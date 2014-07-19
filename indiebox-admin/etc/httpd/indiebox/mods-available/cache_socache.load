@@ -1,0 +1,1 @@
+LoadModule cache_socache_module modules/mod_cache_socache.so

@@ -1,0 +1,1 @@
+LoadModule cache_disk_module modules/mod_cache_disk.so

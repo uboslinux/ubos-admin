@@ -1,0 +1,1 @@
+LoadModule authz_dbd_module modules/mod_authz_dbd.so

@@ -1,0 +1,1 @@
+LoadModule slotmem_shm_module modules/mod_slotmem_shm.so

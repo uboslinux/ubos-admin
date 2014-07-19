@@ -1,0 +1,1 @@
+LoadModule auth_form_module modules/mod_auth_form.so

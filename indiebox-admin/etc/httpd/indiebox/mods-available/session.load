@@ -1,0 +1,1 @@
+LoadModule session_module modules/mod_session.so

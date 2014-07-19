@@ -1,0 +1,1 @@
+LoadModule watchdog_module modules/mod_watchdog.so

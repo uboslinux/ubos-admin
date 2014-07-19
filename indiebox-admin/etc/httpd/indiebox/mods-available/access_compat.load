@@ -1,0 +1,1 @@
+LoadModule access_compat_module modules/mod_access_compat.so

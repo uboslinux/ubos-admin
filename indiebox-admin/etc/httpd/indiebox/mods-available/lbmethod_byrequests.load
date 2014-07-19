@@ -1,0 +1,1 @@
+LoadModule lbmethod_byrequests_module modules/mod_lbmethod_byrequests.so

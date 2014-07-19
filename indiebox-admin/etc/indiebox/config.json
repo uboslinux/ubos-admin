@@ -1,0 +1,73 @@
+{
+    "indiebox" : {
+        "checkmanifest" : true
+    },
+
+    "host" : {
+        "tmpdir" : "/tmp",
+    },
+
+    "package" : {
+        "codedir"     : "/usr/share/${package.name}",
+        "datadir"     : "/var/lib/${package.name}",
+        "manifestdir" : "/var/lib/indiebox/manifests"
+    },
+
+    "apache2" : {
+        "uname" : "http",
+        "gname" : "http",
+
+        "sitefragmentdir"      : "/etc/httpd/indiebox/sites",
+        "appconfigfragmentdir" : "/etc/httpd/indiebox/appconfigs",
+        "sitesdir"             : "/srv/http/sites",
+        "ssldir"               : "/etc/httpd/indiebox/ssl"
+    },
+
+    "tomcat7" : {
+        "uname" : "tomcat7",
+        "gname" : "tomcat7",
+
+        "sitesdir"     : "/var/lib/tomcat7/sites",
+        "sitesappsdir" : "/etc/tomcat7/indiebox/sites-apps"
+    },
+
+    "site" : {
+        "apache2" : {
+            "sitedocumentdir"      : "${apache2.sitesdir}/${site.siteid}",
+            "sitefragmentfile"     : "${apache2.sitefragmentdir}/${site.siteid}.conf",
+
+            "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
+            "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups"
+        },
+        "tomcat7" : {
+            "sitedocumentdir"      : "${tomcat7.sitesdir}/${site.siteid}",
+            "contextdir"           : "/etc/tomcat7/Catalina/${site.hostname}"
+        }
+    },
+
+    "appconfig" : {
+        "apache2" : {
+            "dir"                   : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
+            "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
+        },
+        "tomcat7" : {
+            "dir"         : "${tomcat7.sitesdir}/${site.siteid}/${appconfig.appconfigid}",
+            "contextfile" : "${site.tomcat7.contextdir}/${appconfig.contextorroot}.xml"
+        },
+        "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
+        "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup",
+        "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"
+    },
+    
+    "zipfilebackupmanager" : {
+        "backupsuffix" : ".indie-backup",
+
+        "adminbackupdir"      : "/var/lib/indiebox/backups/admin",
+        "adminsitebackupfile" : "${zipfilebackupmanager.adminbackupdir}/${site.siteid}.${now.tstamp}${zipfilebackupmanager.backupsuffix}",
+        "adminbackuplifetime" : 604800,
+        
+        "testbackupdir"      : "/var/lib/indiebox/backups/test",
+        "testsitebackupfile" : "${zipfilebackupmanager.adminbackupdir}/${site.siteid}.${now.tstamp}${zipfilebackupmanager.backupsuffix}",
+        "testbackuplifetime" : 86400
+    }
+}

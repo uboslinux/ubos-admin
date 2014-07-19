@@ -1,0 +1,1 @@
+LoadModule xml2enc_module modules/mod_xml2enc.so

@@ -1,0 +1,3 @@
+LoadModule mime_module modules/mod_mime.so
+
+TypesConfig conf/mime.types
