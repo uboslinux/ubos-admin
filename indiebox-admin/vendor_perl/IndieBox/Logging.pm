@@ -32,19 +32,20 @@ our @EXPORT = qw( trace debug info warn error fatal );
 my $log;
 
 BEGIN {
-    my $confFile;
-    if( $> ) { # we love perl -- this is non-root
-        $confFile = '/etc/indiebox/log-user.conf';
+    unless( Log::Log4perl::initialized ) {
+        my $confFile;
+        if( $> ) { # we love perl -- this is non-root
+            $confFile = '/etc/indiebox/log-user.conf';
 
-    } else { # user is root
-        $confFile = '/etc/indiebox/log.conf';
-    }
+        } else { # user is root
+            $confFile = '/etc/indiebox/log.conf';
+        }
 
-    if( -r $confFile ) {
-        Log::Log4perl->init( $confFile );
+        if( -r $confFile ) {
+            Log::Log4perl->init( $confFile );
 
-    } else {
-        my $config = q(
+        } else {
+            my $config = q(
 log4perl.rootLogger=WARN,CONSOLE
 
 log4perl.appender.CONSOLE=Log::Log4perl::Appender::Screen
@@ -53,7 +54,8 @@ log4perl.appender.CONSOLE.layout=PatternLayout
 log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
 log4perl.appender.CONSOLE.Threshold=WARN
 );
-        Log::Log4perl->init( \$config );
+            Log::Log4perl->init( \$config );
+        }
     }
 
     $log = Log::Log4perl->get_logger( __FILE__ );
