@@ -130,7 +130,7 @@ sub run {
                     next;
                 }
                 my $value = ask( (( $installable == $app ) ? 'App' : 'Accessory' ) . ' ' . $installable->packageName . " requires a value for $custPointName: " );
-                
+
                 my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                 unless( $custPointValidation->{valuecheck}->( $value )) {
                     fatal(  $custPointValidation->{valuecheckerror} );
@@ -139,6 +139,11 @@ sub run {
             }
         }
     }
+    
+    my $adminUserId     = ask( 'Site admin user id (e.g. admin): ' );
+    my $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
+    my $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ' );
+    my $adminEmail      = ask( 'Site admin user e-mail (e.g. foo@bar.com): ' );
 
     my $siteId      = 's' . IndieBox::Utils::randomHex( 40 ); # same as pgp fingerprint length
     my $appConfigId = 'a' . IndieBox::Utils::randomHex( 40 );
@@ -147,6 +152,14 @@ sub run {
 {
     "siteid" : "$siteId",
     "hostname" : "$hostname",
+    
+    "admin" : {
+        "userid" : "$adminUserId",
+        "username" : "$adminUserName",
+        "credential" : "$adminCredential",
+        "email" : "$adminEmail"
+    },
+
     "appconfigs" : [
         {
             "appconfigid" : "$appConfigId",

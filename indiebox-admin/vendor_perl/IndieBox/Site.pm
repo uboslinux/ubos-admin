@@ -48,13 +48,19 @@ sub new {
     $self->{json} = $json;
     $self->_checkJson();
 
-    my $siteId = $self->siteId();
+    my $siteId    = $self->siteId();
+    my $adminJson = $self->{json}->{admin};
+    
     $self->{config} = new IndieBox::Configuration(
                 "Site=$siteId",
                 {
-                    "site.hostname" => $self->hostName(),
-                    "site.siteid"   => $siteId,
-                    "site.protocol" => ( $self->hasSsl() ? 'https' : 'http' )
+                    "site.hostname"         => $self->hostName(),
+                    "site.siteid"           => $siteId,
+                    "site.protocol"         => ( $self->hasSsl() ? 'https' : 'http' ),
+                    "site.admin.userid"     => $adminJson->{userid},
+                    "site.admin.username"   => $adminJson->{username},
+                    "site.admin.credential" => $adminJson->{credential},
+                    "site.admin.email"      => $adminJson->{email}
                 },
             IndieBox::Host::config() );
 
@@ -623,6 +629,37 @@ sub _checkJson {
         fatal( 'Site JSON: invalid hostname' );
     }
 
+    unless( $json->{admin} ) {
+        fatal( 'Site JSON: admin section is now required' );
+    }
+    unless( ref( $json->{admin} ) eq 'HASH' ) {
+        fatal( 'Site JSON: admin section: not a JSON object' );
+    }
+    unless( $json->{admin}->{userid} ) {
+        fatal( 'Site JSON: admin section: missing userid' );
+    }
+    if( ref( $json->{admin}->{userid} ) || $json->{admin}->{userid} !~ m!^[a-z0-9]+$! ) {
+        fatal( 'Site JSON: admin section: invalid userid, must be string without white space' );
+    }
+    unless( $json->{admin}->{username} ) {
+        fatal( 'Site JSON: admin section: missing username' );
+    }
+    if( ref( $json->{admin}->{username} ) ) {
+        fatal( 'Site JSON: admin section: invalid username, must be string' );
+    }
+    unless( $json->{admin}->{credential} ) {
+        fatal( 'Site JSON: admin section: missing credential' );
+    }
+    if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} !~ m!^[a-z0-9]+$! ) {
+        fatal( 'Site JSON: admin section: invalid credential, must be string without white space' );
+    }
+    unless( $json->{admin}->{email} ) {
+        fatal( 'Site JSON: admin section: missing email' );
+    }
+    if( ref( $json->{admin}->{email} ) || $json->{admin}->{email} !~ m/^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i ) {
+        fatal( 'Site JSON: admin section: invalid email' );
+    }
+
     if( $json->{ssl} ) {
         unless( ref( $json->{ssl} ) eq 'HASH' ) {
             fatal( 'Site JSON: ssl section: not a JSON object' );
@@ -658,7 +695,7 @@ sub _checkJson {
             fatal( 'Site JSON: wellknown section: invalid faviconicobase64' );
         }
     }
-
+    
     if( $json->{appconfigs} ) {
         unless( ref( $json->{appconfigs} ) eq 'ARRAY' ) {
             fatal( 'Site JSON: appconfigs section: not a JSON array' );
