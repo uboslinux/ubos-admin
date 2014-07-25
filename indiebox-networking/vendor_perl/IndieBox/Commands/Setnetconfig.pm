@@ -48,20 +48,7 @@ sub run {
         fatal( 'Invalid command-line arguments' );
     }
 
-    my $netConfigs = IndieBox::Networking::NetConfigUtils::findNetConfigs();
-    my $newConfig  = $netConfigs->{$newConfigName};
-
-    if( $newConfig ) {
-        # if( !IndieBox::Utils::invokeMethod( $newConfig . '::isActive' )) {
-            IndieBox::Utils::invokeMethod( $newConfig . '::activate' );
-
-        # } else {
-        #     error( 'Netconfig', $newConfigName, 'is active already.' );
-        # }
-    } else {
-        fatal( 'Unknown netconfig', $newConfigName );
-    }
-    return 1;
+    return IndieBox::Networking::NetConfigUtils::activateNetConfig( $newConfigName );
 }
 
 ##

@@ -39,3 +39,6 @@ slaac private
 nohook lookup-hostname
 noipv4ll
 
+# Let's not do IPv6
+ipv4only
+noipv6

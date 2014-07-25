@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.2
+pkgver=0.3
 pkgrel=1
 pkgdesc="Network management tools"
 arch=('any')
@@ -38,4 +38,8 @@ package() {
 
     mkdir -p -m 755 $pkgdir/usr/share/$pkgname/bin
     install -m 755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
+
+# Modprobe
+    mkdir -p -m 755 $pkgdir/etc/modprobe.d
+    install -m 644 $startdir/modprobe.d/indiebox-networking.conf $pkgdir/etc/modprobe.d/
 }

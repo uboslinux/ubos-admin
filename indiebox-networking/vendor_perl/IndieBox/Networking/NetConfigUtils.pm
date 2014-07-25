@@ -33,11 +33,24 @@ my $ipLinks      = undef;
 my $dhcpConfHead = '/usr/share/indiebox-networking/tmpl/dhcpcd.head';
 my $dhcpConf     = '/etc/dhcpcd.conf';
 my $ipAddrPrefix = '192.168.139.';
+my $confFile     = '/etc/indiebox/networking.conf';
 
 ##
-# Initialize if needed. Invoked at boot.
+# Initialize if needed. Invoked at boot and when module is installed
 sub initializeIfNeeded {
+
+    my $conf;
+    if( -e $confFile ) {
+        $conf = IndieBox::Utils::readJsonFromFile( $confFile );
+    } else {
+        $conf = {
+            'netconfig' => 'client'
+        };
+        IndieBox::Utils::writeJsonToFile( $confFile, $conf );
+    }
     
+    my $netConfigName = $conf->{netconfig}; 
+    activateNetConfig( $netConfigName );
 }
 
 ##
@@ -47,6 +60,35 @@ sub findNetConfigs {
     my $ret = IndieBox::Utils::findPerlShortModuleNamesInPackage( 'IndieBox::Networking::NetConfigs' );
 
     return $ret;
+}
+
+##
+# Activate a NetConfig by name
+# $newConfigName: name of the NetConfig
+sub activateNetConfig {
+    my $newConfigName = shift;
+    
+    my $netConfigs = findNetConfigs();
+    my $newConfig  = $netConfigs->{$newConfigName};
+
+    if( $newConfig ) {
+        IndieBox::Utils::invokeMethod( $newConfig . '::activate' );
+
+        # update config file
+        
+        my $conf;
+        if( -e $confFile ) {
+            $conf = IndieBox::Utils::readJsonFromFile( $confFile );
+        } else {
+            $conf = {};
+        }
+        $conf->{netconfig} = $newConfigName;
+        IndieBox::Utils::writeJsonToFile( $confFile, $conf );
+        
+    } else {
+        fatal( 'Unknown netconfig', $newConfigName );
+    }
+    return 1;
 }
 
 ##
