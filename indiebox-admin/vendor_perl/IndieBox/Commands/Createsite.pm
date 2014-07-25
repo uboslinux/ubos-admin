@@ -42,14 +42,16 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
+    my $dryRun;
     my $parseOk = GetOptionsFromArray(
-            \@args );
+            \@args,
+            'dry-run|n' => \$dryRun );
 
     if( !$parseOk || @args) {
         fatal( 'Invalid command-line arguments, add --help for help' );
     }
 
-    my $appId = ask( "App to run: " );
+    my $appId = ask( "App to run: ", '^[.-_a-z0-9]+$' );
     IndieBox::Host::installPackages( $appId );
 
     my $app = new IndieBox::App( $appId );
@@ -58,11 +60,8 @@ sub run {
     my $existingSite = undef;
     my $hostname     = undef;
     outer: while( 1 ) {
-        $hostname = ask( "Hostname for app: " );
-		unless( $hostname =~ m![a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$! ) {
-			print "Not a valid hostname: $hostname\n";
-			next outer;
-	    }
+        $hostname = ask( "Hostname for app: ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$' );
+
         foreach my $oldSite ( values %$oldSites ) {
             if( $oldSite->hostName eq $hostname ) {
                 print "There is already a site with hostname $hostname.\n";
@@ -139,20 +138,47 @@ sub run {
             }
         }
     }
+
+    my $newSiteJsonString;
     
-    my $adminUserId     = ask( 'Site admin user id (e.g. admin): ' );
-    my $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
-    my $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ' );
-    my $adminEmail      = ask( 'Site admin user e-mail (e.g. foo@bar.com): ' );
+    my $siteId;
+    my $appConfigId;
+    my $adminUserId;
+    my $adminUserName;
+    my $adminCredential;
+    my $adminEmail;
 
-    my $siteId      = 's' . IndieBox::Utils::randomHex( 40 ); # same as pgp fingerprint length
-    my $appConfigId = 'a' . IndieBox::Utils::randomHex( 40 );
+    if( $existingSite ) {
+        my $json = $existingSite->{json};
 
-    my $newSiteJsonString = <<JSON;
+        $siteId      = $json->{siteid};
+        $appConfigId = 'a' . IndieBox::Utils::randomHex( 40 );
+
+        $adminUserId     = $json->{admin}->{userid};
+        $adminUserName   = $json->{admin}->{username};
+        $adminCredential = $json->{admin}->{credential};
+        $adminEmail      = $json->{admin}->{email};
+
+    } else {
+        $siteId      = 's' . IndieBox::Utils::randomHex( 40 );
+        $appConfigId = 'a' . IndieBox::Utils::randomHex( 40 );
+
+        $adminUserId     = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
+        $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
+        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$' );
+        $adminEmail      = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
+    }
+
+    $newSiteJsonString = <<JSON;
 {
     "siteid" : "$siteId",
     "hostname" : "$hostname",
-    
+
+JSON
+    if( $existingSite && $existingSite->{json}->{ssl} ) {
+        $newSiteJsonString .= IndieBox::Utils::writeJsonToString( $existingSite->{json}->{ssl} );
+    }
+    $newSiteJsonString .= <<JSON;
     "admin" : {
         "userid" : "$adminUserId",
         "username" : "$adminUserName",
@@ -161,14 +187,25 @@ sub run {
     },
 
     "appconfigs" : [
+JSON
+    if( $existingSite ) {
+        foreach my $appConfig ( @{$existingSite->appConfigs} ) {
+            my $toAdd = IndieBox::Utils::writeJsonToString( $appConfig->{json} );
+            $toAdd =~ s!\s+$!!;
+            $toAdd =~ s!^!        !mg;
+            $newSiteJsonString .= "\n" . $toAdd;
+        }
+        $newSiteJsonString .= ",\n";
+    }
+    $newSiteJsonString .= <<JSON;
         {
             "appconfigid" : "$appConfigId",
-            "appid"       : "$appId",
+            "appid" : "$appId",
 JSON
 
     if( defined( $context )) {
         $newSiteJsonString .= <<JSON;
-            "context"     : "$context",
+            "context" : "$context",
 JSON
     }
     if( @accs ) {
@@ -176,7 +213,7 @@ JSON
             "accessories" : [
 JSON
         $newSiteJsonString .= join( '', map { '                ' . $_->packageName . ",\n" } @accs );
-        
+            
         $newSiteJsonString .= <<JSON;
             ],
 JSON
@@ -208,41 +245,45 @@ JSON
 }
 JSON
 
-    my $newSiteJson = IndieBox::Utils::readJsonFromString( $newSiteJsonString );
+    if( $dryRun ) {
+        print $newSiteJsonString;
 
-    my $newSite = new IndieBox::Site( $newSiteJson );
+    } else {
+        my $newSiteJson = IndieBox::Utils::readJsonFromString( $newSiteJsonString );
 
-    my $prerequisites = {};
-    $newSite->addDependenciesToPrerequisites( $prerequisites );
-    IndieBox::Host::installPackages( $prerequisites );
+        my $newSite = new IndieBox::Site( $newSiteJson );
 
-    $newSite->checkDeployable();
+        my $prerequisites = {};
+        $newSite->addDependenciesToPrerequisites( $prerequisites );
+        IndieBox::Host::installPackages( $prerequisites );
 
-    # May not be interrupted, bad things may happen if it is
-	IndieBox::Host::preventInterruptions();
+        $newSite->checkDeployable();
 
-    debug( 'Setting up placeholder sites' );
+        # May not be interrupted, bad things may happen if it is
+        IndieBox::Host::preventInterruptions();
 
-    my $suspendTriggers = {};
-    $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
-    IndieBox::Host::executeTriggers( $suspendTriggers );
+        debug( 'Setting up placeholder sites' );
 
-    $newSite->deploy();
+        my $suspendTriggers = {};
+        $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+        IndieBox::Host::executeTriggers( $suspendTriggers );
 
-    debug( 'Resuming sites' );
+        $newSite->deploy();
 
-    my $resumeTriggers = {};
-    $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
-    IndieBox::Host::executeTriggers( $resumeTriggers );
+        debug( 'Resuming sites' );
 
-    debug( 'Running installers/upgraders' );
+        my $resumeTriggers = {};
+        $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        IndieBox::Host::executeTriggers( $resumeTriggers );
 
-    foreach my $appConfig ( @{$newSite->appConfigs} ) {
-        $appConfig->runInstaller();
+        debug( 'Running installers/upgraders' );
+
+        foreach my $appConfig ( @{$newSite->appConfigs} ) {
+            $appConfig->runInstaller();
+        }
+
+        print "Installed site $siteId at http://$hostname/\n";
     }
-
-    print "Installed site $siteId at http://$hostname/\n";
-
     return 1;
 }
 
@@ -252,13 +293,22 @@ JSON
 # $dontTrim: if false, trim whitespace
 sub ask {
     my $q        = shift;
+    my $regex    = shift || '.?';
     my $dontTrim = shift || 0;
 
-    print $q;
-    my $ret = <STDIN>;
-    unless( $dontTrim ) {
-        $ret =~ s!\s+$!!;
-        $ret =~ s!^\s+!!;
+    my $ret;
+    while( 1 ) {
+        print $q;
+        $ret = <STDIN>;
+        unless( $dontTrim ) {
+            $ret =~ s!\s+$!!;
+            $ret =~ s!^\s+!!;
+        }
+        if( $ret =~ $regex ) {
+            last;
+        } else {
+            print "(input not valid: regex is $regex)\n";
+        }
     }
     return $ret;
 }
