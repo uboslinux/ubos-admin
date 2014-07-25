@@ -333,8 +333,8 @@ sub checkManifestInfoSection {
         if( ref( $license )) {
             $self->myFatal( "info section: licenses section: license must be a string" );
         }
-        unless( $license =~ m!^[a-zA-Z0-9]+$! ) {
-            $self->myFatal( "info section: licenses section: invalid license string" );
+        unless( $license =~ m!^(custom:)?[.a-zA-Z0-9]+$! ) {
+            $self->myFatal( "info section: licenses section: invalid license string: $license" );
         }
     }
 }
