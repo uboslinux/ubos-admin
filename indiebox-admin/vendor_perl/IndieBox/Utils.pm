@@ -741,4 +741,48 @@ sub invokeMethod {
     return $ret;
 }
 
+##
+# Helper method to print name-value pairs, with the value optionally processed
+# $hash: hash of first column to second column
+# $f: optional method to invoke on the second column before printing. Do not print if method returns undef
+# $comp: optional comparison method on the keys, for sorting
+sub printHashAsColumns {
+    my $hash = shift;
+    my $f    = shift || sub { shift; };
+    my $comp = shift;
+
+    my $toPrint = {};
+    my $indent  = 0;
+    foreach my $name ( keys %$hash ) {
+        my $obj            = $hash->{$name};
+        my $formattedValue = &$f( $obj );
+
+        if( defined( $formattedValue )) {
+            $toPrint->{$name} = $formattedValue;
+
+            my $length = length( $name );
+            if( $length > $indent ) {
+                $indent = $length;
+            }
+        }
+    }
+
+    my @sortedKeys;
+    if( defined( $comp )) {
+        @sortedKeys = sort $comp keys %$toPrint;
+    } else {
+        @sortedKeys = sort keys %$toPrint;
+    }
+
+    my $s = ' ' x $indent;
+    foreach my $name ( @sortedKeys ) {
+        my $formattedValue = $toPrint->{$name};
+        $formattedValue =~ s!^\s*!$s!gm;
+        $formattedValue =~ s!^\s+!!;
+        $formattedValue =~ s!\s+$!!;
+
+        printf( '%-' . $indent . "s - %s\n", $name, $formattedValue );
+    }
+}
+
 1;

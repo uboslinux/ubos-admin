@@ -75,7 +75,7 @@ sub setQuiet {
 ##
 # Verbose output
 sub setVerbose {
-    my $level = shift;
+    my $level = shift || 1;
 
     my $consoleAppender = Log::Log4perl->appenders()->{'CONSOLE'};
 

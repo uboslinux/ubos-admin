@@ -324,7 +324,7 @@ sub installPackages {
 
     if( @filteredPackageList ) {
         my $err;
-        if( myexec( 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList ), undef, undef, \$err )) {
+        if( myexec( 'sudo pacman -S --noconfirm ' . join( ' ', @filteredPackageList ), undef, undef, \$err )) {
             fatal( 'Failed to install package(s). Pacman says:', $err );
         }
     }

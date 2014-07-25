@@ -1,21 +1,21 @@
 #
-# Installation scripts for indiebox-admin package. Just bridge to Perl.
+# Installation scripts for indiebox-networking package.
 #
-# This file is part of indiebox-admin.
+# This file is part of indiebox-networking.
 # (C) 2012-2014 Indie Computing Corp.
 #
-# indiebox-admin is free software: you can redistribute it and/or modify
+# indiebox-networking is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# indiebox-admin is distributed in the hope that it will be useful,
+# indiebox-networking is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with indiebox-admin.  If not, see <http://www.gnu.org/licenses/>.
+# along with indiebox-networking.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ## arg 1:  the new package version
@@ -26,25 +26,29 @@ pre_install() {
 
 ## arg 1:  the new package version
 post_install() {
-    perl -MIndieBox::Installer -e "IndieBox::Installer::post_install( '$1' )"
+    systemctl enable indiebox-networking
+    systemctl start indiebox-networking
 }
 
 ## arg 1:  the new package version
 ## arg 2:  the old package version
 pre_upgrade() {
-    # not used
-    true
+    systemctl stop indiebox-networking
+    systemctl disable indiebox-networking
 }
 
 ## arg 1:  the new package version
 ## arg 2:  the old package version
 post_upgrade() {
-    perl -MIndieBox::Installer -e "IndieBox::Installer::post_upgrade( '$1', '$2' )"
+    systemctl daemon-reload
+    systemctl enable indiebox-networking
+    systemctl start indiebox-networking
 }
 
 ## arg 1:  the old package version
 pre_remove() {
-    perl -MIndieBox::Installer -e "IndieBox::Installer::pre_remove( '$1' )"
+    systemctl stop indiebox-networking
+    systemctl disable indiebox-networking
 }
 
 ## arg 1:  the old package version

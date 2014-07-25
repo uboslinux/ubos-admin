@@ -1,0 +1,41 @@
+pkgname=$(basename $(pwd))
+pkgver=0.2
+pkgrel=1
+pkgdesc="Network management tools"
+arch=('any')
+url="http://indiebox.net/"
+license=('GPL')
+groups=()
+depends=('indiebox-admin')
+backup=()
+source=()
+options=('!strip')
+install=install
+
+package() {
+# Template files
+    mkdir -p -m755 $pkgdir/usr/share/$pkgname/tmpl
+    for f in $startdir/tmpl/*; do
+        install -m644 $f $pkgdir/usr/share/$pkgname/tmpl/
+    done
+
+# dnsmasq directory
+    mkdir -p -m755 $pkgdir/etc/dnsmasq.d
+
+# Code
+    for d in Commands Networking Networking/NetConfigs; do
+		mkdir -p -m755 $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/$d/
+		for f in $startdir/vendor_perl/IndieBox/$d/*.pm; do
+			if [ -r "$f" ]; then
+				install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/$d/
+			fi
+		done
+	done
+    
+# Systemd
+    mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
+    install -m 755 $startdir/systemd/indiebox-networking.service $pkgdir/usr/lib/systemd/system/
+
+    mkdir -p -m 755 $pkgdir/usr/share/$pkgname/bin
+    install -m 755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
+}
