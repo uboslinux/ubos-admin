@@ -354,7 +354,7 @@ sub checkManifestRolesSection {
         while( my( $roleName, $roleJson ) = each %{$json->{roles}} ) {
             my $role = $rolesOnHost->{$roleName};
             if( $role ) {
-                $role->checkAppManifestForRole( $roleName, $self->packageName, $roleJson, $retentionBuckets, $config, \&IndieBox::InstallableManifest::myFatal );
+                $role->checkAppManifestForRole( $roleName, $self->packageName, $roleJson, $retentionBuckets, $config, \&IndieBox::Manifest::myFatal );
             } # else we ignore roles we don't know
         }
     }
