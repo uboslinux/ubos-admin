@@ -1,12 +1,12 @@
 pkgname=$(basename $(pwd))
-pkgver=0.48
+pkgver=0.49
 pkgrel=1
 pkgdesc="Indie Box administration infrastructure and tools"
 arch=('any')
 url="http://indiebox.net/"
 license=('GPL')
 groups=()
-depends=('cronie' 'ntp' 'btrfs-progs' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'perl-archive-zip' 'apache' 'mod_wsgi2' )
+depends=('cronie' 'ntp' 'btrfs-progs' 'sudo' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'perl-archive-zip' 'apache' 'mod_wsgi2' )
 backup=(
     'etc/indiebox/config.json'
     'etc/indiebox/log.conf'
