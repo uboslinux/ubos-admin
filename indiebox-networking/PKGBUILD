@@ -1,6 +1,6 @@
 pkgname=$(basename $(pwd))
-pkgver=0.3
-pkgrel=2
+pkgver=0.4
+pkgrel=1
 pkgdesc="Network management tools"
 arch=('any')
 url="http://indiebox.net/"
@@ -34,7 +34,7 @@ package() {
     
 # Systemd
     mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
-    install -m 755 $startdir/systemd/indiebox-networking.service $pkgdir/usr/lib/systemd/system/
+    install -m 644 $startdir/systemd/indiebox-networking.service $pkgdir/usr/lib/systemd/system/
 
     mkdir -p -m 755 $pkgdir/usr/share/$pkgname/bin
     install -m 755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
