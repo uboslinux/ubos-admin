@@ -38,7 +38,7 @@ BEGIN {
             $confFile = '/etc/indiebox/log-user.conf';
 
         } else { # user is root
-            $confFile = '/etc/indiebox/log.conf';
+            $confFile = '/etc/indiebox/log-admin.conf';
         }
 
         if( -r $confFile ) {

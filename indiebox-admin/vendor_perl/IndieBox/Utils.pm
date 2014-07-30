@@ -732,12 +732,23 @@ sub invokeMethod {
     my $methodName = shift;
     my @args       = @_;
 
-    if( $methodName =~ m!^(.*)::! ) {
-        my $packageName = $1;
+    my $ret;
+    if( $methodName =~ m!^(.*)((?:::)|(?:->))(.*)! ) {
+        my $packageName     = $1;
+        my $operator        = $2;
+        my $shortMethodName = $3;
+
         eval "require $packageName" || IndieBox::Logging::warn( "Cannot read $packageName: $@" );
+
+        if( $operator eq '::' ) {
+            $ret = &{\&{$methodName}}( @args );
+        } else {
+            $ret = $packageName->$shortMethodName( @args );
+        }
+    } else {
+        $ret = &{\&{$methodName}}( @args );
     }
 
-    my $ret = &{\&{$methodName}}( @args );
     return $ret;
 }
 

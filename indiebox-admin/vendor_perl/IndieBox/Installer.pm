@@ -30,11 +30,8 @@ use IndieBox::Host;
 use IndieBox::ResourceManager;
 
 ##
-# Invoked by pacman after this package has been installed for the first time
-# $newVersion: identifier of the installed package version
-sub post_install {
-    my $version = shift;
-
+# Invoked by systemd upon boot
+sub initialize {
     IndieBox::Host::ensurePacmanConfig();
 
     IndieBox::Host::ensureEssentialServicesRunning();
@@ -46,6 +43,15 @@ sub post_install {
     IndieBox::Apache2::ensureConfigFiles();
     IndieBox::Apache2::ensureRunning();
 }
+    
+##
+# Invoked by pacman after this package has been installed for the first time
+# $newVersion: identifier of the installed package version
+sub post_install {
+    my $version = shift;
+
+    initialize();
+}
 
 ##
 # Invoked by pacman after this package has been upgraded
@@ -55,16 +61,7 @@ sub post_upgrade {
     my $newVersion = shift;
     my $oldVersion = shift;
 
-    IndieBox::Host::ensurePacmanConfig();
-
-    IndieBox::Host::ensureEssentialServicesRunning();
-
-    IndieBox::Databases::MySqlDriver::ensureRunning();
-    IndieBox::Databases::MySqlDriver::ensureRootPassword();
-    IndieBox::ResourceManager::initializeIfNeeded();
-
-    IndieBox::Apache2::ensureConfigFiles();
-    IndieBox::Apache2::ensureRunning();
+    initialize();
 }
 
 ##

@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.49
+pkgver=0.50
 pkgrel=1
 pkgdesc="Indie Box administration infrastructure and tools"
 arch=('any')
@@ -9,7 +9,8 @@ groups=()
 depends=('cronie' 'ntp' 'btrfs-progs' 'sudo' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'perl-archive-zip' 'apache' 'mod_wsgi2' )
 backup=(
     'etc/indiebox/config.json'
-    'etc/indiebox/log.conf'
+    'etc/indiebox/log-admin.conf'
+    'etc/indiebox/log-user.conf'
     'etc/httpd/indiebox/defaults.conf'
     'etc/httpd/indiebox/defaultsite.conf'
     'etc/httpd/indiebox/errors.conf'
@@ -37,6 +38,9 @@ package() {
 
     mkdir -p $pkgdir/usr/share/indiebox/cgi-bin
     install -m755 $startdir/cgi-bin/show-apps.pl $pkgdir/usr/share/indiebox/cgi-bin/
+
+    mkdir -p $pkgdir/usr/share/$pkgname/bin
+    install -m755 $startdir/bin/indiebox-admin $pkgdir/usr/share/$pkgname/bin/
     
     # (hopefully) temporary patch to Perl's Archive::Zip
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip
@@ -45,8 +49,8 @@ package() {
 # Config files
     mkdir -p $pkgdir/etc/indiebox/ssl
 
-    install -m644 $startdir/etc/indiebox/config.json $pkgdir/etc/indiebox/
-    install -m644 $startdir/etc/indiebox/log.conf    $pkgdir/etc/indiebox/
+    install -m644 $startdir/etc/indiebox/config.json           $pkgdir/etc/indiebox/
+    install -m644 $startdir/etc/indiebox/log-{admin,user}.conf $pkgdir/etc/indiebox/
 
 # Site files and AppConfiguration parameter files
     mkdir -p $pkgdir/var/lib/indiebox/sites
@@ -99,6 +103,10 @@ package() {
     install -m640 $startdir/etc/tomcat7/server-indiebox.xml.tmpl $pkgdir/etc/tomcat7/
     mkdir -p -m 775 $pkgdir/var/lib/tomcat7
     mkdir -p $pkgdir/var/lib/tomcat7/sites
+
+# Systemd
+    mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
+    install -m 644 $startdir/systemd/indiebox-admin.service $pkgdir/usr/lib/systemd/system/
 
 # Other config files
     mkdir -p $pkgdir/etc/php/conf.d
