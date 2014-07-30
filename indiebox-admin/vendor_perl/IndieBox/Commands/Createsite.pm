@@ -321,9 +321,16 @@ sub ask {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
+        <<SSS => <<HHH,
 SSS
-    Interactively create a new site.
+    Interactively define and install a new site.
+HHH
+        <<SSS => <<HHH
+    --dry-run | -n
+SSS
+    Interactively define a new site, but instead of installing,
+    print the Site JSON file for the site, which then can be
+    deployed using 'indiebox-admin deploy'.
 HHH
     };
 }
