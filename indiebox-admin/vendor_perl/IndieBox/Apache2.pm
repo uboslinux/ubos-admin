@@ -46,7 +46,7 @@ sub ensureRunning {
     trace( 'Apache2::ensureRunning' );
 
     IndieBox::Utils::myexec( 'systemctl enable httpd' );
-    IndieBox::Utils::myexec( 'systemctl restart httpd' );
+    IndieBox::Utils::myexec( 'systemctl restart httpd &' ); # may be executed during systemd init, so background execution
 
     1;
 }

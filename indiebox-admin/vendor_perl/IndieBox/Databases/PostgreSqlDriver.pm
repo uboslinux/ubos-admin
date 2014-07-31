@@ -53,8 +53,8 @@ sub ensureRunning {
 
         }
         
-        IndieBox::Utils::myexec( 'systemctl start postgresql' );
         IndieBox::Utils::myexec( 'systemctl enable postgresql' );
+        IndieBox::Utils::myexec( 'systemctl start  postgresql' );
 
         sleep( 3 ); # Needed, otherwise might not be able to connect
     }

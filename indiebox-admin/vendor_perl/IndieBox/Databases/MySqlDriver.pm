@@ -39,7 +39,7 @@ my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 # Ensure that mysqld is running
 sub ensureRunning {
     IndieBox::Utils::myexec( 'systemctl enable mysqld' );
-    IndieBox::Utils::myexec( 'systemctl start mysqld' );
+    IndieBox::Utils::myexec( 'systemctl start  mysqld &' ); # may be executed during systemd init, so background execution
 
     1;
 }

@@ -41,6 +41,8 @@ my $now              = time();
 my @_rolesOnHostInSequence = (); # allocated as needed
 my %_rolesOnHost           = (); # allocated as needed
 
+my @essentialServices = qw( cronie ntpd );
+
 ##
 # Ensure that pacman is configured correctly.
 sub ensurePacmanConfig {
@@ -104,12 +106,11 @@ sub ensurePacmanConfig {
 sub ensureEssentialServicesRunning {
     trace( 'Host::ensureEssentialServicesRunning' );
 
-    my @services = qw( cronie ntpd );
-    foreach my $service ( @services ) {
-        IndieBox::Utils::myexec( 'systemctl enable ' . $service );
-        IndieBox::Utils::myexec( 'systemctl restart ' . $service );
+    if( @essentialServices ) {
+        IndieBox::Utils::myexec( 'systemctl enable'  . ( map { " '$_'" } @essentialServices ) );
+        IndieBox::Utils::myexec( 'systemctl restart' . ( map { " '$_'" } @essentialServices ) . ' &' );
+                # may be executed during systemd init, so background execution
     }
-
     1;
 }
 
