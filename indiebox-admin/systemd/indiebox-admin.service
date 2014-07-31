@@ -6,7 +6,7 @@ Before=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/share/indiebox/bin/initialize
+ExecStart=/usr/share/indiebox-admin/bin/initialize
 
 [Install]
 WantedBy=multi-user.target

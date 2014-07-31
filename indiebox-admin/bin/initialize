@@ -24,6 +24,6 @@ use warnings;
 
 use IndieBox::Installer;
 
-IndieBox::Installer::initializeIfNeeded();
+IndieBox::Installer::initialize();
 
 1;
