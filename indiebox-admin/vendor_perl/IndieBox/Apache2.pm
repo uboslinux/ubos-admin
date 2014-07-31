@@ -83,8 +83,8 @@ sub restart {
 # return: 0: success, 1: timeout
 sub _syncApacheCtl {
     my $command = shift;
-    my $max     = shift || 10;
-    my $poll    = shift || 0.1;
+    my $max     = shift || 15;
+    my $poll    = shift || 0.2;
 
     open( FH, '<', $logFile ) || fatal( 'Cannot open', $logFile );
     my $lastPos = sysseek( FH, 0, SEEK_END );
@@ -113,6 +113,7 @@ sub _syncApacheCtl {
         my $delta = $seconds + 0.000001 * $microseconds - $until;
         
         if( $written =~ /resuming normal operations/ ) {
+            sleep( 2 ); # two more seconds
             debug( 'Detected Apache restart after ', $delta + $max, 'seconds' );
             return 0;
         }

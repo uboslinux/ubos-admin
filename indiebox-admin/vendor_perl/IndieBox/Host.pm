@@ -107,8 +107,8 @@ sub ensureEssentialServicesRunning {
     trace( 'Host::ensureEssentialServicesRunning' );
 
     if( @essentialServices ) {
-        IndieBox::Utils::myexec( 'systemctl enable'  . ( map { " '$_'" } @essentialServices ) );
-        IndieBox::Utils::myexec( 'systemctl restart' . ( map { " '$_'" } @essentialServices ) . ' &' );
+        IndieBox::Utils::myexec( 'systemctl enable'  . join( '', map { " '$_'" } @essentialServices ) );
+        IndieBox::Utils::myexec( 'systemctl restart' . join( '', map { " '$_'" } @essentialServices ) . ' &' );
                 # may be executed during systemd init, so background execution
     }
     1;
