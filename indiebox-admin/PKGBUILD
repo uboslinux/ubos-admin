@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.50
+pkgver=0.51
 pkgrel=1
 pkgdesc="Indie Box administration infrastructure and tools"
 arch=('any')
@@ -40,7 +40,7 @@ package() {
     install -m755 $startdir/cgi-bin/show-apps.pl $pkgdir/usr/share/indiebox/cgi-bin/
 
     mkdir -p $pkgdir/usr/share/$pkgname/bin
-    install -m755 $startdir/bin/indiebox-admin $pkgdir/usr/share/$pkgname/bin/
+    install -m755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
     
     # (hopefully) temporary patch to Perl's Archive::Zip
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip
