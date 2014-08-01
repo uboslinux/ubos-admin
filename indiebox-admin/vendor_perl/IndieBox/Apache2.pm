@@ -169,6 +169,7 @@ sub ensureConfigFiles {
 sub activateApacheModules {
     my @modules = @_;
 
+    my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$modsEnabledDir/$module.load" ) {
             debug( 'Apache2 module activated already:', $module );
@@ -181,9 +182,10 @@ sub activateApacheModules {
         debug( 'Activating Apache2 module:', $module );
 
         IndieBox::Utils::myexec( "ln -s '$modsAvailableDir/$module.load' '$modsEnabledDir/$module.load'" );
+        ++$ret;
     }
 
-    1;
+    return $ret;
 }
 
 ##
@@ -192,6 +194,7 @@ sub activateApacheModules {
 sub activatePhpModules {
     my @modules = @_;
 
+    my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$phpModulesConfDir/$module.ini" ) {
             debug( 'PHP module activated already:', $module );
@@ -206,9 +209,10 @@ sub activatePhpModules {
         IndieBox::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
 extension=$module.so
 END
+        ++$ret;
     }
 
-    1;
+    return $ret;
 }
 
 1;

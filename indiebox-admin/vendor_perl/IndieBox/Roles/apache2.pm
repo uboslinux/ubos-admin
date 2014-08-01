@@ -81,15 +81,19 @@ sub deployOrCheck {
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
         my $apache2modules = $installableRoleJson->{apache2modules};
+        my $numberActivated = 0;
         if( $appConfig->site->hasSsl ) {
             push @$apache2modules, 'ssl';
         }
         if( $doIt && $apache2modules ) {
-            IndieBox::Apache2::activateApacheModules( @$apache2modules );
+            $numberActivated += IndieBox::Apache2::activateApacheModules( @$apache2modules );
         }
         my $phpModules = $installableRoleJson->{phpmodules};
         if( $doIt && $phpModules ) {
-            IndieBox::Apache2::activatePhpModules( @$phpModules );
+            $numberActivated += IndieBox::Apache2::activatePhpModules( @$phpModules );
+        }
+        if( $numberActivated ) {
+            IndieBox::Apache2::restart(); # reload seems to be insufficient
         }
     }
     $self->SUPER::deployOrCheck( $doIt, $appConfig, $installable, $config );

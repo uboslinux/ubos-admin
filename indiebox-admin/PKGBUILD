@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.54
+pkgver=0.55
 pkgrel=1
 pkgdesc="Indie Box administration infrastructure and tools"
 arch=('any')
