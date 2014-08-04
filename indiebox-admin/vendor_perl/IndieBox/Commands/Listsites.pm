@@ -36,6 +36,10 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
+    if ( $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
     my $json    = 0;
     my $brief   = 0;
     my @siteIds = ();

@@ -51,6 +51,10 @@ our $updateStatusSuffix = '.status';
 sub run {
     my @args = @_;
 
+    if ( $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
     my $quiet   = 0;
     my $verbose = 0;
     my $parseOk = GetOptionsFromArray(

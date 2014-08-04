@@ -28,8 +28,8 @@ use fields qw(json config packageName);
 
 use IndieBox::Host;
 use IndieBox::Logging;
-use JSON;
 use IndieBox::Utils qw( readJsonFromFile );
+use JSON;
 
 ##
 # The known customization point types, validation routines, and error messages.
@@ -354,7 +354,7 @@ sub checkManifestRolesSection {
         while( my( $roleName, $roleJson ) = each %{$json->{roles}} ) {
             my $role = $rolesOnHost->{$roleName};
             if( $role ) {
-                $role->checkAppManifestForRole( $roleName, $self->packageName, $roleJson, $retentionBuckets, $config, \&IndieBox::Manifest::myFatal );
+                $role->checkAppManifestForRole( $roleName, $self, $roleJson, $retentionBuckets, $config );
             } # else we ignore roles we don't know
         }
     }

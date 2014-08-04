@@ -218,89 +218,81 @@ sub instantiateAppConfigurationItem {
 ##
 # Check the part of an app manifest that deals with this role.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration object to use
-# $myFatal: method to be invoked if an error has been found
 sub checkAppManifestForRole {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
-    $self->checkInstallableManifestForRole( $roleName, $packageName, $jsonFragment, $retentionBuckets, $config, $myFatal );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
 }
 
 ##
 # Check the part of an accessory manifest that deals with this role.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration object to use
-# $myFatal: method to be invoked if an error has been found
 sub checkAccessoryManifestForRole {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
-    $self->checkInstallableManifestForRole( $roleName, $packageName, $jsonFragment, $retentionBuckets, $config, $myFatal );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
 }
 
 ##
 # Check the part of an app or accessory manifest that deals with this role.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration object to use
-# $myFatal: method to be invoked if an error has been found
 sub checkInstallableManifestForRole {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
-    myFatal->( $packageName, "roles section implementation errror: role $roleName does not define checkInstallableManifestForRole, checkAppManifestForRole or checkAccessoryManifestForRole" );
+    $installable->myFatal( "roles section implementation errror: role $roleName does not define checkInstallableManifestForRole, checkAppManifestForRole or checkAccessoryManifestForRole" );
 }
 
 ##
 # Check the part of a manifest that deals with this role and the generic 'depends'.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $config: the Configuration to use
-# $myFatal: method to be invoked if an error has been found
 sub checkManifestForRoleGenericDepends {
     my $self         = shift;
     my $roleName     = shift;
-    my $packageName  = shift;
+    my $installable  = shift;
     my $jsonFragment = shift;
     my $config       = shift;
-    my $myFatal      = shift;
 
     if( $jsonFragment->{depends} ) {
         unless( ref( $jsonFragment->{depends} ) eq 'ARRAY' ) {
-            $myFatal->( $packageName, "roles section: role $roleName: depends is not an array" );
+            $installable->myFatal( "roles section: role $roleName: depends is not an array" );
         }
         my $dependsIndex = 0;
         foreach my $depends ( @{$jsonFragment->{depends}} ) {
             if( ref( $depends )) {
-                $myFatal->( $packageName, "roles section: role $roleName: depends[$dependsIndex] must be string" );
+                $installable->myFatal( "roles section: role $roleName: depends[$dependsIndex] must be string" );
             }
             unless( $depends =~ m!^[-_a-z0-9]+$! ) {
-                $myFatal->( $packageName, "roles section: role $roleName: depends[$dependsIndex] invalid: $depends" );
+                $installable->myFatal( "roles section: role $roleName: depends[$dependsIndex] invalid: $depends" );
             }
             ++$dependsIndex;
         }
@@ -310,25 +302,23 @@ sub checkManifestForRoleGenericDepends {
 ##
 # Check the part of a manifest that deals with this role and the generic 'appconfigitems'.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $allowedTypes: hash of allowed types
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration to use
-# $myFatal: method to be invoked if an error has been found
 sub checkManifestForRoleGenericAppConfigItems {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $allowedTypes     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
     if( $jsonFragment->{appconfigitems} ) {
         unless( ref( $jsonFragment->{appconfigitems} ) eq 'ARRAY' ) {
-            $myFatal->( $packageName, "roles section: role $roleName: not an array" );
+            $installable->myFatal( "roles section: role $roleName: not an array" );
         }
         my $codeDir = $config->getResolve( 'package.codedir' );
 
@@ -337,122 +327,122 @@ sub checkManifestForRoleGenericAppConfigItems {
         my $appConfigIndex = 0;
         foreach my $appConfigItem ( @{$jsonFragment->{appconfigitems}} ) {
             if( ref( $appConfigItem->{type} )) {
-                $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
+                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
             }
             unless( $allowedTypes->{ $appConfigItem->{type}} ) {
-                $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown or disallowed type: " . $appConfigItem->{type}
+                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown or disallowed type: " . $appConfigItem->{type}
                                            . ". Allowed types are: " . join( ', ', keys %$allowedTypes ) );
             }
 
             if( $appConfigItem->{type} eq 'perlscript' || $appConfigItem->{type} eq 'sqlscript' ) {
                 unless( $appConfigItem->{source} ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": must specify source" );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": must specify source" );
                 }
                 if( ref( $appConfigItem->{source} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
                 }
                 unless( IndieBox::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid name: " . $appConfigItem->{name} );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid name: " . $appConfigItem->{name} );
                 }
                 if( $appConfigItem->{name} ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": name not permitted for type " . $appConfigItem->{type} );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": name not permitted for type " . $appConfigItem->{type} );
                 }
                 if( $appConfigItem->{names} ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": names not permitted for type " . $appConfigItem->{type} );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": names not permitted for type " . $appConfigItem->{type} );
                 }
             } else {
                 my @names = ();
                 if( defined( $appConfigItem->{name} )) {
                     if( $appConfigItem->{names} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name or names, not both" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name or names, not both" );
                     }
                     if( ref( $appConfigItem->{name} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
                     }
                     # file does not exist yet
                     push @names, $appConfigItem->{name};
 
                 } else {
                     unless( $appConfigItem->{names} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify name or names" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify name or names" );
                     }
                     unless( ref( $appConfigItem->{names} ) eq 'ARRAY' ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: names must be an array" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: names must be an array" );
                     }
                     my $namesIndex = 0;
                     foreach my $name ( @{$appConfigItem->{names}} ) {
                         if( ref( $name )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: names[$namesIndex] must be string" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: names[$namesIndex] must be string" );
                         }
                         # file does not exist yet
                         push @names, $name;
                         ++$namesIndex;
                     }
                     unless( $namesIndex > 0 ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify name or names" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify name or names" );
                     }
                 }
 
                 if( $appConfigItem->{type} eq 'file' ) {
                     if( $appConfigItem->{source} ) {
                         if( $appConfigItem->{template} ) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': specify source or template, not both" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': specify source or template, not both" );
                         }
                         if( ref( $appConfigItem->{source} )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'source' must be string" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'source' must be string" );
                         }
                         foreach my $name ( @names ) {
                             unless( IndieBox::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                                $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
                     } elsif( $appConfigItem->{template} ) {
                         unless( $appConfigItem->{templatelang} ) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': if specifying template, must specify templatelang as well" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': if specifying template, must specify templatelang as well" );
                         }
                         if( ref( $appConfigItem->{template} )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'template' must be string" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'template' must be string" );
                         }
                         foreach my $name ( @names ) {
                             unless( IndieBox::Installable::validFilename( $codeDir, $appConfigItem->{template}, $name )) {
-                                $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
+                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
                             }
                         }
                         if( ref( $appConfigItem->{templatelang} )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'templatelang' must be string" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'templatelang' must be string" );
                         }
                         unless( $appConfigItem->{templatelang} =~ m!^(varsubst|perlscript)$! ) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid templatelang: " . $appConfigItem->{templatelang} );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid templatelang: " . $appConfigItem->{templatelang} );
                         }
                     } else {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': must specify source or template" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': must specify source or template" );
                     }
 
                 } elsif( $appConfigItem->{type} eq 'directory' ) {
 
                 } elsif( $appConfigItem->{type} eq 'directorytree' ) {
                     unless( $appConfigItem->{source} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': must specify source" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': must specify source" );
                     }
                     if( ref( $appConfigItem->{source} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': field 'source' must be string" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': field 'source' must be string" );
                     }
                     foreach my $name ( @names ) {
                         unless( IndieBox::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
                         }
                     }
 
                 } elsif( $appConfigItem->{type} eq 'symlink' ) {
                     unless( $appConfigItem->{source} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': must specify source" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': must specify source" );
                     }
                     if( ref( $appConfigItem->{source} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': field 'source' must be string" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': field 'source' must be string" );
                     }
                     foreach my $name ( @names ) {
                         unless( IndieBox::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
                         }
                     }
 
@@ -460,77 +450,77 @@ sub checkManifestForRoleGenericAppConfigItems {
                     # no op
 
                     if( $databaseNames{$appConfigItem->{name}} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has non-unique symbolic database name" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has non-unique symbolic database name" );
                         $databaseNames{$appConfigItem->{name}} = 1;
                     }
 
                     if( $appConfigItem->{privileges} ) {
                         if( ref( $appConfigItem->{privileges} )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
                         }
                     } else {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be given" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be given" );
                     }
                         
                 } else { # perlscript and sqlscript handled above
-                    $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type (1): " . $appConfigItem->{type}
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type (1): " . $appConfigItem->{type}
                                               . ". Allowed types are: " . join( ', ', keys %$allowedTypes ) );
                 }
 
                 if( $appConfigItem->{uname} ) {
                     if( ref( $appConfigItem->{uname} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be string" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be string" );
                     }
                     unless( $config->replaceVariables( $appConfigItem->{uname} ) =~ m!^[-a-z0-9]+$! ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid uname: " . $appConfigItem->{uname} );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid uname: " . $appConfigItem->{uname} );
                     }
                     unless( $appConfigItem->{gname} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be given is 'uname' is given." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be given is 'uname' is given." );
                     }
                 }
                 if( $appConfigItem->{gname} ) {
                     if( ref( $appConfigItem->{gname} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be string" );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be string" );
                     }
                     unless( $config->replaceVariables( $appConfigItem->{gname} ) =~ m!^[-a-z0-9]+$! ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid gname: " . $appConfigItem->{gname} );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid gname: " . $appConfigItem->{gname} );
                     }
                     unless( $appConfigItem->{uname} ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be given is 'gname' is given." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be given is 'gname' is given." );
                     }
                 }
                 if( $appConfigItem->{type} eq 'directorytree' ) {
                     foreach my $f ( 'filepermissions', 'dirpermissions' ) {
                         if( defined( $appConfigItem->{$f} )) {
                             if( ref( $appConfigItem->{$f} )) {
-                                $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field '$f' must be string (octal)" );
+                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field '$f' must be string (octal)" );
                             }
                             unless( $config->replaceVariables( $appConfigItem->{$f} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
-                                $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid $f: " . $appConfigItem->{$f} );
+                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid $f: " . $appConfigItem->{$f} );
                             }
                         }
                     }
                     if( defined( $appConfigItem->{permissions} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: use fields 'filepermissions' and 'dirpermissions' instead of 'permissions'." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use fields 'filepermissions' and 'dirpermissions' instead of 'permissions'." );
                     }
                 } else {
                     if( defined( $appConfigItem->{permissions} )) {
                         if( ref( $appConfigItem->{permissions} )) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'permissions' must be string (octal)" );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'permissions' must be string (octal)" );
                         }
                         unless( $config->replaceVariables( $appConfigItem->{permissions} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
-                            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid permissions: " . $appConfigItem->{permissions} );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid permissions: " . $appConfigItem->{permissions} );
                         }
                     }
                     if( defined( $appConfigItem->{filepermissions} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'filepermissions'." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'filepermissions'." );
                     }
                     if( defined( $appConfigItem->{dirpermissions} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'dirpermissions'." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'dirpermissions'." );
                     }
                 }
 
-                _checkRetention( $packageName, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets, $myFatal );
+                _checkRetention( $installable, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets );
             }
             ++$appConfigIndex;
         }
@@ -540,33 +530,32 @@ sub checkManifestForRoleGenericAppConfigItems {
 ##
 # Check the part of a manifest that deals with this role and the generic 'triggersactivate'.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $config: the Configuration to use
-# $myFatal: method to be invoked if an error has been found
 sub checkManifestForRoleGenericTriggersActivate {
     my $self         = shift;
     my $roleName     = shift;
-    my $packageName  = shift;
+    my $installable  = shift;
     my $jsonFragment = shift;
+    my $allowedTypes = shift;
     my $config       = shift;
-    my $myFatal      = shift;
 
     if( $jsonFragment->{triggersactivate} ) {
         unless( ref( $jsonFragment->{triggersactivate} ) eq 'ARRAY' ) {
-            $myFatal->( $packageName, "roles section: role $roleName: triggersactivate: not an array" );
+            $installable->myFatal( "roles section: role $roleName: triggersactivate: not an array" );
         }
         my $triggersIndex = 0;
         my %triggers = ();
         foreach my $triggersJson ( @{$jsonFragment->{triggersactivate}} ) {
             if( ref( $triggersJson )) {
-                $myFatal->( $packageName, "roles section: role $roleName: triggersactivate[$triggersIndex]: not an array" );
+                $installable->myFatal( "roles section: role $roleName: triggersactivate[$triggersIndex]: not an array" );
             }
             unless( $triggersJson =~ m/^[a-z][-a-z0-9]*$/ ) {
-                $myFatal->( $packageName, "roles section: role $roleName: triggersactivate[$triggersIndex]: invalid trigger name: $triggersJson" );
+                $installable->myFatal( "roles section: role $roleName: triggersactivate[$triggersIndex]: invalid trigger name: $triggersJson" );
             }
             if( $triggers{$triggersJson} ) {
-                $myFatal->( $packageName, "roles section: role $roleName: triggersactivate[$triggersIndex] is not unique: $triggersJson" );
+                $installable->myFatal( "roles section: role $roleName: triggersactivate[$triggersIndex] is not unique: $triggersJson" );
                 $triggers{$triggersJson} = 1;
             }
             ++$triggersIndex;
@@ -578,19 +567,17 @@ sub checkManifestForRoleGenericTriggersActivate {
 # Check the part of a manifest that deals with this role and the generic 'installers',
 # 'uninstallers' and 'upgraders'.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $allowedTypes: hash of allowed types
 # $config: the Configuration to use
-# $myFatal: method to be invoked if an error has been found
 sub checkManifestForRoleGenericInstallersEtc {
     my $self         = shift;
     my $roleName     = shift;
-    my $packageName  = shift;
+    my $installable  = shift;
     my $jsonFragment = shift;
     my $allowedTypes = shift;
     my $config       = shift;
-    my $myFatal      = shift;
 
     my $codeDir = $config->getResolve( 'package.codedir' );
 
@@ -599,53 +586,53 @@ sub checkManifestForRoleGenericInstallersEtc {
             next;
         }
         unless( ref( $jsonFragment->{$postInstallCategory} ) eq 'ARRAY' ) {
-            $myFatal->( $packageName, "$postInstallCategory section: not an array" );
+            $installable->myFatal( "$postInstallCategory section: not an array" );
         }
         my $itemsIndex = 0;
         foreach my $item ( @{$jsonFragment->{$postInstallCategory}} ) {
             if( ref( $item->{type} )) {
-                $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: field 'type' must be string" );
+                $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: field 'type' must be string" );
             }
             unless( $allowedTypes->{ $item->{type}} ) {
-                $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: unknown type: " . $item->{type} );
+                $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: unknown type: " . $item->{type} );
             }
             if( $item->{source} ) {
                 if( $item->{template} ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template, not both" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template, not both" );
                 }
                 if( ref( $item->{source} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'source' must be string" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'source' must be string" );
                 }
                 unless( IndieBox::Installable::validFilename( $codeDir, $item->{source} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid source" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid source" );
                 }
             } else {
                 unless( $item->{template} ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template" );
                 }
                 unless( IndieBox::Installable::validFilename( $codeDir, $item->{template} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid template" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid template" );
                 }
                 if( ref( $item->{templatelang} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'templatelang' must be string" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'templatelang' must be string" );
                 }
                 unless( $item->{templatelang} =~ m!^(varsubst|perlscript)$! ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . " [$itemsIndex] of type '" . $item->{type} . "': invalid templatelang: " . $item->{templatelang} );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . " [$itemsIndex] of type '" . $item->{type} . "': invalid templatelang: " . $item->{templatelang} );
                 }
             }
             if( $item->{type} eq 'sqlscript' ) { # This does not hurt here even for non-sql roles
                 unless( $item->{name} ) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: must specify 'name'" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: must specify 'name'" );
                 }
                 if( ref( $item->{name} )) {
-                    $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid 'name'" );
+                    $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid 'name'" );
                 }
                 if( $item->{delimiter} ) {
                     if( ref( $item->{delimiter} )) {
-                        $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid delimiter" );
+                        $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid delimiter" );
                     }
                     if( $item->{delimiter} !~ m!^[;|\$]$! ) {
-                        $myFatal->( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid delimiter" );
+                        $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid delimiter" );
                     }
                 }
             }
@@ -657,40 +644,38 @@ sub checkManifestForRoleGenericInstallersEtc {
 
 ##
 # Helper method to check retentionpolicy.
-# $packageName: name of the package whose manifest is checked
+# $installable: the installable whose manifest is being checked
 # $appConfigItem: the AppConfigItem that may have a retentionpolicy
 # $roleName: name of the currently examined role
 # $appConfigIndex: index if the currently examined AppConfigItem in its role section
 # $retentionBuckets: hash of retentionbuckets specified so far
-# $myFatal: method to be invoked if an error has been found
 sub _checkRetention {
-    my $packageName      = shift;
+    my $installable      = shift;
     my $appConfigItem    = shift;
     my $roleName         = shift;
     my $appConfigIndex   = shift;
     my $retentionBuckets = shift;
-    my $myFatal          = shift;
 
     if( $appConfigItem->{retentionpolicy} ) {
         if( ref( $appConfigItem->{retentionpolicy} )) {
-            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionpolicy' must be string" );
+            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionpolicy' must be string" );
         }
         if( $appConfigItem->{retentionpolicy} ne 'keep' ) {
-            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown value for field 'retentionpolicy': " . $appConfigItem->{retentionpolicy} );
+            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown value for field 'retentionpolicy': " . $appConfigItem->{retentionpolicy} );
         }
         unless( $appConfigItem->{retentionbucket} ) {
-            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionpolicy', also specify 'retentionbucket'" );
+            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionpolicy', also specify 'retentionbucket'" );
         }
         if( ref( $appConfigItem->{retentionbucket} )) {
-            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
+            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
         }
         if( $retentionBuckets->{$appConfigItem->{retentionbucket}} ) {
-            $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
+            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
         }
         $retentionBuckets->{$appConfigItem->{retentionbucket}} = 1;
         
     } elsif( $appConfigItem->{retentionbucket} ) {
-        $myFatal->( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
+        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
     }
 }
 

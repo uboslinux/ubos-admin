@@ -53,22 +53,20 @@ sub name {
 ##
 # Check the part of an app or accessory manifest that deals with this role.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration object to use
-# $myFatal: method to be invoked if an error has been found
 sub checkInstallableManifestForRole {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
     if( $jsonFragment->{depends} ) {
-        $myFatal->( $packageName, "roles section: role $roleName: depends not allowed here" );
+        $installable->myFatal( "roles section: role $roleName: depends not allowed here" );
     }
 
     my $databaseOrScript = {
@@ -81,9 +79,9 @@ sub checkInstallableManifestForRole {
         'sqlscript'  => 1
     };
     
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $packageName, $jsonFragment, $databaseOrScript, $retentionBuckets, $config, $myFatal );
-    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $packageName, $jsonFragment, $config, $myFatal );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $packageName, $jsonFragment, $perlOrSql, $config, $myFatal );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $databaseOrScript, $retentionBuckets, $config );
+    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $config );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOrSql, $config );
 }
 
 1;

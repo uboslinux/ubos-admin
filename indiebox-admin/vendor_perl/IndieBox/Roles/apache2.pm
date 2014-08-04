@@ -375,89 +375,85 @@ sub removeSite {
 ##
 # Check the part of an app manifest that deals with this role.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration object to use
-# $myFatal: method to be invoked if an error has been found
 sub checkAppManifestForRole {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
     # There is more to check for apps, so this gets inserted here
-    if( $jsonFragment->{defaultcontext} ) {
-        if( $jsonFragment->{fixedcontext} ) {
-            $myFatal->( $packageName, "roles section: role $roleName: must not specify both defaultcontext and fixedcontext" );
+    if( defined( $jsonFragment->{defaultcontext} )) {
+        if( defined( $jsonFragment->{fixedcontext} )) {
+            $installable->myFatal( "roles section: role $roleName: must not specify both defaultcontext and fixedcontext" );
         }
         if( ref( $jsonFragment->{defaultcontext} )) {
-            $myFatal->( $packageName, "roles section: role $roleName: field 'defaultcontext' must be string" );
+            $installable->myFatal( "roles section: role $roleName: field 'defaultcontext' must be string" );
         }
         unless( $jsonFragment->{defaultcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
-            $myFatal->( $packageName, "roles section: role $roleName: invalid defaultcontext: " . $jsonFragment->{defaultcontext} );
+            $installable->myFatal( "roles section: role $roleName: invalid defaultcontext: " . $jsonFragment->{defaultcontext} );
         }
 
-    } elsif( $jsonFragment->{fixedcontext} ) {
+    } elsif( defined( $jsonFragment->{fixedcontext} )) {
         if( ref( $jsonFragment->{fixedcontext} )) {
-            $myFatal->( $packageName, "roles section: role $roleName: field 'fixedcontext' must be string" );
+            $installable->myFatal( "roles section: role $roleName: field 'fixedcontext' must be string" );
         }
         unless( $jsonFragment->{fixedcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
-            $myFatal->( $packageName, "roles section: role $roleName: invalid fixedcontext: " . $jsonFragment->{fixedcontext} );
+            $installable->myFatal( "roles section: role $roleName: invalid fixedcontext: " . $jsonFragment->{fixedcontext} );
         }
     } else {
-        $myFatal->( $packageName, "roles section: role $roleName: either defaultcontext or fixedcontext must be given" );
+        $installable->myFatal( "roles section: role $roleName: either defaultcontext or fixedcontext must be given" );
     }
 
-    $self->checkInstallableManifestForRole( $roleName, $packageName, $jsonFragment, $retentionBuckets, $config, $myFatal );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
 }
 
 ##
 # Check the part of an app or accessory manifest that deals with this role.
 # $roleName: name of this role, passed for efficiency
-# $packageName: name of the package whose manifest is being checked
+# $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $config: the Configuration object to use
-# $myFatal: method to be invoked if an error has been found
 sub checkInstallableManifestForRole {
     my $self             = shift;
     my $roleName         = shift;
-    my $packageName      = shift;
+    my $installable      = shift;
     my $jsonFragment     = shift;
     my $retentionBuckets = shift;
     my $config           = shift;
-    my $myFatal          = shift;
 
     if( $jsonFragment->{apache2modules} ) {
         unless( ref( $jsonFragment->{apache2modules} ) eq 'ARRAY' ) {
-            $myFatal->( $packageName, "roles section: role $roleName: apache2modules is not an array" );
+            $installable->myFatal( "roles section: role $roleName: apache2modules is not an array" );
         }
         my $modulesIndex = 0;
         foreach my $module ( @{$jsonFragment->{apache2modules}} ) {
             if( ref( $module )) {
-                $myFatal->( $packageName, "roles section: role $roleName: apache2modules[$modulesIndex] must be string" );
+                $installable->myFatal( "roles section: role $roleName: apache2modules[$modulesIndex] must be string" );
             }
             unless( $module =~ m!^[-_a-z0-9]+$! ) {
-                $myFatal->( $packageName, "roles section: role $roleName: apache2modules[$modulesIndex] invalid: $module" );
+                $installable->myFatal( "roles section: role $roleName: apache2modules[$modulesIndex] invalid: $module" );
             }
             ++$modulesIndex;
         }
     }
     if( $jsonFragment->{phpmodules} ) {
         unless( ref( $jsonFragment->{phpmodules} ) eq 'ARRAY' ) {
-            $myFatal->( $packageName, "roles section: role $roleName: phpmodules is not an array" );
+            $installable->myFatal( "roles section: role $roleName: phpmodules is not an array" );
         }
         my $modulesIndex = 0;
         foreach my $module ( @{$jsonFragment->{phpmodules}} ) {
             if( ref( $module )) {
-                $myFatal->( $packageName, "roles section: role $roleName: phpmodules[$modulesIndex] must be string" );
+                $installable->myFatal( "roles section: role $roleName: phpmodules[$modulesIndex] must be string" );
             }
             unless( $module =~ m!^[-_a-z0-9]+$! ) {
-                $myFatal->( $packageName, "roles section: role $roleName: phpmodules[$modulesIndex] invalid: $module" );
+                $installable->myFatal( "roles section: role $roleName: phpmodules[$modulesIndex] invalid: $module" );
             }
             ++$modulesIndex;
         }
@@ -474,10 +470,10 @@ sub checkInstallableManifestForRole {
         'perlscript' => 1
     };
 
-    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $packageName, $jsonFragment, $config, $myFatal );
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $packageName, $jsonFragment, $noDatabase, $retentionBuckets, $config, $myFatal );
-    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $packageName, $jsonFragment, $config, $myFatal );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $packageName, $jsonFragment, $perlOnly, $config, $myFatal );
+    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $config );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $config );
+    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $config );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $config );
 }
 
 1;

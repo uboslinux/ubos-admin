@@ -1,6 +1,6 @@
 pkgname=$(basename $(pwd))
-pkgver=0.55
-pkgrel=2
+pkgver=0.56
+pkgrel=1
 pkgdesc="Indie Box administration infrastructure and tools"
 arch=('any')
 url="http://indiebox.net/"

@@ -37,6 +37,10 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
+    if ( $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
     my $in           = undef;
     my @siteIds      = ();
     my @appConfigIds = ();

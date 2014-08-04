@@ -38,50 +38,79 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
+    if ( $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
     my @siteIds = ();
+    my @hosts   = ();
     my $file    = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'siteid=s' => \@siteIds,
+            'host=s'   => \@hosts,
             'file=s'   => \$file );
 
-    if( !$parseOk || @args || ( !@siteIds && !$file ) || ( @siteIds && $file )) {
+    if( !$parseOk || @args || ( !@siteIds && !@hosts && !$file )
+                           || ( @siteIds && @hosts )
+                           || ( @siteIds && $file )
+                           || ( @hosts && $file ))
+    {
         fatal( 'Invalid command-line arguments, add --help for help' );
     }
     
     debug( 'Looking for site(s)' );
 
-    if( $file ) {
-        # if $file is given, construct @siteIds from there
-        my $json = readJsonFromFile( $file );
-        $json = IndieBox::Utils::insertSlurpedFiles( $json, dirname( $file ) );
-
-        if( ref( $json ) eq 'HASH' && %$json ) {
-            # This is either a site json directly, or a hash of site jsons (for which we ignore the keys)
-            if( defined( $json->{siteid} )) {
-                @siteIds = ( $json->{siteid} );
-            } else {
-                @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } values %$json;
-            }
-        } elsif( ref( $json ) eq 'ARRAY' ) {
-            if( !@$json ) {
-                fatal( 'No site given' );
-            } else {
-                @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } @$json;
-            }
-        }
-    }
-
     my $oldSites = {};
-    foreach my $siteId ( @siteIds ) {
-        my $site = IndieBox::Host::findSiteByPartialId( $siteId );
-        if( $site ) {
-            $oldSites->{$site->siteId} = $site;
-        } else {
-            fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
+    if( @hosts ) {
+        my $sites = IndieBox::Host::sites();
+        
+        foreach my $host ( @hosts ) {
+            my $found = 0;
+            while( my( $siteId, $site ) = each %$sites ) {
+                if( $site->hostName eq $host ) {
+                    $oldSites->{$siteId} = $site;
+                    $found = 1;
+                    last;
+                }
+            }
+            unless( $found ) {
+                fatal( "Cannot find site with hostname $host. Not undeploying any site." );
+            }
         }
-        $site->checkUndeployable;
+
+    } else {
+        if( $file ) {
+            # if $file is given, construct @siteIds from there
+            my $json = readJsonFromFile( $file );
+            $json = IndieBox::Utils::insertSlurpedFiles( $json, dirname( $file ) );
+
+            if( ref( $json ) eq 'HASH' && %$json ) {
+                # This is either a site json directly, or a hash of site jsons (for which we ignore the keys)
+                if( defined( $json->{siteid} )) {
+                    @siteIds = ( $json->{siteid} );
+                } else {
+                    @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } values %$json;
+                }
+            } elsif( ref( $json ) eq 'ARRAY' ) {
+                if( !@$json ) {
+                    fatal( 'No site given' );
+                } else {
+                    @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } @$json;
+                }
+            }
+        }
+
+        foreach my $siteId ( @siteIds ) {
+            my $site = IndieBox::Host::findSiteByPartialId( $siteId );
+            if( $site ) {
+                $oldSites->{$site->siteId} = $site;
+            } else {
+                fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
+            }
+            $site->checkUndeployable;
+        }
     }
 
     # May not be interrupted, bad things may happen if it is
@@ -121,13 +150,20 @@ sub synopsisHelp {
         <<SSS => <<HHH,
     --siteid <siteid> [--siteid <siteid>]...
 SSS
-    Undeploy one or more previously deployed website(s).
+    Undeploy one or more previously deployed website(s) by specifying their site id.
+HHH
+        <<SSS => <<HHH,
+    --host <hostname> [--host <hostname>]...
+SSS
+    Undeploy one or more previously deployed website(s) by specifying their hostname.
+    This is equivalent to undeploying the site ids, but may be more convenient.
 HHH
         <<SSS => <<HHH
     --file <site.json>
 SSS
     Undeploy one or more previously deployed website(s) whose site JSON
-    file is given. This is a convenience invocation.
+    file is given. This is equivalent to undeploying the site ids of the
+    site(s) contained in the file.
 HHH
     };
 }
