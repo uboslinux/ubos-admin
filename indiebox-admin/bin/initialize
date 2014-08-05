@@ -22,8 +22,21 @@
 use strict;
 use warnings;
 
-use IndieBox::Installer;
+use IndieBox::Apache2;
+use IndieBox::Databases::MySqlDriver;
+use IndieBox::Host;
+use IndieBox::ResourceManager;
 
-IndieBox::Installer::initialize();
+
+IndieBox::Host::ensurePacmanConfig();
+
+IndieBox::Host::ensureEssentialServicesRunning();
+
+IndieBox::Databases::MySqlDriver::ensureRunning();
+IndieBox::Databases::MySqlDriver::ensureRootPassword();
+IndieBox::ResourceManager::initializeIfNeeded();
+
+IndieBox::Apache2::ensureConfigFiles();
+IndieBox::Apache2::ensureRunning();
 
 1;

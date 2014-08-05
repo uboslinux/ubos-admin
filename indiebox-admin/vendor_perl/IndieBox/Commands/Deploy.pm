@@ -95,8 +95,12 @@ sub run {
     my @newSites = values %$newSitesHash;
 
     # make sure AppConfigIds, SiteIds and hostnames are unique, and that all Sites are deployable
-    my $haveIdAlready   = {};
-    my $haveHostAlready = {};
+    my $haveIdAlready   = {}; # it's okay that we have an old site by this id
+    my $haveHostAlready = {}; # it's not okay that we have an old site by this hostname if site id is different
+    
+    foreach my $oldSite ( values %$oldSites ) {
+        $haveHostAlready->{$oldSite->hostName} = $oldSite;
+    }
     
     foreach my $newSite ( @newSites ) {
         my $newSiteId = $newSite->siteId;
@@ -106,8 +110,8 @@ sub run {
         $haveIdAlready->{$newSiteId} = $newSite;
 
         my $newSiteHostName = $newSite->hostName;
-        if( $haveHostAlready->{$newSiteHostName} ) {
-            fatal( 'More than one site with hostname', $newSiteHostName );
+        if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
+            fatal( 'There is already a site with hostname', $newSiteHostName );
         }
         $haveHostAlready->{$newSiteHostName} = $newSite;
 

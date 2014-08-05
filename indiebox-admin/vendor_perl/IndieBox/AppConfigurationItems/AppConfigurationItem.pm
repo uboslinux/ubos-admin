@@ -218,7 +218,17 @@ sub _addRecursive {
     } elsif( -d $fileName ) {
         $zip->addDirectory( "$fileName/", "$zipName/" );
 
-        my @children = grep { !/^\.{1,2}$/ } <"$fileName/*">;
+        my @children = ();
+        opendir( DIR, $fileName ) or fatal( 'Could not read directory', $fileName, $! );
+
+        while( my $file = readdir( DIR )) {
+            if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
+                next;
+            }
+            push @children, "$fileName/$file";
+        }
+        closedir( DIR );
+
         foreach my $child ( @children ) {
             my $relative = $child;
             $relative = substr( $relative, length( $fileName ) + 1 );
