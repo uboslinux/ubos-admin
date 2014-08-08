@@ -23,13 +23,15 @@
 use strict;
 use warnings;
 
-use IndieBox::Host;
-use IndieBox::ResourceManager;
 use IndieBox::Databases::MySqlDriver;
+use IndieBox::Host;
+use IndieBox::Logging;
+use IndieBox::ResourceManager;
 
 IndieBox::Host::ensurePacmanConfig();
-IndieBox::ResourceManager::initializeIfNeeded();
 
 IndieBox::Databases::MySqlDriver::ensureRootPassword();
+
+IndieBox::ResourceManager::initializeIfNeeded();
 
 1;

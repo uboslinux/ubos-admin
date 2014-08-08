@@ -170,6 +170,13 @@ sub findRootUserPass {
     my $pass;
     my $host;
 
+    unless( -e $rootConfiguration ) {
+        fatal( 'Cannot access MySQL database. File missing:', $rootConfiguration );
+    }
+    unless( -r $rootConfiguration ) {
+        fatal( 'Cannot read root credentials to access MySQL database in:', $rootConfiguration );
+    }
+
     open CNF, '<', $rootConfiguration || return undef;
     foreach my $line ( <CNF> ) {
         if( $line =~ m/^\s*\[.*\]/ ) {
@@ -192,7 +199,7 @@ sub findRootUserPass {
     if( $user && $pass ) {
         return( $user, $pass );
     } else {
-        error( 'Cannot find root credentials to access MySQL database. Perhaps you need to run as root?' );
+        fatal( 'Cannot find root credentials to access MySQL database in:', $rootConfiguration );
         return undef;
     }
 }
