@@ -63,7 +63,7 @@ sub run {
             'verbose' => \$verbose );
 
     if( !$parseOk || @args ) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: update', @_, '(add --help for help)' );
     }
 
     my $ts         = IndieBox::Host::config->get( 'now.tstamp' );

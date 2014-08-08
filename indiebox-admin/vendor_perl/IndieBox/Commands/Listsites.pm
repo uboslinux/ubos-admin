@@ -51,7 +51,7 @@ sub run {
             'siteid=s' => \@siteIds );
 
     if( !$parseOk || ( $json && $brief ) || @args ) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: listsites', @_, '(add --help for help)' );
     }
 
     if( $json ) {

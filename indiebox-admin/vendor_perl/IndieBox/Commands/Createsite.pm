@@ -48,7 +48,7 @@ sub run {
             'dry-run|n' => \$dryRun );
 
     if( !$parseOk || @args) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
     my $appId = ask( "App to run: ", '^[.-_a-z0-9]+$' );

@@ -49,7 +49,7 @@ sub run {
             'siteid=s' => \$siteId );
 
     if( !$parseOk || !$siteId || @args ) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: showsite', @_, '(add --help for help)' );
     }
 
     my $site = IndieBox::Host::findSiteByPartialId( $siteId );

@@ -52,7 +52,7 @@ sub run {
             'appconfigid=s' => \@appConfigIds );
 
     if( !$parseOk || @args || !$out ) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: backup', @_, '(add --help for help)' );
     }
 
     # May not be interrupted, bad things may happen if it is

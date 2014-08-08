@@ -54,7 +54,7 @@ sub run {
             'translate=s'   => \@translates );
 
     if( !$parseOk || @args || !$in ) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
     }
 
     debug( 'Parsing translation table (if any)' );

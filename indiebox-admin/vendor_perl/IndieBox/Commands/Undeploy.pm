@@ -57,7 +57,7 @@ sub run {
                            || ( @siteIds && $file )
                            || ( @hosts && $file ))
     {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: undeploy', @_, '(add --help for help)' );
     }
     
     debug( 'Looking for site(s)' );

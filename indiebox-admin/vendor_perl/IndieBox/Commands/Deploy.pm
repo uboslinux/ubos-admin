@@ -53,7 +53,7 @@ sub run {
             'stdin'    => \$stdin );
 
     if( !$parseOk || @args || ( $file && $stdin ) || ( !$file && !$stdin )) {
-        fatal( 'Invalid command-line arguments, add --help for help' );
+        fatal( 'Invalid invocation: deploy', @_, '(add --help for help)' );
     }
 
     debug( 'Parsing site JSON and checking' );
