@@ -1,5 +1,6 @@
+#!/usr/bin/bash
 #
-# Installation scripts for indiebox-admin package. Just bridge to Perl.
+# Installation scripts for indiebox-admin package.
 #
 # This file is part of indiebox-admin.
 # (C) 2012-2014 Indie Computing Corp.
@@ -18,37 +19,19 @@
 # along with indiebox-admin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-## arg 1:  the new package version
-pre_install() {
-    # not used
-    true
-}
-
-## arg 1:  the new package version
-post_install() {
-    perl -MIndieBox::Installer -e "IndieBox::Installer::post_install( '$1' )"
-}
-
-## arg 1:  the new package version
-## arg 2:  the old package version
-pre_upgrade() {
-    # not used
-    true
-}
-
-## arg 1:  the new package version
-## arg 2:  the old package version
-post_upgrade() {
-    perl -MIndieBox::Installer -e "IndieBox::Installer::post_upgrade( '$1', '$2' )"
-}
-
 ## arg 1:  the old package version
 pre_remove() {
-    perl -MIndieBox::Installer -e "IndieBox::Installer::pre_remove( '$1' )"
-}
+    cat <<MSG;
 
-## arg 1:  the old package version
-post_remove() {
-    # not used
-    true
+Hey hacker,
+
+Sorry to see you go.
+Hope to see you again in the future.
+
+Regards,
+    Indie Box Project
+    http://indiebox.net/
+
+MSG
+
 }

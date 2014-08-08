@@ -36,15 +36,6 @@ my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 ## ---- STATIC METHODS ---- ##
 
 ##
-# Ensure that mysqld is running
-sub ensureRunning {
-    IndieBox::Utils::myexec( 'systemctl enable mysqld' );
-    IndieBox::Utils::myexec( 'systemctl start  mysqld &' ); # may be executed during systemd init, so background execution
-
-    1;
-}
-
-##
 # Ensure that the mysql installation on this host has a root password.
 sub ensureRootPassword {
     unless( -r $rootConfiguration ) {

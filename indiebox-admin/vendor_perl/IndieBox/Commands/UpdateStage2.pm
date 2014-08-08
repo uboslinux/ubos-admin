@@ -50,6 +50,8 @@ sub run {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
+    IndieBox::Utils::myexec( 'sudo systemctl daemon-reload' );
+    
     my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
 
     debug( 'Restoring configuration' );

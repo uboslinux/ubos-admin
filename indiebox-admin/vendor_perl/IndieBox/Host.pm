@@ -102,19 +102,6 @@ sub ensurePacmanConfig {
 }
 
 ##
-# Ensure that all essential services run on this Host.
-sub ensureEssentialServicesRunning {
-    trace( 'Host::ensureEssentialServicesRunning' );
-
-    if( @essentialServices ) {
-        IndieBox::Utils::myexec( 'systemctl enable'  . join( '', map { " '$_'" } @essentialServices ) );
-        IndieBox::Utils::myexec( 'systemctl restart' . join( '', map { " '$_'" } @essentialServices ) . ' &' );
-                # may be executed during systemd init, so background execution
-    }
-    1;
-}
-
-##
 # Obtain the host Configuration object.
 # return: Configuration object
 sub config {

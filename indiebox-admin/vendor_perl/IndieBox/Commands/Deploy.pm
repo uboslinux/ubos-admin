@@ -44,13 +44,15 @@ sub run {
 
     my $quiet   = 0;
     my $file    = undef;
+    my $stdin   = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'quiet'    => \$quiet,
-            'file=s'   => \$file );
+            'file=s'   => \$file,
+            'stdin'    => \$stdin );
 
-    if( !$parseOk || @args) {
+    if( !$parseOk || @args || ( $file && $stdin ) || ( !$file && !$stdin )) {
         fatal( 'Invalid command-line arguments, add --help for help' );
     }
 
@@ -65,14 +67,21 @@ sub run {
         $json = IndieBox::Utils::insertSlurpedFiles( $json, getcwd() );
     }
 
+use Data::Dumper;
+print( 'Read JSON: ' . Dumper( $json ) . "\n" );
+
     my $newSitesHash = {};
     if( ref( $json ) eq 'HASH' && %$json ) {
 		if( defined( $json->{siteid} )) {
             $json = [ $json ];
         } else {
-			$json = values %$json;
+			my @newJson = ();
+            map { push @newJson, $_ } values %$json;
+            $json = \@newJson;
 		}
     }
+print( 'is now JSON: ' . Dumper( $json ) . "\n" );
+
     if( ref( $json ) eq 'ARRAY' ) {
         if( !@$json ) {
             fatal( 'No site given' );
@@ -277,12 +286,13 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
+    [--quiet] [--siteid <siteid>] ... --stdin
 SSS
-    Interactively ask users questions about the site to be deployed.
-    Once dialog is complete, deploy a new site or update an existing
-    site, depending on user input. This includes setting up the
-    virtual host, installing and configuring all web applications for
-    the website.
+    Deploy or update one or more websites based on the Site JSON
+    information read from stdin. If one or more <siteid>s are given, ignore
+    all information contained in <site.json> other than sites with the
+    specified <siteid>s. This includes setting up the virtual host(s),
+    installing and configuring all web applications for the website(s).
 HHH
         <<SSS => <<HHH
     [--quiet] [--siteid <siteid>] ... --file <site.json>
