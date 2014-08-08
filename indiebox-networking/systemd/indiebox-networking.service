@@ -2,6 +2,8 @@
 Description=Set up Indie Box networking
 Wants=network.target
 Before=network.target
+Requires=indiebox-admin.service
+After=indiebox-admin.service
 
 [Service]
 Type=oneshot
