@@ -29,8 +29,6 @@ use IndieBox::Logging;
 use IndieBox::Utils;
 use Time::HiRes qw( gettimeofday );
 
-my $mainConfigFile    = '/etc/httpd/conf/httpd.conf';
-my $ourConfigFile     = '/etc/httpd/conf/httpd-indiebox.conf';
 my $modsAvailableDir  = '/etc/httpd/indiebox/mods-available';
 my $modsEnabledDir    = '/etc/httpd/indiebox/mods-enabled';
 my $phpModulesDir     = '/usr/lib/php/modules';
@@ -39,17 +37,6 @@ my $phpModulesConfDir = '/etc/php/conf.d';
 my $logFile  = '/var/log/httpd/error_log';
 
 my @minimumApacheModules = qw( alias authz_core authz_host cgi deflate dir env log_config mime mpm_prefork setenvif unixd ); # always need those
-
-##
-# Ensure that Apache is running.
-sub ensureRunning {
-    trace( 'Apache2::ensureRunning' );
-
-    IndieBox::Utils::myexec( 'systemctl enable httpd' );
-    IndieBox::Utils::myexec( 'systemctl restart httpd &' ); # may be executed during systemd init, so background execution
-
-    1;
-}
 
 ##
 # Reload configuration
@@ -90,7 +77,7 @@ sub _syncApacheCtl {
     my $lastPos = sysseek( FH, 0, SEEK_END );
     close( FH );
 
-    IndieBox::Utils::myexec( "systemctl $command httpd" );
+    IndieBox::Utils::myexec( "systemctl $command indiebox-httpd" );
     
     my( $seconds, $microseconds ) = gettimeofday;
     my $until = $seconds + 0.000001 * $microseconds + $max;
@@ -130,11 +117,6 @@ sub _syncApacheCtl {
 sub ensureConfigFiles {
     trace( 'Apache2::ensureConfigFiles' );
 
-    if( -e $ourConfigFile ) {
-        IndieBox::Utils::myexec( "cp -f '$ourConfigFile' '$mainConfigFile'" );
-    } else {
-        IndieBox::Logging::warn( 'Config file', $ourConfigFile, 'is missing' );
-    }
     activateApacheModules( @minimumApacheModules );
 
     # Make sure we have default SSL keys and a self-signed cert

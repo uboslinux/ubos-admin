@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #
-# Configure or reconfigure indiebox-admin upon boot.
+# Configure or reconfigure indiebox-admin when the indiebox-admin.service
+# is started.
 #
 # This file is part of indiebox-admin.
 # (C) 2012-2014 Indie Computing Corp.
@@ -22,21 +23,13 @@
 use strict;
 use warnings;
 
-use IndieBox::Apache2;
-use IndieBox::Databases::MySqlDriver;
 use IndieBox::Host;
 use IndieBox::ResourceManager;
-
+use IndieBox::Databases::MySqlDriver;
 
 IndieBox::Host::ensurePacmanConfig();
-
-IndieBox::Host::ensureEssentialServicesRunning();
-
-IndieBox::Databases::MySqlDriver::ensureRunning();
-IndieBox::Databases::MySqlDriver::ensureRootPassword();
 IndieBox::ResourceManager::initializeIfNeeded();
 
-IndieBox::Apache2::ensureConfigFiles();
-IndieBox::Apache2::ensureRunning();
+IndieBox::Databases::MySqlDriver::ensureRootPassword();
 
 1;

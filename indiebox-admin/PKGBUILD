@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.57
+pkgver=0.58
 pkgrel=1
 pkgdesc="Indie Box administration infrastructure and tools"
 arch=('any')
@@ -40,7 +40,7 @@ package() {
     install -m755 $startdir/cgi-bin/show-apps.pl $pkgdir/usr/share/indiebox/cgi-bin/
 
     mkdir -p $pkgdir/usr/share/$pkgname/bin
-    install -m755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
+    install -m755 $startdir/bin/{initialize,apachectl} $pkgdir/usr/share/$pkgname/bin/
     
     # (hopefully) temporary patch to Perl's Archive::Zip
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip
@@ -100,13 +100,17 @@ package() {
 # Tomcat
     mkdir -p -m 775 $pkgdir/etc/tomcat7
     mkdir -p $pkgdir/etc/tomcat7/indiebox/sites-apps
-    install -m640 $startdir/etc/tomcat7/server-indiebox.xml.tmpl $pkgdir/etc/tomcat7/
+    install -m644 $startdir/etc/tomcat7/server-indiebox.xml.tmpl $pkgdir/etc/tomcat7/
     mkdir -p -m 775 $pkgdir/var/lib/tomcat7
     mkdir -p $pkgdir/var/lib/tomcat7/sites
 
+# Mysql
+    mkdir -p -m 755 $pkgdir/etc/mysql
+    install -m644 $startdir/etc/mysql/mysql-indiebox.cnf $pkgdir/etc/mysql/
+
 # Systemd
     mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
-    install -m 644 $startdir/systemd/indiebox-admin.service $pkgdir/usr/lib/systemd/system/
+    install -m 644 $startdir/systemd/indiebox-*.service $pkgdir/usr/lib/systemd/system/
 
 # Other config files
     mkdir -p $pkgdir/etc/php/conf.d

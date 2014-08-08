@@ -1,7 +1,11 @@
 [Unit]
 Description=Configure or reconfigure indiebox-admin on startup
-Wants=network.target
-Before=network.target
+Wants=network.target cronie.service ntpd.service
+Requires=indiebox-mysqld.service indiebox-httpd.service
+# indiebox-admin wants to set a root password for mysql, so start mysqld first
+After=indiebox-mysqld.service
+# indiebox-admin wants to change the Apache config, so start Apache later
+Before=indiebox-httpd.service
 
 [Service]
 Type=oneshot
