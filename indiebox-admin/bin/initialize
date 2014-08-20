@@ -28,8 +28,6 @@ use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::ResourceManager;
 
-IndieBox::Host::ensurePacmanConfig();
-
 IndieBox::Databases::MySqlDriver::ensureRootPassword();
 
 IndieBox::ResourceManager::initializeIfNeeded();
