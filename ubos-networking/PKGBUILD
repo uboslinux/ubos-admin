@@ -1,0 +1,43 @@
+pkgname=$(basename $(pwd))
+pkgver=0.6
+pkgrel=1
+pkgdesc="Network management tools"
+arch=('any')
+url="http://ubos.net/"
+developer=$url
+maintainer=$url
+license=('GPL')
+depends=('ubos-admin')
+options=('!strip')
+
+package() {
+# Template files
+    mkdir -p -m755 $pkgdir/usr/share/$pkgname/tmpl
+    for f in $startdir/tmpl/*; do
+        install -m644 $f $pkgdir/usr/share/$pkgname/tmpl/
+    done
+
+# dnsmasq directory
+    mkdir -p -m755 $pkgdir/etc/dnsmasq.d
+
+# Code
+    for d in Commands Networking Networking/NetConfigs; do
+		mkdir -p -m755 $pkgdir/usr/lib/perl5/vendor_perl/UBOS/$d/
+		for f in $startdir/vendor_perl/UBOS/$d/*.pm; do
+			if [ -r "$f" ]; then
+				install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/$d/
+			fi
+		done
+	done
+    
+# Systemd
+    mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
+    install -m 644 $startdir/systemd/ubos-networking.service $pkgdir/usr/lib/systemd/system/
+
+    mkdir -p -m 755 $pkgdir/usr/share/$pkgname/bin
+    install -m 755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
+
+# Modprobe
+    mkdir -p -m 755 $pkgdir/etc/modprobe.d
+    install -m 644 $startdir/modprobe.d/ubos-networking.conf $pkgdir/etc/modprobe.d/
+}

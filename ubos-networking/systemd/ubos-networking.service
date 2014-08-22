@@ -1,0 +1,14 @@
+[Unit]
+Description=Set up UBOS networking
+Wants=network.target
+Before=network.target
+Requires=ubos-admin.service
+After=ubos-admin.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/share/ubos-networking/bin/initialize
+
+[Install]
+WantedBy=multi-user.target

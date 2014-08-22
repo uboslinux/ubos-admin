@@ -1,0 +1,30 @@
+pkgname=$(basename $(pwd))
+pkgver=0.1
+pkgrel=1
+pkgdesc="UBOS Perl utilities"
+arch=('any')
+url="http://ubos.net/"
+developer=$url
+maintainer=$url
+license=('GPL')
+depends=('perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' )
+backup=(
+    'etc/ubos/log-admin.conf'
+    'etc/ubos/log-user.conf'
+)
+options=('!strip')
+
+package() {
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/UBOS
+    for f in $startdir/vendor_perl/UBOS/*.pm; do
+        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/
+    done
+
+    # (hopefully) temporary patch to Perl's Archive::Zip
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip
+    install $startdir/vendor_perl/Archive/Zip/Member.pm $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip/
+
+# Config files
+    mkdir -p $pkgdir/etc/ubos
+    install -m644 $startdir/etc/ubos/log-{admin,user}.conf $pkgdir/etc/ubos/
+}

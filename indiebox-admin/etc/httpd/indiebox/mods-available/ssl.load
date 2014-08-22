@@ -1,3 +1,0 @@
-LoadModule ssl_module modules/mod_ssl.so
-
-Include /etc/httpd/indiebox/ssl.conf

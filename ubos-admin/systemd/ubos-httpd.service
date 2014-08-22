@@ -1,0 +1,16 @@
+[Unit]
+Description=Apache Web Server configured for UBOS
+After=network.target remote-fs.target nss-lookup.target
+Conflicts=httpd.service
+
+[Service]
+Type=forking
+PIDFile=/run/httpd/httpd.pid
+ExecStart=/usr/share/ubos-admin/bin/apachectl start
+ExecStop=/usr/share/ubos-admin/bin/apachectl graceful-stop
+ExecReload=/usr/share/ubos-admin/bin/apachectl graceful
+PrivateTmp=true
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target

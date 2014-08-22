@@ -1,0 +1,7 @@
+Description='Static ethernet connection'
+Interface=${networking.nic.name}
+Connection=ethernet
+IP=static
+Address=('${networking.nic.ip}/${networking.nic.slashn}')
+Gateway='${networking.gateway.ip}'
+DNS=('${networking.dns.ip}')
