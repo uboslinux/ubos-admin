@@ -141,6 +141,39 @@ sub packageName {
 }
 
 ##
+# Determine the user-friendly name
+# $locale: the locale
+# return: user-friendly name
+sub name {
+	my $self   = shift;
+	my $locale = shift;
+
+    return $self->_l10nInfo( 'name', $locale, $self->packageName );
+}
+
+##
+# Determine a user-friendly tagline
+# locale: the locale
+# return: user-friendly tagline, or undef
+sub tagline {
+	my $self   = shift;
+	my $locale = shift;
+	
+    return $self->_l10nInfo( 'tagline', $locale );
+}
+
+##
+# Determine a user-friendly description in HTML
+# locale: the locale
+# return: user-friendly description, or undef
+sub description {
+	my $self   = shift;
+	my $locale = shift;
+	
+    return $self->_l10nInfo( 'description', $locale );
+}
+
+##
 # Obtain this Installable's JSON
 # return: JSON
 sub installableJson {
@@ -205,6 +238,50 @@ sub needsRole {
 
     my $ret = $self->{json}->{roles}->{$role->name()};
     return $ret ? 1 : 0;
+}
+
+##
+# Helper method to find a localized attribute in the info section
+# $att: name of the attribute in the info section
+# $locale: the locale
+# $default: the default to return, if otherwise not found
+# return: value of the attribute
+sub _l10nInfo {
+	my $self    = shift;
+	my $att     = shift;
+	my $locale  = shift;
+	my $default = shift;
+	
+	if( defined( $self->{json}->{info} )) {
+		my $info = $self->{json}->{info};
+        my @keys = _localeToKeys( $locale );
+
+		foreach my $key ( @keys ) {
+			if( defined( $info->{$key}->{$att} )) {
+				return $info->{$key}->{$att};
+			}
+		}
+	}
+	return $default;
+}
+
+##
+# Helper method to split a locale string into keys to try in sequence
+# $locale: the locale string, e.g. en_US
+# return: array of keys to try, e.g. ( 'en_US', 'en', 'default' )
+sub _localeToKeys {
+    my $locale = shift;
+    
+    my @ret = ();
+    if( $locale ) {
+        push @ret, $locale;
+    
+        if( $locale =~ m!(.*)_(.*)! ) {
+            push @ret, $1;
+        }
+    }
+    push @ret, 'default';
+    return @ret;
 }
 
 # === Manifest checking routines from here ===

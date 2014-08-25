@@ -30,6 +30,7 @@ use UBOS::Site;
 my $siteId = $ENV{'SiteId'};
 my $site   = UBOS::Host::findSiteById( $siteId );
 my $q      = new CGI;
+my $locale = 'en_US'; # for now
 
 if( $site ) {
     my $hostName = $site->hostName;
@@ -64,28 +65,34 @@ HTML
         }
 
         foreach my $appConfig ( @$appConfigs ) {
-            my $appId       = $appConfig->app->packageName();
-            my $appName    = $appConfig->app->name();
-            my $appTagline = $appConfig->app->tagline();
+            my $appId      = $appConfig->app->packageName();
+            my $appName    = $appConfig->app->name( $locale );
+            my $appTagline = $appConfig->app->tagline( $locale );
             my $context    = $appConfig->context;
 
             if( defined( $context )) {
-                print <<HTML;
+                if( $appTagline ) {
+                    print <<HTML;
      <a class="appconfig" href="$context/" title="$appTagline">
 HTML
+                } else {
+                    print <<HTML;
+     <a class="appconfig" href="$context/">
+HTML
+                }
             }
             print <<HTML;
-     <div class="app">
-      <div class="icon" style="background-image: url(/_appicons/$appId/72x72.png)"></div>
-      <p class="name">$appName</p>
+      <div class="app">
+       <div class="icon" style="background-image: url(/_appicons/$appId/72x72.png)"></div>
+       <p class="name">$appName</p>
 HTML
             if( $showContext ) {
             print <<HTML;
-      <p class="context">$context</p>
+       <p class="context">$context</p>
 HTML
             }
             print <<HTML;
-     </div>
+      </div>
 HTML
             if( defined( $context )) {
                 print <<HTML;
