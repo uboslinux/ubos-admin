@@ -163,17 +163,6 @@ sub tagline {
 }
 
 ##
-# Determine a user-friendly description in HTML
-# locale: the locale
-# return: user-friendly description, or undef
-sub description {
-	my $self   = shift;
-	my $locale = shift;
-	
-    return $self->_l10nInfo( 'description', $locale );
-}
-
-##
 # Obtain this Installable's JSON
 # return: JSON
 sub installableJson {

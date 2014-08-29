@@ -166,7 +166,7 @@ sub run {
 
         $adminUserId     = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
         $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
-        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$' );
+        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$', undef, 1 );
         $adminEmail      = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
     }
 
@@ -295,15 +295,25 @@ JSON
 # Ask the user a question
 # $q: the question text
 # $dontTrim: if false, trim whitespace
+# $blank: if true, blank terminal echo
 sub ask {
     my $q        = shift;
     my $regex    = shift || '.?';
     my $dontTrim = shift || 0;
+    my $blank    = shift;
 
     my $ret;
     while( 1 ) {
         print $q;
+
+        if( $blank ) {
+            system('stty','-echo');
+        }
         $ret = <STDIN>;
+        if( $blank ) {
+            system('stty','echo');
+            print "\n";
+        }
         unless( $dontTrim ) {
             $ret =~ s!\s+$!!;
             $ret =~ s!^\s+!!;
