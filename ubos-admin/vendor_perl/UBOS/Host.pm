@@ -317,4 +317,12 @@ sub obtainDbDriver {
     return $ret;
 }
 
+##
+# Ensure that pacman has been initialized. This may generate a key pair, which
+# means it cannot be pre-installed; it also may take some time, depending on
+# how much entropy is available.
+sub ensurePacmanInit {
+    UBOS::Utils::myexec( "pacman-key --init" );
+}
+
 1;
