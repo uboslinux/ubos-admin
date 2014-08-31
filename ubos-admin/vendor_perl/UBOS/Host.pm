@@ -323,6 +323,7 @@ sub obtainDbDriver {
 # how much entropy is available.
 sub ensurePacmanInit {
     UBOS::Utils::myexec( "pacman-key --init" );
+    UBOS::Utils::myexec( "pacman-key --populate archlinux" );
 }
 
 1;
