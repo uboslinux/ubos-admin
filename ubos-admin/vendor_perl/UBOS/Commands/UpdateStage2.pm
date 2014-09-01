@@ -127,6 +127,8 @@ sub run {
     debug( 'Purging cache' );
     
     UBOS::Host::purgeCache( 1 );
+
+    return 1;
 }
 
 ##

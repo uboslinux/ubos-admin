@@ -143,6 +143,7 @@ sub run {
     } else {
         exec( "ubos-admin update-stage2" ) || fatal( "Failed to run ubos-admin update-stage2" );
     }
+    return 1;
 }
 
 ##
