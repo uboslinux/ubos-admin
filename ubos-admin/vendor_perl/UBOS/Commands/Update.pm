@@ -55,12 +55,14 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $quiet   = 0;
-    my $verbose = 0;
+    my $quiet        = 0;
+    my $verbose      = 0;
+    my @packageFiles = ();
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'quiet'   => \$quiet,
-            'verbose' => \$verbose );
+            'quiet'     => \$quiet,
+            'verbose'   => \$verbose,
+            'pkgFile=s' => \@packageFiles );
 
     if( !$parseOk || @args ) {
         fatal( 'Invalid invocation: update', @_, '(add --help for help)' );
@@ -129,7 +131,11 @@ sub run {
         print( "Updating code\n" );
     }
 
-    UBOS::Host::updateCode( $quiet );
+    if( @packageFiles ) {
+        UBOS::Host::installPackageFiles( \@packageFiles );
+    } else {
+        UBOS::Host::updateCode( $quiet );
+    }
 
     # Will look into the know spot and restore from there
     
@@ -151,10 +157,18 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
-    [--quiet]
+        <<SSS => <<HHH,
+    [--quiet][--verbose]
 SSS
     Update all code installed on this device. This will perform
+    package updates, configuration updates, database migrations
+    et al as needed.
+HHH
+        <<SSS => <<HHH
+    [--quiet][--verbose] --pkgfile <package-file>
+SSS
+    Update this device, but only install the provided package files
+    as if they were the only code that can be upgraded. This will perform
     package updates, configuration updates, database migrations
     et al as needed.
 HHH

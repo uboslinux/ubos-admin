@@ -262,6 +262,21 @@ sub installPackages {
 }
 
 ##
+# Install the provided package files
+# $packageFiles: List of package files
+# return: number of installed packages
+sub installPackageFiles {
+    my $packageFiles = shift;
+
+    my $err;
+    if( myexec( 'sudo pacman -U --noconfirm ' . join( ' ', @$packageFiles ), undef, undef, \$err )) {
+        error( 'Failed to install package file(s). Pacman says:', $err );
+        return 0;
+    }
+    return 0 + ( @$packageFiles );
+}
+
+##
 # Prevent interruptions of this script
 sub preventInterruptions {
     $SIG{'HUP'}  = 'IGNORE';
