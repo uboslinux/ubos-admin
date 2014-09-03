@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.1
+pkgver=0.2
 pkgrel=1
 pkgdesc="UBOS Perl utilities"
 arch=('any')
@@ -7,7 +7,7 @@ url="http://ubos.net/"
 developer=$url
 maintainer=$url
 license=('GPL')
-depends=('perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' )
+depends=('perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'perl-log-journald')
 backup=(
     'etc/ubos/log-admin.conf'
     'etc/ubos/log-user.conf'
