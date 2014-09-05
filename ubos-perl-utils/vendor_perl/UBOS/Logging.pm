@@ -90,6 +90,13 @@ sub debug {
 }
 
 ##
+# Is debug logging on?
+# return: 1 or 0
+sub isDebugActive {
+    return $log->is_debug();
+}
+
+##
 # Emit an info message.
 # @msg: the message or message components
 sub info {
@@ -101,6 +108,13 @@ sub info {
 }
 
 ##
+# Is info logging on?
+# return: 1 or 0
+sub isInfoActive {
+    return $log->is_info();
+}
+
+##
 # Emit a notice message.
 # @msg: the message or message components
 sub notice {
@@ -109,6 +123,13 @@ sub notice {
     if( $log->is_notice()) {
         $log->notice( _constructMsg( @msg ));
     }
+}
+
+##
+# Is notice logging on?
+# return: 1 or 0
+sub isNoticeActive {
+    return $log->is_notice();
 }
 
 ##
@@ -124,6 +145,14 @@ sub warning {
 }
 
 ##
+# Is warning logging on?
+# return: 1 or 0
+sub isWarningActive {
+    return $log->is_warn();
+}
+
+
+##
 # Emit an error message.
 # @msg: the message or message components
 sub error {
@@ -132,6 +161,13 @@ sub error {
     if( $log->is_error()) {
         $log->error( _constructMsg( @msg ));
     }
+}
+
+##
+# Is error logging on?
+# return: 1 or 0
+sub isErrorActive {
+    return $log->is_error();
 }
 
 ##
@@ -147,6 +183,13 @@ sub fatal {
     }
 
     exit 1;
+}
+
+##
+# Is fatal logging on?
+# return: 1 or 0
+sub isFatalActive {
+    return $log->is_fatal();
 }
 
 ##

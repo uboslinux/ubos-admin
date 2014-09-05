@@ -136,7 +136,7 @@ sub run {
     if( @packageFiles ) {
         UBOS::Host::installPackageFiles( \@packageFiles );
     } else {
-        UBOS::Host::updateCode( $quiet );
+        UBOS::Host::updateCode();
     }
 
     # Will look into the know spot and restore from there
@@ -147,7 +147,7 @@ sub run {
     for( my $i=0 ; $i<$verbose ; ++$i ) {
         $stage2Cmd .= ' -v';
     }
-    if( $stage2LogConfigFile ) [
+    if( $stage2LogConfigFile ) {
         $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile );
     }
 

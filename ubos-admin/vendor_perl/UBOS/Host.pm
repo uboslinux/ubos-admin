@@ -205,12 +205,9 @@ sub executeTriggers {
 ##
 # Update all the code currently installed on this host.
 sub updateCode {
-    my $quiet = shift;
-
-    debug( 'Host::updateCode' );
 
     my $cmd = 'pacman -Syu --noconfirm';
-    if( $quiet ) {
+    unless( UBOS::Logging::isDebugActive() ) {
         $cmd .= ' > /dev/null';
     }
     myexec( $cmd );
@@ -219,12 +216,9 @@ sub updateCode {
 ##
 # Clean package cache
 sub purgeCache {
-    my $quiet = shift;
-
-    debug( 'Host::purgeCache' );
 
     my $cmd = 'pacman -Sc --noconfirm';
-    if( $quiet ) {
+    unless( UBOS::Logging::isDebugActive() ) {
         $cmd .= ' > /dev/null';
     }
     myexec( $cmd );
