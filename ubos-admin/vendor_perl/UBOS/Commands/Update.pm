@@ -148,7 +148,7 @@ sub run {
         $stage2Cmd .= ' -v';
     }
     if( $stage2LogConfigFile ) {
-        $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile );
+        $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
     }
 
     exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
