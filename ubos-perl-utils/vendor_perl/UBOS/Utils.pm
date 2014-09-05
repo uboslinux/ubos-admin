@@ -24,13 +24,13 @@ use warnings;
 
 package UBOS::Utils;
 
-use UBOS::Logging;
 use Exporter qw( import myexec );
 use File::Temp;
 use JSON;
 use Lchown;
 use POSIX;
 use Time::Local qw( timegm );
+use UBOS::Logging;
 
 our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
                   writeJsonToFile writeJsonToStdout writeJsonToString
@@ -44,7 +44,7 @@ my $jsonParser = JSON->new->relaxed->pretty->utf8();
 sub readJsonFromFile {
     my $file = shift;
 
-    trace( 'readJsonFromFile(', $file, ')' );
+    debug( 'readJsonFromFile(', $file, ')' );
 
     my $fileContent = slurpFile( $file );
 
@@ -60,7 +60,7 @@ sub readJsonFromFile {
 # Read and parse JSON from STDIN
 # return: JSON object
 sub readJsonFromStdin {
-    trace( 'readJsonFromStdin()' );
+    debug( 'readJsonFromStdin()' );
 
     local $/;
     my $fileContent = <STDIN>;
@@ -80,7 +80,7 @@ sub readJsonFromStdin {
 sub readJsonFromString {
     my $string = shift;
 
-    trace( 'readJsonFromString()' );
+    debug( 'readJsonFromString()' );
 
     my $json;
     eval {
@@ -105,7 +105,7 @@ sub writeJsonToFile {
     my $uname    = shift;
     my $gname    = shift;
 
-    trace( 'writeJsonToFile(', $fileName, ')' );
+    debug( 'writeJsonToFile(', $fileName, ')' );
 
     saveFile( $fileName, $jsonParser->encode( $json ), $mask, $uname, $gname );
 }
@@ -116,7 +116,7 @@ sub writeJsonToFile {
 sub writeJsonToStdout {
     my $json = shift;
 
-    trace( 'writeJsonToStdout()' );
+    debug( 'writeJsonToStdout()' );
 
     print $jsonParser->encode( $json );
 }
@@ -127,7 +127,7 @@ sub writeJsonToStdout {
 sub writeJsonToString {
     my $json = shift;
 
-    trace( 'writeJsonToString()' );
+    debug( 'writeJsonToString()' );
 
     return $jsonParser->encode( $json );
 }
@@ -227,7 +227,7 @@ sub myexec {
 sub slurpFile {
     my $filename = shift;
 
-    trace( 'slurpFile(', $filename, ')' );
+    debug( 'slurpFile(', $filename, ')' );
 
     local $/;
     open( my $fh, '<', $filename ) || fatal( 'Cannot read file', $filename );
@@ -258,7 +258,8 @@ sub saveFile {
     unless( defined( $mask )) {
         $mask = 0644;
     }
-    trace( 'saveFile(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' );
+    # more efficient if debug isn't on
+    debug( sub { ( 'saveFile(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
 
     unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
         error( "Could not write to file $filename:", $! );
@@ -268,8 +269,7 @@ sub saveFile {
     if( defined( $content )) {
         print F $content;
     } else {
-        # This is usually a programming error
-        UBOS::Logging::warn( 'Undefined content when attempting to save file', $filename );
+        warning( 'Undefined content (usually programming error) when attempting to save file', $filename );
     }
     close F;
 
@@ -289,7 +289,7 @@ sub saveFile {
 sub deleteFile {
     my @files = @_;
 
-    trace( 'deleteFile(', join( ", ", @files ), ')' );
+    debug( 'deleteFile(', @files, ')' );
 
     my $ret = 1;
     foreach my $f ( @files ) {
@@ -327,7 +327,7 @@ sub mkdir {
     }
 
     if( -d $filename ) {
-        UBOS::Logging::warn( 'Directory exists already', $filename );
+        warning( 'Directory exists already', $filename );
         return 1;
     }
     if( -e $filename ) {
@@ -335,7 +335,7 @@ sub mkdir {
         return 0;
     }
 
-    trace( 'Creating directory', $filename );
+    debug( 'Creating directory', $filename );
 
     my $ret = CORE::mkdir $filename;
     unless( $ret ) {
@@ -363,14 +363,15 @@ sub symlink {
     my $uid     = getUid( shift );
     my $gid     = getGid( shift );
 
-    trace( 'Symlink', $oldfile, $newfile );
+    debug( 'Symlink', $oldfile, $newfile );
 
     my $ret = symlink $oldfile, $newfile;
-    unless( $ret ) {
+    if( $ret ) {
+        if( $uid >= 0 || $gid >= 0 ) {
+            lchown $uid, $gid, $newfile;
+        }
+    } else {
         error( 'Failed to symlink', $oldfile, $newfile );
-    }
-    if( $uid >= 0 || $gid >= 0 ) {
-        lchown $uid, $gid, $newfile;
     }
 
     return $ret;
@@ -382,7 +383,7 @@ sub symlink {
 sub rmdir {
     my @dirs = @_;
 
-    trace( 'Delete directories:', join( ', ', @dirs ));
+    debug( 'Delete directories:', @dirs );
 
     my $ret = 1;
     foreach my $d ( @dirs ) {
@@ -392,10 +393,10 @@ sub rmdir {
                 $ret = 0;
             }
         } elsif( -e $d ) {
-            error( "Cannot delete directory. File exists but isn't a directory", $d );
+            error( 'Cannot delete directory. File exists but isn\'t a directory:', $d );
             $ret = 0;
         } else {
-            UBOS::Logging::warn( 'Cannot delete directory, does not exist', $d );
+            warning( 'Cannot delete directory, does not exist:', $d );
             next;
         }
     }
@@ -410,7 +411,7 @@ sub deleteRecursively {
 
     my $ret = 1;
     if( @files ) {
-        trace( 'Recursively delete files:', join( ', ', @files ));
+        debug( 'Recursively delete files:', @files );
 
         myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ));
     }
@@ -424,8 +425,6 @@ sub deleteRecursively {
 sub copyRecursively {
     my $from = shift;
     my $to   = shift;
-
-    debug( 'copyRecursively:', $from, $to );
 
     myexec( "cp -d -r -p '$from' '$to'" );
 
@@ -447,8 +446,8 @@ sub readFilesInDirectory {
 
     while( my $file = readdir( DIR )) {
         if( $file =~ m/$pattern/ ) {
-            my $fileName    = "$dir/$file";
-            my $content     = UBOS::Utils::slurpFile( $fileName );
+            my $fileName = "$dir/$file";
+            my $content  = UBOS::Utils::slurpFile( $fileName );
 
             $ret->{$file} = $content;
         }
@@ -532,8 +531,8 @@ sub findModulesInDirectory {
 
     while( my $file = readdir( DIR )) {
         if( $file =~ m/$pattern/ ) {
-            my $fileName    = "$dir/$file";
-            my $content     = UBOS::Utils::slurpFile( $fileName );
+            my $fileName = "$dir/$file";
+            my $content  = UBOS::Utils::slurpFile( $fileName );
 
             if( $content =~ m!package\s+([a-zA-Z0-9:_]+)\s*;! ) {
                 my $packageName = $1;
@@ -706,7 +705,7 @@ sub string2time {
     if( $s =~ m!^(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$! ) {
         $ret = timegm( $6, $5, $4, $3, $2-1, $1-1900 );
     } else {
-        fatal( "Cannot parse time string $s" );
+        error( "Cannot parse time string $s" );
     }
 
     return $ret;
@@ -738,7 +737,7 @@ sub invokeMethod {
         my $operator        = $2;
         my $shortMethodName = $3;
 
-        eval "require $packageName" || UBOS::Logging::warn( "Cannot read $packageName: $@" );
+        eval "require $packageName" || warning( "Cannot read $packageName:", $@ );
 
         if( $operator eq '::' ) {
             $ret = &{\&{$methodName}}( @args );

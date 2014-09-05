@@ -121,7 +121,7 @@ sub siteDeployed {
     my $siteId   = $site->siteId;
     my $siteJson = $site->siteJson;
 
-    trace( 'Host::siteDeployed', $siteId );
+    debug( 'Host::siteDeployed', $siteId );
 
     UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
 }
@@ -132,9 +132,9 @@ sub siteDeployed {
 sub siteUndeployed {
     my $site = shift;
 
-    my $siteId   = $site->siteId;
+    my $siteId = $site->siteId;
 
-    trace( 'Host::siteUndeployed', $siteId );
+    debug( 'Host::siteUndeployed', $siteId );
 
     UBOS::Utils::deleteFile( "$SITES_DIR/$siteId.json" );
 }
@@ -176,8 +176,6 @@ sub rolesOnHostInSequence {
 sub executeTriggers {
     my $triggers = shift;
 
-    trace( 'Host::executeTriggers' );
-
     my @triggerList;
     if( ref( $triggers ) eq 'HASH' ) {
         @triggerList = keys %$triggers;
@@ -186,6 +184,9 @@ sub executeTriggers {
     } else {
         fatal( 'Unexpected type:', $triggers );
     }
+
+    debug( 'Host::executeTriggers:', @triggerList );
+
     foreach my $trigger ( @triggerList ) {
         if( 'httpd-reload' eq $trigger ) {
             UBOS::Apache2::reload();
@@ -196,7 +197,7 @@ sub executeTriggers {
         } elsif( 'tomcat7-restart' eq $trigger ) {
             UBOS::Tomcat7::restart();
         } else {
-            UBOS::Logging::warn( 'Unknown trigger:', $trigger );
+            warning( 'Unknown trigger:', $trigger );
         }
     }
 }
@@ -206,7 +207,7 @@ sub executeTriggers {
 sub updateCode {
     my $quiet = shift;
 
-    trace( 'Host::updateCode' );
+    debug( 'Host::updateCode' );
 
     my $cmd = 'pacman -Syu --noconfirm';
     if( $quiet ) {
@@ -220,7 +221,7 @@ sub updateCode {
 sub purgeCache {
     my $quiet = shift;
 
-    trace( 'Host::purgeCache' );
+    debug( 'Host::purgeCache' );
 
     my $cmd = 'pacman -Sc --noconfirm';
     if( $quiet ) {
@@ -249,8 +250,6 @@ sub installPackages {
 
     # only install what isn't installed yet
     my @filteredPackageList = grep { myexec( "pacman -Q $_ > /dev/null 2>&1" ) } @packageList;
-
-    trace( 'Host::installPackages', @filteredPackageList );
 
     if( @filteredPackageList ) {
         my $err;

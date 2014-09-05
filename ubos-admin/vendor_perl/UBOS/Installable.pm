@@ -283,7 +283,7 @@ sub checkManifest {
 	my $self = shift;
 	my $type = shift;
 
-    trace( 'Checking manifest for', $self->packageName );
+    debug( 'Checking manifest for', $self->packageName );
 
     $self->checkManifestStructure();
 

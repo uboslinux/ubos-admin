@@ -6,9 +6,11 @@ Conflicts=httpd.service
 [Service]
 Type=forking
 PIDFile=/run/httpd/httpd.pid
-ExecStart=/usr/share/ubos-admin/bin/apachectl start
-ExecStop=/usr/share/ubos-admin/bin/apachectl graceful-stop
-ExecReload=/usr/share/ubos-admin/bin/apachectl graceful
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-httpd
+ExecStart=/usr/share/ubos-admin/bin/ubos-apachectl start
+ExecStop=/usr/share/ubos-admin/bin/ubos-apachectl graceful-stop
+ExecReload=/usr/share/ubos-admin/bin/ubos-apachectl graceful
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-http
 PrivateTmp=true
 LimitNOFILE=infinity
 

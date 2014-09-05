@@ -42,20 +42,27 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my @siteIds = ();
-    my @hosts   = ();
-    my $file    = undef;
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my @siteIds       = ();
+    my @hosts         = ();
+    my $file          = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'siteid=s' => \@siteIds,
-            'host=s'   => \@hosts,
-            'file=s'   => \$file );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'siteid=s'    => \@siteIds,
+            'host=s'      => \@hosts,
+            'file=s'      => \$file );
+
+    UBOS::Logging::initialize( 'ubos-admin', 'undeploy', $verbose, $logConfigFile );
 
     if( !$parseOk || @args || ( !@siteIds && !@hosts && !$file )
                            || ( @siteIds && @hosts )
                            || ( @siteIds && $file )
-                           || ( @hosts && $file ))
+                           || ( @hosts && $file )
+                           || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation: undeploy', @_, '(add --help for help)' );
     }
@@ -148,18 +155,18 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    --siteid <siteid> [--siteid <siteid>]...
+    [--verbose | --logConfig <file>] --siteid <siteid> [--siteid <siteid>]...
 SSS
     Undeploy one or more previously deployed site(s) by specifying their site id.
 HHH
         <<SSS => <<HHH,
-    --host <hostname> [--host <hostname>]...
+    [--verbose | --logConfig <file>] --host <hostname> [--host <hostname>]...
 SSS
     Undeploy one or more previously deployed site(s) by specifying their hostname.
     This is equivalent to undeploying the site ids, but may be more convenient.
 HHH
         <<SSS => <<HHH
-    --file <site.json>
+    [--verbose | --logConfig <file>]--file <site.json>
 SSS
     Undeploy one or more previously deployed site(s) whose site JSON
     file is given. This is equivalent to undeploying the site ids of the

@@ -41,8 +41,6 @@ my @minimumApacheModules = qw( alias authz_core authz_host cgi deflate dir env l
 ##
 # Reload configuration
 sub reload {
-    trace( 'Apache2::reload' );
-
     _syncApacheCtl( 'reload' );
 
     1;
@@ -51,8 +49,6 @@ sub reload {
 ##
 # Restart configuration
 sub restart {
-    trace( 'Apache2::restart' );
-
     _syncApacheCtl( 'restart' );
 
     1;
@@ -73,7 +69,10 @@ sub _syncApacheCtl {
     my $max     = shift || 15;
     my $poll    = shift || 0.2;
 
-    open( FH, '<', $logFile ) || fatal( 'Cannot open', $logFile );
+    unless( open( FH, '<', $logFile )) {
+        error( 'Cannot open', $logFile );
+        return;
+    }
     my $lastPos = sysseek( FH, 0, SEEK_END );
     close( FH );
 
@@ -85,7 +84,10 @@ sub _syncApacheCtl {
     while( 1 ) {
         select( undef, undef, undef, $poll ); # apparently a tricky way of sleeping for $poll seconds that works with fractions        
 
-        open( FH, '<', $logFile ) || fatal( 'Cannot open', $logFile );
+        unless( open( FH, '<', $logFile )) {
+            error( 'Cannot open', $logFile );
+            return;
+        }
         my $pos = sysseek( FH, 0, SEEK_END );
         
         my $written = '';
@@ -106,7 +108,7 @@ sub _syncApacheCtl {
         }
         
         if( $delta >= $max ) {
-            UBOS::Logging::warn( 'Apache command', $command, 'not finished within', $max, 'seconds' );
+            warning( 'Apache command', $command, 'not finished within', $max, 'seconds' );
             return 1;
         }
     }
@@ -115,7 +117,7 @@ sub _syncApacheCtl {
 ##
 # Make the changes to Apache configuration files are in place that are needed by UBOS.
 sub ensureConfigFiles {
-    trace( 'Apache2::ensureConfigFiles' );
+    debug( 'Apache2::ensureConfigFiles' );
 
     activateApacheModules( @minimumApacheModules );
 
@@ -154,16 +156,15 @@ sub activateApacheModules {
     my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$modsEnabledDir/$module.load" ) {
-            debug( 'Apache2 module activated already:', $module );
             next;
         }
         unless( -e "$modsAvailableDir/$module.load" ) {
-            UBOS::Logging::warn( 'Cannot find Apache2 module, not activating:', $module );
+            warning( 'Cannot find Apache2 module, not activating:', $module );
             next;
         }
         debug( 'Activating Apache2 module:', $module );
 
-        UBOS::Utils::myexec( "ln -s '$modsAvailableDir/$module.load' '$modsEnabledDir/$module.load'" );
+        UBOS::Utils::symlink( "$modsAvailableDir/$module.load", "$modsEnabledDir/$module.load" );
         ++$ret;
     }
 
@@ -179,11 +180,10 @@ sub activatePhpModules {
     my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$phpModulesConfDir/$module.ini" ) {
-            debug( 'PHP module activated already:', $module );
             next;
         }
         unless( -e "$phpModulesDir/$module.so" ) {
-            UBOS::Logging::warn( 'Cannot find PHP module, not activating:', $module );
+            warning( 'Cannot find PHP module, not activating:', $module );
             next;
         }
         debug( 'Activating PHP module:', $module );

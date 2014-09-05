@@ -29,6 +29,7 @@ package UBOS::Commands::Update;
 
 use Cwd;
 use File::Basename;
+use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::BackupManagers::ZipFileBackupManager;
 use UBOS::Host;
@@ -41,7 +42,7 @@ use UBOS::Utils;
 # Do not write them into /tmp or such, because we still want to be able to do
 # UpdateStage2 even after reboot
 
-our $updateStatusDir = '/var/lib/ubos/backups/admin';
+our $updateStatusDir    = '/var/lib/ubos/backups/admin';
 our $updateStatusPrefix = 'update.';
 our $updateStatusSuffix = '.status';
 
@@ -55,17 +56,27 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $quiet        = 0;
-    my $verbose      = 0;
-    my @packageFiles = ();
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my @packageFiles  = ();
+
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'quiet'     => \$quiet,
-            'verbose'   => \$verbose,
-            'pkgFile=s' => \@packageFiles );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'pkgFile=s'   => \@packageFiles );
 
-    if( !$parseOk || @args ) {
+    UBOS::Logging::initialize( 'ubos-admin', 'update', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: update', @_, '(add --help for help)' );
+    }
+
+    # Need to keep a copy of the logConfigFile, new package may not have it any more
+    my $stage2LogConfigFile;
+    if( $logConfigFile ) {
+         my $tmp = File::Temp->new( UNLINK => 0, SUFFIX => '.conf' );
+         $stage2LogConfigFile = $tmp->filename;
     }
 
     my $ts         = UBOS::Host::config->get( 'now.tstamp' );
@@ -91,10 +102,7 @@ sub run {
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
 
-    debug( 'Suspending sites' );
-    if( $verbose ) {
-        print( "Suspending sites\n" );
-    }
+    info( 'Suspending sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( values %$oldSites ) {
@@ -102,7 +110,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    debug( 'Backing up and undeploying' );
+    info( 'Backing up and undeploying' );
     
     my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
 
@@ -114,10 +122,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
-    debug( 'Preserving current configuration' );
-    if( $verbose ) {
-        print( "Preserving current configuration\n" );
-    }
+    info( 'Preserving current configuration' );
 
     my $statusJson = {};
     while( my( $siteId, $backup ) = each %$adminBackups ) {
@@ -126,10 +131,7 @@ sub run {
 
     UBOS::Utils::writeJsonToFile( $statusFile, $statusJson, '0600' );
 
-    debug( 'Updating code' );
-    if( $verbose ) {
-        print( "Updating code\n" );
-    }
+    info( 'Updating code' );
 
     if( @packageFiles ) {
         UBOS::Host::installPackageFiles( \@packageFiles );
@@ -140,15 +142,17 @@ sub run {
     # Will look into the know spot and restore from there
     
     debug( 'Handing over to update-stage2' );
-    if( $verbose ) {
-        print( "Handing over to update-stage2\n" );
+
+    my $stage2Cmd = 'ubos-admin update-stage2';
+    for( my $i=0 ; $i<$verbose ; ++$i ) {
+        $stage2Cmd .= ' -v';
+    }
+    if( $stage2LogConfigFile ) [
+        $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile );
     }
 
-    if( $verbose ) {
-        exec( "ubos-admin update-stage2 --verbose" ) || fatal( "Failed to run ubos-admin update-stage2" );
-    } else {
-        exec( "ubos-admin update-stage2" ) || fatal( "Failed to run ubos-admin update-stage2" );
-    }
+    exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
+
     return 1;
 }
 
@@ -158,14 +162,14 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--quiet][--verbose]
+    [--verbose | --logConfig <file>]
 SSS
     Update all code installed on this device. This will perform
     package updates, configuration updates, database migrations
     et al as needed.
 HHH
         <<SSS => <<HHH
-    [--quiet][--verbose] --pkgfile <package-file>
+    [--verbose | --logConfig <file>] --pkgfile <package-file>
 SSS
     Update this device, but only install the provided package files
     as if they were the only code that can be upgraded. This will perform

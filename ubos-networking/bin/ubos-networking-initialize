@@ -1,37 +1,33 @@
 #!/usr/bin/perl
 #
-# Configure or reconfigure ubos-admin when the ubos-admin.service
+# Configure or reconfigure ubos-networking when the ubos-networking.service
 # is started.
 #
-# This file is part of ubos-admin.
+# This file is part of ubos-networking.
 # (C) 2012-2014 Indie Computing Corp.
 #
-# ubos-admin is free software: you can redistribute it and/or modify
+# ubos-networking is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# ubos-admin is distributed in the hope that it will be useful,
+# ubos-networking is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with ubos-admin.  If not, see <http://www.gnu.org/licenses/>.
+# along with ubos-networking.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 use strict;
 use warnings;
 
-use UBOS::Databases::MySqlDriver;
-use UBOS::Host;
 use UBOS::Logging;
-use UBOS::ResourceManager;
+use UBOS::Networking::NetConfigUtils;
 
-UBOS::Host::ensurePacmanInit();
+UBOS::Logging::initialize( 'ubos-networking', 'service-start', 0, '/etc/ubos/log-system.conf' );
 
-UBOS::Databases::MySqlDriver::ensureRootPassword();
-
-UBOS::ResourceManager::initializeIfNeeded();
+UBOS::Networking::NetConfigUtils::initializeIfNeeded();
 
 1;

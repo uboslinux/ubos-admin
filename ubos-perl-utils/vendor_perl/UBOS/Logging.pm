@@ -24,81 +24,58 @@ use warnings;
 
 package UBOS::Logging;
 
+use Cwd 'abs_path';
 use Exporter qw( import );
 use Log::Log4perl qw( :easy );
 use Log::Log4perl::Level;
 
-our @EXPORT = qw( trace debug info warn error fatal );
+our @EXPORT = qw( debug info notice warning error fatal );
 my $log;
 
+# Initialize with something in case there's an error before logging is initialized
 BEGIN {
     unless( Log::Log4perl::initialized ) {
-        my $confFile;
-        if( $> ) { # we love perl -- this is non-root
-            $confFile = '/etc/ubos/log-user.conf';
+        Log::Log4perl::Logger::create_custom_level( "NOTICE", "WARN", 2, 2 );
 
-        } else { # user is root
-            $confFile = '/etc/ubos/log-admin.conf';
-        }
-
-        if( -r $confFile ) {
-            Log::Log4perl->init( $confFile );
-
-        } else {
-            my $config = q(
+        my $config = q(
 log4perl.rootLogger=WARN,CONSOLE
 
 log4perl.appender.CONSOLE=Log::Log4perl::Appender::Screen
 log4perl.appender.CONSOLE.stderr=1
 log4perl.appender.CONSOLE.layout=PatternLayout
 log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
-log4perl.appender.CONSOLE.Threshold=WARN
 );
-            Log::Log4perl->init( \$config );
+        Log::Log4perl->init( \$config );
+        $log = Log::Log4perl->get_logger( $0);
+    }
+}
+
+##
+# Invoked at the beginning of a script, this initializes logging.
+sub initialize {
+    my $moduleName  = shift;
+    my $scriptName  = shift || $moduleName;
+    my $verbosity   = shift || 0;
+    my $logConfFile = shift;
+
+    if( $verbosity ) {
+        if( $logConfFile ) {
+            fatal( 'Specify --verbose or --logConfFile, not both' );
         }
+        $logConfFile = "/etc/ubos/log-default-v$verbosity.conf";
+
+    } elsif( !$logConfFile ) {
+        $logConfFile = '/etc/ubos/log-default.conf';
     }
 
-    $log = Log::Log4perl->get_logger( __FILE__ );
-    $log->trace( 'Initialized log4perl' );
-}
-
-##
-# Avoid console output.
-sub setQuiet {
-    my $consoleAppender = Log::Log4perl->appenders()->{'CONSOLE'};
-
-    if( $consoleAppender ) {
-        $consoleAppender->threshold( $ERROR );
+    unless( -r $logConfFile ) {
+        fatal( 'Logging configuration file not found:', $logConfFile );
     }
-}
 
-##
-# Verbose output
-sub setVerbose {
-    my $level = shift || 1;
+    Log::Log4perl->init( $logConfFile );
 
-    my $consoleAppender = Log::Log4perl->appenders()->{'CONSOLE'};
-
-    if( $consoleAppender ) {
-        if( $level >= 3 ) {
-            $consoleAppender->threshold( $TRACE );
-        } elsif( $level >= 2 ) {
-            $consoleAppender->threshold( $DEBUG );
-        } else {
-            $consoleAppender->threshold( $INFO );
-        }
-    }
-}
-    
-##
-# Emit a trace message.
-# @msg: the message or message components
-sub trace {
-    my @msg = @_;
-
-    if( $log->is_trace()) {
-        $log->trace( join( ' ', @msg ));
-    }
+    Log::Log4perl::MDC->put( 'SYSLOG_IDENTIFIER', $moduleName );
+    $log = Log::Log4perl->get_logger( $scriptName );
 }
 
 ##
@@ -108,7 +85,7 @@ sub debug {
     my @msg = @_;
 
     if( $log->is_debug()) {
-        $log->debug( join( ' ', @msg ));
+        $log->debug( _constructMsg( @msg ));
     }
 }
 
@@ -119,18 +96,30 @@ sub info {
     my @msg = @_;
 
     if( $log->is_info()) {
-        $log->info( join( ' ', @msg ));
+        $log->info( _constructMsg( @msg ));
     }
 }
 
 ##
-# Emit a warning message.
+# Emit a notice message.
 # @msg: the message or message components
-sub warn {
+sub notice {
+    my @msg = @_;
+
+    if( $log->is_notice()) {
+        $log->notice( _constructMsg( @msg ));
+    }
+}
+
+##
+# Emit a warning message. This is called 'warning' instead of 'warn'
+# so it won't conflict with Perl's built-in 'warn'.
+# @msg: the message or message components
+sub warning {
     my @msg = @_;
 
     if( $log->is_warn()) {
-        $log->warn( join( ' ', @msg ));
+        $log->warn( _constructMsg( @msg ));
     }
 }
 
@@ -141,7 +130,7 @@ sub error {
     my @msg = @_;
 
     if( $log->is_error()) {
-        $log->error( join( ' ', @msg ));
+        $log->error( _constructMsg( @msg ));
     }
 }
 
@@ -153,11 +142,24 @@ sub fatal {
 
 	if( @msg ) {
 		if( $log->is_fatal()) {
-			$log->fatal( join( ' ', @msg ));
+			$log->fatal( _constructMsg( @msg ));
 		}
     }
 
     exit 1;
+}
+
+##
+# Construct a message from these arguments.
+# @msg: the message or message components
+# return: string message
+sub _constructMsg {
+    my @args = @_;
+
+    my @args2 = map { my $a = $_; ref( $a ) eq 'CODE' ? $a->() : $a; } @args;
+    
+    my $ret = join( ' ', @args2 );
+    return $ret;
 }
 
 1;

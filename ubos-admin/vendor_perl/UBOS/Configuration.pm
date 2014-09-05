@@ -84,11 +84,6 @@ sub get {
             }
         }
     }
-#    if( defined( $ret )) {
-#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::get( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> ", $ret, "\n" );
-#    } else {
-#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::get( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> <undef>\n" );
-#    }
     return $ret;
 }
 
@@ -123,8 +118,6 @@ sub getResolve {
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
-#    trace( ( '  ' x ( 16-$remainingDepth)), "Attempting to Configuration::getResolve( ", $self->{name}, ", ", $name, " )\n" );
-
     my $func = undef;
     if( $name =~ m!([^\s]+)\s*\(\s*([^\s]+)\s*\)! ) {
         $func = $1;
@@ -153,11 +146,6 @@ sub getResolve {
         $ret = '${' . $name . '}';
     }
 
-#    if( defined( $ret )) {
-#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolve( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> ", $ret, "\n" );
-#    } else {
-#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolve( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> <undef>\n" );
-#    }
     return $ret;
 }
 
@@ -175,8 +163,6 @@ sub getResolveOrNull {
     my $default        = shift;
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
-
-#    trace( ( '  ' x ( 16-$remainingDepth)), "Attempting to Configuration::getResolveOrNull( ", $self->{name}, ", ", $name, " )\n" );
 
     my $func = undef;
     if( $name =~ m!([^\s]+)\s*\(\s*([^\s]+)\s*\)! ) {
@@ -205,11 +191,6 @@ sub getResolveOrNull {
     } else {
         $ret = undef;
     }
-#    if( defined( $ret )) {
-#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolveOrNull( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> ", $ret, "\n" );
-#    } else {
-#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolveOrNull( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> <undef>\n" );
-#    }
     return $ret;
 }
 
@@ -243,8 +224,6 @@ sub replaceVariables {
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
-#    trace( ( '  ' x ( 16-$remainingDepth)), "Attempting to Configuration::replaceVariables( ", $self->dump(), " )" );
-
     my $ret;
     if( ref( $value ) eq 'HASH' ) {
         $ret = {};
@@ -267,7 +246,6 @@ sub replaceVariables {
     } else {
         $ret = undef;
     }
-#    trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::replaceVariables( ", $self->{name}, ', ', $unresolvedOk, ', ', $remainingDepth, " )" );
 
     return $ret;
 }

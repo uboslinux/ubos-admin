@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.2
+pkgver=0.3
 pkgrel=1
 pkgdesc="UBOS Perl utilities"
 arch=('any')
@@ -9,8 +9,10 @@ maintainer=$url
 license=('GPL')
 depends=('perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'perl-log-journald')
 backup=(
-    'etc/ubos/log-admin.conf'
-    'etc/ubos/log-user.conf'
+    'etc/ubos/log-default.conf'
+    'etc/ubos/log-default-v1.conf'
+    'etc/ubos/log-default-v2.conf'
+    'etc/ubos/log-system.conf'
 )
 options=('!strip')
 
@@ -26,5 +28,8 @@ package() {
 
 # Config files
     mkdir -p $pkgdir/etc/ubos
-    install -m644 $startdir/etc/ubos/log-{admin,user}.conf $pkgdir/etc/ubos/
+    install -m644 $startdir/etc/ubos/log-default.conf $pkgdir/etc/ubos/
+    install -m644 $startdir/etc/ubos/log-default-v1.conf $pkgdir/etc/ubos/
+    install -m644 $startdir/etc/ubos/log-default-v2.conf $pkgdir/etc/ubos/
+    install -m644 $startdir/etc/ubos/log-system.conf $pkgdir/etc/ubos/
 }

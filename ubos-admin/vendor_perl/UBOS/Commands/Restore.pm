@@ -41,24 +41,31 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $in           = undef;
-    my @siteIds      = ();
-    my @appConfigIds = ();
-    my @translates   = ();
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my $in            = undef;
+    my @siteIds       = ();
+    my @appConfigIds  = ();
+    my @translates    = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'verbose+'      => \$verbose,
+            'logConfig=s'   => \$logConfigFile,
             'in=s'          => \$in,
             'siteid=s'      => \@siteIds,
             'appconfigid=s' => \@appConfigIds,
             'translate=s'   => \@translates );
 
-    if( !$parseOk || @args || !$in ) {
+    UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || !$in || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
     }
 
-    debug( 'Parsing translation table (if any)' );
-
+    if( @translates ) {
+        debug( 'Parsing translation table' );
+    }
     my $translationTable = {};
     foreach my $translate ( @translates ) {
         if( $translate =~ m!^(.*)=>(.*)$! ) {
@@ -232,7 +239,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    --in <backupfile>
+    [--verbose | --logConfig <file>] --in <backupfile>
 SSS
     Restore all sites contained in backupfile. This includes all
     applications and their data. This will overwrite the currently
@@ -240,7 +247,7 @@ SSS
     mentioned in backupfile will remain unchanged. 
 HHH
         <<SSS => <<HHH,
-    --siteid <siteid> --in <backupfile>
+    [--verbose | --logConfig <file>] --siteid <siteid> --in <backupfile>
 SSS
     Restore the site with siteid contained in backupfile. This includes
     all applications and their data. This will overwrite the currently
@@ -248,7 +255,7 @@ SSS
     the site with siteid will be affected.
 HHH
         <<SSS => <<HHH,
-    --siteid <fromsiteid> --translate <fromsiteid>=><tositeid> --in <backupfile>
+    [--verbose | --logConfig <file>] --siteid <fromsiteid> --translate <fromsiteid>=><tositeid> --in <backupfile>
 SSS
     Restore the site with siteid tositeid from the backup contained in
     backupfile with siteid fromsiteid. This includes all applications
@@ -259,14 +266,14 @@ SSS
     to be escaped in your shell.
 HHH
         <<SSS => <<HHH,
-    --appconfigid <appconfigid> --in <backupfile>
+    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid on a currently deployed site to
     the configuration and data contained in the backup file. This will
     overwrite the currently deployed AppConfiguration and all of its data.
 HHH
         <<SSS => <<HHH
-    --appconfigid <fromappconfigid> --translate <fromappconfigid>=><toappconfigid> --in <backupfile>
+    [--verbose | --logConfig <file>] --appconfigid <fromappconfigid> --translate <fromappconfigid>=><toappconfigid> --in <backupfile>
 SSS
     Restore AppConfiguration toappconfigid on a currently deployed site
     to the configuration and data contained in the backup file for

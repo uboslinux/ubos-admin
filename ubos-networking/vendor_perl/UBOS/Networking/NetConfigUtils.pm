@@ -291,23 +291,23 @@ sub _configureDhcpcd {
     if( $these ) {
         if( @$these ) {
             $ret = 'allowinterfaces ' . join( ' ', @$these ) . "\n";
-            info( 'Activating DHCP on interfaces', @$these );
+            notice( 'Activating DHCP on interfaces', @$these );
         } else {
             $ret = "allowinterfaces\n"; # none
-            info( 'Activating DHCP on no interfaces' );
+            notice( 'Activating DHCP on no interfaces' );
         }
 
     } elsif( $notThese ) {
         if( @$notThese ) {
             $ret = 'denyinterfaces ' . join( ' ', @$notThese ) . "\n";
-            info( 'Activating DHCP on all interfaces BUT', @$notThese );
+            notice( 'Activating DHCP on all interfaces BUT', @$notThese );
         } else {
-            info( 'Activating DHCP on all interfaces' );
+            notice( 'Activating DHCP on all interfaces' );
         }
 
     } else {
         $ret = "allowinterfaces\n"; # none
-        info( 'Turning off DHCP' );
+        notice( 'Turning off DHCP' );
     }
     return $ret;
 }
@@ -326,10 +326,10 @@ sub _configureStatic {
     my @list;
     if( $these ) {
         if( @$these ) {
-            info( 'Configuring static IP on interfaces', @$these );
+            notice( 'Configuring static IP on interfaces', @$these );
             @list = @$these;
         } else {
-            info( 'Configuring static IP on no interfaces' );
+            notice( 'Configuring static IP on no interfaces' );
             @list = ();
         }
     } elsif( $notThese ) {
@@ -346,13 +346,13 @@ sub _configureStatic {
                     push @list, $nic1;
                 }
             }
-            info( 'Configuring static IP on interfaces', @list );
+            notice( 'Configuring static IP on interfaces', @list );
         } else {
-            info( 'Configuring static IP on all interfaces' );
+            notice( 'Configuring static IP on all interfaces' );
             @list = keys %$allNics;
         }
     } else {
-        info( 'Configuring no static IP' );
+        notice( 'Configuring no static IP' );
     }
     
     @list = sort compareNics @list;

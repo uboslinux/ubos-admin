@@ -41,12 +41,17 @@ sub run {
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
 
-    my $verbose = 0;
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose' => \$verbose );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile );
 
-    if( !$parseOk || @args ) {
+    UBOS::Logging::initialize( 'ubos-admin', 'update-stage-2', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || ( $verbose && $logConfigFile ) ) {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
@@ -54,10 +59,7 @@ sub run {
     
     my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
 
-    debug( 'Restoring configuration' );
-    if( $verbose ) {
-        print( "Restoring configuration\n" );
-    }
+    info( 'Restoring configuration' );
     
     my @candidateFiles = <"$UBOS::Commands::Update::updateStatusDir/*">;
 
@@ -89,10 +91,7 @@ sub run {
         $adminBackups->{$siteId} = $backup;
     }
 
-    debug( 'Redeploying sites' );
-    if( $verbose ) {
-        print( "Redeploying sites\n" );
-    }
+    info( 'Redeploying sites' );
 
     my $deployTriggers = {};
     foreach my $site ( values %$oldSites ) {
@@ -104,7 +103,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $deployTriggers );
 
-    debug( 'Resuming sites' );
+    info( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( values %$oldSites ) {
@@ -112,7 +111,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
-    debug( 'Running upgraders' );
+    info( 'Running upgraders' );
 
     foreach my $site ( values %$oldSites ) {
         foreach my $appConfig ( @{$site->appConfigs} ) {

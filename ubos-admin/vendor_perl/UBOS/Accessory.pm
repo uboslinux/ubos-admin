@@ -27,11 +27,6 @@ package UBOS::Accessory;
 use base qw( UBOS::Installable );
 use fields;
 
-use UBOS::Configuration;
-use UBOS::Logging;
-use UBOS::Utils;
-use JSON;
-
 ##
 # Constructor.
 # $packageName: unique identifier of the package
@@ -48,7 +43,6 @@ sub new {
 		$self->checkManifest( 'accessory' );
         $self->checkManifestAccessoryInfo();
     }
-    trace( 'Created accessory', $packageName );
 
     return $self;
 }
@@ -59,8 +53,8 @@ sub new {
 sub checkManifestAccessoryInfo {
 	my $self = shift;
 
-    my $json   = $self->{json};
-    
+    my $json = $self->{json};
+
     unless( defined( $json->{accessoryinfo} )) {
         $self->myFatal( "accessoryinfo section required for accessories" );
     }

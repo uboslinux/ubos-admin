@@ -8,7 +8,9 @@ After=ubos-admin.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/share/ubos-networking/bin/initialize
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-networking
+ExecStart=/usr/share/ubos-networking/bin/ubos-networking-initialize
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-networking
 
 [Install]
 WantedBy=multi-user.target

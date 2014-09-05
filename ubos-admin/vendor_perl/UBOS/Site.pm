@@ -27,7 +27,6 @@ package UBOS::Site;
 use UBOS::AppConfiguration;
 use UBOS::Host;
 use UBOS::Logging;
-use UBOS::Logging;
 use UBOS::Utils;
 use JSON;
 use MIME::Base64;
@@ -419,8 +418,6 @@ sub needsRole {
 sub checkDeployable {
     my $self = shift;
 
-    debug( 'Site', $self->{json}->{siteid}, '->checkDeployable' );
-
     $self->_deployOrCheck( 0 );
 }
 
@@ -431,7 +428,7 @@ sub deploy {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site', $self->{json}->{siteid}, '->deploy' );
+    debug( 'Site', $self->siteId, '->deploy' );
 
     $self->_deployOrCheck( 1, $triggers );
 }
@@ -471,8 +468,6 @@ sub _deployOrCheck {
 sub checkUndeployable {
     my $self = shift;
 
-    debug( 'Site', $self->{json}->{siteid}, '->checkUndeployable' );
-
     $self->_undeployOrCheck( 0 );
 }
     
@@ -483,7 +478,7 @@ sub undeploy {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site', $self->{json}->{siteid}, '->undeploy' );
+    debug( 'Site', $self->siteId, '->undeploy' );
 
     $self->_undeployOrCheck( 1, $triggers );
 }

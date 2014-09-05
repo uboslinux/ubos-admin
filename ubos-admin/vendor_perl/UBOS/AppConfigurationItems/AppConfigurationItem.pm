@@ -24,12 +24,12 @@ use warnings;
 
 package UBOS::AppConfigurationItems::AppConfigurationItem;
 
+use fields qw( json appConfig installable );
+
 use UBOS::Logging;
 use UBOS::TemplateProcessor::Passthrough;
 use UBOS::TemplateProcessor::Perlscript;
 use UBOS::TemplateProcessor::Varsubst;
-
-use fields qw( json appConfig installable );
 
 ##
 # Constructor
@@ -237,7 +237,7 @@ sub _addRecursive {
         }
 
     } else {
-        UBOS::Logging::warn( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
+        warning( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
     }
 
     1;
@@ -265,7 +265,7 @@ sub _restoreRecursive {
     } else {
         $asOct = sprintf( "%o", $mode );
     }
-    UBOS::Utils::myexec "chmod -R $asOct $fileName"; # no -h on Linux
+    UBOS::Utils::myexec( "chmod -R $asOct $fileName" ); # no -h on Linux
 
     if( defined( $uid )) {
         UBOS::Utils::myexec( 'chown -R -h ' . ( 0 + $uid ) . " $fileName" );

@@ -114,7 +114,7 @@ sub getDatabase {
     my $installableId = shift;
     my $itemName      = shift;
 
-    trace( 'getDatabase', $dbType, $appConfigId, $installableId, $itemName );
+    debug( 'ResourceManager::getDatabase', $dbType, $appConfigId, $installableId, $itemName );
 
     my $dbh = UBOS::Databases::MySqlDriver::dbConnectAsRoot( $ubosDbName );
     my $sth = UBOS::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbType );
@@ -139,7 +139,7 @@ SQL
 
     while( my $ref = $sth->fetchrow_hashref() ) {
         if( $dbName ) {
-            error( 'More than one found, not good:', $dbName );
+            error( 'More than one database found, not good:', $dbName );
             last;
         }
         $dbName              = $ref->{'dbName'};
@@ -174,7 +174,7 @@ sub provisionLocalDatabase {
     my $itemName      = shift;
     my $privileges    = shift;
 
-    trace( 'provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges );
+    debug( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, 'localhost' );
     unless( $dbDriver ) {
@@ -234,7 +234,7 @@ sub unprovisionLocalDatabase {
     my $installableId = shift;
     my $itemName      = shift;
 
-    trace( 'unprovisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName );
+    debug( 'ResourceManager::unprovisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName );
 
     my $dbh = UBOS::Databases::MySqlDriver::dbConnectAsRoot( $ubosDbName );
     my $sth = UBOS::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbType );
@@ -277,7 +277,7 @@ SQL
             $sth->finish();
             
         } else {
-            UBOS::Logging::error( 'Unknown database type', $dbType );
+            error( 'Unknown database type', $dbType );
         }
     }
     $dbh->disconnect();
@@ -301,14 +301,14 @@ sub exportLocalDatabase {
     my $itemName      = shift;
     my $fileName      = shift;
 
-    trace( 'exportLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
+    debug( 'ResourceManager::exportLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = getDatabase( $dbType, $appConfigId, $installableId, $itemName );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
-        UBOS::Logging::error( 'Unknown database type', $dbType );
+        error( 'Unknown database type', $dbType );
         return;
     }
 
@@ -329,14 +329,14 @@ sub importLocalDatabase {
     my $itemName      = shift;
     my $fileName      = shift;
 
-    trace( 'importLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
+    debug( 'ResourceManager::importLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = getDatabase( $dbType, $appConfigId, $installableId, $itemName );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
-        UBOS::Logging::error( 'Unknown database type', $dbType );
+        error( 'Unknown database type', $dbType );
         return;
     }
 
@@ -344,4 +344,3 @@ sub importLocalDatabase {
 }
 
 1;
-

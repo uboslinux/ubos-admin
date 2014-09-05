@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.6
+pkgver=0.7
 pkgrel=1
 pkgdesc="Network management tools"
 arch=('any')
@@ -35,7 +35,7 @@ package() {
     install -m 644 $startdir/systemd/ubos-networking.service $pkgdir/usr/lib/systemd/system/
 
     mkdir -p -m 755 $pkgdir/usr/share/$pkgname/bin
-    install -m 755 $startdir/bin/initialize $pkgdir/usr/share/$pkgname/bin/
+    install -m 755 $startdir/bin/ubos-networking-initialize $pkgdir/usr/share/$pkgname/bin/
 
 # Modprobe
     mkdir -p -m 755 $pkgdir/etc/modprobe.d

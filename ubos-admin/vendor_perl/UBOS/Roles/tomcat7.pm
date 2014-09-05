@@ -91,13 +91,13 @@ sub setupSite {
     my $site     = shift;
     my $triggers = shift;
 
-    trace( 'tomcat7::setupSite' );
-
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostName;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
+
+    debug( 'tomcat7::setupSite', $siteId );
 
     unless( -d $siteContextDir ) {
         UBOS::Utils::mkdir( $siteContextDir );
@@ -111,8 +111,6 @@ sub setupSite {
 
     $self->sitesUpdated();
     $triggers->{'tomcat7-reload'} = 1;
-
-    UBOS::Tomcat7::ensureRunning();
 
     1;
 }
@@ -128,22 +126,22 @@ sub removeSite {
     my $doIt     = shift;
     my $triggers = shift;
 
-    trace( 'tomcat7::removeSite' );
-
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostName;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
 
+    debug( 'tomcat7::removeSite', $siteId, $doIt );
+
     if( $doIt ) {
         UBOS::Utils::rmdir( $siteDocumentDir );
         UBOS::Utils::rmdir( $webappsDir );
         UBOS::Utils::rmdir( $siteContextDir );
-    }
 
-    $self->sitesUpdated();
-    $triggers->{'tomcat7-reload'} = 1;
+        $self->sitesUpdated();
+        $triggers->{'tomcat7-reload'} = 1;
+    }
 
     1;
 }

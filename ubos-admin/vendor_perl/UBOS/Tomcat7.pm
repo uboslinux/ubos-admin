@@ -32,10 +32,6 @@ my $ourServerXmlTemplate = '/etc/tomcat7/server-ubos.xml.tmpl';
 ##
 # Ensure that Tomcat7 is running.
 sub ensureRunning {
-    trace( 'Tomcat7::ensureRunning' );
-
-    debug( 'Installing tomcat7' );
-    
     UBOS::Host::installPackages( 'tomcat7', 'apr' );
 
     UBOS::Utils::myexec( 'systemctl enable tomcat7' );
@@ -47,8 +43,6 @@ sub ensureRunning {
 ##
 # Reload configuration
 sub reload {
-    trace( 'Tomcat7::reload' );
-
     UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat7' );
 
     1;
@@ -57,8 +51,6 @@ sub reload {
 ##
 # Restart configuration
 sub restart {
-    trace( 'Tomcat7::reload' );
-
     UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat7' );
 
     1;
@@ -70,8 +62,6 @@ sub restart {
 sub updateServerXmlFile {
     my $hostsSection = shift;
     
-    trace( 'Tomcat7::updateServerXmlFile' );
-
     my $content = UBOS::Utils::slurpFile( $ourServerXmlTemplate );
     $content =~ s!INSERT-UBOS-SITES-HERE!$hostsSection!;
 

@@ -129,12 +129,12 @@ sub setupPlaceholderSite {
     my $placeholderName = shift;
     my $triggers        = shift;
 
-    trace( 'apache2::setupPlaceholderSite' );
-
     my $siteId            = $site->siteId;
     my $hostName          = $site->hostName;
     my $siteFile          = "$sitesDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
+
+    debug( 'apache2::setupPlaceholderSite', $siteId );
 
     unless( -d $siteDocumentRoot ) {
         error( 'Placeholder site', $placeholderName, 'does not exist at', $siteDocumentRoot );
@@ -175,14 +175,14 @@ sub setupSite {
     my $site     = shift;
     my $triggers = shift;
 
-    trace( 'apache2::setupSite' );
-
     my $siteId            = $site->siteId;
     my $hostName          = $site->hostName;
     my $siteFile          = "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+
+    debug( 'apache2::setupSite', $siteId );
 
     unless( -d $siteWellKnownDir ) {
         UBOS::Utils::mkdir( $siteWellKnownDir );
@@ -344,13 +344,13 @@ sub removeSite {
     my $doIt     = shift;
     my $triggers = shift;
 
-    trace( 'apache2::removeSite' );
-
     my $siteId            = $site->siteId;
     my $siteFile          = "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentDir   = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+
+    debug( 'apache2::removeSite', $siteId, $doIt );
 
     if( $doIt ) {
         UBOS::Utils::deleteFile( $siteFile );
@@ -363,9 +363,9 @@ sub removeSite {
         }
 
         UBOS::Utils::rmdir( $siteDocumentDir );
-    }
 
-    $triggers->{'httpd-reload'} = 1;
+        $triggers->{'httpd-reload'} = 1;
+    }
 
     1;
 }

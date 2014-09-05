@@ -263,8 +263,6 @@ sub needsRole {
 sub checkDeployable {
     my $self = shift;
 
-    debug( 'AppConfiguration', $self->{json}->{siteid}, '->checkDeployable' );
-
     $self->_deployOrCheck( 0 );
 }
 
@@ -272,8 +270,6 @@ sub checkDeployable {
 # Deploy this AppConfiguration.
 sub deploy {
     my $self = shift;
-
-    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->deploy' );
 
     $self->_deployOrCheck( 1 );
 }
@@ -343,8 +339,6 @@ sub _deployOrCheck {
 sub checkUndeployable {
     my $self = shift;
 
-    debug( 'AppConfiguration', $self->{json}->{siteid}, '->checkUndeployable' );
-
     $self->_undeployOrCheck( 0 );
 }
 
@@ -352,8 +346,6 @@ sub checkUndeployable {
 # Undeploy this AppConfiguration.
 sub undeploy {
     my $self = shift;
-
-    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->undeploy' );
 
     $self->_undeployOrCheck( 1 );
 }

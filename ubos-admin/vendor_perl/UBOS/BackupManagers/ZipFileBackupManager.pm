@@ -137,7 +137,7 @@ sub _purgeBackupsIn {
         return 0;
     }
     
-    trace( '_purgeBackupsIn', $dir, $seconds, $suffix );
+    debug( '_purgeBackupsIn', $dir, $seconds, $suffix );
 
     my $cutoff = time() - $seconds;
     my @files = <"$dir*$suffix">;

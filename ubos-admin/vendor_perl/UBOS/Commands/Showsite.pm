@@ -40,15 +40,21 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $json   = 0;
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my $json          = 0;
     my $siteId;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'json'     => \$json,
-            'siteid=s' => \$siteId );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'json'        => \$json,
+            'siteid=s'    => \$siteId );
 
-    if( !$parseOk || !$siteId || @args ) {
+    UBOS::Logging::initialize( 'ubos-admin', 'showsite', $verbose, $logConfigFile );
+
+    if( !$parseOk || !$siteId || @args || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: showsite', @_, '(add --help for help)' );
     }
 
@@ -74,7 +80,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH
-    [--json] --siteid <siteid>
+    [--verbose | --logConfig <file>] [--json] --siteid <siteid>
 SSS
     Show the site with siteid.
     --json: show it in JSON format

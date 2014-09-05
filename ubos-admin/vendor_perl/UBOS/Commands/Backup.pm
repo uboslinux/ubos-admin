@@ -41,17 +41,23 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $out          = undef;
-    my @siteIds      = ();
-    my @appConfigIds = ();
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my $out           = undef;
+    my @siteIds       = ();
+    my @appConfigIds  = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'verbose+'      => \$verbose,
+            'logConfig=s'   => \$logConfigFile,
             'out=s',        => \$out,
             'siteid=s'      => \@siteIds,
             'appconfigid=s' => \@appConfigIds );
 
-    if( !$parseOk || @args || !$out ) {
+    UBOS::Logging::initialize( 'ubos-admin', 'backup', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || !$out || ( $verbose && $logConfigFile ) ) {
         fatal( 'Invalid invocation: backup', @_, '(add --help for help)' );
     }
 
@@ -138,19 +144,19 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    --siteid <siteid> --out <backupfile>
+    [--verbose | --logConfig <file>] --siteid <siteid> --out <backupfile>
 SSS
     Back up all data from all applications installed at a currently
     deployed site with siteid to backupfile.
 HHH
         <<SSS => <<HHH,
-    --appconfigid <appconfigid> --out <backupfile>
+    [--verbose | --logConfig <file>]--appconfigid <appconfigid> --out <backupfile>
 SSS
     Back up all data from the currently deployed application at
     AppConfiguration appconfigid to backupfile.
 HHH
         <<SSS => <<HHH
-    --out <backupfile>
+    [--verbose | --logConfig <file>]--out <backupfile>
 SSS
     Back up all data from all currently deployed applications at all
     deployed sites to backupfile.

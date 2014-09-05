@@ -40,17 +40,23 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $json    = 0;
-    my $brief   = 0;
-    my @siteIds = ();
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my $json          = 0;
+    my $brief         = 0;
+    my @siteIds       = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'json'     => \$json,
-            'brief'    => \$brief,
-            'siteid=s' => \@siteIds );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'json'        => \$json,
+            'brief'       => \$brief,
+            'siteid=s'    => \@siteIds );
 
-    if( !$parseOk || ( $json && $brief ) || @args ) {
+    UBOS::Logging::initialize( 'ubos-admin', 'listsites', $verbose, $logConfigFile );
+
+    if( !$parseOk || ( $json && $brief ) || @args || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: listsites', @_, '(add --help for help)' );
     }
 
@@ -100,7 +106,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH
-    [--json | --brief] [--siteid <siteid>]...
+    [--json | --brief] [--verbose | --logConfig <file>] [--siteid <siteid>]...
 SSS
     Show the sites with siteid, or if not given, show all sites currently
     deployed to this device.

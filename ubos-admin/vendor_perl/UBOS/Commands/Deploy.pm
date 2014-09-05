@@ -42,17 +42,21 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $quiet   = 0;
-    my $file    = undef;
-    my $stdin   = 0;
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my $file          = undef;
+    my $stdin         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'quiet'    => \$quiet,
-            'file=s'   => \$file,
-            'stdin'    => \$stdin );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'file=s'      => \$file,
+            'stdin'       => \$stdin );
 
-    if( !$parseOk || @args || ( $file && $stdin ) || ( !$file && !$stdin )) {
+    UBOS::Logging::initialize( 'ubos-admin', 'deploy', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || ( $file && $stdin ) || ( !$file && !$stdin ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: deploy', @_, '(add --help for help)' );
     }
 
@@ -286,7 +290,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--quiet] [--siteid <siteid>] ... --stdin
+    [--verbose | --logConfig <file>] [--siteid <siteid>] ... --stdin
 SSS
     Deploy or update one or more websites based on the Site JSON
     information read from stdin. If one or more <siteid>s are given, ignore
@@ -295,7 +299,7 @@ SSS
     installing and configuring all web applications for the website(s).
 HHH
         <<SSS => <<HHH
-    [--quiet] [--siteid <siteid>] ... --file <site.json>
+    [--verbose | --logConfig <file>] [--siteid <siteid>] ... --file <site.json>
 SSS
     Deploy or update one or more websites based on the information
     contained in <site.json>. If one or more <siteid>s are given, ignore

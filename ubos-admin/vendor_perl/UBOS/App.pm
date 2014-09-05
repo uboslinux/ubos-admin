@@ -27,11 +27,6 @@ package UBOS::App;
 use base qw( UBOS::Installable );
 use fields;
 
-use UBOS::Configuration;
-use UBOS::Logging;
-use UBOS::Utils;
-use JSON;
-
 ##
 # Constructor.
 # $packageName: unique identifier of the package
@@ -47,7 +42,6 @@ sub new {
     if( $self->{config}->get( 'ubos.checkmanifest', 1 )) {
         $self->checkManifest( 'app' );
     }
-    trace( 'Created app', $packageName );
 
     return $self;
 }

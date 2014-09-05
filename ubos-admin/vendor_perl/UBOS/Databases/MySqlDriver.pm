@@ -88,7 +88,7 @@ sub dbConnect {
     $connectString .= "host=$host;";
     $connectString .= "port=$port;";
 
-    trace( 'MySqlDriver::dbConnect as user', $user, 'with', $connectString );
+    debug( 'MySqlDriver::dbConnect as user', $user, 'with', $connectString );
 
     my $dbh = DBI->connect( "DBI:mysql:${connectString}",
                             $user,
@@ -98,7 +98,7 @@ sub dbConnect {
     if( defined( $dbh )) {
         $dbh->{HandleError} = sub { error( 'Database error:', shift ); };
     } else {
-        debug( 'Connecting to database failed, using connection string', $connectString, 'user', $user );
+        error( 'Connecting to database failed, using connection string', $connectString, 'user', $user );
     }
     return $dbh;
 }
@@ -123,7 +123,9 @@ sub sqlPrepare {
     my $dbh  = shift;
     my $sql  = shift;
 
-    trace( 'Preparing SQL:', ( length( $sql ) > 400 ? ( substr( $sql, 0, 400 ) . '...(truncated)' ) : $sql ));
+    debug( sub {
+        ( 'Preparing SQL:', ( length( $sql ) > 400 ? ( substr( $sql, 0, 400 ) . '...(truncated)' ) : $sql ))
+    } );
 
     my $sth = $dbh->prepare( $sql );
     return $sth;
@@ -138,11 +140,8 @@ sub sqlExecute {
     my $sth  = shift;
     my @args = @_;
 
-    if( @args ) {
-        trace( 'Executing SQL with arguments', join( ', ', @args ));
-    } else {
-        trace( 'Executing SQL without arguments' );
-    }
+    debug( 'Executing SQL with arguments: ', @args );
+
     $sth->execute( @args );
     return $sth;
 }

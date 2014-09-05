@@ -43,12 +43,19 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
+    my $verbose       = 0;
+    my $logConfigFile = undef;
     my $dryRun;
+
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'dry-run|n' => \$dryRun );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'dry-run|n'   => \$dryRun );
 
-    if( !$parseOk || @args) {
+    UBOS::Logging::initialize( 'ubos-admin', 'createsite', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
@@ -333,11 +340,12 @@ sub ask {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
+    [--verbose | --logConfig <file>]
 SSS
     Interactively define and install a new site.
 HHH
         <<SSS => <<HHH
-    --dry-run | -n
+    [--verbose | --logConfig <file>] --dry-run | -n
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be

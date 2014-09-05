@@ -1,7 +1,7 @@
 [Unit]
 Description=Configure or reconfigure ubos-admin on startup
-Wants=network.target cronie.service ntpd.service
-Requires=ubos-mysqld.service ubos-httpd.service
+Wants=network.target cronie.service ntpd.service ubos-httpd.service
+Requires=ubos-mysqld.service
 # ubos-admin wants to set a root password for mysql, so start mysqld first
 After=ubos-mysqld.service
 # ubos-admin wants to change the Apache config, so start Apache later
@@ -10,7 +10,9 @@ Before=ubos-httpd.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/share/ubos-admin/bin/initialize
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-admin
+ExecStart=/usr/share/ubos-admin/bin/ubos-admin-initialize
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-admin
 
 [Install]
 WantedBy=multi-user.target

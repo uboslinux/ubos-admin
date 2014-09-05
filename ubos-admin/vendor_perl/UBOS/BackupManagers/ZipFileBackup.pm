@@ -52,8 +52,6 @@ sub new {
     my $appConfigIds = shift;
     my $outFile      = shift;
 
-    trace( 'ZipFileBackup::new' );
-
     my $sites         = {};
     my $appConfigs    = {};
     my @filesToDelete = ();
@@ -105,7 +103,7 @@ sub new {
 
     ##
     my $zip = Archive::Zip->new();
-    $zip->addString( $fileType,                                     $zipFileTypeEntry );
+    $zip->addString( $fileType,                                 $zipFileTypeEntry );
     $zip->addString( UBOS::Utils::time2string( time() ) . "\n", $zipFileStartTimeEntry );
 
     ##
@@ -180,8 +178,6 @@ sub new {
         }
     }
 
-    trace( 'Writing zip file', $outFile );
-
     $zip->writeToFileNamed( $outFile );
 
     foreach my $current ( @filesToDelete ) {
@@ -198,8 +194,6 @@ sub new {
 sub newFromArchive {
     my $self    = shift;
     my $archive = shift;
-
-    trace( 'ZipFileBackup::newFromArchive' );
 
     unless( ref( $self )) {
         $self = fields::new( $self );
@@ -284,8 +278,6 @@ sub restoreSite {
     my $self    = shift;
     my $site    = shift;
 
-    debug( 'ZipFileBackup->restoreSite', $site->siteId );
-
     foreach my $appConfig ( @{$site->appConfigs} ) {
         $self->restoreAppConfiguration( $site, $appConfig );
     }
@@ -300,8 +292,6 @@ sub restoreSiteWithoutAppConfigurations {
     my $self    = shift;
     my $site    = shift;
 
-    debug( 'ZipFileBackup->restoreSiteWithoutAppConfigurations', $site->siteId );
-
     # currently nothing
 
     1;
@@ -315,8 +305,6 @@ sub restoreAppConfiguration {
     my $self      = shift;
     my $siteId    = shift;
     my $appConfig = shift;
-
-    debug( 'Backup::restoreAppConfiguration', $siteId, $appConfig->appConfigId );
 
     my $zip         = $self->{zip};
     my $appConfigId = $appConfig->appConfigId;

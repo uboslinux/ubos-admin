@@ -166,7 +166,7 @@ sub backup {
         $names = [ $self->{json}->{name} ];
     }
     if( @$names != 1 ) {
-        fatal( 'Cannot backup item with more than one name:', join( @$names ));
+        fatal( 'Cannot backup item with more than one name:', @$names );
     }
 
     my $toName = $names->[0];
@@ -198,7 +198,7 @@ sub restore {
         $names = [ $self->{json}->{name} ];
     }
     if( @$names != 1 ) {
-        fatal( 'Cannot restore item with more than one name:', join( @$names ));
+        error( 'Cannot restore item with more than one name:', @$names );
     }
 
     my $toName = $names->[0];
