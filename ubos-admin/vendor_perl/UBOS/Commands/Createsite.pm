@@ -59,7 +59,7 @@ sub run {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
-    my $appId = ask( "App to run: ", '^[.-_a-z0-9]+$' );
+    my $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
     UBOS::Host::installPackages( $appId );
 
     my $app = new UBOS::App( $appId );
