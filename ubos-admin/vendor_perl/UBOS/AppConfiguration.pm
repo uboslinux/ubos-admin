@@ -545,8 +545,8 @@ sub _addCustomizationPointValuesToConfig {
                         UBOS::Utils::saveFile( $filename, $data );
                     }
 
-                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.filename', $filename );
-                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.value', $data );
+                    $config->put( 'installable.customizationpoints.' . $custPointName . '.filename', $filename );
+                    $config->put( 'installable.customizationpoints.' . $custPointName . '.value', $data );
                 }
             }
         }
