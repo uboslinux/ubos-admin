@@ -247,7 +247,12 @@ sub installPackages {
 
     if( @filteredPackageList ) {
         my $err;
-        if( myexec( 'sudo pacman -S --noconfirm ' . join( ' ', @filteredPackageList ), undef, undef, \$err )) {
+        my $cmd = 'sudo pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
+        unless( UBOS::Logging::isDebugActive() ) {
+            $cmd .= ' > /dev/null';
+        }
+
+        if( myexec( $cmd, undef, undef, \$err )) {
             fatal( 'Failed to install package(s). Pacman says:', $err );
         }
     }
@@ -262,7 +267,12 @@ sub installPackageFiles {
     my $packageFiles = shift;
 
     my $err;
-    if( myexec( 'sudo pacman -U --noconfirm ' . join( ' ', @$packageFiles ), undef, undef, \$err )) {
+    my $cmd = 'sudo pacman -U --noconfirm ' . join( ' ', @$packageFiles );
+        unless( UBOS::Logging::isDebugActive() ) {
+            $cmd .= ' > /dev/null';
+        }
+
+    if( myexec( $cmd, undef, undef, \$err )) {
         error( 'Failed to install package file(s). Pacman says:', $err );
         return 0;
     }
