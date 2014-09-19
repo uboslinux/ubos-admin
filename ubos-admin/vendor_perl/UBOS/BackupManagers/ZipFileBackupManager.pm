@@ -24,22 +24,11 @@ use warnings;
 
 package UBOS::BackupManagers::ZipFileBackupManager;
 
+use base qw( UBOS::AbstractBackupManager );
 use fields;
 
 use UBOS::BackupManagers::ZipFileBackup;
 use UBOS::Logging;
-
-##
-# Constructor
-# $dir: the directory in which to make new backups
-sub new {
-    my $self = shift;
-    
-    unless( ref( $self )) {
-        $self = fields::new( $self );
-    }
-    return $self;
-}
 
 ##
 # Create a Backup.
@@ -54,19 +43,6 @@ sub backup {
     my $outFile      = shift;
 
     return new UBOS::BackupManagers::ZipFileBackup( $siteIds, $appConfigIds, $outFile );
-}
-
-##
-# Convenience method to create a Backup containing exactly one site.
-# $site: the Site to be backed up
-# $outFile: the file to save the backup to
-# return: the Backup object
-sub backupSite {
-    my $self    = shift;
-    my $site    = shift;
-    my $outFile = shift;
-    
-    return $self->backup( [ $site->siteId ], undef, $outFile );
 }
 
 ##

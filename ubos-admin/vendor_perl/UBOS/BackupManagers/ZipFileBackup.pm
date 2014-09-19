@@ -32,7 +32,8 @@ use UBOS::Site;
 use UBOS::Utils qw( readJsonFromString writeJsonToString );
 use JSON;
 
-use fields qw( zip sites appConfigs startTime file );
+use base qw( UBOS::AbstractBackup );
+use fields qw( zip file );
 
 my $fileType                 = 'ubos backup v1';
 my $zipFileTypeEntry         = 'filetype';
@@ -235,31 +236,6 @@ sub newFromArchive {
     return $self;
 }
 
-##
-# Determine the start time in UNIX time format
-sub startTime {
-    my $self = shift;
-
-    return UBOS::Utils::string2time( $self->{startTime} );
-}
-
-##
-# Determine the sites contained in this Backup.
-# return: hash of siteid to Site
-sub sites {
-    my $self = shift;
-
-    return $self->{sites};
-}
-
-##
-# Determine the AppConfigurations contained in this Backup.
-# return: hash of appconfigid to AppConfiguration
-sub appConfigs {
-    my $self = shift;
-
-    return $self->{appConfigs};
-}
 
 ##
 # Obtain the file that holds this Backup, if any
@@ -268,33 +244,6 @@ sub fileName {
     my $self = shift;
 
     return $self->{file};
-}
-
-##
-# Restore a site including all AppConfigurations from a backup
-# $site: the Site to restore
-# $backup: the Backup from where to restore
-sub restoreSite {
-    my $self    = shift;
-    my $site    = shift;
-
-    foreach my $appConfig ( @{$site->appConfigs} ) {
-        $self->restoreAppConfiguration( $site, $appConfig );
-    }
-
-    1;
-}
-
-##
-# Restore only site-specific information from a backup, leaving out
-# all AppConfiguration-specific information.
-sub restoreSiteWithoutAppConfigurations {
-    my $self    = shift;
-    my $site    = shift;
-
-    # currently nothing
-
-    1;
 }
     
 ##
