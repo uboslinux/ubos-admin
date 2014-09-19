@@ -84,21 +84,6 @@ sub adminBackupSite {
 }
 
 ##
-# Convenience method to create a Backup containing exactly one site.
-# $site: the Site to be backed up
-# $outFile: the file to save the backup to, if any
-# return: the Backup object
-sub testBackupSite {
-    my $self    = shift;
-    my $site    = shift;
-    
-    my $config  = $site->config;
-    my $outFile = $config->getResolve( 'zipfilebackupmanager.testsitebackupfile' );
-
-    return $self->backup( [ $site->siteId ], undef, $outFile );
-}
-
-##
 # Read a Backup
 # $archive: the archive file name
 sub newFromArchive {
@@ -115,15 +100,6 @@ sub purgeAdminBackups {
     return _purgeBackupsIn(
             UBOS::Host::config()->getResolve( 'zipfilebackupmanager.adminbackupdir' ),
             UBOS::Host::config()->getResolve( 'zipfilebackupmanager.adminbackuplifetime' ));
-}
-
-##
-# Purge testing backups on this device.
-sub purgeTestBackups {
-
-    return _purgeBackupsIn(
-            UBOS::Host::config()->getResolve( 'zipfilebackupmanager.testbackupdir' ),
-            UBOS::Host::config()->getResolve( 'zipfilebackupmanager.testbackuplifetime' ));
 }
 
 ##
