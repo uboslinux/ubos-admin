@@ -157,16 +157,14 @@ sub uninstallOrCheck {
 # Back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
-    my $filesToDelete       = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
+    my $filesToDelete = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -183,21 +181,19 @@ sub backup {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    $backup->addDirectoryHierarchy( $fullName, "$contextPathInBackup/$bucket" );
+    $backupContext->addDirectoryHierarchy( $fullName, $bucket );
 }
 
 ##
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 sub restore {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -217,14 +213,24 @@ sub restore {
     my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
     my $uname       = $config->replaceVariables( $self->{json}->{uname} );
     my $gname       = $config->replaceVariables( $self->{json}->{gname} );
-    my $mode        = $self->permissionToMode( $permissions, 0755 );
+    my $mode        = $self->permissionToMode( $permissions, -1 );
 
     my $uid = UBOS::Utils::getUid( $uname );
     my $gid = UBOS::Utils::getGid( $gname );
 
-    # Contrary to the docs, Archive::Zip seems to restore ../foobar if
-    # argument ../foo is given, so we need to append a slash
-    $backup->restoreRecursive( "$contextPathInBackup/$bucket/", "$fullName/", $mode, $uid, $gid );
+    $backupContext->restoreRecursive( $bucket, $fullName );
+
+    if( $mode > -1 ) {
+        my $asOct = sprintf( "%o", $mode );
+        UBOS::Utils::myexec( "chmod -R $asOct $fullName" ); # no -h on Linux
+    }
+
+    if( defined( $uid )) {
+        UBOS::Utils::myexec( 'chown -R -h ' . ( 0 + $uid ) . " $fullName" );
+    }
+    if( defined( $gid )) {
+        UBOS::Utils::myexec( 'chgrp -R -h ' . ( 0 + $gid ) . " $fullName" );
+    }
 }
 
 1;

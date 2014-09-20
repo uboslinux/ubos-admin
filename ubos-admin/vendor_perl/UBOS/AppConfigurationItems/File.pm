@@ -150,16 +150,14 @@ sub uninstallOrCheck {
 # Back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
-    my $filesToDelete       = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
+    my $filesToDelete = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -177,21 +175,19 @@ sub backup {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    $backup->addFile( $toName, "$contextPathInBackup/$bucket" );
+    $backupContext->addFile( $toName, $bucket );
 }
 
 ##
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 sub restore {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -213,7 +209,7 @@ sub restore {
     my $gname       = $config->replaceVariables( $self->{json}->{gname} );
     my $mode        = $self->permissionToMode( $permissions, 0644 );
 
-    if( $backup->restore( "$contextPathInBackup/$bucket", $toName )) {
+    if( $backupContext->restore( $bucket, $toName )) {
         # There's actually a file by that name in the Backup
 
         if( defined( $mode )) {

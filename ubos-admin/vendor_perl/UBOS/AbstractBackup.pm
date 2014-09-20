@@ -26,6 +26,8 @@ package UBOS::AbstractBackup;
 
 use fields qw( sites appConfigs startTime );
 
+use UBOS::Logging;
+
 ##
 # Save the specified sites and AppConfigurations to a file, and return the corresponding Backup object
 # $siteIds: list of siteids to be contained in the backup
@@ -114,59 +116,6 @@ sub restoreAppConfiguration {
     my $appConfig = shift;
 
     error( 'Cannot perform restoreAppConfiguration on', $self );
-}
-
-##
-# Callback by which an AppConfigurationItem can add a file to a Backup
-# $fileToAdd: the name of the file to add in the file system
-# $nameInBackup: the name of the file in the Backup
-sub addFile {
-    my $self         = shift;
-    my $fileToAdd    = shift;
-    my $nameInBackup = shift;
-
-    error( 'Cannot perform addFile on', $self );
-}
-
-##
-# Callback by which an AppConfigurationItem can add a directory hierarchy to a Backup
-# $dirToAdd: the name of the directory to add in the file system
-# $nameInBackup: the name of the directory in the Backup
-sub addDirectoryHierarchy {
-    my $self         = shift;
-    my $dirToAdd     = shift;
-    my $nameInBackup = shift;
-
-    error( 'Cannot perform addDirectoryHierarchy on', $self );
-}
-
-##
-# Callback by which an AppConfigurationItem can restore a file from a Backup
-# $nameInBackup: the name of the file in the Backup
-# $fileName: name of the file in the filesystem to be written
-# return: 1 if the extraction was performed
-sub restore {
-    my $self         = shift;
-    my $nameInBackup = shift;
-    my $fileName     = shift;
-
-    error( 'Cannot perform restore on', $self );
-}
-
-
-##
-# Helper method to restore a directory hierarchy from a Backup
-# $nameInBackup: the name of the directory in the Backup
-# $dirName: name of the director in the filesystem to be written
-sub restoreRecursive {
-    my $self         = shift;
-    my $nameInBackup = shift;
-    my $dirName      = shift;
-    my $mode         = shift;
-    my $uid          = shift;
-    my $gid          = shift;
-
-    error( 'Cannot restoreRecursive extract on', $self );
 }
 
 1;

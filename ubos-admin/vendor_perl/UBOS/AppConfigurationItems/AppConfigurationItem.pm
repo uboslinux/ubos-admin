@@ -125,16 +125,14 @@ sub runUpgradeScript {
 # Default implementation to back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
-    my $filesToDelete       = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
+    my $filesToDelete = shift;
 
     error( 'Cannot perform backup() on', $self );
 }
@@ -143,14 +141,12 @@ sub backup {
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backupContext: the Backup Context object
 sub restore {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
 
     error( 'Cannot perform restore() on', $self );
 }

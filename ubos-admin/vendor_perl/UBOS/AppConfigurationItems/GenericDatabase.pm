@@ -131,16 +131,14 @@ sub uninstallOrCheck {
 # Back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
-    my $filesToDelete       = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
+    my $filesToDelete = shift;
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
@@ -156,7 +154,7 @@ sub backup {
             $name,
             $tmp->filename );
 
-    $backup->addFile( $tmp->filename, "$contextPathInBackup/$bucket" );
+    $backupContext->addFile( $tmp->filename, $bucket );
 
     push @$filesToDelete, $tmp->filename;
 }
@@ -165,14 +163,12 @@ sub backup {
 # Restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $backup: the Backup object
-# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
+# $backupContext: the Backup Context object
 sub restore {
-    my $self                = shift;
-    my $dir                 = shift;
-    my $config              = shift;
-    my $backup              = shift;
-    my $contextPathInBackup = shift;
+    my $self          = shift;
+    my $dir           = shift;
+    my $config        = shift;
+    my $backupContext = shift;
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
@@ -180,7 +176,7 @@ sub restore {
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
     my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
-    if( $backup->restore( "$contextPathInBackup/$bucket", $tmp->filename )) {
+    if( $backupContext->restore( $bucket, $tmp->filename )) {
         # there's actually something in the Backup by this name
 
         UBOS::ResourceManager::importLocalDatabase(
