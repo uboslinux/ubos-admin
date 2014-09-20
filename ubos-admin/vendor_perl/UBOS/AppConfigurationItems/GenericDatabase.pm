@@ -131,16 +131,16 @@ sub uninstallOrCheck {
 # Back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
-    my $filesToDelete    = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
+    my $filesToDelete       = shift;
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
@@ -156,7 +156,7 @@ sub backup {
             $name,
             $tmp->filename );
 
-    $zip->addFile( $tmp->filename, "$contextPathInZip/$bucket" );
+    $backup->addFile( $tmp->filename, "$contextPathInBackup/$bucket" );
 
     push @$filesToDelete, $tmp->filename;
 }
@@ -165,25 +165,23 @@ sub backup {
 # Restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 sub restore {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
     my $dbType = $self->{dbType};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
-    my $member = $zip->memberNamed( "$contextPathInZip/$bucket" );
-    if( $member ) {
-        my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
-
-        $zip->extractMember( $member, $tmp->filename );
+    my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
+    if( $backup->restore( "$contextPathInBackup/$bucket", $tmp->filename )) {
+        # there's actually something in the Backup by this name
 
         UBOS::ResourceManager::importLocalDatabase(
                 $dbType,

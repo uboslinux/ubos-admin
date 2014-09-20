@@ -150,16 +150,16 @@ sub uninstallOrCheck {
 # Back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
-    my $filesToDelete    = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
+    my $filesToDelete       = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -177,21 +177,21 @@ sub backup {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    $zip->addFile( $toName, "$contextPathInZip/$bucket" );
+    $backup->addFile( $toName, "$contextPathInBackup/$bucket" );
 }
 
 ##
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 sub restore {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -207,18 +207,27 @@ sub restore {
         $toName = "$dir/$toName";
     }
 
-    my $bucket  = $self->{json}->{retentionbucket};
-    my $contentToSave = $zip->contents( "$contextPathInZip/$bucket" );
-    if( $contentToSave ) {
-        my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
-        my $uname       = $config->replaceVariables( $self->{json}->{uname} );
-        my $gname       = $config->replaceVariables( $self->{json}->{gname} );
-        my $mode        = $self->permissionToMode( $permissions, 0644 );
+    my $bucket       = $self->{json}->{retentionbucket};
+    my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
+    my $uname       = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname       = $config->replaceVariables( $self->{json}->{gname} );
+    my $mode        = $self->permissionToMode( $permissions, 0644 );
 
-        unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
-            error( 'Writing file failed:', $toName );
+    if( $backup->restore( "$contextPathInBackup/$bucket", $toName )) {
+        # There's actually a file by that name in the Backup
+
+        if( defined( $mode )) {
+            chmod $mode, $toName;
+        }
+
+        my $uid = UBOS::Utils::getUid( $uname );
+        my $gid = UBOS::Utils::getGid( $gname );
+
+        if( $uid >= 0 || $gid >= 0 ) {
+            chown $uid, $gid, $toName;
         }
     }
-}
+    return 1;
+}        
 
 1;

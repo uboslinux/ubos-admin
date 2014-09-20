@@ -35,7 +35,7 @@ use JSON;
 use base qw( UBOS::AbstractBackup );
 use fields qw( zip file );
 
-my $fileType                 = 'ubos backup v1';
+my $fileType                 = 'UBOS backup v1';
 my $zipFileTypeEntry         = 'filetype';
 my $zipFileStartTimeEntry    = 'starttime';
 my $zipFileSiteEntry         = 'sites';
@@ -102,10 +102,21 @@ sub new {
         }
     }
 
+    unless( ref( $self )) {
+        $self = fields::new( $self );
+    }
+
+    $self->{startTime}  = UBOS::Utils::time2string( time() );
+    $self->{sites}      = $sites;
+    $self->{appConfigs} = $appConfigs;
+    $self->{zip}        = Archive::Zip->new();
+    $self->{file}       = $outFile;
+
     ##
-    my $zip = Archive::Zip->new();
-    $zip->addString( $fileType,                                 $zipFileTypeEntry );
-    $zip->addString( UBOS::Utils::time2string( time() ) . "\n", $zipFileStartTimeEntry );
+    my $zip = $self->{zip}; # makes code shorter
+
+    $zip->addString( $fileType,                 $zipFileTypeEntry );
+    $zip->addString( $self->{startTime} . "\n", $zipFileStartTimeEntry );
 
     ##
 
@@ -170,7 +181,7 @@ sub new {
                             }
                             my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                             if( $item ) {
-                                $item->backup( $dir, $config, $zip, $appConfigPathInZip, \@filesToDelete );
+                                $item->backup( $dir, $config, $self, $appConfigPathInZip, \@filesToDelete );
                             }
                         }
                     }
@@ -185,7 +196,7 @@ sub new {
         unlink $current || error( 'Could not unlink', $current );
     }
 
-    return UBOS::BackupManagers::ZipFileBackup->newFromArchive( $outFile );
+    return $self;
 }
 
 ##
@@ -292,7 +303,7 @@ sub restoreAppConfiguration {
                         }
                         my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                         if( $item ) {
-                            $item->restore( $dir, $config, $zip, $appConfigPathInZip );
+                            $item->restore( $dir, $config, $self, $appConfigPathInZip );
                         }
                     }
                 }
@@ -301,4 +312,124 @@ sub restoreAppConfiguration {
     }
 }
 
+##
+# Callback by which an AppConfigurationItem can add a file to a Backup
+# $fileToAdd: the name of the file to add in the file system
+# $nameInBackup: the name of the file in the Backup
+sub addFile {
+    my $self         = shift;
+    my $fileToAdd    = shift;
+    my $nameInBackup = shift;
+
+    $self->{zip}->addFile( $fileToAdd, $nameInBackup );
+}
+
+##
+# Callback by which an AppConfigurationItem can add a directory hierarchy to a Backup
+# $dirToAdd: the name of the directory to add in the file system
+# $nameInBackup: the name of the directory in the Backup
+sub addDirectoryHierarchy {
+    my $self         = shift;
+    my $dirToAdd     = shift;
+    my $nameInBackup = shift;
+
+    $self->_addRecursive( $dirToAdd, $nameInBackup );
+}
+
+##
+# Recursive helper method to add a directory hierarchy to a zip file
+# $fileName: the name of the object in the filesystem
+# $zipName: the name of the object in the zip file
+sub _addRecursive {
+    my $self     = shift;
+    my $fileName = shift;
+    my $zipName  = shift;
+
+    if( -l $fileName ) {
+        my $member = $self->{zip}->addString( readlink $fileName, $zipName );
+        $member->{'externalFileAttributes'} = 0xA1FF0000;
+        # This comes from the source code of Archive::Zip; there doesn't seem to be an API
+
+    } elsif( -f $fileName ) {
+        $self->{zip}->addFile( $fileName, $zipName );
+
+    } elsif( -d $fileName ) {
+        $self->{zip}->addDirectory( "$fileName/", "$zipName/" );
+
+        my @children = ();
+        opendir( DIR, $fileName ) or fatal( 'Could not read directory', $fileName, $! );
+
+        while( my $file = readdir( DIR )) {
+            if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
+                next;
+            }
+            push @children, "$fileName/$file";
+        }
+        closedir( DIR );
+
+        foreach my $child ( @children ) {
+            my $relative = $child;
+            $relative = substr( $relative, length( $fileName ) + 1 );
+
+            $self->_addRecursive( $child, "$zipName/$relative" );
+        }
+
+    } else {
+        warning( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
+    }
+
+    1;
+}
+
+##
+# Callback by which an AppConfigurationItem can extract a file from a Backup
+# $nameInBackup: the name of the file in the Backup
+# $fileName: name of the file in the filesystem to be written
+# return: 1 if the extraction was performed
+sub restore {
+    my $self         = shift;
+    my $nameInBackup = shift;
+    my $fileName     = shift;
+
+    my $member = $self->{zip}->memberNamed( $nameInBackup );
+    if( $member ) {
+        $self->{zip}->extractMember( $member, $fileName );
+
+        return 1;
+    }
+    return 0;
+}
+
+
+##
+# Helper method to restore a directory hierarchy from a Backup
+# $nameInBackup: the name of the directory in the Backup
+# $dirName: name of the director in the filesystem to be written
+sub restoreRecursive {
+    my $self         = shift;
+    my $nameInBackup = shift;
+    my $dirName      = shift;
+    my $mode         = shift;
+    my $uid          = shift;
+    my $gid          = shift;
+
+    $self->{zip}->extractTree( $nameInBackup, $dirName );
+
+    my $asOct;
+    if( $mode == -1 ) {
+        $asOct = "755";
+    } else {
+        $asOct = sprintf( "%o", $mode );
+    }
+    UBOS::Utils::myexec( "chmod -R $asOct $dirName" ); # no -h on Linux
+
+    if( defined( $uid )) {
+        UBOS::Utils::myexec( 'chown -R -h ' . ( 0 + $uid ) . " $dirName" );
+    }
+    if( defined( $gid )) {
+        UBOS::Utils::myexec( 'chgrp -R -h ' . ( 0 + $gid ) . " $dirName" );
+    }
+
+    1;
+}
 1;

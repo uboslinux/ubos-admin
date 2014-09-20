@@ -157,16 +157,16 @@ sub uninstallOrCheck {
 # Back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
-    my $filesToDelete    = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
+    my $filesToDelete       = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -183,21 +183,21 @@ sub backup {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    $self->_addRecursive( $zip, $fullName, "$contextPathInZip/$bucket" );
+    $backup->addDirectoryHierarchy( $fullName, "$contextPathInBackup/$bucket" );
 }
 
 ##
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 sub restore {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
 
     my $names = $self->{json}->{names};
     unless( $names ) {
@@ -224,7 +224,7 @@ sub restore {
 
     # Contrary to the docs, Archive::Zip seems to restore ../foobar if
     # argument ../foo is given, so we need to append a slash
-    $self->_restoreRecursive( $zip, "$contextPathInZip/$bucket/", "$fullName/", $mode, $uid, $gid );
+    $backup->restoreRecursive( "$contextPathInBackup/$bucket/", "$fullName/", $mode, $uid, $gid );
 }
 
 1;

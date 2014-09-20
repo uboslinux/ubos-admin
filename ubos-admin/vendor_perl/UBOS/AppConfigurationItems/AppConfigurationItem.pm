@@ -125,16 +125,16 @@ sub runUpgradeScript {
 # Default implementation to back this item up.
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
-# $zip: the ZIP object
-# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $backup: the Backup object
+# $contextPathInBackup: the directory, in the Backup, into which this item will be backed up
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
-    my $self             = shift;
-    my $dir              = shift;
-    my $config           = shift;
-    my $zip              = shift;
-    my $contextPathInZip = shift;
-    my $filesToDelete    = shift;
+    my $self                = shift;
+    my $dir                 = shift;
+    my $config              = shift;
+    my $backup              = shift;
+    my $contextPathInBackup = shift;
+    my $filesToDelete       = shift;
 
     error( 'Cannot perform backup() on', $self );
 }
@@ -194,87 +194,6 @@ sub _instantiateTemplateProcessor {
         $ret = new UBOS::TemplateProcessor::Passthrough();
     }
     return $ret;
-}
-
-##
-# Helper method to add a directory hierarchy to a zip file
-# $zip: the ZIP object
-# $fileName: the name of the object in the filesystem
-# $zipName: the name of the object in the zip file
-sub _addRecursive {
-    my $self     = shift;
-    my $zip      = shift;
-    my $fileName = shift;
-    my $zipName  = shift;
-
-    if( -l $fileName ) {
-        my $member = $zip->addString( readlink $fileName, $zipName );
-        $member->{'externalFileAttributes'} = 0xA1FF0000;
-        # This comes from the source code of Archive::Zip; there doesn't seem to be an API
-
-    } elsif( -f $fileName ) {
-        $zip->addFile( $fileName, $zipName );
-
-    } elsif( -d $fileName ) {
-        $zip->addDirectory( "$fileName/", "$zipName/" );
-
-        my @children = ();
-        opendir( DIR, $fileName ) or fatal( 'Could not read directory', $fileName, $! );
-
-        while( my $file = readdir( DIR )) {
-            if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
-                next;
-            }
-            push @children, "$fileName/$file";
-        }
-        closedir( DIR );
-
-        foreach my $child ( @children ) {
-            my $relative = $child;
-            $relative = substr( $relative, length( $fileName ) + 1 );
-
-            $self->_addRecursive( $zip, $child, "$zipName/$relative" );
-        }
-
-    } else {
-        warning( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
-    }
-
-    1;
-}
-
-##
-# Helper method to restore a directory hierarchy from a zip file
-# $zip: the ZIP object
-# $zipName: the name of the object in the zip file
-# $fileName: the name of the object in the filesystem
-sub _restoreRecursive {
-    my $self     = shift;
-    my $zip      = shift;
-    my $zipName  = shift;
-    my $fileName = shift;
-    my $mode     = shift;
-    my $uid      = shift;
-    my $gid      = shift;
-
-    $zip->extractTree( $zipName, $fileName );
-
-    my $asOct;
-    if( $mode == -1 ) {
-        $asOct = "755";
-    } else {
-        $asOct = sprintf( "%o", $mode );
-    }
-    UBOS::Utils::myexec( "chmod -R $asOct $fileName" ); # no -h on Linux
-
-    if( defined( $uid )) {
-        UBOS::Utils::myexec( 'chown -R -h ' . ( 0 + $uid ) . " $fileName" );
-    }
-    if( defined( $gid )) {
-        UBOS::Utils::myexec( 'chgrp -R -h ' . ( 0 + $gid ) . " $fileName" );
-    }
-
-    1;
 }
 
 1;
