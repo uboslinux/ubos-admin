@@ -31,20 +31,10 @@ use Cwd;
 use File::Basename;
 use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupManagers::ZipFileBackupManager;
+use UBOS::UpdateBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
-
-# Do not change the following filenames and paths unless you also update
-# UpdateStage2 so it can still find the old location and restore.
-# They aren't in config.json so that nobody is tempted to change them accidentally
-# Do not write them into /tmp or such, because we still want to be able to do
-# UpdateStage2 even after reboot
-
-our $updateStatusDir    = '/var/lib/ubos/backups/admin';
-our $updateStatusPrefix = 'update.';
-our $updateStatusSuffix = '.status';
 
 ##
 # Execute this command.
@@ -79,18 +69,6 @@ sub run {
          $stage2LogConfigFile = $tmp->filename;
     }
 
-    my $ts         = UBOS::Host::config->get( 'now.tstamp' );
-    my $statusFile = "$updateStatusDir/$updateStatusPrefix$ts$updateStatusSuffix";
-    if( -e $statusFile ) {
-        if( ! -w $statusFile ) {
-            fatal( 'Cannot write to status file', $statusFile, ', not updating' );
-        }
-    } else {
-        if( ! -e dirname( $statusFile )) {
-            fatal( 'Cannot create status file', $statusFile, ', not updating' );
-        }
-    }
-
     my $oldSites = UBOS::Host::sites();
     foreach my $oldSite ( values %$oldSites ) {
         $oldSite->checkUndeployable();
@@ -102,6 +80,10 @@ sub run {
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
 
+    unless( UBOS::UpdateBackup::checkReady() ) {
+        fatal( 'Cannot create temporary backup; backup directory is not empty' );
+    }
+
     info( 'Suspending sites' );
 
     my $suspendTriggers = {};
@@ -110,26 +92,18 @@ sub run {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Backing up and undeploying' );
-    
-    my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
+    info( 'Backing up' );
+
+    my $backup = UBOS::UpdateBackup->create( $oldSites );
+
+    info( 'Undeploying' );
 
     my $adminBackups = {};
     my $undeployTriggers = {};
     foreach my $site ( values %$oldSites ) {
-        $adminBackups->{$site->siteId} = $backupManager->adminBackupSite( $site );
         $site->undeploy( $undeployTriggers );
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
-
-    info( 'Preserving current configuration' );
-
-    my $statusJson = {};
-    while( my( $siteId, $backup ) = each %$adminBackups ) {
-        $statusJson->{sites}->{$siteId} = { 'backupfile' => $backup->fileName };
-    }
-
-    UBOS::Utils::writeJsonToFile( $statusFile, $statusJson, '0600' );
 
     info( 'Updating code' );
 

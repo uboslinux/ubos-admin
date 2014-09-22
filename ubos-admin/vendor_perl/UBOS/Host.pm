@@ -89,27 +89,43 @@ sub findSiteById {
 }
 
 ##
-# Find a particular Site currently installed on this host by a partial identifier.
-# $partial: the partial Site identifier
+# Find a particular Site currently installed on this host by a complete or
+# partial identifier.
+# $id: the complete or partial Site identifier
 # return: the Site
 sub findSiteByPartialId {
-	my $partial = shift;
+	my $id = shift;
+
+    my @candidates;
+    my $siteId;
+    if( $id =~ m!^(.*)\.\.\.$! ) {
+        my $partial = $1;
+        my @candidates = <"$SITES_DIR/$partial?*.json">; # needs to have at least one more char
+        if( @candidates == 1 ) {
+            $siteId = $candidates[0];
+
+        } elsif( @candidates ) {
+	        $@ = "There is more than one site whose siteid starts with $partial: " . join( " vs ", map { m!/(s[0-9a-fA-F]{40})\.json! } @candidates ) . '.';
+            return undef;
+
+        } else {
+            $@ = "No site found whose siteid starts with $partial.";
+            return undef;
+        }
 	
-    my @candidates = <"$SITES_DIR/$partial*.json">;
-    if( @candidates == 1 ) {
-        my $siteJson = readJsonFromFile( $candidates[0] );
-        my $site     = new UBOS::Site( $siteJson );
+    } else {
+        if( -e "$SITES_DIR/$id.json" ) {
+            $siteId = $id;
+        } else {
+            $@ = "No site found with siteid $id.";
+            return undef;
+        }
+    }
 
-        return $site;
+    my $siteJson = readJsonFromFile( $siteId );
+    my $site     = new UBOS::Site( $siteJson );
 
-    } elsif( @candidates == 0 ) {
-		error( "No site found with partial siteid", $partial );
-		return undef;
-
-	} else {
-		error( "Partial siteid", $partial, "ambiguous:", join( " vs ", map { m!/(s[0-9a-fA-F]{40})\.json! } @candidates ));
-		return undef;
-	}
+    return $site;
 }
 
 ##

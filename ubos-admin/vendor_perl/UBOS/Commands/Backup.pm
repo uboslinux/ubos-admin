@@ -26,7 +26,7 @@ package UBOS::Commands::Backup;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupManagers::ZipFileBackupManager;
+use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -85,7 +85,7 @@ sub run {
                     }
                 }
             } else {
-                fatal( "Cannot find site $siteId" );
+                fatal( $@ );
             }
         }
         foreach my $siteId ( @siteIds ) {
@@ -124,8 +124,7 @@ sub run {
 
     debug( 'Creating and exporting backup' );
 
-    my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
-    my $backup        = $backupManager->backup( \@siteIds, \@appConfigIds, $out );
+    my $backup = UBOS::Backup::ZipFileBackup->create( \@siteIds, \@appConfigIds, $out );
 
     debug( 'Resuming sites' );
 

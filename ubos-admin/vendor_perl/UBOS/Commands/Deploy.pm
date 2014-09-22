@@ -27,9 +27,9 @@ package UBOS::Commands::Deploy;
 use Cwd;
 use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupManagers::ZipFileBackupManager;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::UpdateBackup;
 use UBOS::Utils;
 
 ##
@@ -152,6 +152,10 @@ sub run {
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
 
+    unless( UBOS::UpdateBackup::checkReady() ) {
+        fatal( 'Cannot backup; backup directory not empty' );
+    }
+
     debug( 'Installing prerequisites' );
     # This is a two-step process: first we need to install the applications that haven't been
     # installed yet, and then we need to install their dependencies
@@ -233,21 +237,20 @@ sub run {
 
     debug( 'Backing up, undeploying and redeploying' );
 
-    my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
-
-    my $adminBackups = {};
     my $deployUndeployTriggers = {};
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
-            my $backup = $backupManager->adminBackupSite( $oldSite );
+            my $backup = UBOS::UpdateBackup->create( { $site->siteId => $oldSite } );
             $oldSite->undeploy( $deployUndeployTriggers );
             
             $site->deploy( $deployUndeployTriggers );
             $backup->restoreSite( $site );
-            $adminBackups->{$site->siteId} = $backup;
+
+            $backup->delete();
+
         } else {
-            $site->deploy();
+            $site->deploy( $deployUndeployTriggers );
         }
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
@@ -278,8 +281,6 @@ sub run {
             }
         }
     }
-
-    $backupManager->purgeAdminBackups();
 
     return 1;
 }

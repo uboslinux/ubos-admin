@@ -59,9 +59,8 @@ sub run {
     }
 
     my $site = UBOS::Host::findSiteByPartialId( $siteId );
-    
     unless( $site ) {
-        fatal();
+        fatal( $@ );
     }
 		
     if( $json ) {

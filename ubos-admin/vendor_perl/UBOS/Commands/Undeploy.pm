@@ -27,7 +27,6 @@ package UBOS::Commands::Undeploy;
 use Cwd;
 use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupManagers::ZipFileBackupManager;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -114,7 +113,7 @@ sub run {
             if( $site ) {
                 $oldSites->{$site->siteId} = $site;
             } else {
-                fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
+                fatal( "$@ Not undeploying any site." );
             }
             $site->checkUndeployable;
         }
@@ -131,21 +130,14 @@ sub run {
     }
     UBOS::Host::executeTriggers( $disableTriggers );
 
-    debug( 'Backing up and undeploying' );
+    debug( 'Undeploying' );
 
-    my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
-
-    my $adminBackups     = {};
     my $undeployTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
-        my $backup  = $backupManager->adminBackupSite( $oldSite );
         $oldSite->undeploy( $undeployTriggers );
-        $adminBackups->{$oldSite->siteId} = $backup;
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
-    $backupManager->purgeAdminBackups();
-    
     return 1;
 }
 

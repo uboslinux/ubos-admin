@@ -27,9 +27,9 @@ package UBOS::Commands::UpdateStage2;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Commands::Update;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::UpdateBackup;
 use UBOS::Utils;
 
 ##
@@ -57,47 +57,17 @@ sub run {
 
     UBOS::Utils::myexec( 'sudo systemctl daemon-reload' );
     
-    my $backupManager = new UBOS::BackupManagers::ZipFileBackupManager();
 
-    info( 'Restoring configuration' );
+    info( 'Redeploying sites and restoring data' );
+
+    my $backup   = UBOS::UpdateBackup->read();
+    my $oldSites = $backup->sites();
     
-    my @candidateFiles = <"$UBOS::Commands::Update::updateStatusDir/*">;
-
-    my $statusFile = undef;
-    my $bestTs     = undef;
-    foreach my $candidate ( @candidateFiles ) {
-        if( $candidate =~ m!^\Q$UBOS::Commands::Update::updateStatusDir/$UBOS::Commands::Update::updateStatusPrefix\E(.*)\Q$UBOS::Commands::Update::updateStatusSuffix\E$! ) {
-            my $ts = $1;
-            if( !$bestTs || $ts gt $bestTs ) {
-                $bestTs     = $ts;
-                $statusFile = $candidate;
-            }
-        }
-    }
-    unless( $statusFile ) {
-        fatal( 'Cannot restore, no status file found in', $UBOS::Commands::Update::updateStatusDir );
-    }
-    
-    my $statusJson = UBOS::Utils::readJsonFromFile( $statusFile );
-    
-    my $oldSites     = {};
-    my $adminBackups = {};
-    while( my( $siteId, $frag ) = each %{$statusJson->{sites}} ) {
-        my $backupFile = $frag->{backupfile};
-        my $backup     = $backupManager->newFromArchive( $backupFile );
-        
-        my $site = $backup->{sites}->{$siteId};
-        $oldSites->{$siteId} = $site;
-        $adminBackups->{$siteId} = $backup;
-    }
-
-    info( 'Redeploying sites' );
-
     my $deployTriggers = {};
     foreach my $site ( values %$oldSites ) {
         $site->deploy( $deployTriggers );
-        
-        $adminBackups->{$site->siteId}->restoreSite( $site );
+
+        $backup->restoreSite( $site );
 
         UBOS::Host::siteDeployed( $site );
     }
@@ -118,10 +88,9 @@ sub run {
             $appConfig->runUpgrader();
         }
     }
-    
-    UBOS::Utils::deleteFile( $statusFile );
 
-    $backupManager->purgeAdminBackups();
+    debug( 'Deleting update backup' );
+    $backup->delete();
 
     debug( 'Purging cache' );
     

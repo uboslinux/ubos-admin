@@ -22,11 +22,11 @@
 use strict;
 use warnings;
 
-package UBOS::BackupManagers::ZipFileBackup;
+package UBOS::Backup::ZipFileBackup;
 
 use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
 use UBOS::AppConfiguration;
-use UBOS::BackupManagers::ZipFileBackupContext;
+use UBOS::Backup::ZipFileBackupContext;
 use UBOS::Configuration;
 use UBOS::Logging;
 use UBOS::Site;
@@ -48,7 +48,7 @@ my $zipFileAppConfigsEntry   = 'appconfigs';
 # $siteIds: list of siteids to be contained in the backup
 # $appConfigIds: list of appconfigids to be contained in the backup that aren't part of the sites with the siteids
 # $outFile: the file to save the backup to
-sub new {
+sub create {
     my $self         = shift;
     my $siteIds      = shift;
     my $appConfigIds = shift;
@@ -62,7 +62,7 @@ sub new {
         foreach my $siteId ( @$siteIds ) {
             my $site = UBOS::Host::findSiteByPartialId( $siteId );
             unless( defined( $site )) {
-                fatal( 'This server does not run site', $siteId );
+                fatal( $@ );
             }
             if( $sites->{$siteId}) {
                 fatal( 'Duplicate siteid', $siteId );
@@ -175,7 +175,7 @@ sub new {
                     my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                     if( $appConfigItems ) {
 
-                        my $backupContext = new UBOS::BackupManagers::ZipFileBackupContext( $self, $appConfigPathInZip );
+                        my $backupContext = new UBOS::Backup::ZipFileBackupContext( $self, $appConfigPathInZip );
 
                         foreach my $appConfigItem ( @$appConfigItems ) {
                             if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
@@ -206,7 +206,7 @@ sub new {
 # Instantiate a Backup object from an archive file
 # $archive: the archive file name
 # return: the Backup object
-sub newFromArchive {
+sub readArchive {
     my $self    = shift;
     my $archive = shift;
 
@@ -299,7 +299,7 @@ sub restoreAppConfiguration {
                 if( $appConfigItems ) {
                     my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
-                    my $backupContext = new UBOS::BackupManagers::ZipFileBackupContext( $self, $appConfigPathInZip );
+                    my $backupContext = new UBOS::Backup::ZipFileBackupContext( $self, $appConfigPathInZip );
 
                     foreach my $appConfigItem ( @$appConfigItems ) {
                         if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {

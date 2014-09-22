@@ -88,7 +88,7 @@ sub restoreSite {
     my $site    = shift;
 
     foreach my $appConfig ( @{$site->appConfigs} ) {
-        $self->restoreAppConfiguration( $site, $appConfig );
+        $self->restoreAppConfiguration( $site->siteId, $appConfig );
     }
 
     1;

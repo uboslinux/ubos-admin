@@ -22,7 +22,7 @@
 use strict;
 use warnings;
 
-package UBOS::BackupManagers::ZipFileBackupContext;
+package UBOS::Backup::ZipFileBackupContext;
 
 use base qw( UBOS::AbstractBackupContext );
 use fields qw( backup contextPathInBackup );

@@ -26,7 +26,7 @@ package UBOS::Commands::Restore;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupManagers::ZipFileBackupManager;
+use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -81,8 +81,7 @@ sub run {
         }
     }
 
-    my $backupManager      = new UBOS::BackupManagers::ZipFileBackupManager();
-    my $backup             = $backupManager->newFromArchive( $in );
+    my $backup             = UBOS::Backup::ZipFileBackup->readArchive( $in );
     my $sitesInBackup      = $backup->sites();
     my $appConfigsInBackup = $backup->appConfigs();
     my $sites              = UBOS::Host::sites();
@@ -205,7 +204,7 @@ sub run {
     if( @appConfigIds ) {
         foreach my $appConfigId ( @appConfigIds ) {
             my $site = $sitesOfAppConfigs->{$appConfigId};
-            $backup->restoreAppConfiguration( $site, $site->appConfig( $appConfigId ));
+            $backup->restoreAppConfiguration( $site->siteId, $site->appConfig( $appConfigId ));
 
             $restoredSites{$site->siteId} = $site;
         }

@@ -68,7 +68,7 @@ sub run {
                 if( $site ) {
                     $sitesJson->{$site->siteId} = $site->siteJson;
                 } else {
-                    fatal();
+                    fatal( $@ );
                 }
             }
         } else {
@@ -86,7 +86,7 @@ sub run {
                 if( $site ) {
                     $site->print( $brief ? 1 : 2 );
                 } else {
-                    fatal();
+                    fatal( $@);
                 }
             }
         } else {
