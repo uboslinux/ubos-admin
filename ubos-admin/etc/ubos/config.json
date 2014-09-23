@@ -57,17 +57,5 @@
         "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
         "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.ubos-backup",
         "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"
-    },
-    
-    "zipfilebackupmanager" : {
-        "backupsuffix" : ".ubos-backup",
-
-        "adminbackupdir"      : "/var/lib/ubos/backups/admin",
-        "adminsitebackupfile" : "${zipfilebackupmanager.adminbackupdir}/${site.siteid}.${now.tstamp}${zipfilebackupmanager.backupsuffix}",
-        "adminbackuplifetime" : 604800,
-        
-        "testbackupdir"      : "/var/lib/ubos/backups/test",
-        "testsitebackupfile" : "${zipfilebackupmanager.adminbackupdir}/${site.siteid}.${now.tstamp}${zipfilebackupmanager.backupsuffix}",
-        "testbackuplifetime" : 86400
     }
 }
