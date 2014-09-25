@@ -48,6 +48,13 @@ our $knownCustomizationPointTypes = {
         },
         'valuecheckerror' => 'valid e-mail address required'
     },
+    'url' => {
+        'valuecheck' => sub {
+            my $v = shift;
+            return !ref( $v ) && $v =~ m!^https?://\S+$!;
+        },
+        'valuecheckerror' => 'valid http or https URL required'
+    },
     'text' => {
         'valuecheck' => sub {
             my $v = shift;

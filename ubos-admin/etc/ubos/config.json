@@ -27,8 +27,7 @@
         "uname" : "tomcat7",
         "gname" : "tomcat7",
 
-        "sitesdir"     : "/var/lib/tomcat7/sites",
-        "sitesappsdir" : "/etc/tomcat7/ubos/sites-apps"
+        "sitesdir" : "/var/lib/tomcat7/sites"
     },
 
     "site" : {
@@ -52,10 +51,9 @@
         },
         "tomcat7" : {
             "dir"         : "${tomcat7.sitesdir}/${site.siteid}/${appconfig.appconfigid}",
-            "contextfile" : "${site.tomcat7.contextdir}/${appconfig.contextorroot}.xml"
+            "contextfile" : "${site.tomcat7.contextdir}/${appconfig.contextnoslashorroot}.xml"
         },
         "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
-        "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.ubos-backup",
         "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"
     }
 }

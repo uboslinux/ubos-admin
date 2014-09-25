@@ -93,7 +93,7 @@ sub installOrCheck {
         unless( $toName =~ m#^/# ) {
             $toName = "$defaultToDir/$toName";
         }
-        if( -r $fromName ) {
+        if( -e $fromName ) {
             if( $doIt ) {
                 unless( -e $toName ) {
                     # These names sound a little funny for symlinks. Think "copy" instead of "link"

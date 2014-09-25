@@ -69,19 +69,12 @@ sub run {
     debug( 'Looking for site(s)' );
 
     my $oldSites = {};
-    if( @hosts ) {
-        my $sites = UBOS::Host::sites();
-        
+    if( @hosts ) {        
         foreach my $host ( @hosts ) {
-            my $found = 0;
-            while( my( $siteId, $site ) = each %$sites ) {
-                if( $site->hostName eq $host ) {
-                    $oldSites->{$siteId} = $site;
-                    $found = 1;
-                    last;
-                }
-            }
-            unless( $found ) {
+            my $site = UBOS::Host::findSiteByHostname( $host );
+            if( $site ) {
+                $oldSites->{$site->siteId} = $site;
+            } else {
                 fatal( "Cannot find site with hostname $host. Not undeploying any site." );
             }
         }

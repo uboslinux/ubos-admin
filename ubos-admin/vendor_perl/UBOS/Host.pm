@@ -97,12 +97,12 @@ sub findSiteByPartialId {
 	my $id = shift;
 
     my @candidates;
-    my $siteId;
+    my $siteFile;
     if( $id =~ m!^(.*)\.\.\.$! ) {
         my $partial = $1;
         my @candidates = <"$SITES_DIR/$partial?*.json">; # needs to have at least one more char
         if( @candidates == 1 ) {
-            $siteId = $candidates[0];
+            $siteFile = $candidates[0];
 
         } elsif( @candidates ) {
 	        $@ = "There is more than one site whose siteid starts with $partial: " . join( " vs ", map { m!/(s[0-9a-fA-F]{40})\.json! } @candidates ) . '.';
@@ -115,17 +115,34 @@ sub findSiteByPartialId {
 	
     } else {
         if( -e "$SITES_DIR/$id.json" ) {
-            $siteId = $id;
+            $siteFile = "$SITES_DIR/$id.json";
         } else {
             $@ = "No site found with siteid $id.";
             return undef;
         }
     }
 
-    my $siteJson = readJsonFromFile( $siteId );
+    my $siteJson = readJsonFromFile( $siteFile );
     my $site     = new UBOS::Site( $siteJson );
 
     return $site;
+}
+
+##
+# Find a particular Site currently installed on this host by its hostname
+# $host: hostname
+# return: the Site
+sub findSiteByHostname {
+    my $host = shift;
+    
+    my $sites = UBOS::Host::sites();
+
+    while( my( $siteId, $site ) = each %$sites ) {
+        if( $site->hostName eq $host ) {
+            return $site;
+        }
+    }
+    return undef;
 }
 
 ##

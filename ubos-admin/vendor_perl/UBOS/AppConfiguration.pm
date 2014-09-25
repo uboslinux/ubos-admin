@@ -130,14 +130,16 @@ sub contextOrSlash {
 }
 
 ##
-# Obtain the relative URL without trailing slash, except return ROOT if root of site.
-# This implements the Tomcat convention.
+# Obtain the relative URL without leading or trailing slash, except return
+# ROOT if root of site. This implements the Tomcat convention.
 # return: relative URL
-sub contextOrRoot {
+sub contextNoSlashOrRoot {
     my $self = shift;
 
     my $ret = $self->context;
-    unless( $ret ) {
+    if( $ret ) {
+        $ret =~ s!^/!!;
+    } else {
         $ret = 'ROOT';
     }
     return $ret;
@@ -229,10 +231,10 @@ sub config {
         $self->{config} = new UBOS::Configuration(
                     "AppConfiguration=$appConfigId",
                     {
-                        "appconfig.appconfigid"    => $appConfigId,
-                        "appconfig.context"        => $self->context(),
-                        "appconfig.contextorslash" => $self->contextOrSlash(),
-                        "appconfig.contextorroot"  => $self->contextOrRoot()
+                        "appconfig.appconfigid"          => $appConfigId,
+                        "appconfig.context"              => $self->context(),
+                        "appconfig.contextorslash"       => $self->contextOrSlash(),
+                        "appconfig.contextnoslashorroot" => $self->contextNoSlashOrRoot()
                     },
                     defined( $site ) ? $site->config : undef );
     }

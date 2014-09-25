@@ -44,23 +44,33 @@ sub run {
     my $logConfigFile = undef;
     my $json          = 0;
     my $siteId;
+    my $host;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'json'        => \$json,
-            'siteid=s'    => \$siteId );
+            'siteid=s'    => \$siteId,
+            'host=s'      => \$host );
 
     UBOS::Logging::initialize( 'ubos-admin', 'showsite', $verbose, $logConfigFile );
 
-    if( !$parseOk || !$siteId || @args || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || ( !$siteId && !$host ) || ( $siteId && $host ) || @args || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: showsite', @_, '(add --help for help)' );
     }
 
-    my $site = UBOS::Host::findSiteByPartialId( $siteId );
-    unless( $site ) {
-        fatal( $@ );
+    my $site;
+    if( $host ) {
+        $site = UBOS::Host::findSiteByHostname( $host );
+        unless( $site ) {
+            fatal( 'Cannot find a site with hostname:', $host );
+        }
+    } else {
+        $site = UBOS::Host::findSiteByPartialId( $siteId );
+        unless( $site ) {
+            fatal( $@ );
+        }
     }
 		
     if( $json ) {

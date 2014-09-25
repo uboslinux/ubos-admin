@@ -174,7 +174,9 @@ sub run {
 
         $adminUserId     = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
         $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
-        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$', undef, 1 );
+        do {
+            $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$', undef, 1 );
+        } while( $adminCredential =~ m!s3cr3t!i );
         $adminEmail      = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
     }
 
@@ -231,15 +233,19 @@ JSON
         $newSiteJsonString .= <<JSON;
             "customizationpoints" : {
 JSON
-        while( my( $packageName, $packageInfo ) = each %$custPointValues ) {
+        foreach my $packageName ( sort keys %$custPointValues ) {
+            my $packageInfo = $custPointValues->{$packageName};
+
             $newSiteJsonString .= <<JSON;
                 "$packageName" : {
 JSON
-            while( my( $name, $value ) = each %$packageInfo ) {
+            foreach my $name ( sort keys %$packageInfo ) {
+                my $value = $packageInfo->{$value};
+
                 $newSiteJsonString .= <<JSON;
                     "$name" : {
                         "value" : "$value"
-                    }
+                    },
 JSON
             }
             $newSiteJsonString .= <<JSON;
