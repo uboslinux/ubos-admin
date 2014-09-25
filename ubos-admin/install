@@ -19,7 +19,7 @@
 # along with ubos-admin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-## arg 1:  the old package version
+## arg 1: the old package version
 pre_remove() {
     cat <<MSG;
 
@@ -33,4 +33,10 @@ Regards,
     UBOS                ubos.net
 
 MSG
+}
+
+## arg 1: the new package version
+## arg 2: the old package version
+post_upgrade() {
+    systemctl daemon-reload
 }
