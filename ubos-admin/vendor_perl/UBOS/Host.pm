@@ -374,7 +374,43 @@ sub obtainDbDriver {
 # how much entropy is available.
 sub ensurePacmanInit {
     UBOS::Utils::myexec( "pacman-key --init" );
+
+    # We trust the Arch people
     UBOS::Utils::myexec( "pacman-key --populate archlinux" );
+
+    # and the ubos buildmaster
+    UBOS::Utils::myexec( "pacman-key -a -", <<KEY );
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v2
+
+mQINBFQFASEBEADcxFZSwt1x3xTutlHY0+i1KP4AG4OQHGlWAtBzVQ2YjCMLyLBr
+va+pmRG6HPFpyytSYi3Q9pJXOgWMZwPx+Io8r6CTyfJO5xoruFgs2pBijsImIFNT
+NPyUZ2g7wZ6jvHP2agajOszk6FdUCUxWpK1GvDyiv832EYxf3/4opQNMiDmC8n5E
+azc9LyS24jhe0cdu4QJxqIsc9PrSmGlb47omQB2tTWLz++7YgNBhkPiNdl8MwHrI
+9iLt5rT+fyJrt6CyGkKgxrwLC6SsnWDkNpTLDRY9CETb6J6qdn6Wqk3zEjwx/vIe
+e5F1LMCy6TI7e6DNerIDUpaP/r48ppz8YWF2QPBq9LzuQj8D8u+C3+7Vymcbl3sd
+RvuSonVaiLxzMjywCc7LEAAl4adlrZikkHghdcGIm4qKtDqQYKbHpCIv1EdDD+RZ
+U9SqgnGtKxsiS4v+xPkE+cA8IIc+TpmBqbcRe6HDEK8O9iaEGYi3JJ7Fj0hgH3pi
+cJxHbElppTD68jwx4Rsh+Oe4WghY3GbRtrhuKKUwlnDI+kj6Zlfc0ug+d0QEz6L1
+WsWbwQJjeGNWZVXKeZDixu1Za0Px5jn5sriR4hOj4D12JM3lKG24IHkF1Mk/cx27
+23RLnotH58BtXOcAIhpHiI7aOJpfQ+/wq6xsj8Y8jHuATrRACAO8WaiivQARAQAB
+tCdVQk9TIGJ1aWxkbWFzdGVyIDxidWlsZG1hc3RlckB1Ym9zLm5ldD6JAjkEEwEC
+ACMFAlQFASECGwMHCwkIBwMCAQYVCAIJCgsEFgIDAQIeAQIXgAAKCRBk/MUSy8Nf
+IpinEADV9DZVfi6zX1fabAnaC7krBK9Qb+DE51WFeI45b0OrjY2UNlmD3o4n1hI2
+ksdEZS+Xee2ZkpFexSl3Wy6l/uov+uyHZ+C/uJtdALlXnbaou9aiWCygDgB13oF3
+3XBSsEdAa1PBhCecFen7eZApcs0cyawkR+wnomWqslB5gr3LZEXBHzBkk7uzZkLV
+BArdH303Ed/VtZ80De1BbtQ8Uf9ssSlQ9huafTyvfdNsirVj2KVJG8DqXI87HFzr
+wngGnFIQ6WYp1m+BcuD8nY8wkJNTbqocuFfvQwP2COinGvx9lrwaCDVJIYIbMLlN
+c5C22OcRlLa7eusHQZK4B1I6DsGwJuxRFauKaKtzOtjT3MAinYmtKVcq8ek2ovad
+8r9Kq7KsSlYl3ah62akJV2EhXvIZhjGgMhCO9pH3FBfR2QpS1GV2YAYkuIaRrDr4
+k1F6nc26kBZXeFfSDTFMoslNDn+ULd5CAn8LLi5PTMbz5tcuGbcWIje23pDeA4pe
+oynIywxqYXp3EDSFoN+6z03nrI/4Fp/Xjb/ln/H7s/XAfeoUbklOXGWDQDZF+xqz
+PoRY5jSha6I9CEKMWP9suvk3paWSXfIBhvGsNesBYPAwCD3Q7G+CJTm6zd1E4e+k
+VPWL1gaUNfQUlSYqsbf49U22uPU8MHjPRvttQApwhcrrwokmVg==
+=2hHw
+-----END PGP PUBLIC KEY BLOCK-----
+KEY
+    UBOS::Utils::myexec( "pacman-key --lsign-key 64FCC512CBC35F22" );
 }
 
 1;
