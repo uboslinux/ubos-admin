@@ -240,7 +240,7 @@ JSON
                 "$packageName" : {
 JSON
             foreach my $name ( sort keys %$packageInfo ) {
-                my $value = $packageInfo->{$value};
+                my $value = $packageInfo->{$name};
 
                 $newSiteJsonString .= <<JSON;
                     "$name" : {
