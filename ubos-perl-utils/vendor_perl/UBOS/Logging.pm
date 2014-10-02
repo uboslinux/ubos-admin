@@ -177,8 +177,8 @@ sub fatal {
     my @msg = @_;
 
 	if( @msg ) {
-		if( $log->is_fatal()) {
-			$log->fatal( _constructMsg( @msg ));
+		if( $log->is_error()) {
+			$log->error( 'FATAL: ' . _constructMsg( @msg ));
 		}
     }
 
@@ -189,7 +189,7 @@ sub fatal {
 # Is fatal logging on?
 # return: 1 or 0
 sub isFatalActive {
-    return $log->is_fatal();
+    return $log->is_error();
 }
 
 ##
