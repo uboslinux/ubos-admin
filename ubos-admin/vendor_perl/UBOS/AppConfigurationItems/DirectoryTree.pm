@@ -56,6 +56,7 @@ sub new {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub installOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -63,6 +64,7 @@ sub installOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret   = 1;
     my $names = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
@@ -98,7 +100,7 @@ sub installOrCheck {
         }
 
         if( $doIt ) {
-            UBOS::Utils::copyRecursively( $fromName, $toName );
+            $ret &= UBOS::Utils::copyRecursively( $fromName, $toName );
 
             if( $uid || $gid || ( defined( $filemode ) && $filemode != -1 ) || ( defined( $dirmode ) && $dirmode != -1 )) {
                 find(   sub {
@@ -119,6 +121,7 @@ sub installOrCheck {
             }
         }
     }
+    return $ret;
 }
 
 ##
@@ -127,6 +130,7 @@ sub installOrCheck {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub uninstallOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -134,6 +138,7 @@ sub uninstallOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret   = 1;
     my $names = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
@@ -148,9 +153,10 @@ sub uninstallOrCheck {
             $toName = "$defaultToDir/$toName";
         }
         if( $doIt ) {
-            UBOS::Utils::deleteRecursively( $toName );
+            $ret &= UBOS::Utils::deleteRecursively( $toName );
         }
     }
+    return $ret;
 }
 
 ##
@@ -159,6 +165,7 @@ sub uninstallOrCheck {
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+# return: success or fail
 sub backup {
     my $self          = shift;
     my $dir           = shift;
@@ -172,6 +179,7 @@ sub backup {
     }
     if( @$names != 1 ) {
         error( 'Cannot backup item with more than one name:', @$names );
+        return 0;
     }
 
     my $fullName = $config->replaceVariables( $names->[0] );
@@ -181,7 +189,7 @@ sub backup {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    $backupContext->addDirectoryHierarchy( $fullName, $bucket );
+    return $backupContext->addDirectoryHierarchy( $fullName, $bucket );
 }
 
 ##
@@ -189,6 +197,7 @@ sub backup {
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
+# return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
@@ -200,7 +209,8 @@ sub restore {
         $names = [ $self->{json}->{name} ];
     }
     if( @$names != 1 ) {
-        fatal( 'Cannot restore item with more than one name:', @$names );
+        error( 'Cannot restore item with more than one name:', @$names );
+        return 0;
     }
 
     my $fullName = $config->replaceVariables( $names->[0] );
@@ -218,7 +228,7 @@ sub restore {
     my $uid = UBOS::Utils::getUid( $uname );
     my $gid = UBOS::Utils::getGid( $gname );
 
-    $backupContext->restoreRecursive( $bucket, $fullName );
+    my $ret = $backupContext->restoreRecursive( $bucket, $fullName );
 
     if( $mode > -1 ) {
         my $asOct = sprintf( "%o", $mode );
@@ -231,6 +241,7 @@ sub restore {
     if( defined( $gid )) {
         UBOS::Utils::myexec( 'chgrp -R -h ' . ( 0 + $gid ) . " $fullName" );
     }
+    return $ret;
 }
 
 1;

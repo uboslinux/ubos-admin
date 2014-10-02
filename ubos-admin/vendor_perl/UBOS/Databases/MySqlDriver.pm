@@ -240,6 +240,7 @@ sub defaultPort {
 # $dbUserLidCredential: credential for the database user
 # $dbUserLidCredType: credential type
 # $privileges: string containing required database privileges, like "create, insert"
+# return: success or fail
 sub provisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
@@ -268,11 +269,14 @@ FLUSH PRIVILEGES;
 SQL
     $sth->finish();
     $dbh->disconnect();
+
+    return 1;
 }
 
 ##
 # Unprovision a local database
 # $dbName: name of the database to unprovision
+# return: success or fail
 sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
@@ -283,12 +287,15 @@ sub unprovisionLocalDatabase {
 DROP DATABASE `$dbName`;
 SQL
     $sth->finish();
+
+    return 1;
 }
 
 ##
 # Export the data at a local database
 # $dbName: name of the database to unprovision
 # $fileName: name of the file to create with the exported data
+# return: success or fail
 sub exportLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
@@ -300,13 +307,17 @@ sub exportLocalDatabase {
         return 0;
     }
 
-    UBOS::Utils::myexec( "mysqldump -u $rootUser -p$rootPass $dbName > '$fileName'" );
+    if( UBOS::Utils::myexec( "mysqldump -u $rootUser -p$rootPass $dbName > '$fileName'" )) {
+        return 0;
+    }
+    return 1;
 }
 
 ##
 # Import data into a local database, overwriting its previous content
 # $dbName: name of the database to unprovision
 # $fileName: name of the file to create with the exported data
+# return: success or fail
 sub importLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
@@ -314,7 +325,10 @@ sub importLocalDatabase {
     
     my( $rootUser, $rootPass ) = findRootUserPass();
 
-    UBOS::Utils::myexec( "mysql -u $rootUser -p$rootPass $dbName < '$fileName'" );
+    if( UBOS::Utils::myexec( "mysql -u $rootUser -p$rootPass $dbName < '$fileName'" )) {
+        return 0;
+    }
+    return 1;
 }
 
 1;

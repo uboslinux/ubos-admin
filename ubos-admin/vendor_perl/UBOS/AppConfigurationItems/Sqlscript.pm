@@ -59,6 +59,7 @@ sub new {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub installOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -67,6 +68,8 @@ sub installOrCheck {
     my $config         = shift;
 
     error( 'Cannot perform install on', $self );
+
+    return 0;
 }
 
 ##
@@ -75,6 +78,7 @@ sub installOrCheck {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub uninstallOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -83,6 +87,8 @@ sub uninstallOrCheck {
     my $config         = shift;
 
     error( 'Cannot perform install on', $self );
+
+    return 0;
 }
 
 ##
@@ -91,6 +97,7 @@ sub uninstallOrCheck {
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
@@ -98,6 +105,7 @@ sub runPostDeployScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret              = 1;
     my $sourceOrTemplate = $self->{json}->{template};
     unless( $sourceOrTemplate ) {
         $sourceOrTemplate = $self->{json}->{source};
@@ -133,11 +141,15 @@ sub runPostDeployScript {
         }
         $cmd .= " '$dbName'";
 
-        UBOS::Utils::myexec( $cmd, $sql );
+        if( UBOS::Utils::myexec( $cmd, $sql )) {
+            $ret = 0;
+        }
 
     } else {
         error( 'File does not exist:', $sourceOrTemplate );
+        $ret = 0;
     }
+    return $ret;
 }
 
 1;

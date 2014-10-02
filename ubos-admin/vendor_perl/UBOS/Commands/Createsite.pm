@@ -204,9 +204,9 @@ JSON
             my $toAdd = UBOS::Utils::writeJsonToString( $appConfig->{json} );
             $toAdd =~ s!\s+$!!;
             $toAdd =~ s!^!        !mg;
-            $newSiteJsonString .= "\n" . $toAdd;
+            $newSiteJsonString .= "\n" . $toAdd . ',';
         }
-        $newSiteJsonString .= ",\n";
+        $newSiteJsonString .= "\n";
     }
     $newSiteJsonString .= <<JSON;
         {
@@ -263,6 +263,7 @@ JSON
 }
 JSON
 
+    my $ret = 1;
     if( $dryRun ) {
         print $newSiteJsonString;
 
@@ -283,42 +284,42 @@ JSON
 
         my $suspendTriggers = {};
         if( $existingSite ) {
-            $existingSite->suspend( $suspendTriggers );
+            $ret &= $existingSite->suspend( $suspendTriggers );
         } else {
-            $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+            $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
         }
         UBOS::Host::executeTriggers( $suspendTriggers );
 
         my $deployUndeployTriggers = {};
         if( $existingSite ) {
             my $backup = UBOS::UpdateBackup->create( { $siteId => $existingSite } );
-            $existingSite->undeploy( $deployUndeployTriggers );
+            $ret &= $existingSite->undeploy( $deployUndeployTriggers );
             
-            $newSite->deploy( $deployUndeployTriggers );
-            $backup->restoreSite( $newSite );
+            $ret &= $newSite->deploy( $deployUndeployTriggers );
+            $ret &= $backup->restoreSite( $newSite );
 
             $backup->delete();
         } else {
-            $newSite->deploy( $deployUndeployTriggers );
+            $ret &= $newSite->deploy( $deployUndeployTriggers );
         }
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
         debug( 'Resuming sites' );
 
         my $resumeTriggers = {};
-        $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
         UBOS::Host::executeTriggers( $resumeTriggers );
 
         debug( 'Running installers' );
         # no need to run any upgraders
 
         foreach my $appConfig ( @{$newSite->appConfigs} ) {
-            $appConfig->runInstaller();
+            $ret &= $appConfig->runInstaller();
         }
 
         print "Installed site $siteId at http://$hostname/\n";
     }
-    return 1;
+    return $ret;
 }
 
 ##

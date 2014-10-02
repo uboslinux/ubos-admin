@@ -228,6 +228,7 @@ SQL
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
+# return: success or fail
 sub unprovisionLocalDatabase {
     my $dbType        = shift;
     my $appConfigId   = shift;
@@ -283,8 +284,9 @@ SQL
     $dbh->disconnect();
     
     if( $dbName && $dbDriver ) {
-        $dbDriver->unprovisionLocalDatabase( $dbName );
+        return $dbDriver->unprovisionLocalDatabase( $dbName );
     }
+    return 0;
 }
 
 ##
@@ -294,6 +296,7 @@ SQL
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $fileName: the file to write to
+# return: success or fail
 sub exportLocalDatabase {
     my $dbType        = shift;
     my $appConfigId   = shift;
@@ -309,10 +312,10 @@ sub exportLocalDatabase {
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
         error( 'Unknown database type', $dbType );
-        return;
+        return 0;
     }
 
-    $dbDriver->exportLocalDatabase( $dbName, $fileName );
+    return $dbDriver->exportLocalDatabase( $dbName, $fileName );
 }
 
 ##
@@ -322,6 +325,7 @@ sub exportLocalDatabase {
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $fileName: the file to write to
+# return: success or fail
 sub importLocalDatabase {
     my $dbType        = shift;
     my $appConfigId   = shift;
@@ -337,10 +341,10 @@ sub importLocalDatabase {
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
         error( 'Unknown database type', $dbType );
-        return;
+        return 0;
     }
 
-    $dbDriver->importLocalDatabase( $dbName, $fileName );
+    return $dbDriver->importLocalDatabase( $dbName, $fileName );
 }
 
 1;

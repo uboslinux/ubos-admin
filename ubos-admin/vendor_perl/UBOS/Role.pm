@@ -55,6 +55,7 @@ sub new {
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
 # $config: the Configuration to use
+# return: success or fail
 sub deployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
@@ -63,6 +64,7 @@ sub deployOrCheck {
     my $config      = shift;
 
     # skip dependencies: done already
+    my $ret                 = 1;
     my $roleName            = $self->name();
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
@@ -73,11 +75,12 @@ sub deployOrCheck {
             foreach my $appConfigItem ( @$appConfigItems ) {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
-                    $item->installOrCheck( $doIt, $codeDir, $dir, $config );
+                    $ret &= $item->installOrCheck( $doIt, $codeDir, $dir, $config );
                 }
             }
         }
     }
+    return $ret;
 }
 
 ##
@@ -88,13 +91,15 @@ sub deployOrCheck {
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
 # $config: the Configuration to use
+# return: success or fail
 sub undeployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
     my $appConfig   = shift;
     my $installable = shift;
     my $config      = shift;
-                
+
+    my $ret                 = 1;
     my $roleName            = $self->name();
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
 
@@ -108,11 +113,12 @@ sub undeployOrCheck {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
 
                 if( $item ) {
-                    $item->uninstallOrCheck( $doIt, $codeDir, $dir, $config );
+                    $ret &= $item->uninstallOrCheck( $doIt, $codeDir, $dir, $config );
                 }
             }
         }
     }
+    return $ret;
 }
 
 ##
@@ -120,6 +126,7 @@ sub undeployOrCheck {
 # $site: the Site to check or set up
 # $doIt: if 1, setup; if 0, only check
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub setupSiteOrCheck {
     my $self     = shift;
     my $site     = shift;
@@ -127,6 +134,7 @@ sub setupSiteOrCheck {
     my $triggers = shift;
 
     # no op on this level
+    return 1;
 }
 
 ##
@@ -134,6 +142,7 @@ sub setupSiteOrCheck {
 # $site: the Site for which a placeholder shall be set up
 # $placeholderName: name of the placeholder
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub setupPlaceholderSite {
     my $self            = shift;
     my $site            = shift;
@@ -141,18 +150,21 @@ sub setupPlaceholderSite {
     my $triggers        = shift;
 
     # no op on this level
+    return 1;
 }
 
 ##
 # Do what is necessary to set up a Site.
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub setupSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;
 
     # no op on this level
+    return 1;
 }
 
 ##
@@ -160,6 +172,7 @@ sub setupSite {
 # $site: the Site
 # $doIt: if 1, setup; if 0, only check
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub removeSite {
     my $self     = shift;
     my $site     = shift;
@@ -167,8 +180,8 @@ sub removeSite {
     my $triggers = shift;
 
     # no op on this level
+    return 1;
 }
-
 
 ##
 # Instantiate the right subclass of AppConfigurationItem.
@@ -512,7 +525,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'permissions' must be string (octal)" );
                         }
                         unless( $config->replaceVariables( $appConfigItem->{permissions} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
-                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid permissions: " . $appConfigItem->{permissions} );
+                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid permissions (need octal, no leading zero): " . $appConfigItem->{permissions} );
                         }
                     }
                     if( defined( $appConfigItem->{filepermissions} )) {

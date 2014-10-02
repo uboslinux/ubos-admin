@@ -136,6 +136,7 @@ sub defaultPort {
 # $dbUserLidCredential: credential for the database user
 # $dbUserLidCredType: credential type
 # $privileges: string containing required database privileges, like "readWrite, dbAdmin"
+# return: success or fail
 sub provisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
@@ -144,43 +145,58 @@ sub provisionLocalDatabase {
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
 
-    executeCmdAsAdmin( "createdb -E UNICODE \"$dbName\"" );
-    executeCmdAsAdmin( "createuser \"$dbUserLid\"" );
-    executeCmdAsAdmin( "psql -v HISTFILE=/dev/null", "grant $privileges on database \"$dbName\" to \"$dbUserLid\"" );
+    my $ret = 1;
+    $ret &= executeCmdAsAdmin( "createdb -E UNICODE \"$dbName\"" );
+    $ret &= executeCmdAsAdmin( "createuser \"$dbUserLid\"" );
+    $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null", "grant $privileges on database \"$dbName\" to \"$dbUserLid\"" );
+
+    return $ret;
 }
 
 ##
 # Unprovision a local database
 # $dbName: name of the database to unprovision
+# return: success or fail
 sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
 
-    executeCmdAsAdmin( "dropdb \"$dbName\"" );
+    if( executeCmdAsAdmin( "dropdb \"$dbName\"" )) {
+        return 0;
+    }
+    return 1;
 }
 
 ##
 # Export the data at a local database
 # $dbName: name of the database to unprovision
 # $fileName: name of the file to create with the exported data
+# return: success or fail
 sub exportLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
     my $fileName = shift;
 
-    executeCmdPipeAsAdmin( "pg_dump \"$dbName\"", undef, $fileName );
+    if( executeCmdPipeAsAdmin( "pg_dump \"$dbName\"", undef, $fileName )) {
+        return 0;
+    }
+    return 1;
 }
 
 ##
 # Import data into a local database, overwriting its previous content
 # $dbName: name of the database to unprovision
 # $fileName: name of the file to create with the exported data
+# return: success or fail
 sub importLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
     my $fileName = shift;
 
-    executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef );
+    if( executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef )) {
+        return 0;
+    }
+    return 1;
 }
 
 1;

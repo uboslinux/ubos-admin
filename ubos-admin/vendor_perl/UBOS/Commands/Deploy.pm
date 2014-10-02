@@ -151,6 +151,7 @@ sub run {
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
+    my $ret = 1;
 
     unless( UBOS::UpdateBackup::checkReady() ) {
         fatal( 'Cannot backup; backup directory not empty' );
@@ -228,9 +229,9 @@ sub run {
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
-            $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+            $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
         } else {
-            $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+            $ret &= $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
         }
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
@@ -242,15 +243,15 @@ sub run {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             my $backup = UBOS::UpdateBackup->create( { $site->siteId => $oldSite } );
-            $oldSite->undeploy( $deployUndeployTriggers );
+            $ret &= $oldSite->undeploy( $deployUndeployTriggers );
             
-            $site->deploy( $deployUndeployTriggers );
-            $backup->restoreSite( $site );
+            $ret &= $site->deploy( $deployUndeployTriggers );
+            $ret &= $backup->restoreSite( $site );
 
             $backup->delete();
 
         } else {
-            $site->deploy( $deployUndeployTriggers );
+            $ret &= $site->deploy( $deployUndeployTriggers );
         }
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
@@ -259,7 +260,7 @@ sub run {
 
     my $resumeTriggers = {};
     foreach my $site ( @newSites ) {
-        $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
@@ -270,19 +271,19 @@ sub run {
         if( $oldSite ) {
             foreach my $appConfig ( @{$site->appConfigs} ) {
                 if( $oldSite->appConfig( $appConfig->appConfigId() )) {
-                    $appConfig->runUpgrader();
+                    $ret &= $appConfig->runUpgrader();
                 } else {
-                    $appConfig->runInstaller();
+                    $ret &= $appConfig->runInstaller();
                 }
             }
         } else {
             foreach my $appConfig ( @{$site->appConfigs} ) {
-                $appConfig->runInstaller();
+                $ret &= $appConfig->runInstaller();
             }
         }
     }
 
-    return 1;
+    return $ret;
 }
 
 ##

@@ -28,6 +28,7 @@ use base qw( UBOS::AbstractBackupContext );
 use fields qw( backup contextPathInBackup );
 
 use File::Copy;
+use UBOS::Logging;
 
 ##
 # Constructor
@@ -49,13 +50,16 @@ sub new {
 # Callback by which an AppConfigurationItem can add a file to a Backup
 # $fileToAdd: the name of the file to add in the file system
 # $bucket: the name of the bucket to which the file shall be added
+# return: success or fail
 sub addFile {
     my $self      = shift;
     my $fileToAdd = shift;
     my $bucket    = shift;
 
-    UBOS::Utils::myexec( "cp -pP '$fileToAdd' '" . $self->{contextPathInBackup} . "/$bucket'" );
     # keep attributes, and don't follow symlinks
+    if( UBOS::Utils::myexec( "cp -pP '$fileToAdd' '" . $self->{contextPathInBackup} . "/$bucket'" )) {
+        return 0;
+    }
 
     return 1;
 }
@@ -64,6 +68,7 @@ sub addFile {
 # Callback by which an AppConfigurationItem can add a directory hierarchy to a Backup
 # $dirToAdd: the name of the directory to add in the file system
 # $bucket: the name of the bucket to which the directory hierarchy shall be added
+# return: success or fail
 sub addDirectoryHierarchy {
     my $self     = shift;
     my $dirToAdd = shift;
@@ -71,28 +76,34 @@ sub addDirectoryHierarchy {
 
     UBOS::Utils::mkdir( $self->{contextPathInBackup} . "/$bucket", 0700 );
     
-    opendir( DIR, $dirToAdd ) || error( $! );
+    unless( opendir( DIR, $dirToAdd )) {
+        error( $! );
+        return 0;
+    }
 
+    my $ret = 1;
     while( my $file = readdir( DIR )) {
-        move( "$dirToAdd/$file", $self->{contextPathInBackup} . "/$bucket/$file" );        
+        $ret &= move( "$dirToAdd/$file", $self->{contextPathInBackup} . "/$bucket/$file" );        
     }
     closedir( DIR );
 
-    return 1;
+    return $ret;
 }
 
 ##
 # Callback by which an AppConfigurationItem can restore a file from a Backup
 # $bucket: the name of the bucket from which the file is to be restored
 # $fileName: name of the file in the filesystem to be written
-# return: 1 if the extraction was performed
+# return: success or fail
 sub restore {
     my $self     = shift;
     my $bucket   = shift;
     my $fileName = shift;
 
-    UBOS::Utils::myexec( "mv '" . $self->{contextPathInBackup} . "/$bucket' '$fileName'" );
     # keep attributes, and don't follow symlinks
+    if( UBOS::Utils::myexec( "mv '" . $self->{contextPathInBackup} . "/$bucket' '$fileName'" )) {
+        return 0;
+    }
 
     return 1;
 }
@@ -101,21 +112,26 @@ sub restore {
 # Helper method to restore a directory hierarchy from a Backup
 # $bucket: the name of the bucket from which the directory hierarchy is to be restored
 # $dirName: name of the director in the filesystem to be written
+# return: success or fail
 sub restoreRecursive {
     my $self    = shift;
     my $bucket  = shift;
     my $dirName = shift;
 
-    opendir( DIR, $self->{contextPathInBackup} . "/$bucket" ) || error( $! );
+    unless( opendir( DIR, $self->{contextPathInBackup} . "/$bucket" )) {
+        error( $! );
+        return 0;
+    }
 
+    my $ret = 1;
     while( my $file = readdir( DIR )) {
-        move( $self->{contextPathInBackup} . "/$bucket/$file", "$dirName/$file",  );        
+        $ret &= move( $self->{contextPathInBackup} . "/$bucket/$file", "$dirName/$file",  );        
     }
     closedir( DIR );
 
-    UBOS::Utils::deleteRecursively( $self->{contextPathInBackup} . "/$bucket" );
+    $ret &= UBOS::Utils::deleteRecursively( $self->{contextPathInBackup} . "/$bucket" );
 
-    return 1;
+    return $ret;
 }
 
 1;

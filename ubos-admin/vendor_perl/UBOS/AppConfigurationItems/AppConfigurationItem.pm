@@ -58,6 +58,7 @@ sub new {
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
@@ -65,18 +66,21 @@ sub runPostDeployScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret = 1;
     if( 'install' eq $methodName ) {
-        $self->runInstallScript( $defaultFromDir, $defaultToDir, $config );
+        $ret &= $self->runInstallScript( $defaultFromDir, $defaultToDir, $config );
 
     } elsif( 'uninstall' eq $methodName ) {
-        $self->runUninstallScript( $defaultFromDir, $defaultToDir, $config );
+        $ret &= $self->runUninstallScript( $defaultFromDir, $defaultToDir, $config );
 
     } elsif( 'upgrade' eq $methodName ) {
-        $self->runUpgradeScript( $defaultFromDir, $defaultToDir, $config );
+        $ret &= $self->runUpgradeScript( $defaultFromDir, $defaultToDir, $config );
 
     } else {
         error( 'Cannot perform runPostDeployScript( $methodName ) on', $self );
+        $ret = 0;
     }
+    return $ret;
 }
 
 ##
@@ -84,6 +88,7 @@ sub runPostDeployScript {
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub runInstallScript {
     my $self           = shift;
     my $defaultFromDir = shift;
@@ -91,6 +96,8 @@ sub runInstallScript {
     my $config         = shift;
 
     error( 'Cannot perform runInstallScript on', $self );
+
+    return 0;
 }
 
 ##
@@ -98,6 +105,7 @@ sub runInstallScript {
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub runUninstallScript {
     my $self           = shift;
     my $defaultFromDir = shift;
@@ -105,6 +113,8 @@ sub runUninstallScript {
     my $config         = shift;
 
     error( 'Cannot perform runUninstallScript on', $self );
+
+    return 0;
 }
 
 ##
@@ -112,6 +122,7 @@ sub runUninstallScript {
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub runUpgradeScript {
     my $self           = shift;
     my $defaultFromDir = shift;
@@ -119,6 +130,8 @@ sub runUpgradeScript {
     my $config         = shift;
 
     error( 'Cannot perform runUpgradeScript on', $self );
+
+    return 0;
 }
 
 ##
@@ -142,6 +155,7 @@ sub backup {
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
+# return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
@@ -149,6 +163,8 @@ sub restore {
     my $backupContext = shift;
 
     error( 'Cannot perform restore() on', $self );
+
+    return 0;
 }
 
 ##

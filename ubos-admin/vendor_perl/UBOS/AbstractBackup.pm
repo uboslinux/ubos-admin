@@ -83,20 +83,23 @@ sub appConfigs {
 # Restore a site including all AppConfigurations from a backup
 # $site: the Site to restore
 # $backup: the Backup from where to restore
+# return: success or fail
 sub restoreSite {
     my $self    = shift;
     my $site    = shift;
 
+    my $ret = 1;
     foreach my $appConfig ( @{$site->appConfigs} ) {
-        $self->restoreAppConfiguration( $site->siteId, $appConfig );
+        $ret &= $self->restoreAppConfiguration( $site->siteId, $appConfig );
     }
 
-    1;
+    return $ret;
 }
 
 ##
 # Restore only site-specific information from a backup, leaving out
 # all AppConfiguration-specific information.
+# return: success or fail
 sub restoreSiteWithoutAppConfigurations {
     my $self    = shift;
     my $site    = shift;
@@ -110,6 +113,7 @@ sub restoreSiteWithoutAppConfigurations {
 # Restore a single AppConfiguration from Backup
 # $siteId: the SiteId of the AppConfiguration
 # $appConfig: the AppConfiguration to restore
+# return: success or fail
 sub restoreAppConfiguration {
     my $self      = shift;
     my $siteId    = shift;

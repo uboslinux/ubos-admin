@@ -63,7 +63,7 @@ sub run {
     if( $json ) {
         my $sitesJson = {};
         if( @siteIds ) {
-            foreach my $siteId ( @siteIds ) {
+            foreach my $siteId ( sort @siteIds ) {
                 my $site = UBOS::Host::findSiteByPartialId( $siteId );
                 if( $site ) {
                     $sitesJson->{$site->siteId} = $site->siteJson;
@@ -73,7 +73,7 @@ sub run {
             }
         } else {
             my $sites = UBOS::Host::sites();
-            foreach my $site ( values %$sites ) {
+            foreach my $site ( sort values %$sites ) {
                 $sitesJson->{$site->siteId} = $site->siteJson;
             }
         }
@@ -81,7 +81,7 @@ sub run {
 
     } else { # human-readable, brief or not
         if( @siteIds ) {
-            foreach my $siteId ( @siteIds ) {
+            foreach my $siteId ( sort @siteIds ) {
                 my $site = UBOS::Host::findSiteByPartialId( $siteId );
                 if( $site ) {
                     $site->print( $brief ? 1 : 2 );
@@ -91,7 +91,7 @@ sub run {
             }
         } else {
             my $sites = UBOS::Host::sites();
-            foreach my $site ( values %$sites ) {
+            foreach my $site ( sort values %$sites ) {
                 $site->print( $brief ? 1 : 2 );
             }
         }

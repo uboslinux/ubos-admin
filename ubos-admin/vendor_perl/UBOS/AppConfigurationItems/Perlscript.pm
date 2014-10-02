@@ -56,6 +56,7 @@ sub new {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub installOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -72,7 +73,7 @@ sub installOrCheck {
 
     unless( -r $script ) {
         error( 'File to run does not exist:', $script );
-        return;
+        return 0;
     }
 
     if( $doIt ) {
@@ -83,8 +84,10 @@ sub installOrCheck {
 
         unless( eval $scriptcontent ) {
             error( 'Running eval', $script, $operation, 'failed:', $@ );
+            return 0;
         }
     }
+    return 1;
 }
 
 ##
@@ -93,6 +96,7 @@ sub installOrCheck {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub uninstallOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -113,7 +117,7 @@ sub uninstallOrCheck {
 
     unless( -r $script ) {
         error( 'File to run does not exist:', $script );
-        return;
+        return 0;
     }
 
     if( $doIt ) {
@@ -124,8 +128,10 @@ sub uninstallOrCheck {
 
         unless( eval $scriptcontent ) {
             error( 'Running eval', $script, $operation, 'failed:', $@ );
+            return 0;
         }
     }
+    return 1;
 }
 
 ##
@@ -134,6 +140,7 @@ sub uninstallOrCheck {
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
@@ -150,7 +157,7 @@ sub runPostDeployScript {
 
     unless( -r $script ) {
         error( 'File to run does not exist:', $script );
-        return;
+        return 0;
     }
 
     my $scriptcontent = slurpFile( $script );
@@ -160,7 +167,9 @@ sub runPostDeployScript {
 
     unless( eval $scriptcontent ) {
         error( 'Running eval', $script, $operation, 'failed:', $@ );
+        return 0;
     }
+    return 1;
 }
 
 1;

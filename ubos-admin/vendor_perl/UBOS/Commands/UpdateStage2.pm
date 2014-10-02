@@ -43,11 +43,13 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $stage1exit    = 0;
     
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile );
+            'verbose+'     => \$verbose,
+            'logConfig=s'  => \$logConfigFile,
+            'stage1exit=1' => \$stage1exit );
 
     UBOS::Logging::initialize( 'ubos-admin', 'update-stage-2', $verbose, $logConfigFile );
 
@@ -56,18 +58,19 @@ sub run {
     }
 
     UBOS::Utils::myexec( 'sudo systemctl daemon-reload' );
-    
 
     info( 'Redeploying sites and restoring data' );
+
+    my $ret = 1;
 
     my $backup   = UBOS::UpdateBackup->read();
     my $oldSites = $backup->sites();
     
     my $deployTriggers = {};
     foreach my $site ( values %$oldSites ) {
-        $site->deploy( $deployTriggers );
+        $ret &= $site->deploy( $deployTriggers );
 
-        $backup->restoreSite( $site );
+        $ret &= $backup->restoreSite( $site );
 
         UBOS::Host::siteDeployed( $site );
     }
@@ -77,7 +80,7 @@ sub run {
 
     my $resumeTriggers = {};
     foreach my $site ( values %$oldSites ) {
-        $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
@@ -85,7 +88,7 @@ sub run {
 
     foreach my $site ( values %$oldSites ) {
         foreach my $appConfig ( @{$site->appConfigs} ) {
-            $appConfig->runUpgrader();
+            $ret &= $appConfig->runUpgrader();
         }
     }
 
@@ -96,7 +99,7 @@ sub run {
     
     UBOS::Host::purgeCache( 1 );
 
-    return 1;
+    return $ret && !$stage1exit;
 }
 
 ##

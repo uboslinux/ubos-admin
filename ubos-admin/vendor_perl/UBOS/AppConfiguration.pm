@@ -281,6 +281,7 @@ sub deploy {
 # share the same code, so the checks get updated at the same time as the
 # actual deployment.
 # $doIt: if 1, deploy; if 0, only check
+# return: success or fail
 sub _deployOrCheck {
     my $self = shift;
     my $doIt = shift;
@@ -290,6 +291,7 @@ sub _deployOrCheck {
     unless( $self->{site} ) {
         fatal( 'Cannot deploy AppConfiguration without site' );
     }
+    my $ret             = 1;
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
 
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
@@ -329,27 +331,11 @@ sub _deployOrCheck {
         # Now for all the roles
         foreach my $role ( @rolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $role->deployOrCheck( $doIt, $self, $installable, $config );
+                $ret &= $role->deployOrCheck( $doIt, $self, $installable, $config );
             }
         }
     }
-}
-
-##
-# Before undeploying, check whether this AppConfiguration would be undeployable
-# If not, this invocation never returns
-sub checkUndeployable {
-    my $self = shift;
-
-    $self->_undeployOrCheck( 0 );
-}
-
-##
-# Undeploy this AppConfiguration.
-sub undeploy {
-    my $self = shift;
-
-    $self->_undeployOrCheck( 1 );
+    return $ret;
 }
 
 ##
@@ -367,6 +353,7 @@ sub _undeployOrCheck {
         fatal( 'Cannot undeploy AppConfiguration without site' );
     }
 
+    my $ret                = 1;
     my @reverseRolesOnHost = reverse UBOS::Host::rolesOnHostInSequence();
 
     my $appConfigId = $self->appConfigId;
@@ -392,7 +379,7 @@ sub _undeployOrCheck {
         # Now for all the roles
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $role->undeployOrCheck( $doIt, $self, $installable, $config );
+                $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $config );
             }
         }
     }
@@ -408,10 +395,12 @@ sub _undeployOrCheck {
             }
         }
     }
+    return $ret;
 }
 
 ##
 # Run the installer(s) for the app at this AppConfiguration
+# return: success or fail
 sub runInstaller {
     my $self = shift;
 
@@ -419,15 +408,8 @@ sub runInstaller {
 }
 
 ##
-# Run the uninstaller(s) for the app at this AppConfiguration
-sub runUninstaller {
-    my $self = shift;
-
-    return $self->_runPostDeploy( 'uninstallers', 'uninstall' );
-}
-
-##
 # Run the upgrader(s) for the app at this AppConfiguration
+# return: success or fail
 sub runUpgrader {
     my $self = shift;
 
@@ -438,6 +420,7 @@ sub runUpgrader {
 # Common code for running installers, uninstallers and upgraders
 # $jsonSection: name of the JSON section that holds the script(s)
 # $methodName: name of the method on AppConfigurationItem to invoke
+# return: success or fail
 sub _runPostDeploy {
     my $self        = shift;
     my $jsonSection = shift;
@@ -449,6 +432,7 @@ sub _runPostDeploy {
         fatal( 'Cannot _runPostDeploy AppConfiguration without site' );
     }
 
+    my $ret          = 1;
     my @rolesOnHost  = UBOS::Host::rolesOnHostInSequence();
     my $appConfigId  = $self->appConfigId;
     my @installables = $self->installables();
@@ -480,12 +464,13 @@ sub _runPostDeploy {
                     my $item = $role->instantiateAppConfigurationItem( $itemJson, $self, $installable );
 
                     if( $item ) {
-                        $item->runPostDeployScript( $methodName, $codeDir, $dir, $config );
+                        $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $config );
                     }
                 }
             }
         }
     }
+    return $ret;
 }
 
 ##

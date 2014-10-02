@@ -63,9 +63,10 @@ sub run {
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
+    my $ret = 1;
 
     my $oldSites = UBOS::Host::sites();
-    my $resumeSites = ();
+    my $resumeSites     = ();
     my $suspendTriggers = {};
 
     debug( 'Suspending sites' );
@@ -91,7 +92,7 @@ sub run {
         foreach my $siteId ( @siteIds ) {
             my $oldSite = UBOS::Host::findSiteByPartialId( $siteId );
             if( $oldSite ) {
-                $oldSite->suspend( $suspendTriggers );
+                $ret &= $oldSite->suspend( $suspendTriggers );
                 $resumeSites->{$siteId} = $oldSite;
             }
         }
@@ -106,7 +107,7 @@ sub run {
                     }
                 }
                 if( $foundAppConfig ) {
-                    $oldSite->suspend( $suspendTriggers );
+                    $ret &= $oldSite->suspend( $suspendTriggers );
                     $resumeSites->{$oldSite->siteId} = $oldSite;
                 } else {
                     fatal( "Cannot find appconfiguration $appconfigId" );
@@ -116,7 +117,7 @@ sub run {
     } else {
 		my $oldSites = UBOS::Host::sites();
         foreach my $oldSite ( values %$oldSites ) {
-            $oldSite->suspend( $suspendTriggers );
+            $ret &= $oldSite->suspend( $suspendTriggers );
             $resumeSites->{$oldSite->siteId} = $oldSite;
         }
     }
@@ -124,17 +125,18 @@ sub run {
 
     debug( 'Creating and exporting backup' );
 
-    my $backup = UBOS::Backup::ZipFileBackup->create( \@siteIds, \@appConfigIds, $out );
+    my $backup = UBOS::Backup::ZipFileBackup->new();
+    $ret &= $backup->create( \@siteIds, \@appConfigIds, $out );
 
     debug( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( values %$resumeSites ) {
-        $site->resume( $resumeTriggers );
+        $ret &= $site->resume( $resumeTriggers );
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
     
-    return 1;
+    return $ret;
 }
 
 ##

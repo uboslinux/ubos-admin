@@ -415,22 +415,24 @@ sub needsRole {
 ##
 # Before deploying, check whether this Site would be deployable
 # If not, this invocation never returns
+# return: success or fail
 sub checkDeployable {
     my $self = shift;
 
-    $self->_deployOrCheck( 0 );
+    return $self->_deployOrCheck( 0 );
 }
 
 ##
 # Deploy this Site
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub deploy {
     my $self     = shift;
     my $triggers = shift;
 
     debug( 'Site', $self->siteId, '->deploy' );
 
-    $self->_deployOrCheck( 1, $triggers );
+    return $self->_deployOrCheck( 1, $triggers );
 }
 
 ##
@@ -439,48 +441,52 @@ sub deploy {
 # actual deployment.
 # $doIt: if 1, deploy; if 0, only check
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub _deployOrCheck {
     my $self     = shift;
     my $doIt     = shift;
     my $triggers = shift;
 
+    my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $role->setupSiteOrCheck( $self, $doIt, $triggers );
+            $ret &= $role->setupSiteOrCheck( $self, $doIt, $triggers );
         }
     }
     
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->_deployOrCheck( $doIt, $triggers );
+        $ret &= $appConfig->_deployOrCheck( $doIt, $triggers );
     }
 
     if( $doIt ) {
         UBOS::Host::siteDeployed( $self );
     }
 
-    1;
+    return $ret;
 }
 
 ##
 # Prior to undeploying, check whether this Site can be undeployed
 # If not, this invocation never returns
+# return: success or fail
 sub checkUndeployable {
     my $self = shift;
 
-    $self->_undeployOrCheck( 0 );
+    return $self->_undeployOrCheck( 0 );
 }
     
 ##
 # Undeploy this Site
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub undeploy {
     my $self     = shift;
     my $triggers = shift;
 
     debug( 'Site', $self->siteId, '->undeploy' );
 
-    $self->_undeployOrCheck( 1, $triggers );
+    return $self->_undeployOrCheck( 1, $triggers );
 }
 
 ##
@@ -489,19 +495,21 @@ sub undeploy {
 # actual undeployment.
 # $doIt: if 1, undeploy; if 0, only check
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub _undeployOrCheck {
     my $self     = shift;
     my $doIt     = shift;
     my $triggers = shift;
 
+    my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->_undeployOrCheck( $doIt, $triggers );
+        $ret &= $appConfig->_undeployOrCheck( $doIt, $triggers );
     }
 
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $role->removeSite( $self, $doIt, $triggers );
+            $ret &= $role->removeSite( $self, $doIt, $triggers );
         }
     }
 
@@ -509,52 +517,61 @@ sub _undeployOrCheck {
         UBOS::Host::siteUndeployed( $self );
     }
 
-    1;
+    return $ret;
 }
 
 ##
 # Set up a placeholder for this new Site: "coming soon"
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub setupPlaceholder {
     my $self     = shift;
     my $triggers = shift;
 
+    my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $role->setupPlaceholderSite( $self, 'maintenance', $triggers );
+            $ret &= $role->setupPlaceholderSite( $self, 'maintenance', $triggers );
         }
     }
+    return $ret;
 }
 
 ##
 # Suspend this Site: replace Site with an "updating" placeholder or such
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub suspend {
     my $self     = shift;
     my $triggers = shift;
 
+    my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $role->setupPlaceholderSite( $self, 'maintenance', $triggers );
+            $ret &= $role->setupPlaceholderSite( $self, 'maintenance', $triggers );
         }
     }
+    return $ret;
 }
 
 ##
 # Resume this Site from suspension
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub resume {
     my $self     = shift;
     my $triggers = shift;
 
+    my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $role->setupSite( $self, $triggers );
+            $ret &= $role->setupSite( $self, $triggers );
         }
     }
+    return $ret;
 }
 
 ##
@@ -564,12 +581,14 @@ sub disable {
     my $self     = shift;
     my $triggers = shift;
 
+    my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $role->setupPlaceholderSite( $self, 'nosuchsite', $triggers );
+            $ret &= $role->setupPlaceholderSite( $self, 'nosuchsite', $triggers );
         }
     }
+    return $ret;
 }
 
 ##

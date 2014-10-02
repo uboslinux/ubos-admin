@@ -79,6 +79,7 @@ sub run {
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
+    my $ret = 1;
 
     unless( UBOS::UpdateBackup::checkReady() ) {
         fatal( 'Cannot create temporary backup; backup directory is not empty' );
@@ -88,7 +89,7 @@ sub run {
 
     my $suspendTriggers = {};
     foreach my $site ( values %$oldSites ) {
-        $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+        $ret &= $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
@@ -101,7 +102,7 @@ sub run {
     my $adminBackups = {};
     my $undeployTriggers = {};
     foreach my $site ( values %$oldSites ) {
-        $site->undeploy( $undeployTriggers );
+        $ret &= $site->undeploy( $undeployTriggers );
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
@@ -124,10 +125,13 @@ sub run {
     if( $stage2LogConfigFile ) {
         $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
     }
+    unless( $ret ) {
+        $stage2Cmd .= ' --stage1exit 1';
+    }
 
     exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
 
-    return 1;
+    # Never gets here
 }
 
 ##

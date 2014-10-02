@@ -152,13 +152,14 @@ sub read {
 # Restore a single AppConfiguration from Backup
 # $siteId: the SiteId of the AppConfiguration
 # $appConfig: the AppConfiguration to restore
+# return: success or fail
 sub restoreAppConfiguration {
     my $self      = shift;
     my $siteId    = shift;
     my $appConfig = shift;
 
+    my $ret         = 1;
     my $appConfigId = $appConfig->appConfigId;
-
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
     foreach my $installable ( $appConfig->installables ) {
@@ -195,13 +196,14 @@ sub restoreAppConfiguration {
                         }
                         my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                         if( $item ) {
-                            $item->restore( $dir, $config, $backupContext );
+                            $ret &= $item->restore( $dir, $config, $backupContext );
                         }
                     }
                 }
             }
         }
     }
+    return $ret;
 }
 
 ##

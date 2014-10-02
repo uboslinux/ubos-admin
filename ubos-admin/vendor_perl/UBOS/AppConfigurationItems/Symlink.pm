@@ -55,6 +55,7 @@ sub new {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub installOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -62,6 +63,7 @@ sub installOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret   = 1;
     my $names = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
@@ -103,13 +105,16 @@ sub installOrCheck {
                     UBOS::Utils::symlink( $fromName, $toName, $mode, $uname, $gname );
                 } else {
                     error( 'Cannot create symlink:', $toName );
+                    $ret = 0;
                 }
             }
 
         } else {
             error( 'File does not exist:', $fromName );
+            $ret = 0;
         }
     }
+    return $ret;
 }
 
 ##
@@ -118,6 +123,7 @@ sub installOrCheck {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub uninstallOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -125,6 +131,7 @@ sub uninstallOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret   = 1;
     my $names = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
@@ -142,12 +149,15 @@ sub uninstallOrCheck {
 
         if( $doIt ) {
             if( -e $toName ) {
-                UBOS::Utils::deleteFile( $toName );
+                $ret &= UBOS::Utils::deleteFile( $toName );
+
             } else {
                 error( 'File does not exist:', $toName );
+                $ret = 0;
             }
         }
     }
+    return $ret;
 }
 
 1;

@@ -44,10 +44,23 @@ my $zipFileInstallablesEntry = 'installables';
 my $zipFileAppConfigsEntry   = 'appconfigs';
 
 ##
+# Constructor.
+sub new {
+    my $self = shift;
+    
+    unless( ref( $self )) {
+        $self = fields::new( $self );
+    }
+
+    return $self;
+}
+
+##
 # Save the specified sites and AppConfigurations to a file, and return the corresponding Backup object
 # $siteIds: list of siteids to be contained in the backup
 # $appConfigIds: list of appconfigids to be contained in the backup that aren't part of the sites with the siteids
 # $outFile: the file to save the backup to
+# return: success or fail
 sub create {
     my $self         = shift;
     my $siteIds      = shift;
@@ -102,35 +115,32 @@ sub create {
             }
         }
     }
-
-    unless( ref( $self )) {
-        $self = fields::new( $self );
-    }
+    my $ret = 1;
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
+    $self->{zip}        = Archive::Zip->new();
     $self->{sites}      = $sites;
     $self->{appConfigs} = $appConfigs;
-    $self->{zip}        = Archive::Zip->new();
     $self->{file}       = $outFile;
 
     ##
     my $zip = $self->{zip}; # makes code shorter
 
-    $zip->addString( $fileType,                 $zipFileTypeEntry );
-    $zip->addString( $self->{startTime} . "\n", $zipFileStartTimeEntry );
+    $ret &= ( $zip->addString( $fileType,                 $zipFileTypeEntry )      == AZ_OK );
+    $ret &= ( $zip->addString( $self->{startTime} . "\n", $zipFileStartTimeEntry ) == AZ_OK );
 
     ##
 
-    $zip->addDirectory( "$zipFileSiteEntry/" );
+    $ret &= ( $zip->addDirectory( "$zipFileSiteEntry/" ) == AZ_OK );
 
     foreach my $site ( values %{$sites} ) {
         my $siteId = $site->siteId();
-        $zip->addString( writeJsonToString( $site->siteJson() ), "$zipFileSiteEntry/$siteId.json" );
+        $ret &= ( $zip->addString( writeJsonToString( $site->siteJson() ), "$zipFileSiteEntry/$siteId.json" ) == AZ_OK );
     }
 
     ##
 
-    $zip->addDirectory( "$zipFileInstallablesEntry/" );
+    $ret &= ( $zip->addDirectory( "$zipFileInstallablesEntry/" ) == AZ_OK );
 
     # construct table of installables
     my %installables = ();
@@ -140,23 +150,23 @@ sub create {
         }
     }
     while( my( $packageName, $installable ) = each %installables ) {
-        $zip->addString( writeJsonToString( $installable->installableJson()), "$zipFileInstallablesEntry/$packageName.json" );
+        $ret &= ( $zip->addString( writeJsonToString( $installable->installableJson()), "$zipFileInstallablesEntry/$packageName.json" ) == AZ_OK );
     }
 
     ##
 
-    $zip->addDirectory( "$zipFileAppConfigsEntry/" );
+    $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/" ) == AZ_OK );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
     
     foreach my $appConfig ( values %{$appConfigs} ) {
         my $appConfigId = $appConfig->appConfigId;
-        $zip->addString( writeJsonToString( $appConfig->appConfigurationJson()), "$zipFileAppConfigsEntry/$appConfigId.json" );
-        $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/" );
+        $ret &= ( $zip->addString( writeJsonToString( $appConfig->appConfigurationJson()), "$zipFileAppConfigsEntry/$appConfigId.json" ) == AZ_OK );
+        $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/" ) == AZ_OK );
 
         foreach my $installable ( $appConfig->installables ) {
             my $packageName = $installable->packageName;
-            $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/$packageName/" );
+            $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/$packageName/" ) == AZ_OK );
 
             my $config = new UBOS::Configuration(
                     "Installable=$packageName,AppConfiguration=" . $appConfigId,
@@ -168,13 +178,12 @@ sub create {
                 my $role = $rolesOnHost->{$roleName};
                 if( $role ) { # don't attempt to backup anything not installed on this host
                     my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
-                    $zip->addDirectory( "$appConfigPathInZip/" );
+                    $ret &= ( $zip->addDirectory( "$appConfigPathInZip/" ) == AZ_OK );
 
                     my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                     my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                     if( $appConfigItems ) {
-
                         my $backupContext = new UBOS::Backup::ZipFileBackupContext( $self, $appConfigPathInZip );
 
                         foreach my $appConfigItem ( @$appConfigItems ) {
@@ -184,7 +193,7 @@ sub create {
                             }
                             my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                             if( $item ) {
-                                $item->backup( $dir, $config, $backupContext, \@filesToDelete );
+                                $ret &= $item->backup( $dir, $config, $backupContext, \@filesToDelete );
                             }
                         }
                     }
@@ -193,13 +202,16 @@ sub create {
         }
     }
 
-    $zip->writeToFileNamed( $outFile );
+    $ret &= ( $zip->writeToFileNamed( $outFile ) == AZ_OK );
 
     foreach my $current ( @filesToDelete ) {
-        unlink $current || error( 'Could not unlink', $current );
+        unless( unlink $current ) {
+            error( 'Could not unlink', $current );
+            $ret = 0;
+        }
     }
 
-    return $self;
+    return $ret;
 }
 
 ##
@@ -210,44 +222,62 @@ sub readArchive {
     my $self    = shift;
     my $archive = shift;
 
-    unless( ref( $self )) {
-        $self = fields::new( $self );
-    }
-
     $self->{sites}      = {};
     $self->{appConfigs} = {};
     $self->{file}       = $archive;
 
     $self->{zip} = Archive::Zip->new();
     unless( $self->{zip}->read( $archive ) == AZ_OK ) {
-        fatal( 'Failed reading file', $archive );
+        error( 'Failed reading file', $archive );
+        return 0;
     }
 
     my $foundFileType = $self->{zip}->contents( $zipFileTypeEntry );
-    unless( $foundFileType eq $fileType ) {
-        fatal( 'Invalid file type:', $foundFileType );
+    if( $foundFileType ) {
+        $foundFileType =~ s!^\s+!!;
+        $foundFileType =~ s!\s+$!!;
+
+        unless( $foundFileType eq $fileType ) {
+            error( 'Invalid file type:', $foundFileType, "(expecting $fileType)" );
+            return 0;
+        }
+    } else {
+        error( 'No file type entry found. Is this a ubos backup file?' );
+        return 0;
     }
 
+    my $ret = 1;
+    
     foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
-        my $siteJson        = readJsonFromString( $siteJsonContent );
+        if( $siteJsonContent ) {
+            my $siteJson  = readJsonFromString( $siteJsonContent );
 
-        my $site = new UBOS::Site( $siteJson );
+            my $site = new UBOS::Site( $siteJson );
 
-        $self->{sites}->{$site->siteId()} = $site;
+            $self->{sites}->{$site->siteId()} = $site;
+        } else {
+            error( 'Cannot read ZIP file entry', $siteJsonFile );
+            $ret = 0;
+        }
     }
     foreach my $appConfigJsonFile ( $self->{zip}->membersMatching( "$zipFileAppConfigsEntry/.*\.json" )) {
         my $appConfigJsonContent = $self->{zip}->contents( $appConfigJsonFile );
-        my $appConfigJson        = readJsonFromString( $appConfigJsonContent );
+        if( $appConfigJsonContent ) {
+            my $appConfigJson = readJsonFromString( $appConfigJsonContent );
 
-        my $appConfig = new UBOS::AppConfiguration( $appConfigJson );
+            my $appConfig = new UBOS::AppConfiguration( $appConfigJson );
 
-        $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
+            $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
+        } else {
+            error( 'Cannot read ZIP file entry', $appConfigJsonFile );
+            $ret = 0;
+        }
     }
 
     $self->{startTime} = $self->{zip}->contents( $zipFileStartTimeEntry );
 
-    return $self;
+    return $ret;
 }
 
 
@@ -264,14 +294,15 @@ sub fileName {
 # Restore a single AppConfiguration from Backup
 # $siteId: the SiteId of the AppConfiguration
 # $appConfig: the AppConfiguration to restore
+# return: success or fail
 sub restoreAppConfiguration {
     my $self      = shift;
     my $siteId    = shift;
     my $appConfig = shift;
 
+    my $ret         = 1;
     my $zip         = $self->{zip};
     my $appConfigId = $appConfig->appConfigId;
-
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
     foreach my $installable ( $appConfig->installables ) {
@@ -308,13 +339,14 @@ sub restoreAppConfiguration {
                         }
                         my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                         if( $item ) {
-                            $item->restore( $dir, $config, $backupContext );
+                            $ret &= $item->restore( $dir, $config, $backupContext );
                         }
                     }
                 }
             }
         }
     }
+    return $ret;
 }
 
 1;

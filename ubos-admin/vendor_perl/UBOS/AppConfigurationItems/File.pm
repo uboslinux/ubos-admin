@@ -56,6 +56,7 @@ sub new {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub installOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -63,6 +64,7 @@ sub installOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret   = 1;
     my $names = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
@@ -106,13 +108,16 @@ sub installOrCheck {
             if( $doIt ) {
                 unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
                     error( 'Writing file failed:', $toName );
+                    $ret = 0;
                 }
             }
 
         } else {
             error( 'File does not exist:', $fromName );
+            $ret = 0;
         }
     }
+    return $ret;
 }
 
 ##
@@ -121,6 +126,7 @@ sub installOrCheck {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub uninstallOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -128,6 +134,7 @@ sub uninstallOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    my $ret   = 1;
     my $names = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
@@ -141,9 +148,10 @@ sub uninstallOrCheck {
             $toName = "$defaultToDir/$toName";
         }
         if( $doIt ) {
-            UBOS::Utils::deleteFile( $toName );
+            $ret &= UBOS::Utils::deleteFile( $toName );
         }
     }
+    return $ret;
 }
 
 ##
@@ -152,6 +160,7 @@ sub uninstallOrCheck {
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+# return: success or fail
 sub backup {
     my $self          = shift;
     my $dir           = shift;
@@ -164,7 +173,8 @@ sub backup {
         $names = [ $self->{json}->{name} ];
     }
     if( @$names != 1 ) {
-        fatal( 'Cannot backup item with more than one name:', @$names );
+        error( 'Cannot backup item with more than one name:', @$names );
+        return 0;
     }
 
     my $toName = $names->[0];
@@ -175,7 +185,7 @@ sub backup {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    $backupContext->addFile( $toName, $bucket );
+    return $backupContext->addFile( $toName, $bucket );
 }
 
 ##
@@ -183,6 +193,7 @@ sub backup {
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
+# return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
@@ -195,6 +206,7 @@ sub restore {
     }
     if( @$names != 1 ) {
         error( 'Cannot restore item with more than one name:', @$names );
+        return 0;
     }
 
     my $toName = $names->[0];
@@ -203,26 +215,26 @@ sub restore {
         $toName = "$dir/$toName";
     }
 
-    my $bucket       = $self->{json}->{retentionbucket};
+    my $bucket      = $self->{json}->{retentionbucket};
     my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
     my $uname       = $config->replaceVariables( $self->{json}->{uname} );
     my $gname       = $config->replaceVariables( $self->{json}->{gname} );
     my $mode        = $self->permissionToMode( $permissions, 0644 );
 
-    if( $backupContext->restore( $bucket, $toName )) {
-        # There's actually a file by that name in the Backup
-
-        if( defined( $mode )) {
-            chmod $mode, $toName;
-        }
-
-        my $uid = UBOS::Utils::getUid( $uname );
-        my $gid = UBOS::Utils::getGid( $gname );
-
-        if( $uid >= 0 || $gid >= 0 ) {
-            chown $uid, $gid, $toName;
-        }
+    unless( $backupContext->restore( $bucket, $toName )) {
+        return 0;
     }
+    if( defined( $mode )) {
+        chmod $mode, $toName;
+    }
+
+    my $uid = UBOS::Utils::getUid( $uname );
+    my $gid = UBOS::Utils::getGid( $gname );
+
+    if( $uid >= 0 || $gid >= 0 ) {
+        chown $uid, $gid, $toName;
+    }
+
     return 1;
 }        
 

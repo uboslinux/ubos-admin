@@ -169,12 +169,13 @@ sub run {
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
+    my $ret = 1;
 
     debug( 'Suspending sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( values %$sitesToSuspend ) {
-        $site->suspend( $suspendTriggers ); # replace with "in progress page"
+        $ret &= $site->suspend( $suspendTriggers ); # replace with "in progress page"
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
@@ -186,14 +187,14 @@ sub run {
         my $siteInBackup = $sitesInBackup->{$siteId};
 
         if( $site ) {
-            $site->undeploy( $deployUndeployTriggers );
+            $ret &= $site->undeploy( $deployUndeployTriggers );
         }
-        $siteInBackup->deploy( $deployUndeployTriggers );
+        $ret &= $siteInBackup->deploy( $deployUndeployTriggers );
 
         if( @appConfigIds ) {
-            $backup->restoreSiteWithoutAppConfigurations( $siteInBackup );
+            $ret &= $backup->restoreSiteWithoutAppConfigurations( $siteInBackup );
         } else {
-            $backup->restoreSite( $siteInBackup );
+            $ret &= $backup->restoreSite( $siteInBackup );
         }
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
@@ -204,7 +205,7 @@ sub run {
     if( @appConfigIds ) {
         foreach my $appConfigId ( @appConfigIds ) {
             my $site = $sitesOfAppConfigs->{$appConfigId};
-            $backup->restoreAppConfiguration( $site->siteId, $site->appConfig( $appConfigId ));
+            $ret &= $backup->restoreAppConfiguration( $site->siteId, $site->appConfig( $appConfigId ));
 
             $restoredSites{$site->siteId} = $site;
         }
@@ -217,7 +218,7 @@ sub run {
 
     my $resumeTriggers = {};
     foreach my $site ( values %$sitesToResume ) {
-        $site->resume( $resumeTriggers );
+        $ret &= $site->resume( $resumeTriggers );
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
@@ -225,11 +226,11 @@ sub run {
 
     foreach my $site ( values %$sitesToResume ) {
         foreach my $appConfig ( @{$site->appConfigs} ) {
-            $appConfig->runUpgrader();
+            $ret &= $appConfig->runUpgrader();
         }
     }
 
-    return 1;
+    return $ret;
 }
 
 ##

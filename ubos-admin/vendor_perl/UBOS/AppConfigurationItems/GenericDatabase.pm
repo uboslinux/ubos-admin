@@ -61,6 +61,7 @@ sub new {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub installOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -100,6 +101,8 @@ sub installOrCheck {
     $config->put( "appconfig.$dbType.dbport.$name",           $dbPort );
     $config->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
     $config->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
+
+    return $dbName ? 1 : 0;
 }
 
 ##
@@ -108,6 +111,7 @@ sub installOrCheck {
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
 sub uninstallOrCheck {
     my $self           = shift;
     my $doIt           = shift;
@@ -119,12 +123,13 @@ sub uninstallOrCheck {
     my $dbType = $self->{dbType};
 
     if( $doIt ) {
-        UBOS::ResourceManager::unprovisionLocalDatabase(
+        return UBOS::ResourceManager::unprovisionLocalDatabase(
                 $dbType,
                 $self->{appConfig}->appConfigId,
                 $self->{installable}->packageName,
                 $name );
     }
+    return 1;
 }
 
 ##
@@ -133,6 +138,7 @@ sub uninstallOrCheck {
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+# return: success or fail
 sub backup {
     my $self          = shift;
     my $dir           = shift;
@@ -147,16 +153,19 @@ sub backup {
 
     my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
 
-    UBOS::ResourceManager::exportLocalDatabase(
+    my $ret = UBOS::ResourceManager::exportLocalDatabase(
             $dbType,
             $self->{appConfig}->appConfigId,
             $self->{installable}->packageName,
             $name,
             $tmp->filename );
 
-    $backupContext->addFile( $tmp->filename, $bucket );
+    if( $ret ) {
+        $ret &= $backupContext->addFile( $tmp->filename, $bucket );
 
-    push @$filesToDelete, $tmp->filename;
+        push @$filesToDelete, $tmp->filename;
+    }
+    return $ret;
 }
 
 ##
@@ -164,6 +173,7 @@ sub backup {
 # $dir: the directory in which the app was installed
 # $config: the Configuration object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
+# return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
@@ -176,16 +186,16 @@ sub restore {
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
     my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
-    if( $backupContext->restore( $bucket, $tmp->filename )) {
-        # there's actually something in the Backup by this name
-
-        UBOS::ResourceManager::importLocalDatabase(
-                $dbType,
-                $self->{appConfig}->appConfigId,
-                $self->{installable}->packageName,
-                $name,
-                $tmp->filename );
+    unless( $backupContext->restore( $bucket, $tmp->filename )) {
+        return 0;
     }
+ 
+    return UBOS::ResourceManager::importLocalDatabase(
+            $dbType,
+            $self->{appConfig}->appConfigId,
+            $self->{installable}->packageName,
+            $name,
+            $tmp->filename );
 }
 
 1;

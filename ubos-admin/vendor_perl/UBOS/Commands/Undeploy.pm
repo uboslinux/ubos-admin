@@ -114,12 +114,13 @@ sub run {
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
+    my $ret = 1;
 
     debug( 'Disabling site(s)' );
 
     my $disableTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
-        $oldSite->disable( $disableTriggers ); # replace with "404 page"
+        $ret &= $oldSite->disable( $disableTriggers ); # replace with "404 page"
     }
     UBOS::Host::executeTriggers( $disableTriggers );
 
@@ -127,11 +128,11 @@ sub run {
 
     my $undeployTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
-        $oldSite->undeploy( $undeployTriggers );
+        $ret &= $oldSite->undeploy( $undeployTriggers );
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
-    return 1;
+    return $ret;
 }
 
 ##

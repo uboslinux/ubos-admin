@@ -68,6 +68,7 @@ sub name {
 # $site: the Site to check or set up
 # $doIt: if 1, setup; if 0, only check
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub setupSiteOrCheck {
     my $self     = shift;
     my $site     = shift;
@@ -78,7 +79,9 @@ sub setupSiteOrCheck {
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
-        $self->setupSite( $site, $triggers );
+        return $self->setupSite( $site, $triggers );
+    } else {
+        return 1;
     }
 }
 
@@ -86,6 +89,7 @@ sub setupSiteOrCheck {
 # Do what is necessary to set up a Site.
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub setupSite {
     my $self     = shift;
     my $site     = shift;
@@ -112,7 +116,7 @@ sub setupSite {
     $self->sitesUpdated();
     $triggers->{'tomcat7-reload'} = 1;
 
-    1;
+    return 1;
 }
 
 ##
@@ -120,6 +124,7 @@ sub setupSite {
 # $site: the Site
 # $doIt: if 1, setup; if 0, only check
 # $triggers: triggers to be executed may be added to this hash
+# return: success or fail
 sub removeSite {
     my $self     = shift;
     my $site     = shift;
@@ -143,7 +148,7 @@ sub removeSite {
         $triggers->{'tomcat7-reload'} = 1;
     }
 
-    1;
+    return 1;
 }
 
 ##
