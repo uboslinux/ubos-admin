@@ -413,7 +413,9 @@ sub deleteRecursively {
     if( @files ) {
         debug( 'Recursively delete files:', @files );
 
-        myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ));
+        if( myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ))) {
+            $ret = 0;
+        }
     }
     return $ret;
 }
@@ -426,9 +428,11 @@ sub copyRecursively {
     my $from = shift;
     my $to   = shift;
 
-    myexec( "cp -d -r -p '$from' '$to'" );
-
-    return 1;
+    if( myexec( "cp -d -r -p '$from' '$to'" )) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 ##
