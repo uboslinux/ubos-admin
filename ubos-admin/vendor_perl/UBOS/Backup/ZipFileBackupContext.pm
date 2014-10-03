@@ -24,6 +24,8 @@ use warnings;
 
 package UBOS::Backup::ZipFileBackupContext;
 
+use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
+
 use base qw( UBOS::AbstractBackupContext );
 use fields qw( backup contextPathInBackup );
 
@@ -53,10 +55,10 @@ sub addFile {
     my $fileToAdd = shift;
     my $bucket    = shift;
 
-    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket ) != AZ_OK ) {
-        return 0;
+    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket )) {
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 ##
@@ -86,7 +88,7 @@ sub restore {
     unless( $member ) {
         return 0;
     }
-    if( $self->{backup}->{zip}->extractMember( $member, $fileName ) != AZ_OK ) {
+    if( $self->{backup}->{zip}->extractMember( $member, $fileName )) {
         return 0;
     }
     return 1;
@@ -105,7 +107,7 @@ sub restoreRecursive {
 
     # Contrary to the docs, trailing slashes are required, otherwise
     # restoring /foo will also restore /foobar
-    if( $self->{backup}->{zip}->extractTree( $self->{contextPathInBackup} . $bucket . '/', $dirName . '/' ) != AZ_OK ) {
+    if( $self->{backup}->{zip}->extractTree( $self->{contextPathInBackup} . $bucket . '/', $dirName . '/' )) {
         return 0;
     }
     return 1;
@@ -128,10 +130,10 @@ sub _addRecursive {
         # This comes from the source code of Archive::Zip; there doesn't seem to be an API
 
     } elsif( -f $fileName ) {
-        $ret &= ( $self->{backup}->{zip}->addFile( $fileName, $zipName ) == AZ_OK );
+        $ret &= ( $self->{backup}->{zip}->addFile( $fileName, $zipName ) ? 1 : 0 );
 
     } elsif( -d $fileName ) {
-        $ret &= ( $self->{backup}->{zip}->addDirectory( "$fileName/", "$zipName/" ) == AZ_OK );
+        $ret &= ( $self->{backup}->{zip}->addDirectory( "$fileName/", "$zipName/" ) ? 1 : 0 );
 
         my @children = ();
         if( opendir( DIR, $fileName )) {
@@ -147,12 +149,12 @@ sub _addRecursive {
                 my $relative = $child;
                 $relative = substr( $relative, length( $fileName ) + 1 );
 
-                $ret &= $self->_addRecursive( $child, "$zipName/$relative" );
+                $ret &= ( $self->_addRecursive( $child, "$zipName/$relative" ) ? 1 : 0 );
+            }
         } else {
             error( 'Could not read directory', $fileName, $! );
             $ret = 0;
         }
-
 
     } else {
         warning( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );

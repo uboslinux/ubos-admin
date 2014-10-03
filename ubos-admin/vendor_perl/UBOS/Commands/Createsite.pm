@@ -61,7 +61,7 @@ sub run {
     }
 
     my $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
-    UBOS::Host::installPackages( $appId );
+    UBOS::Host::ensurePackages( $appId );
 
     my $app = new UBOS::App( $appId );
 
@@ -120,7 +120,7 @@ sub run {
     $accessories =~ s!\s+$!!;
     my @accs = ();
     foreach my $accId ( split( /\s+,?\s*/, $accessories )) {
-        UBOS::Host::installPackages( $accId );
+        UBOS::Host::ensurePackages( $accId );
         my $acc = new UBOS::Accessory( $accId );
 
         push @accs, $acc;
@@ -273,7 +273,7 @@ JSON
 
         my $prerequisites = {};
         $newSite->addDependenciesToPrerequisites( $prerequisites );
-        UBOS::Host::installPackages( $prerequisites );
+        UBOS::Host::ensurePackages( $prerequisites );
 
         $newSite->checkDeployable();
 

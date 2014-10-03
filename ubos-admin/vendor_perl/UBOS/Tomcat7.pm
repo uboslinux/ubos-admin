@@ -32,7 +32,7 @@ my $ourServerXmlTemplate = '/etc/tomcat7/server-ubos.xml.tmpl';
 ##
 # Ensure that Tomcat7 is running.
 sub ensureRunning {
-    UBOS::Host::installPackages( 'tomcat7', 'apr' );
+    UBOS::Host::ensurePackages( 'tomcat7', 'apr' );
 
     UBOS::Utils::myexec( 'systemctl enable tomcat7' );
     UBOS::Utils::myexec( 'systemctl restart tomcat7' );

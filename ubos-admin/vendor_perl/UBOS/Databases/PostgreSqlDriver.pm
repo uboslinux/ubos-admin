@@ -45,7 +45,7 @@ sub ensureRunning {
 
     debug( 'Installing postgresql' );
     
-    if( UBOS::Host::installPackages( 'postgresql' )) {
+    if( UBOS::Host::ensurePackages( 'postgresql' )) {
         unless( -d $dataDir ) {
             # not initialized yet
             

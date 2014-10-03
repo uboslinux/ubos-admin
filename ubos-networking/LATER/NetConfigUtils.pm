@@ -377,7 +377,7 @@ sub _startService {
     my $package = shift || $service;
 
     if( $package ) {
-        IndieBox::Host::installPackages( $package );
+        IndieBox::Host::ensurePackages( $package );
     }
 
     # Status messages unfortunately go to stderr

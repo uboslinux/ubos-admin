@@ -258,10 +258,10 @@ sub purgeCache {
 }
 
 ##
-# Install the named packages.
+# Make sure the named packages are installed
 # $packages: List of packages
 # return: number of actually installed packages
-sub installPackages {
+sub ensurePackages {
     my $packages = shift;
 
     my @packageList;
@@ -301,15 +301,36 @@ sub installPackageFiles {
 
     my $err;
     my $cmd = 'sudo pacman -U --noconfirm ' . join( ' ', @$packageFiles );
-        unless( UBOS::Logging::isDebugActive() ) {
-            $cmd .= ' > /dev/null';
-        }
+    unless( UBOS::Logging::isDebugActive() ) {
+        $cmd .= ' > /dev/null';
+    }
 
     if( myexec( $cmd, undef, undef, \$err )) {
         error( 'Failed to install package file(s). Pacman says:', $err );
         return 0;
     }
     return 0 + ( @$packageFiles );
+}
+
+##
+# Determine the version of an installed package
+# $packageName: name of the package
+# return: version of the package, or undef
+sub packageVersion {
+    my $packageName = shift;
+
+    my $cmd = "sudo pacman -Q '$packageName'";
+    my $out;
+    my $err;
+    if( myexec( $cmd, undef, \$out, \$err )) {
+        return undef;
+    }
+    if( $out =~ m!$packageName\s+(\S+)! ) {
+        return $1;
+    } else {
+        error( 'Cannot parse pacman -Q output:', $out );
+        return undef;
+    }
 }
 
 ##

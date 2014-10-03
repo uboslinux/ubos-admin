@@ -165,13 +165,13 @@ sub run {
     foreach my $site ( @newSites ) {
         $site->addInstallablesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::installPackages( $prerequisites );
+    UBOS::Host::ensurePackages( $prerequisites );
 
     $prerequisites = {};
     foreach my $site ( @newSites ) {
         $site->addDependenciesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::installPackages( $prerequisites );
+    UBOS::Host::ensurePackages( $prerequisites );
 
     debug( 'Checking customization points' );
     

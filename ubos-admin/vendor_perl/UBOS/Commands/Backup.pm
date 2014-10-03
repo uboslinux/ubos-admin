@@ -135,7 +135,7 @@ sub run {
         $ret &= $site->resume( $resumeTriggers );
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
-    
+
     return $ret;
 }
 

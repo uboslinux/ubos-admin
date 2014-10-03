@@ -126,21 +126,21 @@ sub create {
     ##
     my $zip = $self->{zip}; # makes code shorter
 
-    $ret &= ( $zip->addString( $fileType,                 $zipFileTypeEntry )      == AZ_OK );
-    $ret &= ( $zip->addString( $self->{startTime} . "\n", $zipFileStartTimeEntry ) == AZ_OK );
+    $ret &= ( $zip->addString( $fileType,                 $zipFileTypeEntry )      ? 1 : 0 );
+    $ret &= ( $zip->addString( $self->{startTime} . "\n", $zipFileStartTimeEntry ) ? 1 : 0 );
 
     ##
 
-    $ret &= ( $zip->addDirectory( "$zipFileSiteEntry/" ) == AZ_OK );
+    $ret &= ( $zip->addDirectory( "$zipFileSiteEntry/" ) ? 1 : 0 );
 
     foreach my $site ( values %{$sites} ) {
         my $siteId = $site->siteId();
-        $ret &= ( $zip->addString( writeJsonToString( $site->siteJson() ), "$zipFileSiteEntry/$siteId.json" ) == AZ_OK );
+        $ret &= ( $zip->addString( writeJsonToString( $site->siteJson() ), "$zipFileSiteEntry/$siteId.json" ) ? 1 : 0 );
     }
 
     ##
 
-    $ret &= ( $zip->addDirectory( "$zipFileInstallablesEntry/" ) == AZ_OK );
+    $ret &= ( $zip->addDirectory( "$zipFileInstallablesEntry/" ) ? 1 : 0 );
 
     # construct table of installables
     my %installables = ();
@@ -150,23 +150,23 @@ sub create {
         }
     }
     while( my( $packageName, $installable ) = each %installables ) {
-        $ret &= ( $zip->addString( writeJsonToString( $installable->installableJson()), "$zipFileInstallablesEntry/$packageName.json" ) == AZ_OK );
+        $ret &= ( $zip->addString( writeJsonToString( $installable->installableJson()), "$zipFileInstallablesEntry/$packageName.json" ) ? 1 : 0 );
     }
 
     ##
 
-    $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/" ) == AZ_OK );
+    $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/" ) ? 1 : 0 );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
     
     foreach my $appConfig ( values %{$appConfigs} ) {
         my $appConfigId = $appConfig->appConfigId;
-        $ret &= ( $zip->addString( writeJsonToString( $appConfig->appConfigurationJson()), "$zipFileAppConfigsEntry/$appConfigId.json" ) == AZ_OK );
-        $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/" ) == AZ_OK );
+        $ret &= ( $zip->addString( writeJsonToString( $appConfig->appConfigurationJson()), "$zipFileAppConfigsEntry/$appConfigId.json" ) ? 1 : 0 );
+        $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/" ) ? 1 : 0 );
 
         foreach my $installable ( $appConfig->installables ) {
             my $packageName = $installable->packageName;
-            $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/$packageName/" ) == AZ_OK );
+            $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/$packageName/" ) ? 1 : 0 );
 
             my $config = new UBOS::Configuration(
                     "Installable=$packageName,AppConfiguration=" . $appConfigId,
@@ -178,7 +178,7 @@ sub create {
                 my $role = $rolesOnHost->{$roleName};
                 if( $role ) { # don't attempt to backup anything not installed on this host
                     my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
-                    $ret &= ( $zip->addDirectory( "$appConfigPathInZip/" ) == AZ_OK );
+                    $ret &= ( $zip->addDirectory( "$appConfigPathInZip/" ) ? 1 : 0 );
 
                     my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
@@ -202,7 +202,7 @@ sub create {
         }
     }
 
-    $ret &= ( $zip->writeToFileNamed( $outFile ) == AZ_OK );
+    $ret &= (( $zip->writeToFileNamed( $outFile ) == AZ_OK ) ? 1 : 0 );
 
     foreach my $current ( @filesToDelete ) {
         unless( unlink $current ) {
@@ -227,7 +227,7 @@ sub readArchive {
     $self->{file}       = $archive;
 
     $self->{zip} = Archive::Zip->new();
-    unless( $self->{zip}->read( $archive ) == AZ_OK ) {
+    unless( $self->{zip}->read( $archive )) {
         error( 'Failed reading file', $archive );
         return 0;
     }

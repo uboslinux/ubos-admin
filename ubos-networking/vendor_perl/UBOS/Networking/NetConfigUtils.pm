@@ -413,7 +413,7 @@ sub _startService {
     my $package = shift;
 
     if( defined( $package )) {
-        UBOS::Host::installPackages( $package );
+        UBOS::Host::ensurePackages( $package );
     }
 
     # Status messages unfortunately go to stderr
