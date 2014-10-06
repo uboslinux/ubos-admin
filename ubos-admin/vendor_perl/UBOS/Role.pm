@@ -357,8 +357,8 @@ sub checkManifestForRoleGenericAppConfigItems {
                 unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid name: " . $appConfigItem->{name} );
                 }
-                if( $appConfigItem->{name} ) {
-                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": name not permitted for type " . $appConfigItem->{type} );
+                if( exists( $appConfigItem->{name} ) && ref( $appConfigItem->{name} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
                 }
                 if( $appConfigItem->{names} ) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": names not permitted for type " . $appConfigItem->{type} );

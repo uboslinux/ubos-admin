@@ -227,7 +227,7 @@ sub readArchive {
     $self->{file}       = $archive;
 
     $self->{zip} = Archive::Zip->new();
-    unless( $self->{zip}->read( $archive )) {
+    unless( $self->{zip}->read( $archive ) == AZ_OK ) {
         error( 'Failed reading file', $archive );
         return 0;
     }

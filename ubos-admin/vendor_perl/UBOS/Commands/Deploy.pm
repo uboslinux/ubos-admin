@@ -223,7 +223,7 @@ sub run {
         $newSite->checkDeployable();
     }
 
-    debug( 'Setting up placeholder sites' );
+    debug( 'Setting up placeholder sites or suspending existing sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( @newSites ) {

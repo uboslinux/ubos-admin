@@ -26,6 +26,7 @@ package UBOS::Commands::Listsites;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -45,14 +46,16 @@ sub run {
     my $json          = 0;
     my $brief         = 0;
     my @siteIds       = ();
+    my $backupFile    = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'json'        => \$json,
-            'brief'       => \$brief,
-            'siteid=s'    => \@siteIds );
+            'verbose+'     => \$verbose,
+            'logConfig=s'  => \$logConfigFile,
+            'json'         => \$json,
+            'brief'        => \$brief,
+            'siteid=s'     => \@siteIds,
+            'backupfile=s' => \$backupFile );
 
     UBOS::Logging::initialize( 'ubos-admin', 'listsites', $verbose, $logConfigFile );
 
@@ -60,40 +63,55 @@ sub run {
         fatal( 'Invalid invocation: listsites', @_, '(add --help for help)' );
     }
 
-    if( $json ) {
-        my $sitesJson = {};
+    my $sites;
+    if( $backupFile ) {
+        unless( -r $backupFile ) {
+            fatal( 'Cannot read backup file', $backupFile );
+        }
+
+        my $backup = UBOS::Backup::ZipFileBackup->new();
+        unless( $backup->readArchive( $backupFile )) {
+            fatal( 'Parsing backup file failed:', $backupFile );
+        }
+        my $sitesInBackup = $backup->sites();
+        if( @siteIds ) {
+            foreach my $siteId ( sort @siteIds ) {
+                my $site = $sitesInBackup->{ $siteId };
+                if( $site ) {
+                    $sites->{$site->siteId} = $site;
+                } else {
+                    fatal( 'Cannot find Site with siteid', $siteId, 'in backup' );
+                }
+            }
+        } else {
+            $sites = $sitesInBackup;
+        }
+
+    } else {
         if( @siteIds ) {
             foreach my $siteId ( sort @siteIds ) {
                 my $site = UBOS::Host::findSiteByPartialId( $siteId );
                 if( $site ) {
-                    $sitesJson->{$site->siteId} = $site->siteJson;
+                    $sites->{$site->siteId} = $site;
                 } else {
                     fatal( $@ );
                 }
             }
         } else {
-            my $sites = UBOS::Host::sites();
-            foreach my $site ( sort values %$sites ) {
-                $sitesJson->{$site->siteId} = $site->siteJson;
-            }
+            $sites = UBOS::Host::sites();
+        }
+    }
+
+    if( $json ) {
+        my $sitesJson = {};
+        foreach my $site ( sort values %$sites ) {
+            $sitesJson->{$site->siteId} = $site->siteJson;
         }
         UBOS::Utils::writeJsonToStdout( $sitesJson );
 
-    } else { # human-readable, brief or not
-        if( @siteIds ) {
-            foreach my $siteId ( sort @siteIds ) {
-                my $site = UBOS::Host::findSiteByPartialId( $siteId );
-                if( $site ) {
-                    $site->print( $brief ? 1 : 2 );
-                } else {
-                    fatal( $@);
-                }
-            }
-        } else {
-            my $sites = UBOS::Host::sites();
-            foreach my $site ( sort values %$sites ) {
-                $site->print( $brief ? 1 : 2 );
-            }
+    } else {
+        foreach my $site ( sort values %$sites ) {
+            $site->print( $brief ? 1 : 2 );
         }
     }
     
@@ -105,13 +123,22 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
+        <<SSS => <<HHH,
     [--json | --brief] [--verbose | --logConfig <file>] [--siteid <siteid>]...
 SSS
     Show the sites with siteid, or if not given, show all sites currently
     deployed to this device.
     --json: show them in JSON format
     --brief: only show the site ids.
+HHH
+        <<SSS => <<HHH
+    [--json | --brief] [--verbose | --logConfig <file>] [--siteid <siteid>]... --backupfile <file>
+SSS
+    Show the sites with siteid, or if not given, show all sites contained
+    in the specified backup file.
+    --json: show them in JSON format
+    --brief: only show the site ids.
+    --backupfile: name of the backup file
 HHH
     };
 }

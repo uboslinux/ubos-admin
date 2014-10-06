@@ -97,19 +97,6 @@ sub restoreSite {
 }
 
 ##
-# Restore only site-specific information from a backup, leaving out
-# all AppConfiguration-specific information.
-# return: success or fail
-sub restoreSiteWithoutAppConfigurations {
-    my $self    = shift;
-    my $site    = shift;
-
-    # currently nothing
-
-    1;
-}
-    
-##
 # Restore a single AppConfiguration from Backup
 # $siteId: the SiteId of the AppConfiguration
 # $appConfig: the AppConfiguration to restore

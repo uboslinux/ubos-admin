@@ -38,8 +38,9 @@ my $SITES_DIR        = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE   = '/etc/ubos/config.json';
 my $hostConf         = undef;
 my $now              = time();
-my @_rolesOnHostInSequence = (); # allocated as needed
-my %_rolesOnHost           = (); # allocated as needed
+my $_rolesOnHostInSequence = undef; # allocated as needed
+my $_rolesOnHost           = undef; # allocated as needed
+my $_sites                 = undef; # allocated as needed
 
 my @essentialServices = qw( cronie ntpd );
 
@@ -62,50 +63,57 @@ sub config {
 # Determine all Sites currently installed on this host.
 # return: hash of siteId to Site
 sub sites {
-    my %ret = ();
-    foreach my $f ( <"$SITES_DIR/*.json"> ) {
-        my $siteJson = readJsonFromFile( $f );
-        my $site     = new UBOS::Site( $siteJson );
-        $ret{$site->siteId()} = $site;
+    unless( $_sites ) {
+        $_sites = {};
+
+        foreach my $f ( <"$SITES_DIR/*.json"> ) {
+            my $siteJson = readJsonFromFile( $f );
+            my $site     = new UBOS::Site( $siteJson );
+            $_sites->{$site->siteId()} = $site;
+        }
     }
-    return \%ret;
+    return $_sites;
 }
 
 ##
-# Find a particular Site currently installed on this host.
+# Find a particular Site in the provided hash, or currently installed on this host.
 # $siteId: the Site identifier
-# return: the Site
+# $sites: hash of siteid to Site (defaults to sites installed on host)
+# return: the Site, or undef
 sub findSiteById {
     my $siteId = shift;
+    my $sites  = shift || sites();
 
-    my $jsonFile = "$SITES_DIR/$siteId.json";
-    if( -r $jsonFile ) {
-        my $siteJson = readJsonFromFile( $jsonFile );
-        my $site     = new UBOS::Site( $siteJson );
-
-        return $site;
-    }
-    return undef;
+    return $sites->{$siteId};
 }
 
 ##
-# Find a particular Site currently installed on this host by a complete or
-# partial identifier.
+# Find a particular Site in the provided hash, or currently installed on this host,
+# by a complete or partial siteid match.
 # $id: the complete or partial Site identifier
-# return: the Site
+# $sites: hash of siteid to Site (defaults to sites installed on host)
+# return: the Site, or undef
 sub findSiteByPartialId {
-	my $id = shift;
+	my $id    = shift;
+    my $sites = shift || sites();
 
-    my @candidates;
-    my $siteFile;
+    my $ret;
     if( $id =~ m!^(.*)\.\.\.$! ) {
-        my $partial = $1;
-        my @candidates = <"$SITES_DIR/$partial?*.json">; # needs to have at least one more char
+        my $partial    = $1;
+        my @candidates = ();
+        
+        while( my( $siteId, $site ) = %$sites ) {
+            if( $siteId =~ m!^$partial! ) {
+                push @candidates, $siteId;
+            }
+        }
         if( @candidates == 1 ) {
-            $siteFile = $candidates[0];
+            $ret = $candidates[0];
 
         } elsif( @candidates ) {
-	        $@ = "There is more than one site whose siteid starts with $partial: " . join( " vs ", map { m!/(s[0-9a-fA-F]{40})\.json! } @candidates ) . '.';
+	        $@ = "There is more than one site whose siteid starts with $partial: "
+               . join( " vs ", @candidates )
+               . '.';
             return undef;
 
         } else {
@@ -114,28 +122,24 @@ sub findSiteByPartialId {
         }
 	
     } else {
-        if( -e "$SITES_DIR/$id.json" ) {
-            $siteFile = "$SITES_DIR/$id.json";
-        } else {
+        $ret = $sites->{$id};
+        unless( $ret ) {
             $@ = "No site found with siteid $id.";
             return undef;
         }
     }
-
-    my $siteJson = readJsonFromFile( $siteFile );
-    my $site     = new UBOS::Site( $siteJson );
-
-    return $site;
+    return $ret;
 }
 
 ##
-# Find a particular Site currently installed on this host by its hostname
+# Find a particular Site in the provided hash, or currently installed on this host,
+# by its hostname
 # $host: hostname
+# $sites: hash of siteid to Site (defaults to sites installed on host)
 # return: the Site
 sub findSiteByHostname {
-    my $host = shift;
-    
-    my $sites = UBOS::Host::sites();
+    my $host  = shift;
+    my $sites = shift || sites();
 
     while( my( $siteId, $site ) = each %$sites ) {
         if( $site->hostName eq $host ) {
@@ -143,6 +147,59 @@ sub findSiteByHostname {
         }
     }
     return undef;
+}
+
+##
+# Find a particular AppConfig in the provided hash of sites, or currently installed on this host,
+# by a complete or partial app config id match.
+# $id: the complete or partial app config identifier
+# $sites: hash of siteid to Site (defaults to sites installed on host)
+# return: the Site, or undef
+sub findAppConfigByPartialId {
+	my $id    = shift;
+    my $sites = shift || sites();
+
+    my $ret;
+    if( $id =~ m!^(.*)\.\.\.$! ) {
+        my $partial    = $1;
+        my @candidates = ();
+        
+        while( my( $siteId, $site ) = each %$sites ) {
+            my $appConfigs = $site->appConfigs;
+
+            foreach my $appConfig ( @$appConfigs ) {
+                if( $appConfig->appConfigId =~ m!^$partial! ) {
+                    push @candidates, [ $appConfig, $site ];
+                }
+            }
+        }
+        if( @candidates == 1 ) {
+            $ret = $candidates[0][0];
+
+        } elsif( @candidates ) {
+	        $@ = "There is more than one AppConfiguration whose app config id starts with $partial: "
+                 . join( " vs ", map { "$_[0] (site $_[1] )" } @candidates ) . '.';
+            return undef;
+
+        } else {
+            $@ = "No AppConfiguration found whose app config id starts with $partial.";
+            return undef;
+        }
+	
+    } else {
+        while( my( $siteId, $site ) = each %$sites ) {
+            $ret = $site->appConfig( $id );
+
+            if( $ret ) {
+                last;
+            }
+        }
+        unless( $ret ) {
+            $@ = "No AppConfiguration found with app config id $id.";
+            return undef;
+        }
+    }
+    return $ret;
 }
 
 ##
@@ -177,13 +234,14 @@ sub siteUndeployed {
 # fixed.
 # return: hash of role name to Role
 sub rolesOnHost {
-    unless( %_rolesOnHost ) {
+    unless( $_rolesOnHost ) {
         my @inSequence = rolesOnHostInSequence();
+        $_rolesOnHost = {};
         foreach my $role ( @inSequence ) {
-            $_rolesOnHost{ $role->name } = $role;
+            $_rolesOnHost->{ $role->name } = $role;
         }
     }
-    return \%_rolesOnHost;
+    return $_rolesOnHost;
 }
 
 ##
@@ -192,15 +250,15 @@ sub rolesOnHost {
 # return: the Roles, in sequence
 
 sub rolesOnHostInSequence {
-    unless( @_rolesOnHostInSequence ) {
-        @_rolesOnHostInSequence = (
+    unless( $_rolesOnHostInSequence ) {
+        $_rolesOnHostInSequence = [
                 new UBOS::Roles::mysql,
                 # new UBOS::Roles::postgresql,
                 # new UBOS::Roles::mongo,
                 new UBOS::Roles::tomcat7,
-                new UBOS::Roles::apache2 );
+                new UBOS::Roles::apache2 ];
     }
-    return @_rolesOnHostInSequence;
+    return @$_rolesOnHostInSequence;
 }
 
 ##
