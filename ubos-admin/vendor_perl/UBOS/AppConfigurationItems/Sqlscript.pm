@@ -67,9 +67,7 @@ sub installOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    error( 'Cannot perform install on', $self );
-
-    return 0;
+    return $self->_runIt( $doIt, $defaultFromDir, $defaultToDir, $config );
 }
 
 ##
@@ -86,9 +84,9 @@ sub uninstallOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    error( 'Cannot perform install on', $self );
+    # do nothing
 
-    return 0;
+    return 1;
 }
 
 ##
@@ -105,6 +103,18 @@ sub runPostDeployScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    return $self->_runIt( 1, $defaultFromDir, $defaultToDir, $config );
+}
+
+##
+# Factored out run method for install and runPostDeploy
+sub _runIt {
+    my $self           = shift;
+    my $doIt           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+    
     my $ret              = 1;
     my $sourceOrTemplate = $self->{json}->{template};
     unless( $sourceOrTemplate ) {
@@ -118,7 +128,12 @@ sub runPostDeployScript {
         $sourceOrTemplate = "$defaultFromDir/$sourceOrTemplate";
     }
 
-    if( -r $sourceOrTemplate ) {
+    unless( -r $sourceOrTemplate ) {
+        error( 'File to run does not exist:', $sourceOrTemplate );
+        return 0;
+    }
+
+    if( $doIt ) {
         my $content           = slurpFile( $sourceOrTemplate );
         my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
 
@@ -144,10 +159,6 @@ sub runPostDeployScript {
         if( UBOS::Utils::myexec( $cmd, $sql )) {
             $ret = 0;
         }
-
-    } else {
-        error( 'File does not exist:', $sourceOrTemplate );
-        $ret = 0;
     }
     return $ret;
 }
