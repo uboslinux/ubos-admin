@@ -262,6 +262,20 @@ sub rolesOnHostInSequence {
 }
 
 ##
+# Create a new siteid
+# return: the siteid
+sub createNewSiteId {
+    return 's' . UBOS::Utils::randomHex( 40 );
+}
+
+##
+# Create a new appconfigid
+# return: the appconfigid
+sub createNewAppConfigId {
+    return 'a' . UBOS::Utils::randomHex( 40 );
+}
+
+##
 # Execute the named triggers
 # $triggers: array of trigger names
 sub executeTriggers {

@@ -161,7 +161,7 @@ sub run {
         my $json = $existingSite->{json};
 
         $siteId      = $json->{siteid};
-        $appConfigId = 'a' . UBOS::Utils::randomHex( 40 );
+        $appConfigId = UBOS::Host::createNewAppConfigId();
 
         $adminUserId     = $json->{admin}->{userid};
         $adminUserName   = $json->{admin}->{username};
@@ -169,8 +169,8 @@ sub run {
         $adminEmail      = $json->{admin}->{email};
 
     } else {
-        $siteId      = 's' . UBOS::Utils::randomHex( 40 );
-        $appConfigId = 'a' . UBOS::Utils::randomHex( 40 );
+        $siteId      = UBOS::Host::createNewSiteId();
+        $appConfigId = UBOS::Host::createNewAppConfigId();
 
         $adminUserId     = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
         $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
