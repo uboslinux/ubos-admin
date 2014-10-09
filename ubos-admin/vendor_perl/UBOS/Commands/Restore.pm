@@ -52,6 +52,7 @@ sub run {
     my $hostname      = undef;
     my $context       = undef;
     my $createNew     = 0;
+    my $showIds       = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -64,7 +65,8 @@ sub run {
             'tohostname=s'  => \$toHostname,
             'hostname=s'    => \$hostname,
             'context=s'     => \$context,
-            'createnew'     => \$createNew );
+            'createnew'     => \$createNew,
+            'showids'       => \$showIds );
 
     UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
 
@@ -89,9 +91,9 @@ sub run {
 
     my $ret;
     if( @appConfigIds ) {
-        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $backup );
+        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $showIds, $backup );
     } else {
-        $ret = restoreSites( \@siteIds, $createNew, $hostname, $backup );
+        $ret = restoreSites( \@siteIds, $createNew, $hostname, $showIds, $backup );
     }
     return $ret;
 }
@@ -104,6 +106,7 @@ sub restoreAppConfigs {
     my $toHostname   = shift;
     my $createNew    = shift;
     my $context      = shift;
+    my $showIds      = shift;
     my $backup       = shift;
 
     my $appConfigsInBackup = $backup->appConfigs();
@@ -220,6 +223,12 @@ sub restoreAppConfigs {
         $ret &= $appConfigOnHost->runUpgrader();
     }
 
+    if( $showIds ) {
+        foreach my $appConfigIdOnHost ( values %appConfigIdTranslation ) {
+            print $appConfigIdOnHost->appConfigId . "\n";
+        }
+    }
+
     return $ret;    
 }
     
@@ -229,6 +238,7 @@ sub restoreSites {
     my @siteIds   = @{shift()};
     my $createNew = shift;
     my $hostname  = shift;
+    my $showIds   = shift;
     my $backup    = shift;
 
     my $sitesInBackup      = $backup->sites();
@@ -298,7 +308,7 @@ sub restoreSites {
 
     my %appConfigIdTranslation = (); # maps old appconfigid -> new appconfigid
 
-    my %sitesNew = (); # 
+    my %sitesNew = (); # maps old SiteId -> new Site
     foreach my $site ( values %sitesToRestore ) {
         my $siteJsonNew = dclone( $site->siteJson() );
         if( $createNew ) {
@@ -320,10 +330,8 @@ sub restoreSites {
             }
         }
         my $newSite = new UBOS::Site( $siteJsonNew );
-        $sitesNew{$siteJsonNew->{siteid}} = $newSite;
+        $sitesNew{$site->siteId} = $newSite;
     }
-
-# print "sitesNew: " . join( ', ', map { "$_ => " . $sitesNew{$_} } keys %sitesNew ) . "\n";
 
     debug( 'Setting up placeholders for restored sites' );
 
@@ -368,6 +376,11 @@ sub restoreSites {
         $ret &= $appConfigOnHost->runUpgrader();
     }
 
+    if( $showIds ) {
+        foreach my $siteNew ( values %sitesNew ) {
+            print $siteNew->siteId . "\n";
+        }
+    }
     return $ret;
 }
 
@@ -425,7 +438,7 @@ sub _findAppConfigurationByPartialId {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --in <backupfile>
 SSS
     Restore all sites contained in backupfile. This includes all
     applications and their data. None of the sites in the backup file
@@ -433,7 +446,7 @@ SSS
     must all be different.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --siteid <siteid> [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --siteid <siteid> [--hostname <hostname>] --in <backupfile>
 SSS
     Restore the site with siteid contained in backupfile. This includes
     all applications at that site and their data. This site currently
@@ -441,7 +454,7 @@ SSS
     all be different. Optionally use a different hostname.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --siteid <fromsiteid> --createnew [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --siteid <fromsiteid> --createnew [--hostname <hostname>] --in <backupfile>
 SSS
     Restore the site with siteid contained in backupfile, but instead of using
     the siteids and appconfigids given in the backup, allocate new ones.
@@ -451,7 +464,7 @@ SSS
     with the current site, albeit at a different hostname.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--context <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--context <context>] --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid. No AppConfiguration with appconfigid
@@ -459,7 +472,7 @@ SSS
     for the AppConfiguration. 
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--context <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--context <context>] --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid, but instead of using the
