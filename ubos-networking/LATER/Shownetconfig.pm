@@ -43,8 +43,10 @@ sub run {
     my $netConfigs      = IndieBox::Networking::NetConfigUtils::findNetConfigs();
     my $activeName      = undef;
     my $activeNetConfig = undef;
-    
-    while( my( $name, $netConfig ) = each %$netConfigs ) {
+
+    foreach my $name ( keys %$netConfigs ) {
+        my $netConfig = $netConfigs->{$name};
+
         if( IndieBox::Utils::invokeMethod( $netConfig . '::isActive' )) {
             $activeName      = $name;
             $activeNetConfig = $netConfig;

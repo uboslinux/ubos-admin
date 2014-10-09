@@ -65,7 +65,9 @@ sub getPrimaryKnownNic {
 	my $permanent = getPermanentKnownNics();
 	my( $retName, $retValue ); # return
 
-	while( my( $name, $value ) = each %$permanent ) {
+    foreach my $name ( keys %$permanent ) {
+        my $value = $permanent->{$name};
+
 		if( defined( $value->{primary} ) && $value->{primary} ) {
             $retName  = $name;
 			$retValue = $value;
@@ -74,12 +76,12 @@ sub getPrimaryKnownNic {
 	unless( defined( $retName )) {
 		# take the single one if there is one
 		if( keys %$permanent == 1 ) {
-            ( $retName, $retValue ) = each %$permanent; # just the first one
+            ( $retName, $retValue ) = each %$permanent; # just the first one; previously-line keys resets iteration
 			
 		} elsif( keys %$permanent == 0 ) {
             my $pluggable = getPluggableKnownNics();
 			if( keys %$pluggable == 1 ) {
-				( $retName, $retValue ) = each %$pluggable; # just the first one
+				( $retName, $retValue ) = each %$pluggable; # just the first one; previously-line keys resets iteration
 			}            
 		}
 	}
@@ -93,11 +95,17 @@ sub getAllNics {
 	my $json = _interfacesJson();
 	my $ret  = {};
 
-    while( my( $name, $value ) = each %$all ) {
+    foreach my $name ( keys %$all ) {
+        my $value = $all->{$name};
+
 		$ret->{$name} = $value;
 
-        while( my( $sectionName, $sectionValue ) = each %$json ) {
-            while( my( $regex, $regexValue ) = each %$sectionValue ) {
+        foreach my $sectionName ( keys %$json ) {
+            my $sectionValue = $json->{$sectionName};
+
+            foreach my $regex ( keys %$sectionValue ) {
+                my $regexValue = $sectionValue->{$regex};
+
 				if( $name =~ m!^$regex$! ) {
 					if( defined( $regexValue->{name} )) {
                         $ret->{$name}->{name} = $regexValue->{name};
@@ -125,9 +133,13 @@ sub _getNicsWith {
 	foreach my $sectionName ( @$sectionNames ) {
 		if( defined( $json->{$sectionName} )) {
 			my $sectionValue = $json->{$sectionName};
-			
-			while( my( $name, $value ) = each %$all ) {
-                while( my( $regex, $regexValue ) = each %$sectionValue ) {
+
+            foreach my $name ( keys %$all ) {
+                my $value = $all->{$name};
+
+                foreach my $regex ( keys %$sectionValue ) {
+                    my $regexValue = $sectionValue->{$regex};
+
 					if( $name =~ m!^$regex$! ) {
 						$ret->{$name} = $value;
 						if( defined( $regexValue->{name} )) {
@@ -212,7 +224,9 @@ sub _ipLinks {
 				$h->{atts}  = {};
 				map { $h->{flags}->{$_} = 1 } split ',', $devFlags;
 				# This loop isn't quite clean: att names may be parts of words, not entire words; does not seem to happen though
-				while( my( $att, $regex ) = each %$atts ) {
+                foreach my $att ( keys %$atts ) {
+                    my $regex = $atts->{$att};
+
 					if( $regex ) {
                         if( $devFirstLine =~ m!$att ($regex)! ) {
 						    $h->{atts}->{$att} = $1;
