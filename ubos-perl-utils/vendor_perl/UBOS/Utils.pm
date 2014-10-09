@@ -44,8 +44,6 @@ my $jsonParser = JSON->new->relaxed->pretty->utf8();
 sub readJsonFromFile {
     my $file = shift;
 
-    debug( 'readJsonFromFile(', $file, ')' );
-
     my $fileContent = slurpFile( $file );
 
     my $json;
@@ -60,7 +58,6 @@ sub readJsonFromFile {
 # Read and parse JSON from STDIN
 # return: JSON object
 sub readJsonFromStdin {
-    debug( 'readJsonFromStdin()' );
 
     local $/;
     my $fileContent = <STDIN>;
@@ -79,8 +76,6 @@ sub readJsonFromStdin {
 # return: JSON object
 sub readJsonFromString {
     my $string = shift;
-
-    debug( 'readJsonFromString()' );
 
     my $json;
     eval {
@@ -105,8 +100,6 @@ sub writeJsonToFile {
     my $uname    = shift;
     my $gname    = shift;
 
-    debug( 'writeJsonToFile(', $fileName, ')' );
-
     saveFile( $fileName, $jsonParser->encode( $json ), $mask, $uname, $gname );
 }
 
@@ -116,8 +109,6 @@ sub writeJsonToFile {
 sub writeJsonToStdout {
     my $json = shift;
 
-    debug( 'writeJsonToStdout()' );
-
     print $jsonParser->encode( $json );
 }
 
@@ -126,8 +117,6 @@ sub writeJsonToStdout {
 # $json: the JSON object to write
 sub writeJsonToString {
     my $json = shift;
-
-    debug( 'writeJsonToString()' );
 
     return $jsonParser->encode( $json );
 }
