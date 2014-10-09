@@ -272,11 +272,12 @@ JSON
             }
 JSON
         }
-    }
-
-    $newSiteJsonString .= <<JSON;
+        $newSiteJsonString .= <<JSON;
         }
     ]
+JSON
+    }
+        $newSiteJsonString .= <<JSON;
 }
 JSON
 

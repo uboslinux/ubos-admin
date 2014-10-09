@@ -48,6 +48,7 @@ sub run {
     my @siteIds       = ();
     my @appConfigIds  = ();
     my $toSiteId      = undef;
+    my $toHostname    = undef;
     my $hostname      = undef;
     my $context       = undef;
     my $createNew     = 0;
@@ -60,6 +61,7 @@ sub run {
             'siteid=s'      => \@siteIds,
             'appconfigid=s' => \@appConfigIds,
             'tositeid=s'    => \$toSiteId,
+            'tohostname=s'  => \$toHostname,
             'hostname=s'    => \$hostname,
             'context=s'     => \$context,
             'createnew'     => \$createNew );
@@ -70,10 +72,10 @@ sub run {
         || @args
         || !$in
         || ( $verbose && $logConfigFile )
-        || ( @siteIds && ( @appConfigIds || $toSiteId || $context ))
-        || ( !@siteIds && !@appConfigIds && ( $toSiteId || $createNew ))
+        || ( @siteIds && ( @appConfigIds || $toSiteId || $toHostname || $context ))
+        || ( !@siteIds && !@appConfigIds && ( $toSiteId || $toHostname || $createNew ))
         || ( $context && @appConfigIds > 1 )
-        || ( @appConfigIds && !$toSiteId )
+        || ( @appConfigIds && !$toSiteId && !$toHostname )
         || ( $hostname && ( @appConfigIds || @siteIds > 1 )))
     {
         fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
@@ -87,7 +89,7 @@ sub run {
 
     my $ret;
     if( @appConfigIds ) {
-        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $createNew, $context, $backup );
+        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $backup );
     } else {
         $ret = restoreSites( \@siteIds, $createNew, $hostname, $backup );
     }
@@ -99,6 +101,7 @@ sub run {
 sub restoreAppConfigs {
     my @appConfigIds = @{shift()};
     my $toSiteId     = shift;
+    my $toHostname   = shift;
     my $createNew    = shift;
     my $context      = shift;
     my $backup       = shift;
@@ -106,7 +109,12 @@ sub restoreAppConfigs {
     my $appConfigsInBackup = $backup->appConfigs();
 
     # tosite must exist on the host
-    my $toSite = UBOS::Host::findSiteByPartialId( $toSiteId );
+    my $toSite;
+    if( $toSiteId ) {
+        $toSite = UBOS::Host::findSiteByPartialId( $toSiteId );
+    } else {
+        $toSite = UBOS::Host::findSiteByHostname( $toHostname );
+    }
     unless( $toSite ) {
         fatal( $@ );
     }
@@ -130,6 +138,9 @@ sub restoreAppConfigs {
 
     # $context cannot exist on same host
     if( defined( $context )) {
+        unless( UBOS::AppConfiguration::isValidContext( $context )) {
+            fatal( 'Context must be a slash followed by one or more characters, or be entirely empty' );
+        }
         foreach my $appConfigOnHost ( @{$toSite->appConfigs} ) {
             if( $context eq $appConfigOnHost->context() ) {
                 fatal( 'Already an AppConfiguration at context', $context ? $context : "<root>" );
@@ -406,8 +417,7 @@ sub _findAppConfigurationByPartialId {
         }
     }
     return $ret;
-
-    }
+}
 
 ##
 # Return help text for this command.
@@ -441,7 +451,7 @@ SSS
     with the current site, albeit at a different hostname.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --tosite <tositeid> [--context <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--context <context>] --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid. No AppConfiguration with appconfigid
@@ -449,7 +459,7 @@ SSS
     for the AppConfiguration. 
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --tosite <tositeid> --createnew [--context <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--context <context>] --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid, but instead of using the

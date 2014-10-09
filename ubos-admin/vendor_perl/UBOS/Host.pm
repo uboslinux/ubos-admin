@@ -150,6 +150,7 @@ sub findSiteByHostname {
             return $site;
         }
     }
+    $@ = 'No Site found with hostname '. $host;
     return undef;
 }
 

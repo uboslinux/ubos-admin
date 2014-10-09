@@ -47,28 +47,35 @@ sub checkReady {
 }
 
 ##
+# Constructor.
+sub new {
+    my $self = shift;
+    
+    unless( ref( $self )) {
+        $self = fields::new( $self );
+    }
+    $self->SUPER::new();
+
+    return $self;
+}
+
+##
 # Back up the provided sites.
 # $sites: hash of siteId to site
 sub create {
     my $self  = shift;
     my $sites = shift;
 
-    my @filesToDelete = ();
-
-    unless( ref( $self )) {
-        $self = fields::new( $self );
-    }
-
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{sites}      = $sites;
+
+    my @filesToDelete = ();
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
     foreach my $site ( values %{$sites} ) {
         my $siteId = $site->siteId();
         UBOS::Utils::writeJsonToFile( "$updateBackupDir/$siteId.json", $site->siteJson, 0600 );
-
-        UBOS::Utils::mkdir( "$updateBackupDir/$siteId", 0700 );
 
         my $appConfigs = $site->appConfigs();
         foreach my $appConfig ( @$appConfigs ) {
@@ -158,27 +165,27 @@ sub restoreAppConfiguration {
     my $appConfigInBackup = shift;
     my $appConfigOnHost   = shift;
 
-    my $ret         = 1;
-    my $appConfigId = $appConfig->appConfigId;
-    my $rolesOnHost = UBOS::Host::rolesOnHost();
+    my $ret                 = 1;
+    my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
+    my $rolesOnHost         = UBOS::Host::rolesOnHost();
 
-    foreach my $installable ( $appConfig->installables ) {
+    foreach my $installable ( $appConfigInBackup->installables ) {
         my $packageName = $installable->packageName;
 
-        unless( -d "$updateBackupDir/$appConfigId/$packageName" ) {
+        unless( -d "$updateBackupDir/$appConfigIdInBackup/$packageName" ) {
             next;
         }
 
         my $config = new UBOS::Configuration(
-                "Installable=$packageName,AppConfiguration=" . $appConfigId,
+                "Installable=$packageName,AppConfiguration=" . $appConfigInBackup . "=>" . $appConfigOnHost,
                 {},
                 $installable->config,
-                $appConfig->config );
+                $appConfigOnHost->config );
 
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
             if( $role ) { # don't attempt to restore anything not installed on this host
-                my $appConfigPathInBackup = "$updateBackupDir/$appConfigId/$packageName/$roleName";
+                my $appConfigPathInBackup = "$updateBackupDir/$appConfigIdInBackup/$packageName/$roleName";
                 unless( -d $appConfigPathInBackup ) {
                     next;
                 }
@@ -194,7 +201,7 @@ sub restoreAppConfiguration {
                             # for now, we don't care what value this field has as long as it is non-empty
                             next;
                         }
-                        my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
+                        my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installable );
                         if( $item ) {
                             $ret &= $item->restore( $dir, $config, $backupContext );
                         }
