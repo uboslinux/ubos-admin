@@ -74,12 +74,12 @@ sub create {
         foreach my $appConfig ( @$appConfigs ) {
 
             my $appConfigId = $appConfig->appConfigId;
-            UBOS::Utils::mkdir( "$updateBackupDir/$siteId/$appConfigId", 0700 );
+            UBOS::Utils::mkdir( "$updateBackupDir/$appConfigId", 0700 );
 
             foreach my $installable ( $appConfig->installables ) {
                 my $packageName = $installable->packageName;
 
-                UBOS::Utils::mkdir( "$updateBackupDir/$siteId/$appConfigId/$packageName", 0700 );
+                UBOS::Utils::mkdir( "$updateBackupDir/$appConfigId/$packageName", 0700 );
                 
                 my $config = new UBOS::Configuration(
                         "Installable=$packageName,AppConfiguration=" . $appConfigId,
@@ -90,7 +90,7 @@ sub create {
                 foreach my $roleName ( @{$installable->roleNames} ) {
                     my $role = $rolesOnHost->{$roleName};
                     if( $role ) { # don't attempt to backup anything not installed on this host
-                        my $appConfigPathInBackup = "$updateBackupDir/$siteId/$appConfigId/$packageName/$roleName";
+                        my $appConfigPathInBackup = "$updateBackupDir/$appConfigId/$packageName/$roleName";
 
                         UBOS::Utils::mkdir( $appConfigPathInBackup, 0700 );
                         
@@ -150,13 +150,13 @@ sub read {
 
 ##
 # Restore a single AppConfiguration from Backup
-# $siteId: the SiteId of the AppConfiguration
-# $appConfig: the AppConfiguration to restore
+# $appConfigInBackup: the AppConfiguration to restore, as it is stored in the Backup
+# $appConfigOnHost: the AppConfiguration to restore to, on the host
 # return: success or fail
 sub restoreAppConfiguration {
-    my $self      = shift;
-    my $siteId    = shift;
-    my $appConfig = shift;
+    my $self              = shift;
+    my $appConfigInBackup = shift;
+    my $appConfigOnHost   = shift;
 
     my $ret         = 1;
     my $appConfigId = $appConfig->appConfigId;
@@ -165,7 +165,7 @@ sub restoreAppConfiguration {
     foreach my $installable ( $appConfig->installables ) {
         my $packageName = $installable->packageName;
 
-        unless( -d "$updateBackupDir/$siteId/$appConfigId/$packageName" ) {
+        unless( -d "$updateBackupDir/$appConfigId/$packageName" ) {
             next;
         }
 
@@ -178,7 +178,7 @@ sub restoreAppConfiguration {
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
             if( $role ) { # don't attempt to restore anything not installed on this host
-                my $appConfigPathInBackup = "$updateBackupDir/$siteId/$appConfigId/$packageName/$roleName";
+                my $appConfigPathInBackup = "$updateBackupDir/$appConfigId/$packageName/$roleName";
                 unless( -d $appConfigPathInBackup ) {
                     next;
                 }

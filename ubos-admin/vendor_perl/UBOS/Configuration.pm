@@ -10,6 +10,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
+#
 # ubos-admin is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -201,7 +202,7 @@ sub keys {
     my $self = shift;
 
     my $uniq = {};
-    foreach my $key ( keys %{$self->{flatMap}} ) {
+    foreach my $key ( CORE::keys %{$self->{flatMap}} ) {
         $uniq->{$key} = 1;
     }
     foreach my $delegate ( @{$self->{delegates}} ) {
@@ -209,7 +210,7 @@ sub keys {
             $uniq->{$key} = 1;
         }
     }
-    return keys %$uniq;
+    return CORE::keys %$uniq;
 }
 
 ##
@@ -227,7 +228,9 @@ sub replaceVariables {
     my $ret;
     if( ref( $value ) eq 'HASH' ) {
         $ret = {};
-        while( my( $key2, $value2 ) = each %$value ) {
+        foreach my $key2 ( CORE::keys %$value ) {
+            my $value2 = $value->{$key2};
+
             my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk, $remainingDepth-1 );
             $ret->{$key2} = $newValue2;
         }
@@ -288,10 +291,15 @@ sub _flatten {
     my $map = shift;
     my $ret = {};
 
-    while( my( $key, $value ) = each %$map ) {
+    foreach my $key ( CORE::keys %$map ) {
+        my $value = $map->{$key};
+
         if( ref( $value ) eq 'HASH' ) {
             my $subRet = _flatten( $value );
-            while( my( $foundKey, $foundValue ) = each %$subRet ) {
+
+            foreach my $foundKey ( CORE::keys %$subRet ) {
+                my $foundValue = $subRet->{$foundKey};
+
                 $ret->{"$key.$foundKey"} = $foundValue;
             }
         } else {

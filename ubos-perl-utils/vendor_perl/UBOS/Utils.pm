@@ -150,7 +150,9 @@ sub insertSlurpedFiles {
         
     } elsif( ref( $json ) eq 'HASH' ) {
         $ret = {};
-        while( my( $name, $value ) = each %$json ) {
+        foreach my $name ( keys %$json ) {
+            my $value = $json->{$name};
+
             $ret->{$name} = insertSlurpedFiles( $value, $dir );
         }
         
@@ -508,7 +510,9 @@ sub findPerlShortModuleNamesInPackage {
     my $full = findPerlModuleNamesInPackage( $parentPackage, $inc );
     my $ret  = {};
 
-    while( my( $fileName, $packageName ) = each %$full ) {
+    foreach my $fileName ( keys %$full ) {
+        my $packageName = $full->{fileName};
+
         my $shortName = $packageName;
         $shortName =~ s!^.*::!!;
         $shortName =~ s!([A-Z])!-lc($1)!ge;

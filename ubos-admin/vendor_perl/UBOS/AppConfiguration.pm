@@ -204,7 +204,9 @@ sub resolvedCustomizationPoints {
         my $installableCustPoints = $installable->customizationPoints;
         
         if( $installableCustPoints ) {
-            while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
+            foreach my $custPointName ( keys %$installableCustPoints ) {
+                my $custPointDef = $installableCustPoints->{$custPointName};
+
                 # check data type
                 my $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
                 if( defined( $value )) {
@@ -514,7 +516,9 @@ sub _addCustomizationPointValuesToConfig {
         my $appConfigId         = $self->appConfigId;
         my $appConfigCustPoints = $self->customizationPoints();
 
-        while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
+        foreach my $custPointName ( keys %$installableCustPoints ) {
+            my $custPointDef = $installableCustPoints->{$custPointName};
+
             my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
 
             unless( defined( $value ) && defined( $value->{value} )) {

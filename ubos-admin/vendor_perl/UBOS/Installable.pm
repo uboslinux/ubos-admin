@@ -334,7 +334,9 @@ sub checkManifestRolesSection {
         my $rolesOnHost = UBOS::Host::rolesOnHost();
         my $retentionBuckets = {};
 
-        while( my( $roleName, $roleJson ) = each %{$json->{roles}} ) {
+        foreach my $roleName ( keys %{$json->{roles}} ) {
+            my $roleJson = $json->{roles}->{$roleName};
+
             my $role = $rolesOnHost->{$roleName};
             if( $role ) {
                 $role->checkAppManifestForRole( $roleName, $self, $roleJson, $retentionBuckets, $config );
@@ -356,7 +358,9 @@ sub checkManifestCustomizationPointsSection {
         unless( ref( $json->{customizationpoints} ) eq 'HASH' ) {
             $self->myFatal( "customizationpoints section: not a JSON object" );
         }
-        while( my( $custPointName, $custPointJson ) = each %{$json->{customizationpoints}} ) {
+        foreach my $custPointName ( keys %{$json->{customizationpoints}} ) {
+            my $custPointJson = $json->{customizationpoints}->{$custPointName};
+
             unless( $custPointName =~ m/^[a-z][_a-z0-9]*$/ ) {
                 $self->myFatal( "customizationpoints section: invalid customizationpoint name: $custPointName" );
             }

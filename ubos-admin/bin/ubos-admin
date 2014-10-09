@@ -84,7 +84,9 @@ END
             my $synopsisHelp = UBOS::Utils::invokeMethod( $package . '::synopsisHelp' ) || '';
 
             if( $synopsisHelp ) { # skip commands that don't have this
-                while( my( $synopsis, $help ) = each %$synopsisHelp ) {
+                foreach my $synopsis ( sort keys %$synopsisHelp ) {
+                    my $help = $synopsisHelp->{$synopsis};
+
                     $synopsis =~ s!^\s+!!;
                     $synopsis =~ s!\s+$!!;
 

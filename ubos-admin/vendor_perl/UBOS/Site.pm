@@ -329,7 +329,9 @@ sub print {
                                 print $installable->packageName . "\n";
                                 my $installableCustPoints = $custPoints->{$installable->packageName};
                                 if( defined( $installableCustPoints )) {
-                                    while( my( $custPointName, $custPointValue ) = each %{$installableCustPoints} ) {
+                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                                        my $custPointValue = $installableCustPoints->{$custPointName};
+
                                         print '                     customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
                                     }
                                 }
@@ -754,7 +756,9 @@ sub _checkJsonValidKeys {
     if( ref( $json ) eq 'HASH' ) {
         if( @$context >= 2 && $context->[-1] eq 'customizationpoints' ) {
             # This is a package name, which has laxer rules
-            while( my( $key, $value ) = each %$json ) {
+            foreach my $key ( keys %$json ) {
+                my $value = $json->{$key};
+
                 unless( $key =~ m!^[a-z][-_a-z0-9]*$! ) {
                     fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
@@ -762,14 +766,18 @@ sub _checkJsonValidKeys {
             }
         } elsif( @$context >= 2 && $context->[-2] eq 'customizationpoints' ) {
             # This is a customization point name, which has laxer rules
-            while( my( $key, $value ) = each %$json ) {
+            foreach my $key ( keys %$json ) {
+                my $value = $json->{$key};
+
                 unless( $key =~ m!^[a-z][_a-z0-9]*$! ) {
                     fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
                 $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
             }
         } else {
-            while( my( $key, $value ) = each %$json ) {
+            foreach my $key ( keys %$json ) {
+                my $value = $json->{$key};
+
                 unless( $key =~ m!^[a-z]+$! ) {
                     fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }

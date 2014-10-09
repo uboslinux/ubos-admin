@@ -65,73 +65,64 @@ sub run {
 	UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    my $oldSites = UBOS::Host::sites();
-    my $resumeSites     = ();
-    my $suspendTriggers = {};
+    # first make sure there is no overlap between them
+    my $sites      = {};
+    my $appConfigs = {};
+
+    foreach my $appConfigId ( @appConfigIds ) {
+        my $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
+        if( exists( $appConfigs->{$appConfig->appConfigId} )) {
+            fatal( 'App config id specified more than once:', $appConfig->appConfigId );
+        }
+        $appConfigs->{$appConfig->appConfigId} = $appConfig;
+    }
+    foreach my $siteId ( @siteIds ) {
+        my $site = UBOS::Host::findSiteByPartialId( $siteId );
+        if( exists( $sites->{$site->siteId} )) {
+            fatal( 'Site id specified more than once:', $site->siteId );
+        }
+        $sites->{$site->siteId} = $site;
+    }
+    if( !@appConfigIds && !@siteIds ) {
+        $sites = UBOS::Host::sites();
+    }
+    foreach my $site ( values %$sites ) {
+        my $appConfigsAtSite = $site->appConfigs;
+        
+        foreach my $appConfig ( @$appConfigsAtSite ) {
+            if( exists( $appConfigs->{$appConfig->appConfigId} )) {
+                fatal( 'App config id', $appConfig->appConfigId . 'is also part of site:', $site->siteId );
+            }
+            $appConfigs->{$appConfig->appConfigId} = $appConfig;
+        }
+    }
+
+    my $sitesToSuspendResume = {};
+
+    # We have all AppConfigs of all Sites, so doing this is sufficient
+    foreach my $appConfig ( values %$appConfigs ) {
+        my $site = $appConfig->site;
+        $sitesToSuspendResume->{$site->siteId} = $site; # may be set more than once
+    }
 
     debug( 'Suspending sites' );
 
-    if( @siteIds != 0 || @appConfigIds != 0 ) {
-        # first make sure there is no overlap between them
-        foreach my $siteId ( @siteIds ) {
-            my $oldSite = UBOS::Host::findSiteByPartialId( $siteId );
-            if( $oldSite ) {
-                if( @appConfigIds ) {
-                    foreach my $oldSiteAppConfig ( $oldSite->appConfigs ) {
-                        foreach my $appConfigId ( @appConfigIds ) {
-                            if( $oldSiteAppConfig->appConfigId eq $appConfigId ) {
-                                fatal( "AppConfiguration $appConfigId is already part of site $siteId" );
-                            }
-                        }
-                    }
-                }
-            } else {
-                fatal( $@ );
-            }
-        }
-        foreach my $siteId ( @siteIds ) {
-            my $oldSite = UBOS::Host::findSiteByPartialId( $siteId );
-            if( $oldSite ) {
-                $ret &= $oldSite->suspend( $suspendTriggers );
-                $resumeSites->{$siteId} = $oldSite;
-            }
-        }
-        foreach my $appconfigId ( @appConfigIds ) {
-			my $oldSites = UBOS::Host::sites();
-            foreach my $oldSite ( values %$oldSites ) {
-                my $foundAppConfig;
-                foreach my $oldAppconfig ( @{$oldSite->appconfigs()} ) {
-                    if( $appconfigId eq $oldAppconfig->appConfigId() ) {
-                        my $foundAppConfig = $oldAppconfig;
-                        last;
-                    }
-                }
-                if( $foundAppConfig ) {
-                    $ret &= $oldSite->suspend( $suspendTriggers );
-                    $resumeSites->{$oldSite->siteId} = $oldSite;
-                } else {
-                    fatal( "Cannot find appconfiguration $appconfigId" );
-                }
-            }
-        }
-    } else {
-		my $oldSites = UBOS::Host::sites();
-        foreach my $oldSite ( values %$oldSites ) {
-            $ret &= $oldSite->suspend( $suspendTriggers );
-            $resumeSites->{$oldSite->siteId} = $oldSite;
-        }
+    my $suspendTriggers = {};
+    foreach my $site ( values %$sitesToSuspendResume ) {
+        $ret &= $site->suspend( $suspendTriggers );
     }
+
     UBOS::Host::executeTriggers( $suspendTriggers );
 
     debug( 'Creating and exporting backup' );
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
-    $ret &= $backup->create( \@siteIds, \@appConfigIds, $out );
+    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $out );
 
     debug( 'Resuming sites' );
 
     my $resumeTriggers = {};
-    foreach my $site ( values %$resumeSites ) {
+    foreach my $site ( values %$sitesToSuspendResume ) {
         $ret &= $site->resume( $resumeTriggers );
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
@@ -147,19 +138,21 @@ sub synopsisHelp {
         <<SSS => <<HHH,
     [--verbose | --logConfig <file>] --siteid <siteid> --out <backupfile>
 SSS
-    Back up all data from all applications installed at a currently
-    deployed site with siteid to backupfile.
+    Back up all data from all apps and accessories installed at a currently
+    deployed site with siteid to backupfile. More than one siteid may be
+    specified.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>]--appconfigid <appconfigid> --out <backupfile>
+    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --out <backupfile>
 SSS
-    Back up all data from the currently deployed application at
-    AppConfiguration appconfigid to backupfile.
+    Back up all data from the currently deployed app and its accessories at
+    AppConfiguration appconfigid to backupfile. More than one appconfigid
+    may be specified.
 HHH
         <<SSS => <<HHH
     [--verbose | --logConfig <file>]--out <backupfile>
 SSS
-    Back up all data from all currently deployed applications at all
+    Back up all data from all currently deployed apps and accessories at all
     deployed sites to backupfile.
 HHH
     };

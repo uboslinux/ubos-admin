@@ -44,12 +44,14 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
+    my $noapp         = 0;
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $dryRun;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'noapp'       => \$noapp,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'dry-run|n'   => \$dryRun );
@@ -60,22 +62,30 @@ sub run {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
-    my $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
-    UBOS::Host::ensurePackages( $appId );
+    my $appId;
+    my $app;
 
-    my $app = new UBOS::App( $appId );
+    unless( $noapp ) {
+        $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
+        UBOS::Host::ensurePackages( $appId );
+
+        $app = new UBOS::App( $appId );
+    }
 
     my $oldSites     = UBOS::Host::sites();
     my $existingSite = undef;
     my $hostname     = undef;
     outer: while( 1 ) {
-        $hostname = ask( "Hostname for app: ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$' );
+        $hostname = ask( "Hostname: ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$' );
 
         foreach my $oldSite ( values %$oldSites ) {
             if( $oldSite->hostName eq $hostname ) {
                 print "There is already a site with hostname $hostname.\n";
+                if( $noapp ) {
+                    next outer;
+                }
                 my $yn = ask( "Add app $appId to $hostname? (y/n) " );
-                if( $yn !~ m!^y(es)?$!i ) {
+                unless( $yn =~ m!^y(es)?$!i ) {
                     next outer;
                 }
                 $existingSite = $oldSite;
@@ -84,66 +94,71 @@ sub run {
         last;
     }
 
-    my $defaultContext = $app->defaultContext;
-    my $context        = undef;
-    if( $defaultContext ) {
-        print "App $appId suggests context path " . $app->defaultContext . "\n";
-        my $existingAppConfig;
-        if( $existingSite ) {
-            $existingAppConfig = $existingSite->appConfigAtContext( $defaultContext );
-        }
-        if( $existingAppConfig ) {
-            print 'But: app ' . $existingAppConfig->app->packageName . " already runs at $defaultContext. You need to choose something different.\n";
-        }
-        while( 1 ) {
-            $context = ask( 'Enter context path: ' );
+    my $context         = undef;
+    my @accs            = ();
+    my $custPointValues = {};
 
-            if( UBOS::AppConfiguration::isValidContext( $context )) {
-                if( $existingSite ) {
-                    my $error = $existingSite->mayContextBeAdded( $context );
-                    if( $error ) {
-                        print $error . " You need to choose something different.\n";
+    unless( $noapp ) {
+        my $defaultContext = $app->defaultContext;
+        if( $defaultContext ) {
+            print "App $appId suggests context path " . $app->defaultContext . "\n";
+            my $existingAppConfig;
+            if( $existingSite ) {
+                $existingAppConfig = $existingSite->appConfigAtContext( $defaultContext );
+            }
+            if( $existingAppConfig ) {
+                print 'But: app ' . $existingAppConfig->app->packageName . " already runs at $defaultContext. You need to choose something different.\n";
+            }
+            while( 1 ) {
+                $context = ask( 'Enter context path: ' );
+
+                if( UBOS::AppConfiguration::isValidContext( $context )) {
+                    if( $existingSite ) {
+                        my $error = $existingSite->mayContextBeAdded( $context );
+                        if( $error ) {
+                            print $error . " You need to choose something different.\n";
+                        } else {
+                            last;
+                        }
                     } else {
-						last;
-					}
+                        last;
+                    }
                 } else {
-					last;
-				}
-            } else {
-                print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces\n";
+                    print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces\n";
+                }
             }
         }
-    }
 
-    my $accessories = ask( "Any accessories for $appId? Enter list: " );
-    $accessories =~ s!^\s+!!;
-    $accessories =~ s!\s+$!!;
-    my @accs = ();
-    foreach my $accId ( split( /\s+,?\s*/, $accessories )) {
-        UBOS::Host::ensurePackages( $accId );
-        my $acc = new UBOS::Accessory( $accId );
+        my $accessories = ask( "Any accessories for $appId? Enter list: " );
+        $accessories =~ s!^\s+!!;
+        $accessories =~ s!\s+$!!;
+        foreach my $accId ( split( /\s+,?\s*/, $accessories )) {
+            UBOS::Host::ensurePackages( $accId );
+            my $acc = new UBOS::Accessory( $accId );
 
-        push @accs, $acc;
-    }
+            push @accs, $acc;
+        }
 
-    my $custPointValues = {};
-    foreach my $installable ( $app, @accs ) {
-        my $custPoints = $installable->customizationPoints;
-        if( $custPoints ) {
-            my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+        foreach my $installable ( $app, @accs ) {
+            my $custPoints = $installable->customizationPoints;
+            if( $custPoints ) {
+                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
 
-            while( my( $custPointName, $custPointDef ) = each( %$custPoints )) {
-                # only ask for required values
-                unless( $custPointDef->{required} ) {
-                    next;
+                foreach my $custPointName ( keys %$custPoints ) {
+                    my $custPointDef = $custPoints->{$custPointName};
+
+                    # only ask for required values
+                    unless( $custPointDef->{required} ) {
+                        next;
+                    }
+                    my $value = ask( (( $installable == $app ) ? 'App' : 'Accessory' ) . ' ' . $installable->packageName . " requires a value for $custPointName: " );
+
+                    my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                    unless( $custPointValidation->{valuecheck}->( $value )) {
+                        fatal(  $custPointValidation->{valuecheckerror} );
+                    }
+                    $custPointValues->{$installable->packageName}->{$custPointName} = $value;
                 }
-                my $value = ask( (( $installable == $app ) ? 'App' : 'Accessory' ) . ' ' . $installable->packageName . " requires a value for $custPointName: " );
-
-                my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                unless( $custPointValidation->{valuecheck}->( $value )) {
-                    fatal(  $custPointValidation->{valuecheckerror} );
-                }
-                $custPointValues->{$installable->packageName}->{$custPointName} = $value;
             }
         }
     }
@@ -151,7 +166,7 @@ sub run {
     my $newSiteJsonString;
     
     my $siteId;
-    my $appConfigId;
+    my $appConfigId = UBOS::Host::createNewAppConfigId();
     my $adminUserId;
     my $adminUserName;
     my $adminCredential;
@@ -160,8 +175,7 @@ sub run {
     if( $existingSite ) {
         my $json = $existingSite->{json};
 
-        $siteId      = $json->{siteid};
-        $appConfigId = UBOS::Host::createNewAppConfigId();
+        $siteId = $json->{siteid};
 
         $adminUserId     = $json->{admin}->{userid};
         $adminUserName   = $json->{admin}->{username};
@@ -169,8 +183,7 @@ sub run {
         $adminEmail      = $json->{admin}->{email};
 
     } else {
-        $siteId      = UBOS::Host::createNewSiteId();
-        $appConfigId = UBOS::Host::createNewAppConfigId();
+        $siteId = UBOS::Host::createNewSiteId();
 
         $adminUserId     = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
         $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
@@ -196,65 +209,69 @@ JSON
         "credential" : "$adminCredential",
         "email" : "$adminEmail"
     },
+JSON
 
+    unless( $noapp ) {
+        $newSiteJsonString .= <<JSON;
     "appconfigs" : [
 JSON
-    if( $existingSite ) {
-        foreach my $appConfig ( @{$existingSite->appConfigs} ) {
-            my $toAdd = UBOS::Utils::writeJsonToString( $appConfig->{json} );
-            $toAdd =~ s!\s+$!!;
-            $toAdd =~ s!^!        !mg;
-            $newSiteJsonString .= "\n" . $toAdd . ',';
+        if( $existingSite ) {
+            foreach my $appConfig ( @{$existingSite->appConfigs} ) {
+                my $toAdd = UBOS::Utils::writeJsonToString( $appConfig->{json} );
+                $toAdd =~ s!\s+$!!;
+                $toAdd =~ s!^!        !mg;
+                $newSiteJsonString .= "\n" . $toAdd . ',';
+            }
+            $newSiteJsonString .= "\n";
         }
-        $newSiteJsonString .= "\n";
-    }
-    $newSiteJsonString .= <<JSON;
+        $newSiteJsonString .= <<JSON;
         {
             "appconfigid" : "$appConfigId",
             "appid" : "$appId",
 JSON
 
-    if( defined( $context )) {
-        $newSiteJsonString .= <<JSON;
+        if( defined( $context )) {
+            $newSiteJsonString .= <<JSON;
             "context" : "$context",
 JSON
-    }
-    if( @accs ) {
-        $newSiteJsonString .= <<JSON;
+        }
+        if( @accs ) {
+            $newSiteJsonString .= <<JSON;
             "accessories" : [
 JSON
-        $newSiteJsonString .= join( '', map { '                ' . $_->packageName . ",\n" } @accs );
+            $newSiteJsonString .= join( '', map { '                ' . $_->packageName . ",\n" } @accs );
             
-        $newSiteJsonString .= <<JSON;
+            $newSiteJsonString .= <<JSON;
             ],
 JSON
-    }
-    if( %$custPointValues ) {
-        $newSiteJsonString .= <<JSON;
+        }
+        if( %$custPointValues ) {
+            $newSiteJsonString .= <<JSON;
             "customizationpoints" : {
 JSON
-        foreach my $packageName ( sort keys %$custPointValues ) {
-            my $packageInfo = $custPointValues->{$packageName};
-
-            $newSiteJsonString .= <<JSON;
-                "$packageName" : {
-JSON
-            foreach my $name ( sort keys %$packageInfo ) {
-                my $value = $packageInfo->{$name};
+            foreach my $packageName ( sort keys %$custPointValues ) {
+                my $packageInfo = $custPointValues->{$packageName};
 
                 $newSiteJsonString .= <<JSON;
+                "$packageName" : {
+JSON
+                foreach my $name ( sort keys %$packageInfo ) {
+                    my $value = $packageInfo->{$name};
+
+                    $newSiteJsonString .= <<JSON;
                     "$name" : {
                         "value" : "$value"
                     },
 JSON
-            }
-            $newSiteJsonString .= <<JSON;
+                }
+                $newSiteJsonString .= <<JSON;
                 },
 JSON
-        }
-        $newSiteJsonString .= <<JSON;
+            }
+            $newSiteJsonString .= <<JSON;
             }
 JSON
+        }
     }
 
     $newSiteJsonString .= <<JSON;
@@ -364,16 +381,17 @@ sub ask {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>]
+    [--verbose | --logConfig <file>] [--noapp]
 SSS
-    Interactively define and install a new site.
+    Interactively define and install a new site. Unless --noapp is
+    provided, the site will run one app.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] --dry-run | -n
+    [--verbose | --logConfig <file>] [--noapp] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
-    print the Site JSON file for the site, which then can be
-    deployed using 'ubos-admin deploy'.
+    print the Site JSON file for the site, which then can be deployed
+    using 'ubos-admin deploy'.
 HHH
     };
 }

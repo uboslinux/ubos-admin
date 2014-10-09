@@ -101,10 +101,12 @@ sub findSiteByPartialId {
     if( $id =~ m!^(.*)\.\.\.$! ) {
         my $partial    = $1;
         my @candidates = ();
-        
-        while( my( $siteId, $site ) = %$sites ) {
+
+        foreach my $siteId ( keys %$sites ) {
+            my $site = $sites->{$siteId};
+
             if( $siteId =~ m!^$partial! ) {
-                push @candidates, $siteId;
+                push @candidates, $site;
             }
         }
         if( @candidates == 1 ) {
@@ -112,7 +114,7 @@ sub findSiteByPartialId {
 
         } elsif( @candidates ) {
 	        $@ = "There is more than one site whose siteid starts with $partial: "
-               . join( " vs ", @candidates )
+               . join( " vs ", map { $_->siteId } @candidates )
                . '.';
             return undef;
 
@@ -141,7 +143,9 @@ sub findSiteByHostname {
     my $host  = shift;
     my $sites = shift || sites();
 
-    while( my( $siteId, $site ) = each %$sites ) {
+    foreach my $siteId ( keys %$sites ) {
+        my $site = $sites->{$siteId};
+
         if( $site->hostName eq $host ) {
             return $site;
         }
@@ -150,12 +154,32 @@ sub findSiteByHostname {
 }
 
 ##
-# Find a particular AppConfig in the provided hash of sites, or currently installed on this host,
+# Find a particular AppConfiguration in the provided hash of sites, or currently installed on this host,
+# by ac omplete app config id match.
+sub findAppConfigurationById {
+    my $appConfigId = shift;
+    my $sites       = shift || sites();
+
+    foreach my $siteId ( keys %$sites ) {
+        my $site       = $sites->{$siteId};
+        my $appConfigs = $site->appConfigs;
+
+        foreach my $appConfig ( @$appConfigs ) {
+            if( $appConfig->appConfigId eq $appConfigId ) {
+                return $appConfig;
+            }
+        }
+    }
+    return undef;
+}
+
+##
+# Find a particular AppConfiguration in the provided hash of sites, or currently installed on this host,
 # by a complete or partial app config id match.
 # $id: the complete or partial app config identifier
 # $sites: hash of siteid to Site (defaults to sites installed on host)
 # return: the Site, or undef
-sub findAppConfigByPartialId {
+sub findAppConfigurationByPartialId {
 	my $id    = shift;
     my $sites = shift || sites();
 
@@ -163,8 +187,9 @@ sub findAppConfigByPartialId {
     if( $id =~ m!^(.*)\.\.\.$! ) {
         my $partial    = $1;
         my @candidates = ();
-        
-        while( my( $siteId, $site ) = each %$sites ) {
+
+        foreach my $siteId ( keys %$sites ) {
+            my $site       = $sites->{$siteId};
             my $appConfigs = $site->appConfigs;
 
             foreach my $appConfig ( @$appConfigs ) {
@@ -187,7 +212,9 @@ sub findAppConfigByPartialId {
         }
 	
     } else {
-        while( my( $siteId, $site ) = each %$sites ) {
+        foreach my $siteId ( keys %$sites ) {
+            my $site = $sites->{$siteId};
+
             $ret = $site->appConfig( $id );
 
             if( $ret ) {
@@ -214,6 +241,8 @@ sub siteDeployed {
     debug( 'Host::siteDeployed', $siteId );
 
     UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
+
+    $_sites = undef;
 }
 
 ##
@@ -227,6 +256,8 @@ sub siteUndeployed {
     debug( 'Host::siteUndeployed', $siteId );
 
     UBOS::Utils::deleteFile( "$SITES_DIR/$siteId.json" );
+
+    $_sites = undef;
 }
 
 ##
@@ -248,7 +279,6 @@ sub rolesOnHost {
 # Determine the roles that this host has chosen to use and support, in sequence
 # of installation: databases before middleware before web server.
 # return: the Roles, in sequence
-
 sub rolesOnHostInSequence {
     unless( $_rolesOnHostInSequence ) {
         $_rolesOnHostInSequence = [
@@ -422,7 +452,9 @@ my $dbDriverInstances = {}; # cache: maps short-name to host:port to instance of
 sub _findDatabases {
     unless( %$dbTypes ) {
         my $full = UBOS::Utils::findPerlModuleNamesInPackage( 'UBOS::Databases' );
-        while( my( $fileName, $packageName ) = each %$full ) {
+        foreach my $fileName ( keys %$full ) {
+            my $packageName = $full->{$fileName};
+
             if( $packageName =~ m!::([A-Za-z0-9_]+)Driver$! ) {
                 my $shortName = $1;
                 $shortName =~ s!([A-Z])!lc($1)!ge;

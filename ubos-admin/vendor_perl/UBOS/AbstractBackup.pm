@@ -29,17 +29,33 @@ use fields qw( sites appConfigs startTime );
 use UBOS::Logging;
 
 ##
-# Save the specified sites and AppConfigurations to a file, and return the corresponding Backup object
-# $siteIds: list of siteids to be contained in the backup
-# $appConfigIds: list of appconfigids to be contained in the backup that aren't part of the sites with the siteids
-# $outFile: the file to save the backup to
+# Constructor.
 sub new {
-    my $self         = shift;
-    my $siteIds      = shift;
-    my $appConfigIds = shift;
-    my $outFile      = shift;
+    my $self = shift;
 
-    error( 'Cannot perform new on', $self );
+    unless( ref( $self )) {
+        $self = fields::new( $self );
+    }
+
+    return $self;
+}
+
+##
+# Save the specified Sites and AppConfigurations to a file, and return the
+# corresponding Backup object. If a Site has N AppConfigurations, all of those
+# AppConfigurations must be listed in the $appConfigs
+# array to be backed up. If they are not, only Site meta-data (but none of the AppConfiguration data)
+# will be saved.
+# $sites: array of Site objects
+# $appConfigs: array of AppConfiguration objects
+# $outFile: the file to save the backup to
+sub create {
+    my $self       = shift;
+    my $sites      = shift;
+    my $appConfigs = shift;
+    my $outFile    = shift;
+
+    error( 'Cannot perform create on', $self );
 }
 
 ##
@@ -98,13 +114,13 @@ sub restoreSite {
 
 ##
 # Restore a single AppConfiguration from Backup
-# $siteId: the SiteId of the AppConfiguration
-# $appConfig: the AppConfiguration to restore
+# $appConfigInBackup: the AppConfiguration to restore, as it is stored in the Backup
+# $appConfigOnHost: the AppConfiguration to restore to, on the host
 # return: success or fail
 sub restoreAppConfiguration {
-    my $self      = shift;
-    my $siteId    = shift;
-    my $appConfig = shift;
+    my $self              = shift;
+    my $appConfigInBackup = shift;
+    my $appConfigOnHost   = shift;
 
     error( 'Cannot perform restoreAppConfiguration on', $self );
 }
