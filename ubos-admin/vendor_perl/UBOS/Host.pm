@@ -307,6 +307,42 @@ sub createNewAppConfigId {
 }
 
 ##
+# Determine whether this is a syntactically valid Site id
+# $siteId: the Site id
+# return: 1 or 0
+sub isValidSiteId {
+    my $siteId = shift;
+
+    if( ref( $siteId )) {
+        error( 'Supposed siteId is not a string:', ref( $siteId ));
+        return 0;
+    }
+    if( $siteId =~ m/^s[0-9a-f]{40}$/ ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##
+# Determine whether this is a syntactically valid AppConfiguration id
+# $appConfigId: the AppConfiguration id
+# return: 1 or 0
+sub isValidAppConfigId {
+    my $appConfigId = shift;
+
+    if( ref( $appConfigId )) {
+        error( 'Supposed appConfigId is not a string:', ref( $appConfigId ));
+        return 0;
+    }
+    if( $appConfigId =~ m/^a[0-9a-f]{40}$/ ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##
 # Execute the named triggers
 # $triggers: array of trigger names
 sub executeTriggers {

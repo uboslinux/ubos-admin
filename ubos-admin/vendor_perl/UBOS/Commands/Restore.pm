@@ -52,6 +52,7 @@ sub run {
     my $hostname      = undef;
     my $context       = undef;
     my $createNew     = 0;
+    my $newSiteId     = undef;
     my $showIds       = 0;
 
     my $parseOk = GetOptionsFromArray(
@@ -66,6 +67,7 @@ sub run {
             'hostname=s'    => \$hostname,
             'context=s'     => \$context,
             'createnew'     => \$createNew,
+            'newsiteid=s'   => \$newSiteId,
             'showids'       => \$showIds );
 
     UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
@@ -75,8 +77,9 @@ sub run {
         || !$in
         || ( $verbose && $logConfigFile )
         || ( @siteIds && ( @appConfigIds || $toSiteId || $toHostname || $context ))
-        || ( !@siteIds && !@appConfigIds && ( $toSiteId || $toHostname || $createNew ))
+        || ( !@siteIds && !@appConfigIds && ( $toSiteId || $toHostname || $createNew || $newSiteId ))
         || ( $context && @appConfigIds > 1 )
+        || ( $newSiteId && ( @siteIds > 1 || @appConfigIds ))
         || ( @appConfigIds && !$toSiteId && !$toHostname )
         || ( $hostname && ( @appConfigIds || @siteIds > 1 )))
     {
@@ -93,7 +96,7 @@ sub run {
     if( @appConfigIds ) {
         $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $showIds, $backup );
     } else {
-        $ret = restoreSites( \@siteIds, $createNew, $hostname, $showIds, $backup );
+        $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $backup );
     }
     return $ret;
 }
@@ -237,6 +240,7 @@ sub restoreAppConfigs {
 sub restoreSites {
     my @siteIds   = @{shift()};
     my $createNew = shift;
+    my $newSiteId = shift;
     my $hostname  = shift;
     my $showIds   = shift;
     my $backup    = shift;
@@ -245,6 +249,15 @@ sub restoreSites {
     my $appConfigsInBackup = $backup->appConfigs();
     my $sites              = UBOS::Host::sites();
 
+    if( $newSiteId ) {
+        if( !UBOS::Host::isValidSiteId( $newSiteId )) {
+            fatal( 'Note a valid siteid:', $newSiteId );
+        }
+        if( UBOS::Host::findSiteById( $newSiteId )) {
+            fatal( 'There is already a currently deployed site with siteid', $newSiteId );
+        }
+    }
+        
     if( !@siteIds ) {
         @siteIds = keys %$sitesInBackup;
     }
@@ -313,6 +326,8 @@ sub restoreSites {
         my $siteJsonNew = dclone( $site->siteJson() );
         if( $createNew ) {
             $siteJsonNew->{siteid} = UBOS::Host::createNewSiteId;
+        } elsif( $newSiteId ) {
+            $siteJsonNew->{siteid} = $newSiteId;
         }
         if( $hostname ) {
             $siteJsonNew->{hostname} = $hostname;
@@ -452,6 +467,15 @@ SSS
     all applications at that site and their data. This site currently
     must not exist on the host: siteid, appconfigids, and hostname must
     all be different. Optionally use a different hostname.
+HHH
+        <<SSS => <<HHH,
+    [--verbose | --logConfig <file>] [--showids] --siteid <fromsiteid> --newsiteid <newsiteid> [--hostname <hostname>] --in <backupfile>
+SSS
+    Restore the site with siteid contained in backupfile, but instead of using
+    the siteids and appconfigids given in the backup, use newsiteid for the
+    siteid, and allocate new appconfigids. Optionally also use a different hostname.
+
+    This exists mainly to facilitate testing.
 HHH
         <<SSS => <<HHH,
     [--verbose | --logConfig <file>] [--showids] --siteid <fromsiteid> --createnew [--hostname <hostname>] --in <backupfile>

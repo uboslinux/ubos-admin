@@ -634,7 +634,7 @@ sub _checkJson {
     unless( $json->{siteid} ) {
         fatal( 'Site JSON: missing siteid' );
     }
-    unless( ref( $json->{siteid} ) || $json->{siteid} =~ m/^s[0-9a-f]{40}$/ ) {
+    unless( UBOS::Host::isValidSiteId( $json->{siteid} )) {
         fatal( 'Site JSON: invalid siteid, must be s followed by 40 hex chars' );
     }
     unless( $json->{hostname} ) {
@@ -722,7 +722,7 @@ sub _checkJson {
             unless( $appConfigJson->{appconfigid} ) {
                 fatal( "Site JSON: appconfig $i: missing appconfigid" );
             }
-            unless( ref( $appConfigJson->{appconfigid} ) || $appConfigJson->{appconfigid} =~ m/^a[0-9a-f]{40}$/ ) {
+            unless( UBOS::Host::isValidAppConfigId( $appConfigJson->{appconfigid} )) {
                 fatal( "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars" );
             }
             if(    $appConfigJson->{context}
