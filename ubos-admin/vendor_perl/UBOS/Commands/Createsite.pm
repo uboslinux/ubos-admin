@@ -69,7 +69,7 @@ sub run {
         $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
         UBOS::Host::ensurePackages( $appId );
 
-        $app = new UBOS::App( $appId );
+        $app = UBOS::App->new( $appId );
     }
 
     my $oldSites     = UBOS::Host::sites();
@@ -134,7 +134,7 @@ sub run {
         $accessories =~ s!\s+$!!;
         foreach my $accId ( split( /\s+,?\s*/, $accessories )) {
             UBOS::Host::ensurePackages( $accId );
-            my $acc = new UBOS::Accessory( $accId );
+            my $acc = UBOS::Accessory->new( $accId );
 
             push @accs, $acc;
         }
@@ -287,7 +287,7 @@ JSON
 
     } else {
         my $newSiteJson = UBOS::Utils::readJsonFromString( $newSiteJsonString );
-        my $newSite     = new UBOS::Site( $newSiteJson );
+        my $newSite     = UBOS::Site->new( $newSiteJson );
 
         my $prerequisites = {};
         $newSite->addDependenciesToPrerequisites( $prerequisites );

@@ -55,7 +55,7 @@ sub config {
         $raw->{now}->{unixtime} = $now;
         $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $now );
 
-        $hostConf = new UBOS::Configuration( 'Host', $raw );
+        $hostConf = UBOS::Configuration->new( 'Host', $raw );
     }
 }
 
@@ -68,7 +68,7 @@ sub sites {
 
         foreach my $f ( <"$SITES_DIR/*.json"> ) {
             my $siteJson = readJsonFromFile( $f );
-            my $site     = new UBOS::Site( $siteJson );
+            my $site     = UBOS::Site->new( $siteJson );
             $_sites->{$site->siteId()} = $site;
         }
     }
@@ -283,11 +283,11 @@ sub rolesOnHost {
 sub rolesOnHostInSequence {
     unless( $_rolesOnHostInSequence ) {
         $_rolesOnHostInSequence = [
-                new UBOS::Roles::mysql,
-                # new UBOS::Roles::postgresql,
-                # new UBOS::Roles::mongo,
-                new UBOS::Roles::tomcat7,
-                new UBOS::Roles::apache2 ];
+                UBOS::Roles::mysql->new,
+                # UBOS::Roles::postgresql->new,
+                # UBOS::Roles::mongo->new,
+                UBOS::Roles::tomcat7->new,
+                UBOS::Roles::apache2->new ];
     }
     return @$_rolesOnHostInSequence;
 }

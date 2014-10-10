@@ -88,7 +88,7 @@ sub run {
 
         } else {
             foreach my $siteJson ( @$json ) {
-                my $site   = new UBOS::Site( $siteJson );
+                my $site   = UBOS::Site->new( $siteJson );
                 my $siteId = $site->siteId;
                 if( $newSitesHash->{$siteId} ) {
                     fatal( "Duplicate site definition: $siteId" );

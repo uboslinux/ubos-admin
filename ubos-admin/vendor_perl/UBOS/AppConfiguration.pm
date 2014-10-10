@@ -230,7 +230,7 @@ sub config {
     unless( $self->{config} ) {
         my $site        = $self->site();
         my $appConfigId = $self->appConfigId();
-        $self->{config} = new UBOS::Configuration(
+        $self->{config} = UBOS::Configuration->new(
                     "AppConfiguration=$appConfigId",
                     {
                         "appconfig.appconfigid"          => $appConfigId,
@@ -318,7 +318,7 @@ sub _deployOrCheck {
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
-        my $config = new UBOS::Configuration(
+        my $config = UBOS::Configuration->new(
                 "Installable=$packageName,AppConfiguration=$appConfigId",
                 {},
                 $installable->config,
@@ -372,7 +372,7 @@ sub _undeployOrCheck {
     foreach my $installable ( reverse @installables ) {
         my $packageName = $installable->packageName;
 
-        my $config = new UBOS::Configuration(
+        my $config = UBOS::Configuration->new(
                 "Installable=$packageName,AppConfiguration=$appConfigId",
                 {},
                 $installable->config,
@@ -446,7 +446,7 @@ sub _runPostDeploy {
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
-        my $config = new UBOS::Configuration(
+        my $config = UBOS::Configuration->new(
                 "Installable=$packageName,AppConfiguration=$appConfigId",
                 {},
                 $installable->config,
@@ -489,10 +489,10 @@ sub _initialize {
         return 1;
     }
 
-    $self->{app} = new UBOS::App( $self->{json}->{appid} );
+    $self->{app} = UBOS::App->new( $self->{json}->{appid} );
 
     if( $self->{json}->{accessoryids} ) {
-        my @acc = map { new UBOS::Accessory( $_ ) } @{$self->{json}->{accessoryids}};
+        my @acc = map { UBOS::Accessory->new( $_ ) } @{$self->{json}->{accessoryids}};
         $self->{accessories} = \@acc;
         
     } else {

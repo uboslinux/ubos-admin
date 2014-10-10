@@ -128,7 +128,7 @@ sub create {
             my $packageName = $installable->packageName;
             $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/$packageName/" ) ? 1 : 0 );
 
-            my $config = new UBOS::Configuration(
+            my $config = UBOS::Configuration->new(
                     "Installable=$packageName,AppConfiguration=" . $appConfigId,
                     {},
                     $installable->config,
@@ -144,7 +144,7 @@ sub create {
 
                     my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                     if( $appConfigItems ) {
-                        my $backupContext = new UBOS::Backup::ZipFileBackupContext( $self, $appConfigPathInZip );
+                        my $backupContext = UBOS::Backup::ZipFileBackupContext->new( $self, $appConfigPathInZip );
 
                         foreach my $appConfigItem ( @$appConfigItems ) {
                             if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
@@ -212,7 +212,7 @@ sub readArchive {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
             my $siteJson = readJsonFromString( $siteJsonContent );
-            my $site     = new UBOS::Site( $siteJson );
+            my $site     = UBOS::Site->new( $siteJson );
 
             $self->{sites}->{$site->siteId()} = $site;
 
@@ -225,7 +225,7 @@ sub readArchive {
         my $appConfigJsonContent = $self->{zip}->contents( $appConfigJsonFile );
         if( $appConfigJsonContent ) {
             my $appConfigJson = readJsonFromString( $appConfigJsonContent );
-            my $appConfig     = new UBOS::AppConfiguration( $appConfigJson );
+            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson );
 
             $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
 
@@ -270,7 +270,7 @@ sub restoreAppConfiguration {
             next;
         }
 
-        my $config = new UBOS::Configuration(
+        my $config = UBOS::Configuration->new(
                 "Installable=$packageName,AppConfiguration=" . $appConfigInBackup . "=>" . $appConfigOnHost,
                 {},
                 $installable->config,
@@ -288,7 +288,7 @@ sub restoreAppConfiguration {
                 if( $appConfigItems ) {
                     my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
-                    my $backupContext = new UBOS::Backup::ZipFileBackupContext( $self, $appConfigPathInZip );
+                    my $backupContext = UBOS::Backup::ZipFileBackupContext->new( $self, $appConfigPathInZip );
 
                     foreach my $appConfigItem ( @$appConfigItems ) {
                         if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {

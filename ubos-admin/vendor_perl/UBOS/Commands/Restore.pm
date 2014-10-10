@@ -192,7 +192,7 @@ sub restoreAppConfigs {
         push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
         $appConfigIdTranslation{$appConfig->appConfigId} = $appConfigJsonNew->{appconfigid};
     }
-    my $toSiteNew = new UBOS::Site( $siteJsonNew );
+    my $toSiteNew = UBOS::Site->new( $siteJsonNew );
 
     debug( 'Deploying new version of site' );
 
@@ -344,7 +344,7 @@ sub restoreSites {
                 $appConfigIdTranslation{$appConfigJson->{appconfigid}} = $appConfigJson->{appconfigid};
             }
         }
-        my $newSite = new UBOS::Site( $siteJsonNew );
+        my $newSite = UBOS::Site->new( $siteJsonNew );
         $sitesNew{$site->siteId} = $newSite;
     }
 

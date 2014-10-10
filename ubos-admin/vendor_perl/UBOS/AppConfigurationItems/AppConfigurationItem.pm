@@ -193,17 +193,17 @@ sub _instantiateTemplateProcessor {
     my $ret;
 
     if( !defined( $templateLang )) {
-        $ret = new UBOS::TemplateProcessor::Passthrough();
+        $ret = UBOS::TemplateProcessor::Passthrough->new();
 
     } elsif( 'varsubst' eq $templateLang ) {
-        $ret = new UBOS::TemplateProcessor::Varsubst();
+        $ret = UBOS::TemplateProcessor::Varsubst->new();
 
     } elsif( 'perlscript' eq $templateLang ) {
-        $ret = new UBOS::TemplateProcessor::Perlscript();
+        $ret = UBOS::TemplateProcessor::Perlscript->new();
 
     } else {
         error( 'Unknown templatelang:', $templateLang );
-        $ret = new UBOS::TemplateProcessor::Passthrough();
+        $ret = UBOS::TemplateProcessor::Passthrough->new();
     }
     return $ret;
 }

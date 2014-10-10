@@ -118,7 +118,7 @@ sub new {
     }
 
     my $json        = readJsonFromFile( manifestFileFor( $packageName ));
-    $self->{config} = new UBOS::Configuration(
+    $self->{config} = UBOS::Configuration->new(
             "Installable=$packageName",
             { "package.name" => $packageName },
             UBOS::Host::config() );

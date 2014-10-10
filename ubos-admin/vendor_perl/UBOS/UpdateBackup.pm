@@ -89,7 +89,7 @@ sub create {
 
                 UBOS::Utils::mkdir( "$updateBackupDir/$appConfigId/$packageName", 0700 );
                 
-                my $config = new UBOS::Configuration(
+                my $config = UBOS::Configuration->new(
                         "Installable=$packageName,AppConfiguration=" . $appConfigId,
                         {},
                         $installable->config,
@@ -107,7 +107,7 @@ sub create {
                         my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                         if( $appConfigItems ) {
 
-                            my $backupContext = new UBOS::UpdateBackupContext( $self, $appConfigPathInBackup );
+                            my $backupContext = UBOS::UpdateBackupContext->new( $self, $appConfigPathInBackup );
 
                             foreach my $appConfigItem ( @$appConfigItems ) {
                                 if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
@@ -144,7 +144,7 @@ sub read {
     foreach my $siteJsonFile ( <$updateBackupDir/*.json> ) {
         my $siteJson = UBOS::Utils::readJsonFromFile( $siteJsonFile );
 
-        my $site = new UBOS::Site( $siteJson );
+        my $site = UBOS::Site->new( $siteJson );
 
         $self->{sites}->{$site->siteId()} = $site;
     }
@@ -173,7 +173,7 @@ sub restoreAppConfiguration {
             next;
         }
 
-        my $config = new UBOS::Configuration(
+        my $config = UBOS::Configuration->new(
                 "Installable=$packageName,AppConfiguration=" . $appConfigInBackup . "=>" . $appConfigOnHost,
                 {},
                 $installable->config,
@@ -191,7 +191,7 @@ sub restoreAppConfiguration {
                 if( $appConfigItems ) {
                     my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
-                    my $backupContext = new UBOS::UpdateBackupContext( $self, $appConfigPathInBackup );
+                    my $backupContext = UBOS::UpdateBackupContext->new( $self, $appConfigPathInBackup );
 
                     foreach my $appConfigItem ( @$appConfigItems ) {
                         if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {

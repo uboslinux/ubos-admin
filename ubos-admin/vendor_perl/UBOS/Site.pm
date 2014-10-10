@@ -50,7 +50,7 @@ sub new {
     my $siteId    = $self->siteId();
     my $adminJson = $self->{json}->{admin};
     
-    $self->{config} = new UBOS::Configuration(
+    $self->{config} = UBOS::Configuration->new(
                 "Site=$siteId",
                 {
                     "site.hostname"         => $self->hostName(),
@@ -235,7 +235,7 @@ sub appConfigs {
         my $jsonAppConfigs = $self->{json}->{appconfigs};
         $self->{appConfigs} = [];
         foreach my $current ( @$jsonAppConfigs ) {
-            push @{$self->{appConfigs}}, new UBOS::AppConfiguration( $current, $self );
+            push @{$self->{appConfigs}}, UBOS::AppConfiguration->new( $current, $self );
         }
     }
     return $self->{appConfigs};
