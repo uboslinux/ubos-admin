@@ -500,7 +500,7 @@ sub findPerlShortModuleNamesInPackage {
     my $ret  = {};
 
     foreach my $fileName ( keys %$full ) {
-        my $packageName = $full->{fileName};
+        my $packageName = $full->{$fileName};
 
         my $shortName = $packageName;
         $shortName =~ s!^.*::!!;
