@@ -47,22 +47,6 @@ sub new {
     $self->{json} = $json;
     $self->_checkJson();
 
-    my $siteId    = $self->siteId();
-    my $adminJson = $self->{json}->{admin};
-    
-    $self->{config} = UBOS::Configuration->new(
-                "Site=$siteId",
-                {
-                    "site.hostname"         => $self->hostName(),
-                    "site.siteid"           => $siteId,
-                    "site.protocol"         => ( $self->hasSsl() ? 'https' : 'http' ),
-                    "site.admin.userid"     => $adminJson->{userid},
-                    "site.admin.username"   => $adminJson->{username},
-                    "site.admin.credential" => $adminJson->{credential},
-                    "site.admin.email"      => $adminJson->{email}
-                },
-            UBOS::Host::config() );
-
     return $self;
 }
 
@@ -99,6 +83,23 @@ sub hostName {
 sub config {
     my $self = shift;
 
+    unless( $self->{config} ) {
+        my $siteId    = $self->siteId();
+        my $adminJson = $self->{json}->{admin};
+        
+        $self->{config} = UBOS::Configuration->new(
+                    "Site=$siteId",
+                    {
+                        "site.hostname"         => $self->hostName(),
+                        "site.siteid"           => $siteId,
+                        "site.protocol"         => ( $self->hasSsl() ? 'https' : 'http' ),
+                        "site.admin.userid"     => $adminJson->{userid},
+                        "site.admin.username"   => $adminJson->{username},
+                        "site.admin.credential" => $adminJson->{credential},
+                        "site.admin.email"      => $adminJson->{email}
+                    },
+                UBOS::Host::config() );
+    }
     return $self->{config};
 }
 
@@ -421,7 +422,11 @@ sub needsRole {
 sub checkDeployable {
     my $self = shift;
 
-    return $self->_deployOrCheck( 0 );
+    my $ret = $self->_deployOrCheck( 0 );
+
+    $self->clearCaches(); # placeholder information may have been put in certain places, e.g. MySQL database info
+
+    return $ret;
 }
 
 ##
@@ -591,6 +596,17 @@ sub disable {
         }
     }
     return $ret;
+}
+
+##
+# Clear cached information.
+sub clearCaches {
+    my $self = shift;
+
+    $self->{config}     = undef;
+    $self->{appConfigs} = undef;
+
+    return $self;
 }
 
 ##

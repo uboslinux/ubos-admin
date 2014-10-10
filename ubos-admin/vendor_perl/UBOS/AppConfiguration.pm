@@ -26,12 +26,14 @@ package UBOS::AppConfiguration;
 
 use UBOS::Accessory;
 use UBOS::App;
+use UBOS::Configuration;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Subconfiguration;
 use JSON;
 use MIME::Base64;
 
-use fields qw{json site app accessories config};
+use fields qw{json site app accessories config subconfigs};
 
 my $APPCONFIGPARSDIR = '/var/lib/ubos/appconfigpars';
 
@@ -48,9 +50,10 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{json}   = $json;
-    $self->{site}   = $site;
-    $self->{config} = undef; # initialized when needed
+    $self->{json}       = $json;
+    $self->{site}       = $site;
+    $self->{config}     = undef; # initialized when needed
+    $self->{subconfigs} = {};
 
     # No checking required, UBOS::Site::new has done that already
     return $self;
@@ -245,6 +248,29 @@ sub config {
 }
 
 ##
+# Smart factory to always return the same sub-Configuration objects.
+# $name: name of the sub-configuration; must be consistent as it is used as the key
+# @delegates: more Configuration objects which may be used to resolve unknown variables
+# return: new or reused Configuration object
+sub obtainSubconfig {
+    my $self      = shift;
+    my $name      = shift;
+    my @delegates = @_;
+
+    my $ret;
+    if( exists( $self->{subconfigs}->{$name} )) {
+        $ret = $self->{subconfigs}->{$name};
+    } else {
+        $ret = UBOS::Subconfiguration->new(
+                "$name,AppConfiguration=" . $self->appConfigId,
+                $self->config,
+                @delegates );
+        $self->{subconfigs}->{$name} = $ret;
+    }
+    return $ret;
+}
+
+##
 # Determine whether this AppConfiguration needs a particular role
 # $role: the role to check for
 # return: true or false
@@ -318,11 +344,9 @@ sub _deployOrCheck {
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
-        my $config = UBOS::Configuration->new(
-                "Installable=$packageName,AppConfiguration=$appConfigId",
-                {},
-                $installable->config,
-                $self->config );
+        my $config = $self->obtainSubconfig(
+                "Installable=$packageName",
+                $installable->config );
 
         # Customization points for this Installable at this AppConfiguration
 
@@ -372,11 +396,9 @@ sub _undeployOrCheck {
     foreach my $installable ( reverse @installables ) {
         my $packageName = $installable->packageName;
 
-        my $config = UBOS::Configuration->new(
-                "Installable=$packageName,AppConfiguration=$appConfigId",
-                {},
-                $installable->config,
-                $self->config );
+        my $config = $self->obtainSubconfig(
+                "Installable=$packageName",
+                $installable->config );
 
         $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
@@ -446,11 +468,9 @@ sub _runPostDeploy {
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
-        my $config = UBOS::Configuration->new(
-                "Installable=$packageName,AppConfiguration=$appConfigId",
-                {},
-                $installable->config,
-                $self->config );
+        my $config = $self->obtainSubconfig(
+                "Installable=$packageName",
+                $installable->config );
 
         $self->_addCustomizationPointValuesToConfig( $config, $installable );
 

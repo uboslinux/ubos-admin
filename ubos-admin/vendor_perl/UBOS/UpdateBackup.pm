@@ -88,12 +88,10 @@ sub create {
                 my $packageName = $installable->packageName;
 
                 UBOS::Utils::mkdir( "$updateBackupDir/$appConfigId/$packageName", 0700 );
-                
-                my $config = UBOS::Configuration->new(
-                        "Installable=$packageName,AppConfiguration=" . $appConfigId,
-                        {},
-                        $installable->config,
-                        $appConfig->config );
+
+                my $config = $appConfig->obtainSubconfig(
+                        "Installable=$packageName",
+                        $installable->config );
 
                 foreach my $roleName ( @{$installable->roleNames} ) {
                     my $role = $rolesOnHost->{$roleName};
@@ -173,11 +171,9 @@ sub restoreAppConfiguration {
             next;
         }
 
-        my $config = UBOS::Configuration->new(
-                "Installable=$packageName,AppConfiguration=" . $appConfigInBackup . "=>" . $appConfigOnHost,
-                {},
-                $installable->config,
-                $appConfigOnHost->config );
+        my $config = $appConfigOnHost->obtainSubconfig(
+                "Installable=$packageName",
+                $installable->config );
 
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
