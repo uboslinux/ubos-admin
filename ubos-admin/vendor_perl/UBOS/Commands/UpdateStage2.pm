@@ -49,7 +49,7 @@ sub run {
             \@args,
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
-            'stage1exit=1' => \$stage1exit );
+            'stage1exit=s' => \$stage1exit );
 
     UBOS::Logging::initialize( 'ubos-admin', 'update-stage-2', $verbose, $logConfigFile );
 
@@ -63,9 +63,11 @@ sub run {
 
     my $ret = 1;
 
-    my $backup   = UBOS::UpdateBackup->read();
+    my $backup  = UBOS::UpdateBackup->new();
+    $ret       &= $backup->read();
+
     my $oldSites = $backup->sites();
-    
+
     my $deployTriggers = {};
     foreach my $site ( values %$oldSites ) {
         $ret &= $site->deploy( $deployTriggers );

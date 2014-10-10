@@ -310,7 +310,8 @@ JSON
 
         my $deployUndeployTriggers = {};
         if( $existingSite ) {
-            my $backup = UBOS::UpdateBackup->create( { $siteId => $existingSite } );
+            my $backup = UBOS::UpdateBackup->new;
+            $ret &= $backup->create( { $siteId => $existingSite } );
             $ret &= $existingSite->undeploy( $deployUndeployTriggers );
             
             $ret &= $newSite->deploy( $deployUndeployTriggers );

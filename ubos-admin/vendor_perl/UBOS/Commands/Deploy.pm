@@ -244,7 +244,8 @@ sub run {
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
-            my $backup = UBOS::UpdateBackup->create( { $site->siteId => $oldSite } );
+            my $backup = UBOS::UpdateBackup->new();
+            $ret &= $backup->create( { $site->siteId => $oldSite } );
             $ret &= $oldSite->undeploy( $deployUndeployTriggers );
             
             $ret &= $site->deploy( $deployUndeployTriggers );

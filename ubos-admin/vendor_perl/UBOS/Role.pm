@@ -48,6 +48,17 @@ sub new {
 }
 
 ##
+# Name of this Role
+# return: name
+sub name {
+    my $self = shift;
+
+    error( 'Role name undefined on this level, need to subclass:', ref( $self ));
+
+    return undef;
+}
+
+##
 # Deploy an installable in an AppConfiguration in this Role, or just check whether
 # it is deployable. Both functions share the same code, so the checks get updated
 # at the same time as the actual deployment.
@@ -66,6 +77,7 @@ sub deployOrCheck {
     # skip dependencies: done already
     my $ret                 = 1;
     my $roleName            = $self->name();
+
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
         my $appConfigItems = $installableRoleJson->{appconfigitems};
@@ -347,7 +359,8 @@ sub checkManifestForRoleGenericAppConfigItems {
                                            . ". Allowed types are: " . join( ', ', keys %$allowedTypes ) );
             }
 
-            if( $appConfigItem->{type} eq 'perlscript' || $appConfigItem->{type} eq 'sqlscript' ) {
+            if( $appConfigItem->{type} eq 'perlscript' ) {
+                # perlscript only gets to have source, not template
                 unless( $appConfigItem->{source} ) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": must specify source" );
                 }
@@ -355,7 +368,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
                 }
                 unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
-                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid name: " . $appConfigItem->{name} );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid source: " . $appConfigItem->{source} );
                 }
                 if( exists( $appConfigItem->{name} ) && ref( $appConfigItem->{name} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
@@ -363,6 +376,45 @@ sub checkManifestForRoleGenericAppConfigItems {
                 if( $appConfigItem->{names} ) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": names not permitted for type " . $appConfigItem->{type} );
                 }
+            } elsif( $appConfigItem->{type} eq 'sqlscript' ) {
+                # sqlscript gets to have source or template
+
+                if( exists( $appConfigItem->{name} ) && ref( $appConfigItem->{name} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'name' must be string" );
+                }
+                if( $appConfigItem->{names} ) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': names not permitted for type " . $appConfigItem->{type} );
+                }
+                if( $appConfigItem->{source} ) {
+                    if( $appConfigItem->{template} ) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': specify source or template, not both" );
+                    }
+                    if( ref( $appConfigItem->{source} )) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'source' must be string" );
+                    }
+                    unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid source: " . $appConfigItem->{source} );
+                    }
+                } elsif( $appConfigItem->{template} ) {
+                    unless( $appConfigItem->{templatelang} ) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': if specifying template, must specify templatelang as well" );
+                    }
+                    if( ref( $appConfigItem->{template} )) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'template' must be string" );
+                    }
+                    unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template} )) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid template: " . $appConfigItem->{template} );
+                    }
+                    if( ref( $appConfigItem->{templatelang} )) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'templatelang' must be string" );
+                    }
+                    unless( $appConfigItem->{templatelang} =~ m!^(varsubst|perlscript)$! ) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': invalid templatelang: " . $appConfigItem->{templatelang} );
+                    }
+                } else {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': must specify source or template" );
+                }
+
             } else {
                 my @names = ();
                 if( defined( $appConfigItem->{name} )) {

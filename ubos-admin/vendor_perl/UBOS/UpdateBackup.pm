@@ -27,6 +27,7 @@ package UBOS::UpdateBackup;
 use base qw( UBOS::AbstractBackup );
 use fields;
 
+use UBOS::Configuration;
 use UBOS::UpdateBackupContext;
 use UBOS::Utils;
 
@@ -137,10 +138,6 @@ sub create {
 # return: the Backup object
 sub read {
     my $self = shift;
-
-    unless( ref( $self )) {
-        $self = fields::new( $self );
-    }
 
     $self->{sites} = {};
 

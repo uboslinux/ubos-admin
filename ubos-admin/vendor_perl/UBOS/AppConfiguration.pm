@@ -294,15 +294,17 @@ sub _deployOrCheck {
         fatal( 'Cannot deploy AppConfiguration without site' );
     }
     my $ret             = 1;
-    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir', undef, 1 );
 
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
-    foreach my $role ( @rolesOnHost ) {
-        if( $self->needsRole( $role )) {
-            my $roleName = $role->name();
-            my $dir      = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-            if( $doIt && $dir && $dir ne $siteDocumentDir ) {
-                UBOS::Utils::mkdir( $dir, 0755 );
+    if( $doIt && $siteDocumentDir ) {
+        foreach my $role ( @rolesOnHost ) {
+            if( $self->needsRole( $role )) {
+                my $roleName = $role->name();
+                my $dir      = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+                if( $dir && $dir ne $siteDocumentDir ) {
+                    UBOS::Utils::mkdir( $dir, 0755 );
+                }
             }
         }
     }
@@ -386,14 +388,16 @@ sub _undeployOrCheck {
         }
     }
 
-    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
-    foreach my $role ( @reverseRolesOnHost ) {
-        if( $self->needsRole( $role )) {
-            my $roleName = $role->name;
-            my $dir      = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir', undef, 1 );
+    if( $doIt && $siteDocumentDir ) {
+        foreach my $role ( @reverseRolesOnHost ) {
+            if( $self->needsRole( $role )) {
+                my $roleName = $role->name;
+                my $dir      = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
-            if( $doIt && $dir && $dir ne $siteDocumentDir ) {
-                UBOS::Utils::rmdir( $dir );
+                if( $dir && $dir ne $siteDocumentDir ) {
+                    UBOS::Utils::rmdir( $dir );
+                }
             }
         }
     }

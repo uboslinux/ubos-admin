@@ -95,7 +95,8 @@ sub run {
 
     info( 'Backing up' );
 
-    my $backup = UBOS::UpdateBackup->create( $oldSites );
+    my $backup = UBOS::UpdateBackup->new();
+    $ret &= $backup->create( $oldSites );
 
     info( 'Undeploying' );
 

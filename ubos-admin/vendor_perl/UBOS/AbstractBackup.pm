@@ -106,7 +106,7 @@ sub restoreSite {
 
     my $ret = 1;
     foreach my $appConfig ( @{$site->appConfigs} ) {
-        $ret &= $self->restoreAppConfiguration( $site->siteId, $appConfig );
+        $ret &= $self->restoreAppConfiguration( $appConfig, $appConfig );
     }
 
     return $ret;
