@@ -51,8 +51,8 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{name}            = $name;
-    $self->{delegates}       = \@delegates;
+    $self->{name}      = $name;
+    $self->{delegates} = \@delegates;
 
     return $self;
 }
@@ -245,7 +245,7 @@ sub replaceVariables {
 sub dump {
     my $self = shift;
 
-    my $ret = "Configuration( " . $self->{name} . ",\n" . join( '', map
+    my $ret = ref( $self ) . '(' . $self->{name} . ",\n" . join( '', map
         {
             my $key   = $_;
             my $value = $self->getResolve( $_, undef, 1 );

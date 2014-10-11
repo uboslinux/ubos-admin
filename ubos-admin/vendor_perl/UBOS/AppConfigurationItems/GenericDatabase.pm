@@ -189,13 +189,27 @@ sub restore {
     unless( $backupContext->restore( $bucket, $tmp->filename )) {
         return 0;
     }
- 
-    return UBOS::ResourceManager::importLocalDatabase(
-            $dbType,
-            $self->{appConfig}->appConfigId,
-            $self->{installable}->packageName,
-            $name,
-            $tmp->filename );
+
+    my ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+            = UBOS::ResourceManager::importLocalDatabase(
+                    $dbType,
+                    $self->{appConfig}->appConfigId,
+                    $self->{installable}->packageName,
+                    $name,
+                    $tmp->filename );
+    if( $dbName ) {
+        # now insert those values into the config object
+        $config->put( "appconfig.$dbType.dbname.$name",           $dbName );
+        $config->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
+        $config->put( "appconfig.$dbType.dbport.$name",           $dbPort );
+        $config->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
+        $config->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
+
+        return 1;
+
+    } else {
+        return 0;
+    }
 }
 
 1;

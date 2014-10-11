@@ -84,8 +84,9 @@ sub put {
 
     if( !defined( $self->{flatMap}->{$name} )) {
         $self->{flatMap}->{$name} = $value;
-    } else {
-        error( 'Have value already for', $name, 'was:', $self->{flatMap}->{$name}, ', new:', $value );
+
+    } elsif( $self->{flatMap}->{$name} ne $value ) {
+        error( 'Have different value already for', $name, 'was:', $self->{flatMap}->{$name}, ', new:', $value );
     }
 }
 

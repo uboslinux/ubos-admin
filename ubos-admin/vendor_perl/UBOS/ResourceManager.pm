@@ -325,7 +325,7 @@ sub exportLocalDatabase {
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $fileName: the file to write to
-# return: success or fail
+# return: ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType ) or 0
 sub importLocalDatabase {
     my $dbType        = shift;
     my $appConfigId   = shift;
@@ -344,7 +344,11 @@ sub importLocalDatabase {
         return 0;
     }
 
-    return $dbDriver->importLocalDatabase( $dbName, $fileName );
+    if( $dbDriver->importLocalDatabase( $dbName, $fileName )) {
+        return ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
+    } else {
+        return 0;
+    }
 }
 
 1;
