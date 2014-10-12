@@ -74,6 +74,7 @@ sub create {
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
+    my $ret = 1;
     foreach my $site ( values %{$sites} ) {
         my $siteId = $site->siteId();
         UBOS::Utils::writeJsonToFile( "$updateBackupDir/$siteId.json", $site->siteJson, 0600 );
@@ -114,7 +115,7 @@ sub create {
                                 }
                                 my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                                 if( $item ) {
-                                    $item->backup( $dir, $config, $backupContext, \@filesToDelete );
+                                    $ret &= $item->backup( $dir, $config, $backupContext, \@filesToDelete );
                                 }
                             }
                         }
@@ -128,12 +129,12 @@ sub create {
         unlink $current || error( 'Could not unlink', $current );
     }
 
-    return $self;
+    return $ret;
 }
 
 ##
 # Read the archive
-# return: the Backup object
+# return: success or error
 sub read {
     my $self = shift;
 
@@ -147,7 +148,7 @@ sub read {
         $self->{sites}->{$site->siteId()} = $site;
     }
 
-    return $self;
+    return 1;
 }
 
 ##
