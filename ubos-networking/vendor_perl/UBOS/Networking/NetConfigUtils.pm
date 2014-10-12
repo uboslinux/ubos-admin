@@ -255,7 +255,7 @@ sub _ipLinks {
 				map { $h->{flags}->{$_} = 1 } split ',', $devFlags;
 				# This loop isn't quite clean: att names may be parts of words, not entire words; does not seem to happen though
                 foreach my $att ( keys %$atts ) {
-                    my $regex = $atts->{$att}
+                    my $regex = $atts->{$att};
 
 					if( $regex ) {
                         if( $devFirstLine =~ m!$att ($regex)! ) {
