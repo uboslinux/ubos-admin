@@ -71,6 +71,9 @@ sub run {
 
     foreach my $appConfigId ( @appConfigIds ) {
         my $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
+        unless( $appConfig ) {
+            fatal( $@ );
+        }
         if( exists( $appConfigs->{$appConfig->appConfigId} )) {
             fatal( 'App config id specified more than once:', $appConfig->appConfigId );
         }
@@ -78,6 +81,9 @@ sub run {
     }
     foreach my $siteId ( @siteIds ) {
         my $site = UBOS::Host::findSiteByPartialId( $siteId );
+        unless( $site ) {
+            fatal( $@ );
+        }
         if( exists( $sites->{$site->siteId} )) {
             fatal( 'Site id specified more than once:', $site->siteId );
         }

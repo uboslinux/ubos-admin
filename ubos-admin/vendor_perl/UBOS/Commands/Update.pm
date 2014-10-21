@@ -48,13 +48,15 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $stage1Only    = 0;
     my @packageFiles  = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
-            'pkgFile=s'   => \@packageFiles );
+            'pkgFile=s'   => \@packageFiles,
+            'stage1Only'  => \$stage1Only ); # This option is not public
 
     UBOS::Logging::initialize( 'ubos-admin', 'update', $verbose, $logConfigFile );
 
@@ -107,6 +109,24 @@ sub run {
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
+    my $stage2Cmd = 'ubos-admin update-stage2';
+    for( my $i=0 ; $i<$verbose ; ++$i ) {
+        $stage2Cmd .= ' -v';
+    }
+    if( $stage2LogConfigFile ) {
+        $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
+    }
+    unless( $ret ) {
+        $stage2Cmd .= ' --stage1exit 1';
+    }
+
+    if( $stage1Only ) {
+        print "Stopping after stage 1 as requested. To complete the update:\n";
+        print "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n";
+        print "2. Manually run stage 2: $stage2Cmd\n";
+        exit 0;
+    }
+
     info( 'Updating code' );
 
     if( @packageFiles ) {
@@ -118,17 +138,6 @@ sub run {
     # Will look into the know spot and restore from there
     
     debug( 'Handing over to update-stage2' );
-
-    my $stage2Cmd = 'ubos-admin update-stage2';
-    for( my $i=0 ; $i<$verbose ; ++$i ) {
-        $stage2Cmd .= ' -v';
-    }
-    if( $stage2LogConfigFile ) {
-        $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
-    }
-    unless( $ret ) {
-        $stage2Cmd .= ' --stage1exit 1';
-    }
 
     exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
 

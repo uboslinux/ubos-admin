@@ -27,7 +27,6 @@ package UBOS::UpdateBackupContext;
 use base qw( UBOS::AbstractBackupContext );
 use fields qw( backup contextPathInBackup );
 
-use File::Copy;
 use UBOS::Logging;
 
 ##
@@ -83,6 +82,9 @@ sub addDirectoryHierarchy {
 
     my $ret = 1;
     while( my $file = readdir( DIR )) {
+        if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
+            next;
+        }
         $ret &= move( "$dirToAdd/$file", $self->{contextPathInBackup} . "/$bucket/$file" );        
     }
     closedir( DIR );
@@ -125,6 +127,9 @@ sub restoreRecursive {
 
     my $ret = 1;
     while( my $file = readdir( DIR )) {
+        if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
+            next;
+        }
         $ret &= move( $self->{contextPathInBackup} . "/$bucket/$file", "$dirName/$file",  );        
     }
     closedir( DIR );
@@ -132,6 +137,31 @@ sub restoreRecursive {
     $ret &= UBOS::Utils::deleteRecursively( $self->{contextPathInBackup} . "/$bucket" );
 
     return $ret;
+}
+
+##
+# Private implementation of 'move'. File::Copy has a move method, but it
+# seems to fail moving entire directory hierarchies across file systems,
+# which is something we try to avoid but can happen.
+# $from: source file or directory
+# $to: destination file or directory
+sub move {
+    my $from = shift;
+    my $to   = shift;
+
+    if( $from =~ m!['\\]! ) {
+        error( 'move from contains dangerous character, will likely fail', $from );
+    }
+    if( $to =~ m!['\\]! ) {
+        error( 'move to contains dangerous character, will likely fail', $to );
+    }
+
+    my $exit = UBOS::Utils::myexec( "mv '$from' '$to'" );
+    if( $exit ) {
+        error( 'move failed:', $from, $to );
+        return 0;
+    }
+    return 1;
 }
 
 1;
