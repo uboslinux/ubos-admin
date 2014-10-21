@@ -229,7 +229,8 @@ sub slurpFile {
 }
 
 ##
-# Save content to a file.
+# Save content to a file. If the desired owner of the file is not the current
+# user, this will write to a temp file, and then move the temp file in 
 # $filename: the name of the file to create/write
 # $content: the content of the file
 # $mask: permissions on the file
@@ -243,6 +244,11 @@ sub saveFile {
     my $uname    = shift;
     my $gname    = shift;
 
+    unless( defined( $content )) {
+        warning( 'Undefined content (usually programming error) when attempting to save file', $filename );
+        $content = '';
+    }
+
     my $uid = getUid( $uname );
     my $gid = getGid( $gname );
 
@@ -252,22 +258,41 @@ sub saveFile {
     # more efficient if debug isn't on
     debug( sub { ( 'saveFile(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
 
-    unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
-        error( "Could not write to file $filename:", $! );
-        return 0;
-    }
+    if( $< == 0 || ( $uid == $< && $gid == $( )) {
+        # This is faster -- for root, or for creating one's own files
 
-    if( defined( $content )) {
+        unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
+            error( "Could not write to file $filename:", $! );
+            return 0;
+        }
+
         print F $content;
+        close F;
+
+        chmod $mask, $filename;
+
+        if( $uid >= 0 || $gid >= 0 ) {
+            chown $uid, $gid, $filename;
+        }
+
     } else {
-        warning( 'Undefined content (usually programming error) when attempting to save file', $filename );
-    }
-    close F;
+        # Write to a temp file, and them move it in place as root
+        
+        my $temp = File::Temp->new( UNLINK => 1 );
+        print $temp $content;
+        close $temp;
 
-    chmod $mask, $filename;
+        my $cmd = sprintf( 'sudo install -m%o', $mask );
+        if( $uname ) {
+            $cmd .= '-o' . $uname;
+        }
+        if( $gname ) {
+            $cmd .= '-g' . $gname;
+        }
 
-    if( $uid >= 0 || $gid >= 0 ) {
-        chown $uid, $gid, $filename;
+        UBOS::Utils::myexec( $cmd . $temp->filename . " '$filename'" );
+
+        unlink( $temp );
     }
 
     return 1;
@@ -552,7 +577,7 @@ sub getUid {
 
     my $uid;
     if( !$uname ) {
-        $uid = 0; # default is root
+        $uid = $<; # default is current user
     } elsif( $uname =~ /^[0-9]+$/ ) {
         $uid = $uname;
     } else {
@@ -575,7 +600,7 @@ sub getGid {
 
     my $gid;
     if( !$gname ) {
-        $gid = 0; # default is root
+        $gid = $(; # default is current group
     } elsif( $gname =~ /^[0-9]+$/ ) {
         $gid = $gname;
     } else {
