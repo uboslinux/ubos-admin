@@ -284,13 +284,13 @@ sub saveFile {
 
         my $cmd = sprintf( 'sudo install -m%o', $mask );
         if( $uname ) {
-            $cmd .= '-o' . $uname;
+            $cmd .= ' -o' . $uname;
         }
         if( $gname ) {
-            $cmd .= '-g' . $gname;
+            $cmd .= ' -g' . $gname;
         }
 
-        UBOS::Utils::myexec( $cmd . $temp->filename . " '$filename'" );
+        UBOS::Utils::myexec( $cmd . " '" . $temp->filename . "' '$filename'" );
 
         unlink( $temp );
     }
