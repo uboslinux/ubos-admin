@@ -71,10 +71,8 @@ sub installOrCheck {
 
     my $source = $self->{json}->{source};
 
-    my $permissions  = $self->{json}->{permissions};
     my $uname        = $self->{json}->{uname};
     my $gname        = $self->{json}->{gname};
-    my $mode         = $self->permissionToMode( $permissions, 0644 );
 
     foreach my $name ( @$names ) {
         my $localName  = $name;
@@ -102,7 +100,7 @@ sub installOrCheck {
                     # and they make sense. We keep the names for consistency with other items.
                     # $fromName: the destination of the link
                     # $toName: the source of the link
-                    UBOS::Utils::symlink( $fromName, $toName, $mode, $uname, $gname );
+                    UBOS::Utils::symlink( $fromName, $toName, $uname, $gname );
                 } else {
                     error( 'Cannot create symlink:', $toName );
                     $ret = 0;
