@@ -615,6 +615,52 @@ sub getGid {
 }
 
 ##
+# Get user name, given numerical user id. If already a string, pass through.
+# $uid: user id
+# return: user name
+sub getUname {
+    my $uid = shift;
+
+    if( !defined( $uid )) {
+        $uid = $<; # default is current user
+    }
+    my $uname;
+    if( $uid =~ /^[0-9]+$/ ) {
+        $uname = getpwuid( $uid );
+        unless( $uname ) {
+            error( 'Cannot find user. Using \'nobody\' instead:', $uid );
+            $uname = 'nobody';
+        }
+    } else {
+        $uname = $uid;
+    }
+    return $uname;
+}
+
+##
+# Get group name, given numerical group id. If already a string, pass through.
+# $gid: group id
+# return: group name
+sub getGname {
+    my $gid = shift;
+
+    if( !defined( $gid )) {
+        $gid = $(; # default is current group
+    }
+    my $gname;
+    if( $gid =~ /^[0-9]+$/ ) {
+        $gname = getgrgid( $gid );
+        unless( $gname ) {
+            error( 'Cannot find group. Using \'nogroup\' instead:', $gid );
+            $gname = 'nogroup';
+        }
+    } else {
+        $gname = $gid;
+    }
+    return $gname;
+}
+
+##
 # Generate a random identifier
 # $length: length of identifier
 # return: identifier
