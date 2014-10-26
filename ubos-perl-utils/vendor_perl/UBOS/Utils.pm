@@ -49,7 +49,7 @@ sub readJsonFromFile {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or fatal( 'JSON parsing error in file', $file, ':', $@ );
+    } or error( 'JSON parsing error in file', $file, ':', $@ );
 
     return $json;
 }
@@ -65,7 +65,7 @@ sub readJsonFromStdin {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or fatal( 'JSON parsing error from <stdin>:', $@ );
+    } or error( 'JSON parsing error from <stdin>:', $@ );
 
     return $json;
 }
@@ -80,7 +80,7 @@ sub readJsonFromString {
     my $json;
     eval {
         $json = $jsonParser->decode( $string );
-    } or fatal( 'JSON parsing error:', $@ );
+    } or error( 'JSON parsing error:', $@ );
 
     return $json;
 }
@@ -221,11 +221,17 @@ sub slurpFile {
     debug( 'slurpFile(', $filename, ')' );
 
     local $/;
-    open( my $fh, '<', $filename ) || fatal( 'Cannot read file', $filename );
-    my $fileContent = <$fh>;
-    close $fh;
+    open( my $fh, '<', $filename );
+    if( $fh ) {
+        my $fileContent = <$fh>;
+        close $fh;
 
-    return $fileContent;
+        return $fileContent;
+
+    } else {
+        error( 'Cannot read file', $filename );
+        return undef;
+    }
 }
 
 ##
