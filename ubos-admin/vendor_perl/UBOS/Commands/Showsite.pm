@@ -43,6 +43,7 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $json          = 0;
+    my $brief         = 0;
     my $siteId;
     my $host;
 
@@ -51,12 +52,13 @@ sub run {
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'json'        => \$json,
+            'brief'       => \$brief,
             'siteid=s'    => \$siteId,
             'host=s'      => \$host );
 
     UBOS::Logging::initialize( 'ubos-admin', 'showsite', $verbose, $logConfigFile );
 
-    if( !$parseOk || ( !$siteId && !$host ) || ( $siteId && $host ) || @args || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || ( $json && $brief ) || ( !$siteId && !$host ) || ( $siteId && $host ) || @args || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation: showsite', @_, '(add --help for help)' );
     }
 
@@ -77,7 +79,7 @@ sub run {
         UBOS::Utils::writeJsonToStdout( $site->siteJson );
 
     } else { # human-readable, brief or not
-        $site->print();
+        $site->print( $brief ? 1 : 2 );
     }
     
     return 1;
@@ -88,11 +90,19 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json] --siteid <siteid>
+        <<SSS => <<HHH,
+    [--verbose | --logConfig <file>] [--json | --brief] --siteid <siteid>
 SSS
-    Show the site with siteid.
+    Show the site with the provided siteid.
     --json: show it in JSON format
+    --brief: only show the site id
+HHH
+        <<SSS => <<HHH
+    [--verbose | --logConfig <file>] [--json | --brief] --host <host>
+SSS
+    Show the site with the provided hostname.
+    --json: show it in JSON format
+    --brief: only show the site id
 HHH
     };
 }

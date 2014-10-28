@@ -124,7 +124,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--json | --brief] [--verbose | --logConfig <file>] [--siteid <siteid>]...
+    [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]...
 SSS
     Show the sites with siteid, or if not given, show all sites currently
     deployed to this device.
@@ -132,7 +132,7 @@ SSS
     --brief: only show the site ids.
 HHH
         <<SSS => <<HHH
-    [--json | --brief] [--verbose | --logConfig <file>] [--siteid <siteid>]... --backupfile <file>
+    [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]... --backupfile <file>
 SSS
     Show the sites with siteid, or if not given, show all sites contained
     in the specified backup file.

@@ -581,4 +581,58 @@ sub isValidContext {
     }
 }
 
+##
+# Print this appconfiguration in human-readable form.
+# $detail: 1: only appconfigid,
+#          2: plus app, accessories,
+#          3: plus customizationpoints 
+sub print {
+    my $self   = shift;
+    my $detail = shift || 2;
+
+    if( $detail <= 1 ) {
+        print $self->appConfigId . "\n";
+        
+    } else {
+        print "AppConfiguration: ";
+
+        if( $self->context ) {
+            print $self->context;
+        } else {
+            print '<root>';
+        }
+
+        print " (" . $self->appConfigId . ")";
+
+        if( $detail < 3 ) {
+            print ': ' . $self->app->packageName;
+            foreach my $acc ( $self->accessories ) {
+                print ' ' . $acc->packageName;
+            }
+            print "\n";
+        } else {
+            print "\n";
+        }
+                            
+        my $custPoints = $self->resolvedCustomizationPoints;
+        foreach my $installable ( $self->installables ) {
+            print '    ';
+            if( $installable == $self->app ) {
+                print 'app:      ';
+            } else {
+                print 'accessory: ';
+            }
+            print $installable->packageName . "\n";
+            my $installableCustPoints = $custPoints->{$installable->packageName};
+            if( defined( $installableCustPoints )) {
+                foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                    my $custPointValue = $installableCustPoints->{$custPointName};
+
+                    print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                }
+            }
+        }
+    }
+}
+                            
 1;
