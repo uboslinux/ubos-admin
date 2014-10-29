@@ -166,7 +166,9 @@ sub insertSlurpedFiles {
 # $cmd: the commaand
 # $inContent: optional string containing what will be sent to stdin
 # $outContentP: optional reference to variable into which stdout output will be written
-# $errContentP: optional reference to variable into which stderr output will be written
+# $errContentP: optional reference to variable into which stderr output will be written.
+#               if this has the same non-null value as $outContentP, both streams will be
+#               redirected together
 sub myexec {
     my $cmd         = shift;
     my $inContent   = shift;
@@ -191,8 +193,13 @@ sub myexec {
         $cmd .= " >" . $outFile->filename;
     }
     if( defined( $errContentP )) {
-        $errFile = File::Temp->new();
-        $cmd .= " 2>" . $errFile->filename;
+        if( $outContentP == $errContentP ) {
+            $cmd .= " 2>&1";
+            $errContentP = undef;
+        } else {
+            $errFile = File::Temp->new();
+            $cmd .= " 2>" . $errFile->filename;
+        }
     }
 
     system( $cmd );
@@ -205,7 +212,7 @@ sub myexec {
         ${$errContentP} = slurpFile( $errFile->filename );
     }
 
-    if( $ret == -1 || $ret & 127) {
+    if( $ret == -1 || $ret & 127 ) {
         error( 'Failed to execute', $cmd, "(error code $ret):", $! );
     }
     return $ret;
