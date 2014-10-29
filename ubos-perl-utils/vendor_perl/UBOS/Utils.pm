@@ -193,7 +193,7 @@ sub myexec {
         $cmd .= " >" . $outFile->filename;
     }
     if( defined( $errContentP )) {
-        if( $outContentP == $errContentP ) {
+        if( defined( $outContentP ) && $outContentP == $errContentP ) {
             $cmd .= " 2>&1";
             $errContentP = undef;
         } else {
