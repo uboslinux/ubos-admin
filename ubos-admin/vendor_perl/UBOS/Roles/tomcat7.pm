@@ -27,6 +27,7 @@ package UBOS::Roles::tomcat7;
 use base qw( UBOS::Role );
 use fields;
 
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Tomcat7;
 use UBOS::Utils;
@@ -95,6 +96,8 @@ sub setupSite {
     my $site     = shift;
     my $triggers = shift;
 
+    UBOS::Host::ensurePackages( 'tomcat7' );
+
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostName;
     my $siteContextDir  = "$contextDir/$hostname";
@@ -112,6 +115,7 @@ sub setupSite {
     unless( -d $siteDocumentDir ) {
         UBOS::Utils::mkdir( $siteDocumentDir );
     }
+
 
     $self->sitesUpdated();
     $triggers->{'tomcat7-reload'} = 1;
