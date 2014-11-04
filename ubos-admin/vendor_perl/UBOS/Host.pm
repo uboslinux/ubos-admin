@@ -241,7 +241,7 @@ sub siteDeployed {
 
     debug( 'Host::siteDeployed', $siteId );
 
-    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
+    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson, 0600, 'root', 'root' );
 
     $_sites = undef;
 }

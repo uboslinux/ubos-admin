@@ -116,7 +116,6 @@ sub setupSite {
         UBOS::Utils::mkdir( $siteDocumentDir );
     }
 
-
     $self->sitesUpdated();
     $triggers->{'tomcat7-reload'} = 1;
 
