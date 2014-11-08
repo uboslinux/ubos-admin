@@ -538,7 +538,10 @@ sub ensurePacmanInit {
     UBOS::Utils::myexec( "pacman-key --init" );
 
     # We trust the Arch people, and ourselves
-    UBOS::Utils::myexec( "pacman-key --populate archlinux" );
+    # This is a kludge, it should be one or the other, not both
+    my $err;
+    UBOS::Utils::myexec( "pacman-key --populate archlinux",    undef, undef, \$err );
+    UBOS::Utils::myexec( "pacman-key --populate archlinuxarm", undef, undef, \$err );
     UBOS::Utils::myexec( "pacman-key --populate ubos" );
 }
 

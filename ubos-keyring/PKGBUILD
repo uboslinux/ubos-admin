@@ -2,12 +2,13 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.1
+pkgver=0.2
 pkgrel=1
 pkgdesc="UBOS PGP keyring"
 arch=('any')
 license=('GPL')
 options=('!strip')
+install="${pkgname}.install"
 
 package() {
     mkdir -p ${pkgdir}/usr/share/pacman/keyrings/
