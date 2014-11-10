@@ -42,8 +42,6 @@ my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
 
-my @essentialServices = qw( cronie ntpd );
-
 ##
 # Obtain the host Configuration object.
 # return: Configuration object
