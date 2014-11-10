@@ -535,13 +535,26 @@ sub obtainDbDriver {
 # means it cannot be pre-installed; it also may take some time, depending on
 # how much entropy is available.
 sub ensurePacmanInit {
+    # If the time is completely off, chances are we are on a Raspberry Pi or
+    # such that hasn't connected to the network. In which case we set the system
+    # time to the time of the last build
+    if( time() < 100000000 ) { # in 1973
+        my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
+        if( $osRelease =~ m!^BUILD_ID="?(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)"?$!m ) {
+            my( $year, $month, $day, $hour, $min, $sec ) = ( $1, $2, $3, $4, $5, $6 );
+
+            my $ds = sprintf( '%.2d%.2d%.2d%.2d%.4d.%.2d', $month, $day, $hour, $min, $year, $sec );
+
+            UBOS::Utils::myexec( "date $ds" );
+        }
+    }
+    
     UBOS::Utils::myexec( "pacman-key --init" );
 
     # We trust the Arch people, and ourselves
-    # This is a kludge, it should be one or the other, not both
     my $err;
-    UBOS::Utils::myexec( "pacman-key --populate archlinux",    undef, undef, \$err );
-    UBOS::Utils::myexec( "pacman-key --populate archlinuxarm", undef, undef, \$err );
+    UBOS::Utils::myexec( "pacman -Q archlinux-keyring    > /dev/null 2>&1 && pacman-key --populate archlinux",    undef, undef, \$err );
+    UBOS::Utils::myexec( "pacman -Q archlinuxarm-keyring > /dev/null 2>&1 && pacman-key --populate archlinuxarm", undef, undef, \$err );
     UBOS::Utils::myexec( "pacman-key --populate ubos" );
 }
 
