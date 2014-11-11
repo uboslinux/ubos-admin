@@ -37,10 +37,6 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
-    if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
-    }
-
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $json          = 0;
@@ -127,7 +123,7 @@ sub synopsisHelp {
     [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]...
 SSS
     Show the sites with siteid, or if not given, show all sites currently
-    deployed to this device.
+    deployed to this device. If invoked as root, more information is available.
     --json: show them in JSON format
     --brief: only show the site ids.
 HHH
@@ -135,7 +131,7 @@ HHH
     [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]... --backupfile <file>
 SSS
     Show the sites with siteid, or if not given, show all sites contained
-    in the specified backup file.
+    in the specified backup file. If invoked as root, more information is available.
     --json: show them in JSON format
     --brief: only show the site ids.
     --backupfile: name of the backup file

@@ -45,7 +45,10 @@ sub new {
         $self = fields::new( $self );
     }
     $self->{json} = $json;
-    $self->_checkJson();
+
+    if ( $< == 0 ) { # Nobody else can create new files
+        $self->_checkJson();
+    }
 
     return $self;
 }
@@ -66,6 +69,59 @@ sub siteJson {
     my $self = shift;
 
     return $self->{json};
+}
+
+##
+# Obtain the public components of the site JSON
+# return: public site Json
+sub publicSiteJson {
+    my $self = shift;
+
+    my $json = $self->{json};
+    my $ret  = {};
+
+    $ret->{siteid}   = $json->{siteid};
+    $ret->{hostname} = $json->{hostname};
+    
+    $ret->{admin}->{userid}   = $json->{admin}->{userid};
+    $ret->{admin}->{username} = $json->{admin}->{username};
+    # not admin.credential
+    $ret->{admin}->{email}    = $json->{admin}->{email};
+
+    # leave out ssl section entirely
+    if( exists( $json->{wellknown} )) {
+        $ret->{wellknown} = $json->{wellknown}; # by reference is fine
+    }
+    $self->appConfigs(); # make sure cache exists
+    foreach my $appConfig ( @{$self->{appConfigs}} ) {
+        my $appConfigRet = {};
+
+        $appConfigRet->{appconfigid} = $appConfig->appConfigId;
+        if( exists( $appConfig->{json}->{context} )) {
+            $appConfigRet->{context} = $appConfig->{json}->{context};
+        }
+        if( exists( $appConfig->{json}->{isdefault} )) {
+            $appConfigRet->{isdefault} = $appConfig->{json}->{isdefault};
+        }
+        $appConfigRet->{appid} = $appConfig->{json}->{appid};
+        if( exists( $appConfig->{json}->{accessoryids} )) {
+            $appConfigRet->{accessoryids} = $appConfig->{json}->{accessoryids}; # by reference is fine
+        }
+        foreach my $custPointInstallableName ( keys %{$appConfig->{json}->{customizationpoints}} ) {
+            my $custPointInstallableJson = $appConfig->{json}->{customizationpoints}->{$custPointInstallableName};
+            foreach my $custPointName ( keys %{$custPointInstallableJson} ) {
+                my $custPointDefJson = $appConfig->customizationPointDefinition( $custPointInstallableName, $custPointName );
+                unless( exists( $custPointDefJson->{private} ) && $custPointDefJson->{private} ) {
+                    $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
+                            = $custPointInstallableJson->{$custPointName};
+                }
+            }
+        }
+
+        push @{$ret->{appconfigs}}, $appConfigRet;
+    }
+    
+    return $ret;
 }
 
 ##

@@ -225,6 +225,28 @@ sub resolvedCustomizationPoints {
 }
 
 ##
+# Obtain the definition of the customization point
+# $packageName: name of the package that defines the customization point
+# $customizationPointName: name of the customization point
+# return: JSON fragment from the installable's JSON
+sub customizationPointDefinition {
+    my $self                   = shift;
+    my $packageName            = shift;
+    my $customizationPointName = shift;
+
+    foreach my $installable ( $self->installables ) {
+        if( $installable->packageName eq $packageName ) {
+            my $custPoints = $installable->customizationPoints;
+            if( defined( $custPoints ) && exists( $custPoints->{$customizationPointName} )) {
+                return $custPoints->{$customizationPointName};
+            }
+        }
+    }
+    warn( 'Cannot find customization point', $customizationPointName, 'in package', $packageName );
+    return undef;
+}
+  
+##
 # Obtain the Configuration object
 # return: the Configuration object
 sub config {

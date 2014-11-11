@@ -38,6 +38,10 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
+    if ( $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
 

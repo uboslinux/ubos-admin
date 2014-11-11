@@ -64,10 +64,19 @@ sub sites {
     unless( $_sites ) {
         $_sites = {};
 
-        foreach my $f ( <"$SITES_DIR/*.json"> ) {
-            my $siteJson = readJsonFromFile( $f );
-            my $site     = UBOS::Site->new( $siteJson );
-            $_sites->{$site->siteId()} = $site;
+        if ( $< == 0 ) {
+            # If we are root, we read the full files, otherwise the public files
+            foreach my $f ( <"$SITES_DIR/*-full.json"> ) {
+                my $siteJson = readJsonFromFile( $f );
+                my $site     = UBOS::Site->new( $siteJson );
+                $_sites->{$site->siteId()} = $site;
+            }
+        } else {
+            foreach my $f ( <"$SITES_DIR/*-world.json"> ) {
+                my $siteJson = readJsonFromFile( $f );
+                my $site     = UBOS::Site->new( $siteJson );
+                $_sites->{$site->siteId()} = $site;
+            }
         }
     }
     return $_sites;
@@ -234,12 +243,14 @@ sub findAppConfigurationByPartialId {
 sub siteDeployed {
     my $site = shift;
 
-    my $siteId   = $site->siteId;
-    my $siteJson = $site->siteJson;
+    my $siteId         = $site->siteId;
+    my $siteJson       = $site->siteJson;
+    my $publicSiteJson = $site->publicSiteJson;
 
     debug( 'Host::siteDeployed', $siteId );
 
-    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson, 0600, 'root', 'root' );
+    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
+    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
 
     $_sites = undef;
 }
@@ -254,7 +265,8 @@ sub siteUndeployed {
 
     debug( 'Host::siteUndeployed', $siteId );
 
-    UBOS::Utils::deleteFile( "$SITES_DIR/$siteId.json" );
+    UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-world.json" );
+    UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-full.json" );
 
     $_sites = undef;
 }
@@ -417,7 +429,7 @@ sub ensurePackages {
 
     if( @filteredPackageList ) {
         my $err;
-        my $cmd = 'sudo pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
+        my $cmd = 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
         unless( UBOS::Logging::isDebugActive() ) {
             $cmd .= ' > /dev/null';
         }
@@ -437,7 +449,7 @@ sub installPackageFiles {
     my $packageFiles = shift;
 
     my $err;
-    my $cmd = 'sudo pacman -U --noconfirm ' . join( ' ', @$packageFiles );
+    my $cmd = 'pacman -U --noconfirm ' . join( ' ', @$packageFiles );
     unless( UBOS::Logging::isDebugActive() ) {
         $cmd .= ' > /dev/null';
     }
@@ -456,7 +468,7 @@ sub installPackageFiles {
 sub packageVersion {
     my $packageName = shift;
 
-    my $cmd = "sudo pacman -Q '$packageName'";
+    my $cmd = "pacman -Q '$packageName'";
     my $out;
     my $err;
     if( myexec( $cmd, undef, \$out, \$err )) {

@@ -36,10 +36,6 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
-    if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
-    }
-
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $json          = 0;
@@ -121,20 +117,23 @@ sub synopsisHelp {
     [--verbose | --logConfig <file>] [--json | --brief] --appconfigid <appconfigid>
 SSS
     Show the appconfiguration with the provided appconfigid.
+    If invoked as root, more information is available.
     --json: show it in JSON format
     --brief: only show the appconfig id
 HHH
         <<SSS => <<HHH,
     [--verbose | --logConfig <file>] [--json | --brief] --siteid <siteid> --context <context>
 SSS
-    Show the appconfiguration at the site with the provided siteid with the provided context path
+    Show the appconfiguration at the site with siteid with the provided context path.
+    If invoked as root, more information is available.
     --json: show it in JSON format
     --brief: only show the appconfig id
 HHH
         <<SSS => <<HHH
     [--verbose | --logConfig <file>] [--json | --brief] --host <host> --context <context>
 SSS
-    Show the appconfiguration at the provided hostname with the provided context path
+    Show the appconfiguration at the provided hostname with the provided context path.
+    If invoked as root, more information is available.
     --json: show it in JSON format
     --brief: only show the appconfig id
 HHH

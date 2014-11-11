@@ -36,10 +36,6 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
-    if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
-    }
-
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $json          = 0;
@@ -94,6 +90,7 @@ sub synopsisHelp {
     [--verbose | --logConfig <file>] [--json | --brief] --siteid <siteid>
 SSS
     Show the site with the provided siteid.
+    If invoked as root, more information is available.
     --json: show it in JSON format
     --brief: only show the site id
 HHH
@@ -101,6 +98,7 @@ HHH
     [--verbose | --logConfig <file>] [--json | --brief] --host <host>
 SSS
     Show the site with the provided hostname.
+    If invoked as root, more information is available.
     --json: show it in JSON format
     --brief: only show the site id
 HHH
