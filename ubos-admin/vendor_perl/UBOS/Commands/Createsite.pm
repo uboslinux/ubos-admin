@@ -239,7 +239,7 @@ JSON
             $newSiteJsonString .= <<JSON;
             "accessories" : [
 JSON
-            $newSiteJsonString .= join( '', map { '                ' . $_->packageName . ",\n" } @accs );
+            $newSiteJsonString .= join( '', map { '                "' . $_->packageName . "\",\n" } @accs );
             
             $newSiteJsonString .= <<JSON;
             ],
