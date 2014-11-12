@@ -271,6 +271,7 @@ sub saveFile {
     # more efficient if debug isn't on
     debug( sub { ( 'saveFile(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
 
+    my $ret;
     if( $< == 0 || ( $uid == $< && $gid == $( )) {
         # This is faster -- for root, or for creating one's own files
 
@@ -303,12 +304,12 @@ sub saveFile {
             $cmd .= ' -g' . $gname;
         }
 
-        UBOS::Utils::myexec( $cmd . " '" . $temp->filename . "' '$filename'" );
+        $ret = ( 0 == UBOS::Utils::myexec( $cmd . " '" . $temp->filename . "' '$filename'" ));
 
         unlink( $temp );
     }
 
-    return 1;
+    return $ret;
 }
 
 ##
