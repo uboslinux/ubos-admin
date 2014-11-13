@@ -62,8 +62,14 @@ sub run {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
+    my $oldSites = UBOS::Host::sites();
     my $appId;
     my $app;
+
+    if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostName ) {
+        fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
+        exit 1;
+    }
 
     unless( $noapp ) {
         $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
@@ -72,23 +78,23 @@ sub run {
         $app = UBOS::App->new( $appId );
     }
 
-    my $oldSites     = UBOS::Host::sites();
-    my $existingSite = undef;
-    my $hostname     = undef;
+    my $hostname = undef;
     outer: while( 1 ) {
-        $hostname = ask( "Hostname: ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$' );
+        $hostname = ask( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
 
-        foreach my $oldSite ( values %$oldSites ) {
-            if( $oldSite->hostName eq $hostname ) {
-                print "There is already a site with hostname $hostname.\n";
-                if( $noapp ) {
-                    next outer;
+        if( '*' eq $hostname ) {
+            if( %$oldSites ) {
+                print "You can only create a site with hostname * (any) if no other sites exist.\n";
+                next outer;
+            }
+        } else {
+            foreach my $oldSite ( values %$oldSites ) {
+                if( $oldSite->hostName eq $hostname ) {
+                    print "There is already a site with hostname $hostname.\n";
+                    if( $noapp ) {
+                        next outer;
+                    }
                 }
-                my $yn = ask( "Add app $appId to $hostname? (y/n) " );
-                unless( $yn =~ m!^y(es)?$!i ) {
-                    next outer;
-                }
-                $existingSite = $oldSite;
             }
         }
         last;
@@ -102,27 +108,11 @@ sub run {
         my $defaultContext = $app->defaultContext;
         if( $defaultContext ) {
             print "App $appId suggests context path " . $app->defaultContext . "\n";
-            my $existingAppConfig;
-            if( $existingSite ) {
-                $existingAppConfig = $existingSite->appConfigAtContext( $defaultContext );
-            }
-            if( $existingAppConfig ) {
-                print 'But: app ' . $existingAppConfig->app->packageName . " already runs at $defaultContext. You need to choose something different.\n";
-            }
             while( 1 ) {
                 $context = ask( 'Enter context path: ' );
 
                 if( UBOS::AppConfiguration::isValidContext( $context )) {
-                    if( $existingSite ) {
-                        my $error = $existingSite->mayContextBeAdded( $context );
-                        if( $error ) {
-                            print $error . " You need to choose something different.\n";
-                        } else {
-                            last;
-                        }
-                    } else {
-                        last;
-                    }
+                    last;
                 } else {
                     print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces\n";
                 }
@@ -165,44 +155,23 @@ sub run {
 
     my $newSiteJsonString;
     
-    my $siteId;
+    my $siteId      = UBOS::Host::createNewSiteId();
     my $appConfigId = UBOS::Host::createNewAppConfigId();
-    my $adminUserId;
-    my $adminUserName;
+    my $adminUserId       = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
+    my $adminUserName     = ask( 'Site admin user name (e.g. John Doe): ' );
     my $adminCredential;
     my $adminEmail;
 
-    if( $existingSite ) {
-        my $json = $existingSite->{json};
-
-        $siteId = $json->{siteid};
-
-        $adminUserId     = $json->{admin}->{userid};
-        $adminUserName   = $json->{admin}->{username};
-        $adminCredential = $json->{admin}->{credential};
-        $adminEmail      = $json->{admin}->{email};
-
-    } else {
-        $siteId = UBOS::Host::createNewSiteId();
-
-        $adminUserId     = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
-        $adminUserName   = ask( 'Site admin user name (e.g. John Doe): ' );
-        do {
-            $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$', undef, 1 );
-        } while( $adminCredential =~ m!s3cr3t!i );
-        $adminEmail      = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
-    }
+    do {
+        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$', undef, 1 );
+    } while( $adminCredential =~ m!s3cr3t!i );
+    $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
 
     $newSiteJsonString = <<JSON;
 {
     "siteid" : "$siteId",
     "hostname" : "$hostname",
 
-JSON
-    if( $existingSite && $existingSite->{json}->{ssl} ) {
-        $newSiteJsonString .= UBOS::Utils::writeJsonToString( $existingSite->{json}->{ssl} );
-    }
-    $newSiteJsonString .= <<JSON;
     "admin" : {
         "userid" : "$adminUserId",
         "username" : "$adminUserName",
@@ -214,17 +183,6 @@ JSON
     unless( $noapp ) {
         $newSiteJsonString .= <<JSON;
     "appconfigs" : [
-JSON
-        if( $existingSite ) {
-            foreach my $appConfig ( @{$existingSite->appConfigs} ) {
-                my $toAdd = UBOS::Utils::writeJsonToString( $appConfig->{json} );
-                $toAdd =~ s!\s+$!!;
-                $toAdd =~ s!^!        !mg;
-                $newSiteJsonString .= "\n" . $toAdd . ',';
-            }
-            $newSiteJsonString .= "\n";
-        }
-        $newSiteJsonString .= <<JSON;
         {
             "appconfigid" : "$appConfigId",
             "appid" : "$appId",
@@ -301,26 +259,11 @@ JSON
         debug( 'Setting up placeholder sites' );
 
         my $suspendTriggers = {};
-        if( $existingSite ) {
-            $ret &= $existingSite->suspend( $suspendTriggers );
-        } else {
-            $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
-        }
+        $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
         UBOS::Host::executeTriggers( $suspendTriggers );
 
         my $deployUndeployTriggers = {};
-        if( $existingSite ) {
-            my $backup = UBOS::UpdateBackup->new;
-            $ret &= $backup->create( { $siteId => $existingSite } );
-            $ret &= $existingSite->undeploy( $deployUndeployTriggers );
-            
-            $ret &= $newSite->deploy( $deployUndeployTriggers );
-            $ret &= $backup->restoreSite( $newSite );
-
-            $backup->delete();
-        } else {
-            $ret &= $newSite->deploy( $deployUndeployTriggers );
-        }
+        $ret &= $newSite->deploy( $deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
         debug( 'Resuming sites' );

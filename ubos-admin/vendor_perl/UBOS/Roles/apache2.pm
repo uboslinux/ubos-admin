@@ -31,6 +31,7 @@ use UBOS::Logging;
 use UBOS::Utils;
 
 my $sitesDir         = '/etc/httpd/ubos/sites';
+my $defaultSitesDir  = '/etc/httpd/ubos/defaultsites';
 my $appConfigsDir    = '/etc/httpd/ubos/appconfigs';
 my $sitesDocumentRootDir            = '/srv/http/sites';
 my $sitesWellknownDir               = '/srv/http/wellknown';
@@ -136,8 +137,9 @@ sub setupPlaceholderSite {
 
     my $siteId            = $site->siteId;
     my $hostName          = $site->hostName;
-    my $siteFile          = "$sitesDir/$siteId.conf";
+    my $siteFile          = ( '*' eq $hostName ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
+    my $serverDeclaration = ( '*' eq $hostName ) ? '# Hostname * (any)' : "    ServerName $hostName";
 
     debug( 'apache2::setupPlaceholderSite', $siteId );
 
@@ -154,7 +156,7 @@ sub setupPlaceholderSite {
 #
 
 <VirtualHost *:80>
-    ServerName $hostName
+$serverDeclaration
 
     DocumentRoot "$siteDocumentRoot"
     Options -Indexes
@@ -183,10 +185,11 @@ sub setupSite {
 
     my $siteId            = $site->siteId;
     my $hostName          = $site->hostName;
-    my $siteFile          = "$sitesDir/$siteId.conf";
+    my $siteFile          = ( '*' eq $hostName ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+    my $serverDeclaration = ( '*' eq $hostName ) ? '# Hostname * (any)' : "    ServerName $hostName";
 
     debug( 'apache2::setupSite', $siteId );
 
@@ -218,7 +221,7 @@ CONTENT
         $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
-    ServerName $hostName
+$serverDeclaration
 
     Redirect / https://$hostName/
 </VirtualHost>
@@ -255,7 +258,7 @@ CONTENT
     $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:$siteAtPort>
-    ServerName $hostName
+$serverDeclaration
 
     DocumentRoot "$siteDocumentRoot"
     Options -Indexes
@@ -352,7 +355,8 @@ sub removeSite {
     my $triggers = shift;
 
     my $siteId            = $site->siteId;
-    my $siteFile          = "$sitesDir/$siteId.conf";
+    my $hostName          = $site->hostName;
+    my $siteFile          = ( '*' eq $hostName ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentDir   = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";

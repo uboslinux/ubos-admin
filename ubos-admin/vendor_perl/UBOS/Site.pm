@@ -712,8 +712,8 @@ sub _checkJson {
     unless( $json->{hostname} ) {
         fatal( 'Site JSON: missing hostname' );
     }
-    unless( ref( $json->{hostname} ) || $json->{hostname} =~ m/^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$/ ) {
-        # regex from http://stackoverflow.com/a/1420225/200304
+    unless( ref( $json->{hostname} ) || $json->{hostname} =~ m/^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$|^\*$/ ) {
+        # regex originally from http://stackoverflow.com/a/1420225/200304
         fatal( 'Site JSON: invalid hostname' );
     }
 

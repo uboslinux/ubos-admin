@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.98
+pkgver=0.99
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -24,7 +24,7 @@ depends=(
 backup=(
     'etc/ubos/config.json'
     'etc/httpd/ubos/defaults.conf'
-    'etc/httpd/ubos/defaultsite.conf'
+    'etc/httpd/ubos/defaultsites/fallback.conf'
     'etc/httpd/ubos/errors.conf'
     'etc/httpd/ubos/logging.conf'
     'etc/httpd/ubos/usersettings.conf'
@@ -67,10 +67,13 @@ package() {
 
 # Web server config files
     mkdir -p $pkgdir/etc/httpd/conf
-    mkdir -p $pkgdir/etc/httpd/ubos/{appconfigs,mods-available,mods-enabled,sites,ssl}
+    mkdir -p $pkgdir/etc/httpd/ubos/{appconfigs,defaultsites,mods-available,mods-enabled,sites,ssl}
     install -m644 $startdir/etc/httpd/conf/httpd-ubos.conf $pkgdir/etc/httpd/conf/
     for f in $startdir/etc/httpd/ubos/*.conf; do
         install -m644 $f $pkgdir/etc/httpd/ubos/
+    done
+    for f in $startdir/etc/httpd/ubos/defaultsites/*; do
+        install -m644 $f $pkgdir/etc/httpd/ubos/defaultsites/
     done
     for f in $startdir/etc/httpd/ubos/mods-available/*.load; do
         install -m644 $f $pkgdir/etc/httpd/ubos/mods-available/
