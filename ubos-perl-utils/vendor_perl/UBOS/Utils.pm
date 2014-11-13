@@ -269,12 +269,12 @@ sub saveFile {
         $mask = 0644;
     }
     # more efficient if debug isn't on
-    debug( sub { ( 'saveFile(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
 
     my $ret;
     if( $< == 0 || ( $uid == $< && $gid == $( )) {
         # This is faster -- for root, or for creating one's own files
 
+        debug( sub { ( 'saveFile-as-root-or-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
         unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
             error( "Could not write to file $filename:", $! );
             return 0;
@@ -288,10 +288,12 @@ sub saveFile {
         if( $uid >= 0 || $gid >= 0 ) {
             chown $uid, $gid, $filename;
         }
+        $ret = 1;
 
     } else {
         # Write to a temp file, and them move it in place as root
         
+        debug( sub { ( 'saveFile-as-non-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
         my $temp = File::Temp->new( UNLINK => 1 );
         print $temp $content;
         close $temp;
