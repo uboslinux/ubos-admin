@@ -103,6 +103,8 @@ sub setupSite {
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
+    my $tomcatUser      = $site->config->getResolve( 'tomcat7.uname' );
+    my $tomcatGroup     = $site->config->getResolve( 'tomcat7.gname' );
 
     debug( 'tomcat7::setupSite', $siteId );
 
@@ -110,7 +112,7 @@ sub setupSite {
         UBOS::Utils::mkdir( $siteContextDir );
     }
     unless( -d $webappsDir ) {
-        UBOS::Utils::mkdir( $webappsDir );
+        UBOS::Utils::mkdir( $webappsDir, 0755, $tomcatUser, $tomcatGroup );
     }
     unless( -d $siteDocumentDir ) {
         UBOS::Utils::mkdir( $siteDocumentDir );
