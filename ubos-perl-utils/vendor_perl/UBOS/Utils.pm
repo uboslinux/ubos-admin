@@ -836,11 +836,13 @@ sub invokeMethod {
 }
 
 ##
-# Helper method to print name-value pairs, with the value optionally processed
+# Helper method to convert name-value pairs into a string with column format.
+# Optionally, the value can be processed before converted to string
 # $hash: hash of first column to second column
 # $f: optional method to invoke on the second column before printing. Do not print if method returns undef
 # $comp: optional comparison method on the keys, for sorting
-sub printHashAsColumns {
+# return: string
+sub hashAsColumns {
     my $hash = shift;
     my $f    = shift || sub { shift; };
     my $comp = shift;
@@ -868,15 +870,17 @@ sub printHashAsColumns {
         @sortedKeys = sort keys %$toPrint;
     }
 
-    my $s = ' ' x $indent;
+    my $s   = ' ' x $indent;
+    my $ret = '';
     foreach my $name ( @sortedKeys ) {
         my $formattedValue = $toPrint->{$name};
         $formattedValue =~ s!^\s*!$s!gm;
         $formattedValue =~ s!^\s+!!;
         $formattedValue =~ s!\s+$!!;
 
-        printf( '%-' . $indent . "s - %s\n", $name, $formattedValue );
+        $ret .= sprintf( '%-' . $indent . "s - %s\n", $name, $formattedValue );
     }
+    return $ret;
 }
 
 1;

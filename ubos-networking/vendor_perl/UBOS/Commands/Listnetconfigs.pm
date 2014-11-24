@@ -47,7 +47,7 @@ sub run {
     }
 
     my $netConfigs = UBOS::Networking::NetConfigUtils::findNetConfigs();
-    UBOS::Utils::printHashAsColumns(
+    print UBOS::Utils::hashAsColumns(
             $netConfigs,
             sub {
                 my $netConfig = shift;

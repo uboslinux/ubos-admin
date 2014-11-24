@@ -77,7 +77,7 @@ sub run {
 			return $v->{name} || $v->{type};
 		};
 	}
-    UBOS::Utils::printHashAsColumns( $nics, $print, 'UBOS::Networking::NetConfigUtils::compareNics' );
+    print UBOS::Utils::hashAsColumns( $nics, $print, 'UBOS::Networking::NetConfigUtils::compareNics' );
     
     return 1;
 }
