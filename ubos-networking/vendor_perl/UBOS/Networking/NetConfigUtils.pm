@@ -154,7 +154,7 @@ sub setNetConfig {
         }
     }
 
-    # determine new configuration
+    # determine new configuration -- IP and DHCP
     my $dhcpcdFrag1;
     my $dhcpcdFrag2;
     if( ref( $dhcpClientNicInfo ) eq 'ARRAY' ) {
@@ -195,8 +195,10 @@ sub setNetConfig {
         
     # start/stop daemons
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
-        _startService( 'dhcpcd', 'dhcpcd' );
+        _startService( 'dhcpcd',     'dhcpcd' );
+        _startService( 'ubos-avahi', 'avahi' );
     } else {
+        _stopService( 'ubos-avahi' );
         _stopService( 'dhcpcd' );
     }
 }

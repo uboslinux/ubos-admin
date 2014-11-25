@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.9
+pkgver=0.10
 pkgrel=1
 pkgdesc="Network management tools"
 arch=('any')
@@ -7,37 +7,46 @@ url="http://ubos.net/"
 developer=$url
 maintainer=$url
 license=('GPL')
-depends=('ubos-admin')
+depends=('ubos-admin' 'avahi')
 options=('!strip')
 
 package() {
 # Template files
-    mkdir -p -m755 $pkgdir/usr/share/$pkgname/tmpl
-    for f in $startdir/tmpl/*; do
-        install -m644 $f $pkgdir/usr/share/$pkgname/tmpl/
+    mkdir -p -m755 ${pkgdir}/usr/share/$pkgname/tmpl
+    for f in ${startdir}/tmpl/*; do
+        install -m644 $f ${pkgdir}/usr/share/$pkgname/tmpl/
     done
 
 # dnsmasq directory
-    mkdir -p -m755 $pkgdir/etc/dnsmasq.d
+    mkdir -p -m755 ${pkgdir}/etc/dnsmasq.d
+
+# Avahi
+    mkdir -p m755 ${pkgdir}/etc/avahi/services
+    install -m 644 ${startdir}/avahi/ubos-avahi-daemon.conf ${pkgdir}/etc/avahi/
+    install -m 644 ${startdir}/avahi/{http,https}.service ${pkgdir}/etc/avahi/services/
 
 # Code
     for d in Commands Networking Networking/NetConfigs; do
-		mkdir -p -m755 $pkgdir/usr/lib/perl5/vendor_perl/UBOS/$d/
-		for f in $startdir/vendor_perl/UBOS/$d/*.pm; do
+		mkdir -p -m755 ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
+		for f in ${startdir}/vendor_perl/UBOS/$d/*.pm; do
 			if [ -r "$f" ]; then
-				install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/$d/
+				install -m755 $f ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
 			fi
 		done
 	done
     
 # Systemd
-    mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
-    install -m 644 $startdir/systemd/ubos-networking.service $pkgdir/usr/lib/systemd/system/
+    mkdir -p -m 755 ${pkgdir}/usr/lib/systemd/system/
+    install -m 644 ${startdir}/systemd/ubos-networking.service   ${pkgdir}/usr/lib/systemd/system/
 
-    mkdir -p -m 755 $pkgdir/usr/share/$pkgname/bin
-    install -m 755 $startdir/bin/ubos-networking-initialize $pkgdir/usr/share/$pkgname/bin/
+    # I can't get an ubos-avahi-daemon service to not hang, so it gets installed as an override
+    mkdir -p -m 755 ${pkgdir}/etc/systemd/system/
+    install -m 644 ${startdir}/systemd/avahi-daemon.service ${pkgdir}/etc/systemd/system/
+
+    mkdir -p -m 755 ${pkgdir}/usr/share/$pkgname/bin
+    install -m 755 ${startdir}/bin/ubos-networking-initialize ${pkgdir}/usr/share/$pkgname/bin/
 
 # Modprobe
-    mkdir -p -m 755 $pkgdir/etc/modprobe.d
-    install -m 644 $startdir/modprobe.d/ubos-networking.conf $pkgdir/etc/modprobe.d/
+    mkdir -p -m 755 ${pkgdir}/etc/modprobe.d
+    install -m 644 ${startdir}/modprobe.d/ubos-networking.conf ${pkgdir}/etc/modprobe.d/
 }

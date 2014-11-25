@@ -1,0 +1,18 @@
+[Unit]
+Description=Avahi mDNS/DNS-SD for UBOS
+Requires=ubos-networking.service avahi-daemon.socket
+After=ubos-networking.service
+
+[Service]
+Type=dbus
+BusName=org.freedesktop.Avahi
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-avahi-daemon
+ExecStart=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi-daemon.conf -s
+ExecReload=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi-daemon.conf -r
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-avahi-daemon
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target
+Also=avahi-daemon.socket
+Alias=dbus-org.freedesktop.Avahi.service
