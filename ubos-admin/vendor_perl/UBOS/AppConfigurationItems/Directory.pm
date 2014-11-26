@@ -130,7 +130,7 @@ sub uninstallOrCheck {
         if( $doIt ) {
             $ret &= UBOS::Utils::deleteRecursively( $fullName );
             # Delete recursively, in case there's more stuff in it than we put in.
-            # If that stuff needs preserving, the retentionpolicy should take care of that.
+            # If that stuff needs preserving, the retention should take care of that.
         }
     }
     return $ret;
