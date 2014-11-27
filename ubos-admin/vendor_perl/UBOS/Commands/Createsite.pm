@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that asks the users about the site they want to create, and
+# Command that asks the user about the site they want to create, and
 # then deploys the site.
 #
 # This file is part of ubos-admin.
@@ -27,6 +27,7 @@ package UBOS::Commands::Createsite;
 
 use Cwd;
 use File::Basename;
+use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Installable;
@@ -45,6 +46,8 @@ sub run {
     }
 
     my $noapp         = 0;
+    my $tls           = 0;
+    my $selfSigned    = 0;
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $dryRun;
@@ -52,13 +55,15 @@ sub run {
     my $parseOk = GetOptionsFromArray(
             \@args,
             'noapp'       => \$noapp,
+            'tls'         => \$tls,
+            'selfsigned'  => \$selfSigned,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'dry-run|n'   => \$dryRun );
 
     UBOS::Logging::initialize( 'ubos-admin', 'createsite', $verbose, $logConfigFile );
 
-    if( !$parseOk || @args || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( $selfSigned && !$tls )) {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
@@ -167,18 +172,149 @@ sub run {
     } while( $adminCredential =~ m!s3cr3t!i );
     $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
 
+
+    my $tlsKey;
+    my $tlsCrt;
+    my $tlsCrtChain;
+    my $tlsCaCrt;
+
+    if( $tls ) {
+        if( $selfSigned ) {
+            my $dir = File::Temp->newdir();
+            chmod 0700, $dir;
+    
+            my $err;
+            if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
+                fatal( 'openssl genrsa failed', $err );
+            }
+            if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch", undef, undef, \$err )) {
+                fatal( 'openssl req failed', $err );
+            }
+            if( UBOS::Utils::myexec( "openssl x509 -req -days 3650 -in '$dir/csr' -signkey '$dir/key' -out '$dir/crt'", undef, undef, \$err )) {
+                fatal( 'openssl x509 failed', $err );
+            }
+            $tlsKey = UBOS::Utils::slurpFile( "$dir/key" );
+            $tlsCrt = UBOS::Utils::slurpFile( "$dir/crt" );
+
+            UBOS::Utils::deleteFile( "$dir/key", "$dir/csr", "$dir/crt" );
+
+        } else {
+            # not self-signed
+            while( 1 ) {
+                $tlsKey = ask( 'SSL/TLS private key file: ' );
+                unless( $tlsKey ) {
+                    redo;
+                }
+                unless( -r $tlsKey ) {
+                    print "Cannot find or read file $tlsKey\n";
+                    redo;
+                }
+                $tlsKey = UBOS::Utils::slurpFile( $tlsKey );
+                unless( $tlsKey =~ m!^-----BEGIN RSA PRIVATE KEY-----.*-----END RSA PRIVATE KEY-----\s*$!s ) {
+                    print "This file does not seem to contain a private key\n";
+                    redo;
+                }
+                last;
+            }
+
+            while( 1 ) {
+                $tlsCrt = ask( 'Certificate file: ' );
+                unless( $tlsCrt ) {
+                    redo;
+                }
+                unless( -r $tlsCrt ) {
+                    print "Cannot find or read file $tlsCrt\n";
+                    redo;
+                }
+                $tlsCrt = UBOS::Utils::slurpFile( $tlsCrt );
+                unless( $tlsCrt =~ m!^-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----\s*$!s ) {
+                    print "This file does not seem to contain a certificate\n";
+                    redo;
+                }
+                last;
+            }
+
+            while( 1 ) {
+                $tlsCrtChain = ask( 'Certificate chain file: ' );
+                unless( $tlsCrtChain ) {
+                    redo;
+                }
+                unless( -r $tlsCrtChain ) {
+                    print "Cannot find or read file $tlsCrtChain\n";
+                    redo;
+                }
+                $tlsCrtChain = UBOS::Utils::slurpFile( $tlsCrtChain );
+                unless( $tlsCrtChain =~ m!^-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----\s*$!s ) {
+                    print "This file does not seem to contain a certificate chain\n";
+                    redo;
+                }
+                last;
+            }
+
+            while( 1 ) {
+                $tlsCaCrt = ask( 'Client certificate chain file (or enter blank if none): ' );
+                unless( $tlsCaCrt ) {
+                    $tlsCaCrt = undef;
+                    last;
+                }
+                unless( -r $tlsCaCrt ) {
+                    print "Cannot find or read file $tlsCaCrt\n";
+                    redo;
+                }
+                $tlsCaCrt = UBOS::Utils::slurpFile( $tlsCaCrt );
+                unless( $tlsCaCrt =~ m!^-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----\s*$!s ) {
+                    print "This file does not seem to contain a certificate chain\n";
+                    redo;
+                }
+                last;
+            }
+        }
+    }
+
     $newSiteJsonString = <<JSON;
 {
     "siteid" : "$siteId",
     "hostname" : "$hostname",
 
     "admin" : {
-        "userid" : "$adminUserId",
-        "username" : "$adminUserName",
+        "userid"     : "$adminUserId",
+        "username"   : "$adminUserName",
         "credential" : "$adminCredential",
-        "email" : "$adminEmail"
+        "email"      : "$adminEmail"
     },
 JSON
+    if( $tls ) {
+        $newSiteJsonString .= <<JSON;
+    "tls" : {
+JSON
+        if( $tlsKey ) {
+            my $enc = UBOS::Utils::writeJsonToString( $tlsKey );
+            $newSiteJsonString .= <<JSON;
+        "key"      : $enc,
+JSON
+        }
+        if( $tlsCrt ) {
+            my $enc = UBOS::Utils::writeJsonToString( $tlsCrt );
+            $newSiteJsonString .= <<JSON;
+        "crt"      : $enc,
+JSON
+        }
+        if( $tlsCrtChain ) {
+            my $enc = UBOS::Utils::writeJsonToString( $tlsCrtChain );
+            $newSiteJsonString .= <<JSON;
+        "crtchain" : $enc,
+JSON
+        }
+        if( $tlsCaCrt ) {
+            my $enc = UBOS::Utils::writeJsonToString( $tlsCaCrt );
+            $newSiteJsonString .= <<JSON;
+        "cacrt"    : $enc  
+JSON
+        }
+        $newSiteJsonString .= <<JSON;
+    },
+JSON
+    }
 
     unless( $noapp ) {
         $newSiteJsonString .= <<JSON;
@@ -326,17 +462,19 @@ sub ask {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--noapp]
+    [--verbose | --logConfig <file>] [--noapp] [--tls [--selfsigned]]
 SSS
     Interactively define and install a new site. Unless --noapp is
-    provided, the site will run one app.
+    provided, the site will run one app. If --tls is provided, the
+    site will be secured with SSL.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--noapp] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--noapp] [--tls [--selfsigned]] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed
-    using 'ubos-admin deploy'.
+    using 'ubos-admin deploy'.  If --tls is provided, the site will
+    be secured with SSL.
 HHH
     };
 }

@@ -2,7 +2,7 @@
 #
 # apachectl, modified for the needs of UBOS:
 # * adding an alternate config file
-# * making sure base modules are activated and ssl key material is available
+# * making sure base modules are activated and tls key material is available
 # * no ssl commands
 # (C) 2014 Indie Computing Corp.
 #

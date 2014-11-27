@@ -35,7 +35,7 @@ use UBOS::Logging;
 our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
                   writeJsonToFile writeJsonToStdout writeJsonToString
                   myexec saveFile slurpFile );
-my $jsonParser = JSON->new->relaxed->pretty->utf8();
+my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
 ##
 # Read and parse JSON from a file

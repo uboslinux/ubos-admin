@@ -44,6 +44,11 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    if( exists( $json->{ssl} )) {
+        # migrate
+        $json->{tls} = $json->{ssl};
+        delete $json->{ssl};
+    }
     $self->{json} = $json;
 
     if ( $< == 0 ) { # Nobody else can create new files
@@ -88,7 +93,7 @@ sub publicSiteJson {
     # not admin.credential
     $ret->{admin}->{email}    = $json->{admin}->{email};
 
-    # leave out ssl section entirely
+    # leave out ssl/tls section entirely
     if( exists( $json->{wellknown} )) {
         $ret->{wellknown} = $json->{wellknown}; # by reference is fine
     }
@@ -148,7 +153,7 @@ sub config {
                     {
                         "site.hostname"         => $self->hostName(),
                         "site.siteid"           => $siteId,
-                        "site.protocol"         => ( $self->hasSsl() ? 'https' : 'http' ),
+                        "site.protocol"         => ( $self->hasTls() ? 'https' : 'http' ),
                         "site.admin.userid"     => $adminJson->{userid},
                         "site.admin.username"   => $adminJson->{username},
                         "site.admin.credential" => $adminJson->{credential},
@@ -162,63 +167,63 @@ sub config {
 ##
 # Determine whether SSL data has been given.
 # return: 0 or 1
-sub hasSsl {
+sub hasTls {
     my $self = shift;
 
     my $json = $self->{json};
-    return ( defined( $json->{ssl} ) && defined( $json->{ssl}->{key} ) ? 1 : 0 );
+    return ( defined( $json->{tls} ) && defined( $json->{tls}->{key} ) ? 1 : 0 );
 }
 
 ##
-# Obtain the SSL key, if any has been provided.
-# return: the SSL key
-sub sslKey {
+# Obtain the TLS key, if any has been provided.
+# return: the TLS key
+sub tlsKey {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{ssl} )) {
-        return $json->{ssl}->{key};
+    if( defined( $json->{tls} )) {
+        return $json->{tls}->{key};
     } else {
 		return undef;
 	}
 }
 
 ##
-# Obtain the SSL certificate, if any has been provided.
-# return: the SSL certificate
-sub sslCert {
+# Obtain the TLS certificate, if any has been provided.
+# return: the TLS certificate
+sub tlsCert {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{ssl} )) {
-        return $json->{ssl}->{crt};
+    if( defined( $json->{tls} )) {
+        return $json->{tls}->{crt};
     } else {
 		return undef;
 	}
 }
 
 ##
-# Obtain the SSL certificate chain, if any has been provided.
-# return: the SSL certificate chain
-sub sslCertChain {
+# Obtain the TLS certificate chain, if any has been provided.
+# return: the TLS certificate chain
+sub tlsCertChain {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{ssl} )) {
-        return $json->{ssl}->{crtchain};
+    if( defined( $json->{tls} )) {
+        return $json->{tls}->{crtchain};
     } else {
 		return undef;
 	}
 }
 
 ##
-# Obtain the SSL certificate chain to be used with clients, if any has been provided.
-sub sslCaCert {
+# Obtain the TLS certificate chain to be used with clients, if any has been provided.
+sub tlsCaCert {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{ssl} )) {
-        return $json->{ssl}->{cacrt};
+    if( defined( $json->{tls} )) {
+        return $json->{tls}->{cacrt};
     } else {
 		return undef;
 	}
@@ -343,8 +348,8 @@ sub print {
         
     } else {
         print "Site";
-        if( $self->hasSsl ) {
-            print " (SSL)";
+        if( $self->hasTls ) {
+            print " (TLS)";
         }
         print ": " . $self->hostName;
         print " (" . $self->siteId . ")\n";
@@ -748,21 +753,21 @@ sub _checkJson {
         fatal( 'Site JSON: admin section: invalid email' );
     }
 
-    if( $json->{ssl} ) {
-        unless( ref( $json->{ssl} ) eq 'HASH' ) {
-            fatal( 'Site JSON: ssl section: not a JSON object' );
+    if( $json->{tls} ) {
+        unless( ref( $json->{tls} ) eq 'HASH' ) {
+            fatal( 'Site JSON: tls section: not a JSON object' );
         }
-        unless( $json->{ssl}->{key} || !ref( $json->{ssl}->{key} )) {
-            fatal( 'Site JSON: ssl section: missing or invalid key' );
+        unless( $json->{tls}->{key} || !ref( $json->{tls}->{key} )) {
+            fatal( 'Site JSON: tls section: missing or invalid key' );
         }
-        unless( $json->{ssl}->{crt} || !ref( $json->{ssl}->{crt} )) {
-            fatal( 'Site JSON: ssl section: missing or invalid crt' );
+        unless( $json->{tls}->{crt} || !ref( $json->{tls}->{crt} )) {
+            fatal( 'Site JSON: tls section: missing or invalid crt' );
         }
-        unless( $json->{ssl}->{crtchain} || !ref( $json->{ssl}->{crtchain} )) {
-            fatal( 'Site JSON: ssl section: missing or invalid crtchain' );
+        unless( $json->{tls}->{crtchain} || !ref( $json->{tls}->{crtchain} )) {
+            fatal( 'Site JSON: tls section: missing or invalid crtchain' );
         }
-        if( $json->{ssl}->{cacrt} && ref( $json->{ssl}->{cacrt} )) {
-            fatal( 'Site JSON: ssl section: invalid cacrt' );
+        if( $json->{tls}->{cacrt} && ref( $json->{tls}->{cacrt} )) {
+            fatal( 'Site JSON: tls section: invalid cacrt' );
         }
     }
 

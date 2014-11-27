@@ -84,7 +84,7 @@ sub deployOrCheck {
     if( $installableRoleJson ) {
         my $apache2modules = $installableRoleJson->{apache2modules};
         my $numberActivated = 0;
-        if( $appConfig->site->hasSsl ) {
+        if( $appConfig->site->hasTls ) {
             push @$apache2modules, 'ssl';
         }
         if( $doIt && $apache2modules ) {
@@ -216,7 +216,7 @@ CONTENT
     my $sslCertChain;
     my $sslCaCert;
     
-    if( $site->hasSsl ) {
+    if( $site->hasTls ) {
         $siteAtPort = 443;
         $siteFileContent .= <<CONTENT;
 
@@ -228,10 +228,10 @@ $serverDeclaration
 CONTENT
 
         $sslDir       = $site->config->getResolve( 'apache2.ssldir' );
-        $sslKey       = $site->sslKey;
-        $sslCert      = $site->sslCert;
-        $sslCertChain = $site->sslCertChain;
-        $sslCaCert    = $site->sslCaCert;
+        $sslKey       = $site->tlsKey;
+        $sslCert      = $site->tlsCert;
+        $sslCertChain = $site->tlsCertChain;
+        $sslCaCert    = $site->tlsCaCert;
 
         my $group = $site->config->getResolve( 'apache2.gname' );
         
@@ -244,7 +244,6 @@ CONTENT
         if( $sslCertChain ) {
             UBOS::Utils::saveFile( "$sslDir/$siteId.crtchain", $sslCertChain, 0440, 'root', $group );
         }
-
         if( $sslCaCert ) {
             UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
         }
@@ -274,7 +273,7 @@ $serverDeclaration
     </Directory>
 CONTENT
 
-    if( $site->hasSsl ) {
+    if( $site->hasTls ) {
         $siteFileContent .= <<CONTENT;
 
     SSLEngine on
@@ -284,10 +283,14 @@ CONTENT
 
     # our own cert
     SSLCertificateFile $sslDir/$siteId.crt
+CONTENT
+        if( $sslCertChain ) {
+            $siteFileContent .= <<CONTENT;
  
     # the CA certs explaining where we got our own cert from
     SSLCertificateChainFile $sslDir/$siteId.crtchain
 CONTENT
+        }
         if( $sslCaCert ) {
             $siteFileContent .= <<CONTENT;
 
