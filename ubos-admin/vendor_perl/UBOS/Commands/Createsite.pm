@@ -41,10 +41,6 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
-    if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
-    }
-
     my $noapp         = 0;
     my $tls           = 0;
     my $selfSigned    = 0;
@@ -66,6 +62,11 @@ sub run {
     if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( $selfSigned && !$tls )) {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
+
+    if( !$dryRun && $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
 
     my $oldSites = UBOS::Host::sites();
     my $appId;
