@@ -146,7 +146,7 @@ sub removeSite {
 
     if( $doIt ) {
         UBOS::Utils::rmdir( $siteDocumentDir );
-        UBOS::Utils::rmdir( $webappsDir );
+        UBOS::Utils::deleteRecursively( $webappsDir ); # Tomcat expands the JAR file into this directory
         UBOS::Utils::rmdir( $siteContextDir );
 
         $self->sitesUpdated();
