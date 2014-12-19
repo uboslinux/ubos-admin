@@ -22,6 +22,7 @@
 use strict;
 use warnings;
 
+use Fcntl ':flock';
 use UBOS::Utils;
 
 my $commands = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Commands' );
@@ -46,6 +47,7 @@ if( $commandPackage ) {
         }
     }
     checkReady();
+    checkOnlyOne();
 
     my $result = UBOS::Utils::invokeMethod( $commandPackage . '::run', @ARGV );
 
@@ -92,6 +94,18 @@ END
     
     UBOS::Utils::saveFile( $readyFile, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
     1;
+}
+
+#####
+# Check that only one copy of the script is running at any time.
+sub checkOnlyOne {
+    # See __DATA__ at end of file
+    unless( flock( DATA, LOCK_EX|LOCK_NB )) {
+        print STDERR <<END;
+Another copy of ubos-admin is running already. Please try again later.
+END
+        exit -2;
+    }
 }
 
 #####
@@ -167,3 +181,6 @@ END
 }
 
 1;
+
+# mandatory line, flocking depends on DATA file handle
+__DATA__
