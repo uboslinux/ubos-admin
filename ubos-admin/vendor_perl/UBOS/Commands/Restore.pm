@@ -54,6 +54,7 @@ sub run {
     my $createNew     = 0;
     my $newSiteId     = undef;
     my $showIds       = 0;
+    my $noTls         = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -68,7 +69,8 @@ sub run {
             'context=s'     => \$context,
             'createnew'     => \$createNew,
             'newsiteid=s'   => \$newSiteId,
-            'showids'       => \$showIds );
+            'showids'       => \$showIds,
+            'notls'         => \$noTls );
 
     UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
 
@@ -78,6 +80,7 @@ sub run {
         || ( $verbose && $logConfigFile )
         || ( @siteIds && ( @appConfigIds || $toSiteId || $toHostname || $context ))
         || ( !@siteIds && !@appConfigIds && ( $toSiteId || $toHostname || $createNew || $newSiteId ))
+        || ( $noTls && ( !@siteIds || $toHostname ))
         || ( $context && @appConfigIds > 1 )
         || ( $newSiteId && ( @siteIds > 1 || @appConfigIds ))
         || ( @appConfigIds && !$toSiteId && !$toHostname )
@@ -96,7 +99,7 @@ sub run {
     if( @appConfigIds ) {
         $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $showIds, $backup );
     } else {
-        $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $backup );
+        $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $noTls, $backup );
     }
     return $ret;
 }
@@ -243,6 +246,7 @@ sub restoreSites {
     my $newSiteId = shift;
     my $hostname  = shift;
     my $showIds   = shift;
+    my $noTls     = shift;
     my $backup    = shift;
 
     my $sitesInBackup      = $backup->sites();
@@ -345,6 +349,9 @@ sub restoreSites {
             }
         }
         my $newSite = UBOS::Site->new( $siteJsonNew );
+        if( $noTls ) {
+            $newSite->deleteTlsInfo();
+        }
         $sitesNew{$site->siteId} = $newSite;
     }
 
@@ -453,7 +460,7 @@ sub _findAppConfigurationByPartialId {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --in <backupfile>
 SSS
     Restore all sites contained in backupfile. This includes all
     applications and their data. None of the sites in the backup file
@@ -461,7 +468,7 @@ SSS
     must all be different.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --siteid <siteid> [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <siteid> [--hostname <hostname>] --in <backupfile>
 SSS
     Restore the site with siteid contained in backupfile. This includes
     all applications at that site and their data. This site currently
@@ -469,7 +476,7 @@ SSS
     all be different. Optionally use a different hostname.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --siteid <fromsiteid> --newsiteid <newsiteid> [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --newsiteid <newsiteid> [--hostname <hostname>] --in <backupfile>
 SSS
     Restore the site with siteid contained in backupfile, but instead of using
     the siteids and appconfigids given in the backup, use newsiteid for the
@@ -478,7 +485,7 @@ SSS
     This exists mainly to facilitate testing.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --siteid <fromsiteid> --createnew [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --createnew [--hostname <hostname>] --in <backupfile>
 SSS
     Restore the site with siteid contained in backupfile, but instead of using
     the siteids and appconfigids given in the backup, allocate new ones.

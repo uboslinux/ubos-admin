@@ -78,9 +78,30 @@ sub siteJson {
 
 ##
 # Obtain the public components of the site JSON
-# return: public site Json
+# return: public site JSON
 sub publicSiteJson {
     my $self = shift;
+
+    return $self->_siteJsonWithout( 1, 1 );
+}
+
+##
+# Obtain the Site JSON but without TLS info
+# return: JSON without TLS info
+sub siteJsonWithoutTls {
+    my $self = shift;
+
+    return $self->_siteJsonWithout( 1, 0 );
+}
+
+##
+# Helper method to return subsets of the Site JSON
+# $noTls: if 1, do not return TLS info
+# $noAdminCredential: if 1, do not return site admin credential
+sub _siteJsonWithout {
+    my $self              = shift;
+    my $noTls             = shift;
+    my $noAdminCredential = shift;
 
     my $json = $self->{json};
     my $ret  = {};
@@ -90,8 +111,14 @@ sub publicSiteJson {
     
     $ret->{admin}->{userid}   = $json->{admin}->{userid};
     $ret->{admin}->{username} = $json->{admin}->{username};
-    # not admin.credential
     $ret->{admin}->{email}    = $json->{admin}->{email};
+
+    unless( $noAdminCredential ) {
+        $ret->{admin}->{credential} = $json->{admin}->{credential};
+    }
+    unless( $noTls ) {
+        $ret->{tls} = $json->{tls}; # by reference is fine
+    }
 
     # leave out ssl/tls section entirely
     if( exists( $json->{wellknown} )) {
@@ -229,6 +256,17 @@ sub tlsCaCert {
 	}
 }
 
+##
+# Delete the TLS information from this site.
+sub deleteTlsInfo {
+    my $self = shift;
+
+    my $json = $self->{json};
+    if( defined( $json->{tls} )) {
+        delete $json->{tls};
+    }
+}
+    
 ##
 # Obtain the site's robots.txt file content, if any has been provided.
 # return: robots.txt content

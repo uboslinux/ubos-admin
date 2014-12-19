@@ -46,6 +46,7 @@ sub run {
     my $out           = undef;
     my @siteIds       = ();
     my @appConfigIds  = ();
+    my $noTls         = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -53,7 +54,8 @@ sub run {
             'logConfig=s'   => \$logConfigFile,
             'out=s',        => \$out,
             'siteid=s'      => \@siteIds,
-            'appconfigid=s' => \@appConfigIds );
+            'appconfigid=s' => \@appConfigIds,
+            'notls'         => \$noTls );
 
     UBOS::Logging::initialize( 'ubos-admin', 'backup', $verbose, $logConfigFile );
 
@@ -123,7 +125,7 @@ sub run {
     debug( 'Creating and exporting backup' );
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
-    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $out );
+    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $out );
 
     debug( 'Resuming sites' );
 
@@ -142,21 +144,21 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --siteid <siteid> --out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] --siteid <siteid> --out <backupfile>
 SSS
     Back up all data from all apps and accessories installed at a currently
     deployed site with siteid to backupfile. More than one siteid may be
     specified.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] --appconfigid <appconfigid> --out <backupfile>
 SSS
     Back up all data from the currently deployed app and its accessories at
     AppConfiguration appconfigid to backupfile. More than one appconfigid
     may be specified.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>]--out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] --out <backupfile>
 SSS
     Back up all data from all currently deployed apps and accessories at all
     deployed sites to backupfile.

@@ -64,11 +64,13 @@ sub new {
 # will be saved.
 # $sites: array of Site objects
 # $appConfigs: array of AppConfiguration objects
+# $noTls: if 1, do not include TLS info
 # $outFile: the file to save the backup to
 sub create {
     my $self       = shift;
     my $sites      = shift;
     my $appConfigs = shift;
+    my $noTls      = shift;
     my $outFile    = shift;
 
     my $ret = 1;
@@ -93,7 +95,13 @@ sub create {
 
     foreach my $site ( @$sites ) {
         my $siteId = $site->siteId();
-        $ret &= ( $zip->addString( writeJsonToString( $site->siteJson() ), "$zipFileSiteEntry/$siteId.json" ) ? 1 : 0 );
+        my $siteJson;
+        if( $noTls ) {
+            $siteJson = $site->siteJsonWithoutTls();
+        } else {
+            $siteJson = $site->siteJson();
+        }
+        $ret &= ( $zip->addString( writeJsonToString( $siteJson ), "$zipFileSiteEntry/$siteId.json" ) ? 1 : 0 );
     }
 
     ##
