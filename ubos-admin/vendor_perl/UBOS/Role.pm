@@ -557,7 +557,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be given is 'gname' is given." );
                     }
                 }
-                if( $appConfigItem->{type} eq 'directorytree' ) {
+                if( $appConfigItem->{type} eq 'directorytree' || $appConfigItem->{type} eq 'directory' ) {
                     foreach my $f ( 'filepermissions', 'dirpermissions' ) {
                         if( defined( $appConfigItem->{$f} )) {
                             if( ref( $appConfigItem->{$f} )) {

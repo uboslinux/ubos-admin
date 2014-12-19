@@ -220,19 +220,24 @@ sub restore {
 
     my $bucket = $self->{json}->{retentionbucket};
 
-    my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
-    my $uname       = $config->replaceVariables( $self->{json}->{uname} );
-    my $gname       = $config->replaceVariables( $self->{json}->{gname} );
-    my $mode        = $self->permissionToMode( $permissions, -1 );
-
-    my $uid = UBOS::Utils::getUid( $uname );
-    my $gid = UBOS::Utils::getGid( $gname );
+    my $filepermissions = $config->replaceVariables( $self->{json}->{filepermissions} );
+    my $dirpermissions  = $config->replaceVariables( $self->{json}->{dirpermissions} );
+    my $uname           = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname           = $config->replaceVariables( $self->{json}->{gname} );
+    my $uid             = UBOS::Utils::getUid( $uname );
+    my $gid             = UBOS::Utils::getGid( $gname );
+    my $filemode        = ( defined( $filepermissions ) && $filepermissions eq 'preserve' ) ? -1 : $self->permissionToMode( $filepermissions, 0644 );
+    my $dirmode         = ( defined( $dirpermissions  ) && $dirpermissions  eq 'preserve' ) ? -1 : $self->permissionToMode( $dirpermissions, 0755 );
 
     my $ret = $backupContext->restoreRecursive( $bucket, $fullName );
 
-    if( $mode > -1 ) {
-        my $asOct = sprintf( "%o", $mode );
-        UBOS::Utils::myexec( "chmod -R $asOct $fullName" ); # no -h on Linux
+    if( $filemode > -1 ) {
+        my $asOct = sprintf( "%o", $filemode );
+        UBOS::Utils::myexec( "find '$fullName' -type f -exec chmod $asOct {}\;" ); # no -h on Linux
+    }
+    if( $dirmode > -1 ) {
+        my $asOct = sprintf( "%o", $dirmode );
+        UBOS::Utils::myexec( "find '$fullName' -type d -exec chmod $asOct {}\;" ); # no -h on Linux
     }
 
     if( defined( $uid )) {
