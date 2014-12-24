@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.102
+pkgver=0.103
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -121,5 +121,5 @@ package() {
 
 # Other config files
     mkdir -p $pkgdir/etc/php/conf.d
-    install -m644 $startdir/etc/php/conf.d/{session.save_path,timezone}.ini $pkgdir/etc/php/conf.d/
+    install -m644 $startdir/etc/php/conf.d/*.ini $pkgdir/etc/php/conf.d/
 }
