@@ -69,10 +69,10 @@ sub installOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
-    my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
-    my $uname       = $config->replaceVariables( $self->{json}->{uname} );
-    my $gname       = $config->replaceVariables( $self->{json}->{gname} );
-    my $mode        = $self->permissionToMode( $permissions, 0755 );
+    my $dirpermissions = $config->replaceVariables( $self->{json}->{dirpermissions} || $self->{json}->{permissions} ); # upward compatible
+    my $uname          = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname          = $config->replaceVariables( $self->{json}->{gname} );
+    my $dirmode        = $self->permissionToMode( $dirpermissions, 0755 );
 
     foreach my $name ( @$names ) {
         my $fullName = $name;
@@ -90,7 +90,7 @@ sub installOrCheck {
 
                 $ret = 0;
 
-            } elsif( UBOS::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
+            } elsif( UBOS::Utils::mkdir( $fullName, $dirmode, $uname, $gname ) != 1 ) {
                 error( 'Directory could not be created:', $fullName );
                 $ret = 0;
             }
