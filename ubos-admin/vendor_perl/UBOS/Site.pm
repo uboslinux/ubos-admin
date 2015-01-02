@@ -875,7 +875,7 @@ sub _checkJsonValidKeys {
                 my $value = $json->{$key};
 
                 unless( $key =~ m!^[a-z][-_a-z0-9]*$! ) {
-                    fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                    fatal( 'Site JSON: invalid key (1) in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
                 $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
             }
@@ -885,7 +885,7 @@ sub _checkJsonValidKeys {
                 my $value = $json->{$key};
 
                 unless( $key =~ m!^[a-z][_a-z0-9]*$! ) {
-                    fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                    fatal( 'Site JSON: invalid key (2) in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
                 $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
             }
@@ -893,8 +893,8 @@ sub _checkJsonValidKeys {
             foreach my $key ( keys %$json ) {
                 my $value = $json->{$key};
 
-                unless( $key =~ m!^[a-z]+$! ) {
-                    fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                unless( $key =~ m!^[a-z][a-z0-9]*$! ) {
+                    fatal( 'Site JSON: invalid key (3) in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
                 $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
             }

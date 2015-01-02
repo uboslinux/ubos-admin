@@ -199,7 +199,21 @@ sub setupSite {
     unless( -d $appConfigFilesDir ) {
         UBOS::Utils::mkdir( $appConfigFilesDir );
     }
-    
+
+    my $robotsTxt  = $site->robotsTxt();
+    my $sitemapXml = $site->sitemapXml();
+    my $faviconIco = $site->faviconIco();
+
+    if( $robotsTxt ) {
+        UBOS::Utils::saveFile( "$siteWellKnownDir/robots.txt", $robotsTxt );
+    }
+    if( $sitemapXml ) {
+        UBOS::Utils::saveFile( "$siteWellKnownDir/sitemap.xml", $sitemapXml );
+    }
+    if( $faviconIco ) {
+        UBOS::Utils::saveFile( "$siteWellKnownDir/favicon.ico", $faviconIco );
+    }
+
     my $siteFileContent = <<CONTENT;
 #
 # Apache config fragment for site $siteId at host $hostName
@@ -327,12 +341,25 @@ CONTENT
     AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
 CONTENT
     }
+    $siteFileContent .= "\n";
+
+    if( $robotsTxt ) {
+        $siteFileContent .= <<CONTENT;
+    AliasMatch ^/robots\.txt\$  $siteWellKnownDir/robots.txt
+CONTENT
+    }
+    if( $sitemapXml ) {
+        $siteFileContent .= <<CONTENT;
+    AliasMatch ^/sitemap\.xml\$ $siteWellKnownDir/sitemap.xml
+CONTENT
+    }
+    if( $faviconIco ) {
+        $siteFileContent .= <<CONTENT;
+    AliasMatch ^/favicon\.ico\$ $siteWellKnownDir/favicon.ico
+CONTENT
+    }
 
     $siteFileContent .= <<CONTENT;
-
-    AliasMatch ^/favicon\.ico $siteWellKnownDir/favicon.ico
-    AliasMatch ^/robots\.txt  $siteWellKnownDir/robots.txt
-    AliasMatch ^/sitemap\.xml $siteWellKnownDir/sitemap.xml
 
     Include $appConfigFilesDir/
 </VirtualHost>
@@ -373,7 +400,7 @@ sub removeSite {
             UBOS::Utils::rmdir( $appConfigFilesDir );
         }
         if( -d $siteWellKnownDir ) {
-            UBOS::Utils::rmdir( $siteWellKnownDir );
+            UBOS::Utils::deleteRecursively( $siteWellKnownDir );
         }
 
         UBOS::Utils::rmdir( $siteDocumentDir );
