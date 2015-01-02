@@ -122,7 +122,7 @@ sub run {
         }
         $haveIdAlready->{$newSiteId} = $newSite;
 
-        if( $haveAnyHostAlready ) {
+        if( $haveAnyHostAlready && '*' ne $newSite->hostName() ) {
             fatal( "There is already a site with hostname * (any), so no other site can be created." );
         }
         my $newSiteHostName = $newSite->hostName;
