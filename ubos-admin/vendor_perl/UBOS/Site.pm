@@ -276,24 +276,31 @@ sub robotsTxt {
     my $json = $self->{json};
     if( defined( $json->{wellknown} )) {
         return $json->{wellknown}->{robotstxt};
-    } else {
-		return undef;
 	}
-}
+    my $robotsTxt = $json->{wellknown}->{robotstxtprefix};
+    if( $robotsTxt ) {
+        $robotsTxt .= "\n";
+    }
 
-##
-# Obtain the beginning of the site's robots.txt file content, if no robots.txt
-# has been provided.
-# return: prefix of robots.txt content
-sub robotsTxtPrefix {
-    my $self = shift;
+    my $thisFirst = "User-Agent: *\n";
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        my $app     = $appConfig->app();
+        my $context = $appConfig->context();
 
-    my $json = $self->{json};
-    if( defined( $json->{wellknown} )) {
-        return $json->{wellknown}->{robotstxtprefix};
+        foreach my $allow ( $app->robotstxtAllow() ) {
+            $robotsTxt .= $thisFirst . "Allow: $context$allow\n";
+            $thisFirst  = '';
+        }
+        foreach my $disallow ( $app->robotstxtDisallow() ) {
+            $robotsTxt .= $thisFirst . "Disallow: $context$disallow\n";
+            $thisFirst  = '';
+        }
+    }
+    if( $robotsTxt ) {
+        return $robotsTxt;
     } else {
-		return undef;
-	}
+        return undef;
+    }
 }
 
 ##
@@ -791,7 +798,7 @@ sub _checkJson {
         fatal( 'Site JSON: admin section: invalid email' );
     }
 
-    if( $json->{tls} ) {
+    if( exists( $json->{tls} )) {
         unless( ref( $json->{tls} ) eq 'HASH' ) {
             fatal( 'Site JSON: tls section: not a JSON object' );
         }
@@ -809,12 +816,22 @@ sub _checkJson {
         }
     }
 
-    if( $json->{wellknown} ) {
+    if( exists( $json->{wellknown} )) {
         unless( ref( $json->{wellknown} ) eq 'HASH' ) {
             fatal( 'Site JSON: wellknown section: not a JSON object' );
         }
-        if( $json->{wellknown}->{robotstxt} && ref( $json->{wellknown}->{robotstxt} )) {
-            fatal( 'Site JSON: wellknown section: invalid robotstxt' );
+        if( $json->{wellknown}->{robotstxt} ) {
+            if( ref( $json->{wellknown}->{robotstxt} )) {
+                fatal( 'Site JSON: wellknown section: invalid robotstxt' );
+            }
+            if( exists( $json->{wellknown}->{robotstxtprefix} )) {
+                fatal( 'Site JSON: wellknown section: specifiy robotstxt or robotstxtprefix, not both' );
+            }
+        }
+        if( $json->{wellknown}->{robotstxtprefix} ) {
+            if( ref( $json->{wellknown}->{robotstxtprefix} )) {
+                fatal( 'Site JSON: wellknown section: invalid robotstxtprefix' );
+            }
         }
         if(    $json->{wellknown}->{sitemapxml}
             && (    ref( $json->{wellknown}->{sitemapxml} )

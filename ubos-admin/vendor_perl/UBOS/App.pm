@@ -64,4 +64,32 @@ sub defaultContext {
     return $self->{json}->{roles}->{apache2}->{defaultcontext};
 }
 
+##
+# Return an array of paths relative to the AppConfiguration's context
+# that shall be included in the "allow" section of the site's robots.txt file.
+# return: array of paths
+sub robotstxtAllow {
+    my $self = shift;
+
+    if( defined( $self->{json}->{roles}->{apache2}->{robotstext}->{allow} ) && @{$self->{json}->{roles}->{apache2}->{robotstext}->{allow}} ) {
+        return @{$self->{json}->{roles}->{apache2}->{robotstext}->{allow}};
+    } else {
+        return ();
+    }
+}
+
+##
+# Return an array of paths relative to the AppConfiguration's context
+# that shall be included in the "disallow" section of the site's robots.txt file.
+# return: array of paths
+sub robotstxtDisallow {
+    my $self = shift;
+
+    if( defined( $self->{json}->{roles}->{apache2}->{robotstext}->{disallow} ) && @{$self->{json}->{roles}->{apache2}->{robotstext}->{disallow}} ) {
+        return @{$self->{json}->{roles}->{apache2}->{robotstext}->{disallow}};
+    } else {
+        return ();
+    }
+}
+            
 1;
