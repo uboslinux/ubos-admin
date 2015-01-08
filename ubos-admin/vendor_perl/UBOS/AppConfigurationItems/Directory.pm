@@ -210,11 +210,11 @@ sub restore {
 
     if( $filemode > -1 ) {
         my $asOct = sprintf( "%o", $filemode );
-        UBOS::Utils::myexec( "find '$fullName' -type f -exec chmod $asOct {}\;" ); # no -h on Linux
+        UBOS::Utils::myexec( "find '$fullName' -type f -exec chmod $asOct {} \\;" ); # no -h on Linux
     }
     if( $dirmode > -1 ) {
         my $asOct = sprintf( "%o", $dirmode );
-        UBOS::Utils::myexec( "find '$fullName' -type d -exec chmod $asOct {}\;" ); # no -h on Linux
+        UBOS::Utils::myexec( "find '$fullName' -type d -exec chmod $asOct {} \\;" ); # no -h on Linux
     }
 
     if( defined( $uid )) {
