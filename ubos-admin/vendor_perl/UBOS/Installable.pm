@@ -39,70 +39,80 @@ our $knownCustomizationPointTypes = {
             my $v = shift;
             return !ref( $v ) && $v !~ /\n/;
         },
-        'valuecheckerror' => 'string value without newlines required'
+        'valuecheckerror' => 'string value without newlines required',
+        'ask' => 1
     },
     'email' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v ) && $v !~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
         },
-        'valuecheckerror' => 'valid e-mail address required'
+        'valuecheckerror' => 'valid e-mail address required',
+        'ask' => 1
     },
     'url' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v ) && $v =~ m!^https?://\S+$!;
         },
-        'valuecheckerror' => 'valid http or https URL required'
+        'valuecheckerror' => 'valid http or https URL required',
+        'ask' => 1
     },
     'text' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v );
         },
-        'valuecheckerror' => 'string value required (multiple lines allowed)'
+        'valuecheckerror' => 'string value required (multiple lines allowed)',
+        'ask' => 1
     },
     'password' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v ) && $v =~ /^\S{4,}$/;
         },
-        'valuecheckerror' => 'must be at least four characters long and not contain white space'
+        'valuecheckerror' => 'must be at least four characters long and not contain white space',
+        'ask' => 1
     },
     'boolean' => {
         'valuecheck' => sub {
             my $v = shift;
             return ref( $v ) =~ m/^JSON.*[Bb]oolean$/;
         },
-        'valuecheckerror' => 'must be true or false'
+        'valuecheckerror' => 'must be true or false',
+        'ask' => 1
     },
     'integer' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v ) && $v =~ /^-?[0-9]+$/;
         },
-        'valuecheckerror' => 'must be a whole number'
+        'valuecheckerror' => 'must be a whole number',
+        'ask' => 1
     },
     'positiveinteger' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v ) && $v =~ /^[1-9][0-9]*$/;
         },
-        'valuecheckerror' => 'must be a positive, whole number'
+        'valuecheckerror' => 'must be a positive, whole number',
+        'ask' => 1
     },
     'positiveintegerorzero' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v ) && $v =~ /^[0-9]+$/;
         },
-        'valuecheckerror' => 'must be a positive, whole number or 0'
+        'valuecheckerror' => 'must be a positive, whole number or 0',
+        'ask' => 1
     },
     'image' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v );
         },
-        'valuecheckerror' => 'in-lined image string required'
+        'valuecheckerror' => 'in-lined image string required',
+        'ask' => 0
     }
 };
 

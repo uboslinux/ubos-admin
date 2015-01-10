@@ -42,6 +42,7 @@ sub run {
     my @args = @_;
 
     my $noapp         = 0;
+    my $askAll        = 0;
     my $tls           = 0;
     my $selfSigned    = 0;
     my $verbose       = 0;
@@ -50,12 +51,13 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'noapp'       => \$noapp,
-            'tls'         => \$tls,
-            'selfsigned'  => \$selfSigned,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'dry-run|n'   => \$dryRun );
+            'noapp'                        => \$noapp,
+            'askForAllCustomizationPoints' => \$askAll,
+            'tls'                          => \$tls,
+            'selfsigned'                   => \$selfSigned,
+            'verbose+'                     => \$verbose,
+            'logConfig=s'                  => \$logConfigFile,
+            'dry-run|n'                    => \$dryRun );
 
     UBOS::Logging::initialize( 'ubos-admin', 'createsite', $verbose, $logConfigFile );
 
@@ -143,11 +145,17 @@ sub run {
                 foreach my $custPointName ( keys %$custPoints ) {
                     my $custPointDef = $custPoints->{$custPointName};
 
-                    # only ask for required values
-                    unless( $custPointDef->{required} ) {
+                    if( !$askAll && !$custPointDef->{required} ) {
                         next;
                     }
-                    my $value = ask( (( $installable == $app ) ? 'App' : 'Accessory' ) . ' ' . $installable->packageName . " requires a value for $custPointName: " );
+                    unless( $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{ask} ) {
+                        next; # can't ask for things that cannot be entered at the keyboard
+                    }
+                    my $value = ask(
+                            (( $installable == $app ) ? 'App ' : 'Accessory ' )
+                            . $installable->packageName
+                            . ( $askAll ? ' suports' : ' requires' )
+                            . " a value for $custPointName: " );
 
                     my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                     unless( $custPointValidation->{valuecheck}->( $value )) {
@@ -161,10 +169,10 @@ sub run {
 
     my $newSiteJsonString;
     
-    my $siteId      = UBOS::Host::createNewSiteId();
-    my $appConfigId = UBOS::Host::createNewAppConfigId();
-    my $adminUserId       = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
-    my $adminUserName     = ask( 'Site admin user name (e.g. John Doe): ' );
+    my $siteId        = UBOS::Host::createNewSiteId();
+    my $appConfigId   = UBOS::Host::createNewAppConfigId();
+    my $adminUserId   = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
+    my $adminUserName = ask( 'Site admin user name (e.g. John Doe): ' );
     my $adminCredential;
     my $adminEmail;
 
@@ -179,6 +187,7 @@ sub run {
     my $tlsCrtChain;
     my $tlsCaCrt;
 
+    my $newSiteJson = {};
     if( $tls ) {
         if( $selfSigned ) {
             my $dir = File::Temp->newdir();
@@ -272,117 +281,61 @@ sub run {
         }
     }
 
-    $newSiteJsonString = <<JSON;
-{
-    "siteid" : "$siteId",
-    "hostname" : "$hostname",
+    $newSiteJson->{siteid}   = $siteId;
+    $newSiteJson->{hostname} = $hostname;
 
-    "admin" : {
-        "userid"     : "$adminUserId",
-        "username"   : "$adminUserName",
-        "credential" : "$adminCredential",
-        "email"      : "$adminEmail"
-    },
-JSON
+    $newSiteJson->{admin}->{userid}     = $adminUserId;
+    $newSiteJson->{admin}->{username}   = $adminUserName;
+    $newSiteJson->{admin}->{credential} = $adminCredential;
+    $newSiteJson->{admin}->{email}      = $adminEmail;
+
     if( $tls ) {
-        $newSiteJsonString .= <<JSON;
-    "tls" : {
-JSON
         if( $tlsKey ) {
-            my $enc = UBOS::Utils::writeJsonToString( $tlsKey );
-            $newSiteJsonString .= <<JSON;
-        "key"      : $enc,
-JSON
+            $newSiteJson->{tls}->{key} = $tlsKey;
         }
         if( $tlsCrt ) {
-            my $enc = UBOS::Utils::writeJsonToString( $tlsCrt );
-            $newSiteJsonString .= <<JSON;
-        "crt"      : $enc,
-JSON
+            $newSiteJson->{tls}->{crt} = $tlsCrt;
         }
         if( $tlsCrtChain ) {
-            my $enc = UBOS::Utils::writeJsonToString( $tlsCrtChain );
-            $newSiteJsonString .= <<JSON;
-        "crtchain" : $enc,
-JSON
+            $newSiteJson->{tls}->{crtchain} = $tlsCrtChain;
         }
         if( $tlsCaCrt ) {
-            my $enc = UBOS::Utils::writeJsonToString( $tlsCaCrt );
-            $newSiteJsonString .= <<JSON;
-        "cacrt"    : $enc  
-JSON
+            $newSiteJson->{tls}->{cacrt} = $tlsCaCrt;
         }
-        $newSiteJsonString .= <<JSON;
-    },
-JSON
     }
 
     unless( $noapp ) {
-        $newSiteJsonString .= <<JSON;
-    "appconfigs" : [
-        {
-            "appconfigid" : "$appConfigId",
-            "appid" : "$appId",
-JSON
-
+        my $appConfigJson = {};
+        $appConfigJson->{appconfigid} = $appConfigId;
+        $appConfigJson->{appid}       = $appId;
+        
         if( defined( $context )) {
-            $newSiteJsonString .= <<JSON;
-            "context" : "$context",
-JSON
+            $appConfigJson->{context} = $context;
         }
         if( @accs ) {
-            $newSiteJsonString .= <<JSON;
-            "accessories" : [
-JSON
-            $newSiteJsonString .= join( '', map { '                "' . $_->packageName . "\",\n" } @accs );
-            
-            $newSiteJsonString .= <<JSON;
-            ],
-JSON
+            map { $appConfigJson->{accessories} = @_->packageName } @accs;
         }
+
         if( %$custPointValues ) {
-            $newSiteJsonString .= <<JSON;
-            "customizationpoints" : {
-JSON
             foreach my $packageName ( sort keys %$custPointValues ) {
-                my $packageInfo = $custPointValues->{$packageName};
+                my $packageInfo   = $custPointValues->{$packageName};
+                my $custPointJson = {};
 
-                $newSiteJsonString .= <<JSON;
-                "$packageName" : {
-JSON
                 foreach my $name ( sort keys %$packageInfo ) {
-                    my $value = $packageInfo->{$name};
-
-                    $newSiteJsonString .= <<JSON;
-                    "$name" : {
-                        "value" : "$value"
-                    },
-JSON
+                    $custPointJson->{$name} = $packageInfo->{$name};
                 }
-                $newSiteJsonString .= <<JSON;
-                },
-JSON
+                $newSiteJson->{customizationpoints}->{$packageName} = $custPointJson;
             }
-            $newSiteJsonString .= <<JSON;
-            }
-JSON
         }
-        $newSiteJsonString .= <<JSON;
-        }
-    ]
-JSON
+        $newSiteJson->{appconfigs} = [ $appConfigJson ];
     }
-        $newSiteJsonString .= <<JSON;
-}
-JSON
 
     my $ret = 1;
     if( $dryRun ) {
-        print $newSiteJsonString;
+        print UBOS::Utils::writeJsonToString( $newSiteJson );
 
     } else {
-        my $newSiteJson = UBOS::Utils::readJsonFromString( $newSiteJsonString );
-        my $newSite     = UBOS::Site->new( $newSiteJson );
+        my $newSite = UBOS::Site->new( $newSiteJson );
 
         my $prerequisites = {};
         $newSite->addDependenciesToPrerequisites( $prerequisites );
@@ -463,14 +416,14 @@ sub ask {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--noapp] [--tls [--selfsigned]]
+    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]]
 SSS
     Interactively define and install a new site. Unless --noapp is
     provided, the site will run one app. If --tls is provided, the
     site will be secured with SSL.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--noapp] [--tls [--selfsigned]] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed
