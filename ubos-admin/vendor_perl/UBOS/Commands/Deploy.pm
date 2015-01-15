@@ -232,7 +232,9 @@ sub run {
 
     # Now that we have prerequisites, we can check whether the site is deployable
     foreach my $newSite ( @newSites ) {
-        $newSite->checkDeployable();
+        unless( $newSite->checkDeployable()) {
+            fatal();
+        }
     }
 
     debug( 'Setting up placeholder sites or suspending existing sites' );

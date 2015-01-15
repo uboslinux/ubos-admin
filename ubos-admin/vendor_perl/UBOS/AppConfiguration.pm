@@ -362,6 +362,17 @@ sub _deployOrCheck {
         UBOS::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
     }
 
+    # make sure we don't deploy to an invalid context
+    my $app = $self->app();
+
+    if(    defined( $app->fixedContext() )
+        && defined( $self->{json}->{context} )
+        && $self->{app}->fixedContext() ne $self->{json}->{context} )
+    {
+        error( 'Cannot deploy fixed-context app', $app->packageName, 'at context', $self->{json}->{context} );
+        $ret = 0;
+    }
+
     my @installables = $self->installables();
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;

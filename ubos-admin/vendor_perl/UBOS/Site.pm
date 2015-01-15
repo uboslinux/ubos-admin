@@ -575,7 +575,6 @@ sub _deployOrCheck {
     if( $doIt ) {
         UBOS::Host::siteDeployed( $self );
     }
-
     return $ret;
 }
 
