@@ -761,8 +761,7 @@ sub _checkJson {
     unless( $json->{hostname} ) {
         fatal( 'Site JSON: missing hostname' );
     }
-    unless( ref( $json->{hostname} ) || $json->{hostname} =~ m/^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$|^\*$/ ) {
-        # regex originally from http://stackoverflow.com/a/1420225/200304
+    unless( UBOS::Host::isValidHostname( $json->{hostname} )) {
         fatal( 'Site JSON: invalid hostname' );
     }
 
@@ -857,17 +856,62 @@ sub _checkJson {
                 fatal( "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars" );
             }
             if(    $appConfigJson->{context}
-                && (    ref( $appConfigJson->{context} ) || !UBOS::AppConfiguration::isValidContext( $appConfigJson->{context} )))
+                && ( ref( $appConfigJson->{context} ) || !UBOS::AppConfiguration::isValidContext( $appConfigJson->{context} )))
             {
                 fatal( "Site JSON: appconfig $i: invalid context, must be valid context URL without trailing slash" );
             }
-            if( $appConfigJson->{isdefault} && !JSON::is_bool( $appConfigJson->{isdefault} )) {
+            if( defined( $appConfigJson->{isdefault} ) && !JSON::is_bool( $appConfigJson->{isdefault} )) {
                 fatal( "Site JSON: appconfig $i: invalid isdefault, must be true or false" );
             }
-            unless( $appConfigJson->{appid} && !ref( $appConfigJson->{appid} )) {
+            unless( UBOS::Installable::isValidPackageName( $appConfigJson->{appid} )) {
                 fatal( "Site JSON: appconfig $i: invalid appid" );
-                # FIXME: format of this string must be better specified and checked
             }
+            my %installables = ();
+            $installables{$appConfigJson->{appid}} = 1;
+            
+            if( exists( $appConfigJson->{accessoryids} )) {
+                unless( ref( $appConfigJson->{accessoryids} ) eq 'ARRAY' ) {
+                    fatal( "Site JSON: appconfig $i, accessoryids: not a JSON array" );
+                }
+                foreach my $accessoryId ( @{$appConfigJson->{accessoryids}} ) {
+                    unless( UBOS::Installable::isValidPackageName( $accessoryId )) {
+                        fatal( "Site JSON: appconfig $i: invalid accessoryid" );
+                    }
+                    $installables{$accessoryId} = 1;
+                }
+            }
+            if( exists( $appConfigJson->{customizationpoints} )) {
+                if( ref( $appConfigJson->{customizationpoints} ) ne 'HASH' ) {
+                    fatal( 'Site JSON: customizationpoints section: not a JSON HASH' );
+                }
+                foreach my $packageName ( keys %{$appConfigJson->{customizationpoints}} ) {
+                    unless( $installables{$packageName} ) {
+                        fatal( 'Site JSON: customizationpoint specified for non-installed installable' );
+                    }
+                    my $custPointsForPackage = $appConfigJson->{customizationpoints}->{$packageName};
+                    if( !$custPointsForPackage || ref( $custPointsForPackage ) ne 'HASH' ) {
+                        fatal( 'Site JSON: customizationpoints for package ' . $packageName . ' must be a JSON hash' );
+                    }
+                    foreach my $pointName ( keys %$custPointsForPackage ) {
+                        unless( $pointName =~ m!^[a-z]+$! ) {
+                            fatal( 'Site JSON: invalid name for customizationpoint: ' . $pointName );
+                        }
+                        my $pointValue = $custPointsForPackage->{$pointName};
+                        if( !$pointValue || ref( $pointValue ) ne 'HASH' ) {
+                            fatal( 'Site JSON: customizationpoint values for package ' . $packageName . ', point ' . $pointName . ' must be a JSON hash' );
+                        }
+                        my $valueValue = $pointValue->{value};
+                        if( !$valueValue ) {
+                            fatal( 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' is not given' );
+                        }
+                        my $valueEncoding = $pointValue->{encoding};
+                        if( $valueEncoding && $valueEncoding ne 'base64' ) {
+                            fatal( 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' invalid encoding' );
+                        }
+                    }
+                }
+            }
+            
             ++$i;
         }
     }

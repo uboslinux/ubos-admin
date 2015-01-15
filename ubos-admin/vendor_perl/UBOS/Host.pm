@@ -3,7 +3,7 @@
 # Represents the local host.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -314,6 +314,25 @@ sub createNewSiteId {
 # return: the appconfigid
 sub createNewAppConfigId {
     return 'a' . UBOS::Utils::randomHex( 40 );
+}
+
+##
+# Determine whether this is a valid hostname
+# $hostname: the hostname
+# return: 1 or 0
+sub isValidHostname {
+    my $hostname = shift;
+
+    if( ref( $hostname )) {
+        error( 'Supposed hostname is not a string:', ref( $hostname ));
+        return 0;
+    }
+
+    unless( $hostname =~ m!^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$|^\*$! ) {
+        # regex originally from http://stackoverflow.com/a/1420225/200304
+        return 0;
+    }
+    return 1;
 }
 
 ##

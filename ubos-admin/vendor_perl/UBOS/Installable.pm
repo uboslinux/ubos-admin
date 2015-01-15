@@ -3,7 +3,7 @@
 # Superclass of all installable items e.g. Apps, Accessories.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -469,6 +469,25 @@ sub myFatal {
     my @message = @_;
 
     fatal( "Manifest JSON for package", $self->packageName, ':', @message );
+}
+
+##
+# Determine whether this is a valid package name.
+# $packageName: the package name
+# return: 0 or 1
+sub isValidPackageName {
+    my $packageName = shift;
+
+    unless( defined( $packageName )) {
+        return 0;
+    }
+    if( ref( $packageName )) {
+        return 0;
+    }
+    unless( $packageName =~ m!^[-a-z0-9_.]+$! ) {
+        return 0;
+    }
+    return 1;
 }
 
 1;
