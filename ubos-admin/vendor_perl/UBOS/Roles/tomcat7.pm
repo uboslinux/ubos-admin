@@ -99,7 +99,7 @@ sub setupSite {
     UBOS::Host::ensurePackages( 'tomcat7' );
 
     my $siteId          = $site->siteId;
-    my $hostname        = $site->hostName;
+    my $hostname        = $site->hostname;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
@@ -137,7 +137,7 @@ sub removeSite {
     my $triggers = shift;
 
     my $siteId          = $site->siteId;
-    my $hostname        = $site->hostName;
+    my $hostname        = $site->hostname;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
@@ -168,12 +168,12 @@ END
     foreach my $site ( values %$sites ) {
         if( $site->needsRole( $self )) {
             my $siteId   = $site->siteId;
-            my $hostName = $site->hostName;
+            my $hostname = $site->hostname;
             my $appBase  = "$sitesAppsDir/$siteId";
             my $logFile  = $siteId . '_access_log.';
             
             $hostsSection .= <<END;
-      <Host name="$hostName" appBase="$appBase" unpackWARs="true" autoDeploy="true">
+      <Host name="$hostname" appBase="$appBase" unpackWARs="true" autoDeploy="true">
 
         <!-- SingleSignOn valve, share authentication between web applications
              Documentation at: /docs/config/valve.html -->

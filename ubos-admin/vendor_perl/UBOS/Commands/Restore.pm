@@ -301,15 +301,15 @@ sub restoreSites {
     # $hostname cannot exist on same host
     if( $hostname ) {
         foreach my $site ( values %$sites ) {
-            if( $hostname eq $site->hostName ) {
+            if( $hostname eq $site->hostname ) {
                 fatal( 'This host already runs a site at hostname', $hostname );
             }
         }
     } else {
         foreach my $siteOnHost ( values %$sites ) {
-            my $hostnameOnHost = $siteOnHost->hostName;
+            my $hostnameOnHost = $siteOnHost->hostname;
             foreach my $siteToRestore ( values %sitesToRestore ) {
-                my $hostnameToRestore = $siteToRestore->hostName();
+                my $hostnameToRestore = $siteToRestore->hostname();
                 if( $hostnameOnHost eq $hostnameToRestore ) {
                     fatal( 'Cannot restore Site to hostname that is already taken:', $hostnameToRestore );
                 }

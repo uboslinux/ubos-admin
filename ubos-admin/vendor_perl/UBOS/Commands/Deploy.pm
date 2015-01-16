@@ -109,8 +109,8 @@ sub run {
     my $haveAnyHostAlready = 0; # true if we have the * (any) host
     
     foreach my $oldSite ( values %$oldSites ) {
-        $haveHostAlready->{$oldSite->hostName} = $oldSite;
-        if( '*' eq $oldSite->hostName ) {
+        $haveHostAlready->{$oldSite->hostname} = $oldSite;
+        if( '*' eq $oldSite->hostname ) {
             $haveAnyHostAlready = 1;
         }
     }
@@ -122,10 +122,10 @@ sub run {
         }
         $haveIdAlready->{$newSiteId} = $newSite;
 
-        if( $haveAnyHostAlready && '*' ne $newSite->hostName() ) {
+        if( $haveAnyHostAlready && '*' ne $newSite->hostname() ) {
             fatal( "There is already a site with hostname * (any), so no other site can be created." );
         }
-        my $newSiteHostName = $newSite->hostName;
+        my $newSiteHostName = $newSite->hostname;
 
         if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
             fatal( 'There is already a site with hostname', $newSiteHostName );

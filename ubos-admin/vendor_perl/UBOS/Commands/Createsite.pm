@@ -74,7 +74,7 @@ sub run {
     my $appId;
     my $app;
 
-    if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostName ) {
+    if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostname ) {
         fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
         exit 1;
     }
@@ -97,7 +97,7 @@ sub run {
             }
         } else {
             foreach my $oldSite ( values %$oldSites ) {
-                if( $oldSite->hostName eq $hostname ) {
+                if( $oldSite->hostname eq $hostname ) {
                     print "There is already a site with hostname $hostname.\n";
                     if( $noapp ) {
                         next outer;

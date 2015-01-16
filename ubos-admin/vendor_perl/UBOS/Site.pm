@@ -159,7 +159,7 @@ sub _siteJsonWithout {
 ##
 # Obtain the site's host name.
 # return: string
-sub hostName {
+sub hostname {
     my $self = shift;
 
     return $self->{json}->{hostname};
@@ -178,7 +178,7 @@ sub config {
         $self->{config} = UBOS::Configuration->new(
                     "Site=$siteId",
                     {
-                        "site.hostname"         => $self->hostName(),
+                        "site.hostname"         => $self->hostname(),
                         "site.siteid"           => $siteId,
                         "site.protocol"         => ( $self->hasTls() ? 'https' : 'http' ),
                         "site.admin.userid"     => $adminJson->{userid},
@@ -396,7 +396,7 @@ sub print {
         if( $self->hasTls ) {
             print " (TLS)";
         }
-        print ": " . $self->hostName;
+        print ": " . $self->hostname;
         print " (" . $self->siteId . ")\n";
         if( $detail >= 2 ) {
             foreach my $isDefault ( 1, 0 ) {

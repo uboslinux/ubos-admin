@@ -136,10 +136,10 @@ sub setupPlaceholderSite {
     my $triggers        = shift;
 
     my $siteId            = $site->siteId;
-    my $hostName          = $site->hostName;
-    my $siteFile          = ( '*' eq $hostName ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
+    my $hostname          = $site->hostname;
+    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
-    my $serverDeclaration = ( '*' eq $hostName ) ? '# Hostname * (any)' : "    ServerName $hostName";
+    my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
     debug( 'apache2::setupPlaceholderSite', $siteId );
 
@@ -149,7 +149,7 @@ sub setupPlaceholderSite {
 
     my $content .= <<CONTENT;
 #
-# Apache config fragment for placeholder site $siteId (placeholder $placeholderName) at host $hostName
+# Apache config fragment for placeholder site $siteId (placeholder $placeholderName) at host $hostname
 #
 # (C) 2013-2014 Indie Computing Corp.
 # Generated automatically, do not modify.
@@ -184,12 +184,12 @@ sub setupSite {
     my $triggers = shift;
 
     my $siteId            = $site->siteId;
-    my $hostName          = $site->hostName;
-    my $siteFile          = ( '*' eq $hostName ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
+    my $hostname          = $site->hostname;
+    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
-    my $serverDeclaration = ( '*' eq $hostName ) ? '# Hostname * (any)' : "    ServerName $hostName";
+    my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
     debug( 'apache2::setupSite', $siteId );
 
@@ -216,7 +216,7 @@ sub setupSite {
 
     my $siteFileContent = <<CONTENT;
 #
-# Apache config fragment for site $siteId at host $hostName
+# Apache config fragment for site $siteId at host $hostname
 #
 # (C) 2013-2014 Indie Computing Corp.
 # Generated automatically, do not modify.
@@ -237,7 +237,7 @@ CONTENT
 <VirtualHost *:80>
 $serverDeclaration
 
-    Redirect / https://$hostName/
+    Redirect / https://$hostname/
 </VirtualHost>
 CONTENT
 
@@ -385,8 +385,8 @@ sub removeSite {
     my $triggers = shift;
 
     my $siteId            = $site->siteId;
-    my $hostName          = $site->hostName;
-    my $siteFile          = ( '*' eq $hostName ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
+    my $hostname          = $site->hostname;
+    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentDir   = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";

@@ -33,9 +33,9 @@ my $q      = new CGI;
 my $locale = 'en_US'; # for now
 
 if( $site ) {
-    my $hostName = $site->hostName;
-    if( '*' eq $hostName ) {
-        $hostName = 'Indie Box';
+    my $hostname = $site->hostname;
+    if( '*' eq $hostname ) {
+        $hostname = 'Indie Box';
     }
     print $q->header( -type => 'text/html' );
     print <<HTML;
@@ -49,7 +49,7 @@ if( $site ) {
   <div class="page">
    <div class="logo"><a href="http://indiebox.net/"><img src="/_common/images/indiebox-logo-horizontal-142x41.png" /></a></div>
    <div class="content">
-    <h1>$hostName</h1>
+    <h1>$hostname</h1>
 HTML
 
     my $appConfigs = $site->appConfigs;

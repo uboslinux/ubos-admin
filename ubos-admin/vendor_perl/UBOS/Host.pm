@@ -153,7 +153,7 @@ sub findSiteByHostname {
     foreach my $siteId ( keys %$sites ) {
         my $site = $sites->{$siteId};
 
-        if( $site->hostName eq $host ) {
+        if( $site->hostname eq $host ) {
             return $site;
         }
     }
