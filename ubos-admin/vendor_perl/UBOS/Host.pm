@@ -577,6 +577,9 @@ sub ensurePacmanInit {
             UBOS::Utils::myexec( "date $ds" );
         }
     }
+    if( -x '/usr/bin/pacman-db-upgrade' ) {
+        UBOS::Utils::myexec( 'pacman-db-upgrade' ); # not sure when this can be removed again
+    }
     
     UBOS::Utils::myexec( "pacman-key --init" );
 
