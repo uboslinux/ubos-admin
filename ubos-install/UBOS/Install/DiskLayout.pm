@@ -102,23 +102,39 @@ sub formatDisks {
 ##
 # Mount this disk layout at the specified target directory
 # $target: the target directory
-sub mount {
+sub mountDisks {
     my $self   = shift;
     my $target = shift;
 
-    fatal( 'Must override:', ref( $self ));
+    my $errors = 0;
+    if( defined( $self->{mountpointToDevice} )) {
+        # shortest first
+        foreach my $dir ( sort { length( $a ) <=> length( $b ) } keys %{$self->{mountpointToDevice}} ) {
+            my $device = $self->{mountpointToDevice}->{$dir};
+
+            unless( -d "$target$dir" ) {
+                UBOS::Utils::mkdir( "$target$dir" );
+            }
+            if( UBOS::Utils::myexec( "mount '$device' '$target$dir'" )) {
+                ++$errors;
+            }
+        }
+    }
+    return $errors;
 }
 
 ##
 # Unmount the previous mounts
-sub unmount {
-    my $self = shift;
+# $target: the target directory
+sub unmountDisks {
+    my $self   = shift;
+    my $target = shift;
 
     my $errors = 0;
     if( defined( $self->{mountpointToDevice} )) {
         # longest first
-        foreach my $mount ( sort { length( $b ) <=> length( $a ) } keys %{$self->{mountpointToDevice}} ) {
-            if( UBOS::Utils::myexec( "umount '$mount'" )) {
+        foreach my $dir ( sort { length( $b ) <=> length( $a ) } keys %{$self->{mountpointToDevice}} ) {
+            if( UBOS::Utils::myexec( "umount '$target$dir'" )) {
                 ++$errors;
             }
         }
@@ -313,23 +329,20 @@ END
 }
 
 ##
-# Mount this disk layout at the specified target directory
+# Unmount the previous mounts. Override because we need to take care of the
+# loopback devices.
 # $target: the target directory
-sub mount {
+sub unmountDisks {
     my $self   = shift;
     my $target = shift;
 
-    fatal( 'Must override:', ref( $self ));
-}
+    my $errors = $self->SUPER::unmountDisks( $target );
 
-##
-# Unmount the previous mounts. Override because we need to take care of the
-# loopback devices.
-sub unmount {
-    my $self = shift;
-
-    my $errors = $self->SUPER::unmount();
-
+    my $err;
+    if( UBOS::Utils::myexec( "kpartx -d '" . $self->{rootpartition} . "'", undef, undef, \$err )) {
+        error( "kpartx error:", $err );
+        ++$errors;
+    }
     
     return $errors;
 }
