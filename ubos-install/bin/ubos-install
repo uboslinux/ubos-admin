@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+#
+# Install UBOS on one or more currently unmounted devices.
+#
+# Examples:
+#     ubos-install --class pc --rootpartition /dev/sda
+#     ubos-install --class pc --rootpartition /dev/sda --rootpartition /dev/sdb --hostname rpi
+#     ubos-install --class rpi --rootpartition /dev/sdb
+#     ubos-install --class pc --bootloader-device /dev/sda --rootpartition /dev/sda1 --varpartition /dev/sda2
+#
+# This file is part of ubos-admin.
+# (C) 2012-2014 Indie Computing Corp.
+#
+# ubos-admin is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ubos-admin is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ubos-admin.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long qw( GetOptionsFromArray );
+
+use UBOS::Logging;
+use UBOS::Utils;
+use UBOS::Install::DiskLayout;
+use UBOS::Install::Installers::Pc;
+
+if ( $< != 0 ) {
+    fatal( "This command must be run as root" ); 
+}
+
+my $verbose          = 0;
+my $logConfigFile    = undef;
+my $ret              = 0;
+my $channel          = undef;
+my $hostname         = undef;
+my $deviceclassname  = undef;
+my $target           = undef;
+my $bootloaderdevice = undef;
+my $bootpartition    = undef;
+my @rootpartitions   = ();
+my @varpartitions    = ();
+my $help             = 0;
+
+my $parseOk = GetOptions(
+        'verbose+'           => \$verbose,
+        'logConfig=s'        => \$logConfigFile,
+        'channel=s'          => \$channel,
+        'hostname=s'         => \$hostname,
+        'deviceclass=s'      => \$deviceclassname,
+        'target=s'           => \$target,
+        'bootloaderdevice=s' => \$bootloaderdevice,
+        'bootpartition=s'    => \$bootpartition,
+        'rootpartition=s'    => \@rootpartitions,
+        'varpartition=s'     => \@varpartitions,
+        'help'                => \$help );
+
+UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile );
+
+if( $help ) {
+    synopsisHelpQuit( 1 );
+}
+if( @ARGV || !$deviceclassname || !$target || !@rootpartitions ) {
+    synopsisHelpQuit( 0 );
+}
+
+my $installer = findInstaller( $deviceclassname );
+unless( $installer ) {
+    fatal( 'Cannot find installer for device class', $deviceclassname );
+}
+
+$installer->setTarget( $target );
+if( $hostname ) {
+    $installer->setHostname( $hostname );
+}
+if( $channel ) {
+    $installer->setChannel( $channel );
+}
+
+debug( 'Using installer', $installer );
+
+my $diskLayout = UBOS::Install::DiskLayout->new(
+        \@rootpartitions,
+        \@varpartitions,
+        $bootpartition,
+        $bootloaderdevice );
+
+$installer->install( $diskLayout );
+
+exit( $ret );
+
+
+##
+# Find the right installer for this device class
+sub findInstaller {
+    my $className = shift;
+
+    my $installers = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Install::Installers' );
+    my $installer  = $installers->{$className};
+
+    unless( $installer ) {
+        return undef;
+    }
+
+    my $ret = UBOS::Utils::invokeMethod( $installer . '->new' );
+    return $ret;
+}
+
+#####
+# Print synopsis or help
+# $long: if true, print long help
+# $exit: exit code
+sub synopsisHelpQuit {
+    my $long = shift;
+    my $exit = shift || 0;
+
+    fatal( 'synopsisHelpQuit not implemented' );
+
+    exit $exit;
+}
+
+1;

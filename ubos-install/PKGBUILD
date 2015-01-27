@@ -1,0 +1,18 @@
+developer="http://indiecomputing.com/"
+url="http://ubos.net/"
+maintainer=$developer
+pkgname=$(basename $(pwd))
+pkgver=0.1
+pkgrel=1
+pkgdesc="UBOS installation tool"
+arch=('any')
+license=('GPL')
+depends=(
+    'ubos-admin' )
+options=('!strip')
+
+package() {
+# Code
+    mkdir -p ${pkgdir}/usr/bin
+    install -m755 ${startdir}/bin/ubos-install ${pkgdir}/usr/bin/
+}
