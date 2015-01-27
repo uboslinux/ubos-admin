@@ -16,7 +16,7 @@ package UBOS::Install::DiskLayout;
 use fields qw( bootfs bootsize
                rootfs rootsize
                varfs  varsize
-               unmount );
+               mountpointToDevice );
 
 use UBOS::Logging;
 use UBOS::Utils;
@@ -115,9 +115,12 @@ sub unmount {
     my $self = shift;
 
     my $errors = 0;
-    foreach my $mount ( @{$self->{unmount}} ) {
-        if( UBOS::Utils::myexec( "umount '$mount'" )) {
-            ++$errors;
+    if( defined( $self->{mountpointToDevice} )) {
+        # longest first
+        foreach my $mount ( sort { length( $b ) <=> length( $a ) } keys %{$self->{mountpointToDevice}} ) {
+            if( UBOS::Utils::myexec( "umount '$mount'" )) {
+                ++$errors;
+            }
         }
     }
     return $errors;
@@ -223,7 +226,7 @@ $i
 a
 END
         $fdiskScript .= $self->appendFdiskChangePartitionType( $self->{bootfs}, $i );
-        $mkfsTable{$i} = $self->{bootfs};
+        $mkfsTable{$i} = [ $self->{bootfs}, '/boot' ];
         ++$i;
     }
     if( $self->{varfs} && $self->{varsize} ) {
@@ -236,7 +239,7 @@ $i
 +$size
 END
         $fdiskScript .= $self->appendFdiskChangePartitionType( $self->{rootfs}, $i );
-        $mkfsTable{$i} = $self->{rootfs};
+        $mkfsTable{$i} = [ $self->{rootfs}, '/' ];
         ++$i;
         
         # take the rest for var
@@ -248,7 +251,7 @@ $i
 
 END
         $fdiskScript .= $self->appendFdiskChangePartitionType( $self->{varfs}, $i );
-        $mkfsTable{$i} = $self->{varfs};
+        $mkfsTable{$i} = [ $self->{varfs}, '/var' ];
         ++$i;
         
     } else {
@@ -261,7 +264,7 @@ $i
 
 END
         $fdiskScript .= $self->appendFdiskChangePartitionType( $self->{rootfs}, $i );
-        $mkfsTable{$i} = $self->{rootfs};
+        $mkfsTable{$i} = [ $self->{rootfs}, '/' ];
         ++$i;
     }
     $fdiskScript .= <<END;
@@ -282,40 +285,32 @@ END
     # Create loopback devices and figure out what they are
     debug( "Creating loop devices" );
 
-    my $imageLoopDevice;
-    if( UBOS::Utils::myexec( "losetup --show -f '" . $self->{rootpartition} . "'", undef, \$imageLoopDevice, \$err )) {
-        error( "losetup error:", $err );
+    # -s: wait until created
+    if( UBOS::Utils::myexec( "kpartx -a -s -v '" . $self->{rootpartition} . "'", undef, \$out, \$err )) {
+        error( "kpartx error:", $err );
         ++$errors;
     }
-    $imageLoopDevice =~ s!^\s+!!;
-    $imageLoopDevice =~ s!\s+$!!;
-    $imageLoopDevice =~ m!^/dev/(.*)$!;
-    my $partitionLoopDevice = "/dev/mapper/$1";
-print "imageLoopDevice is $imageLoopDevice\n";
-print "partitionLoopDevice is $partitionLoopDevice\n";
-
-    if( UBOS::Utils::myexec( "kpartx -a '$imageLoopDevice'", undef, undef, \$err )) {
-        error( "xpartx error:", $err );
-        ++$errors;
-    }
-
-    # This sometimes seems to be slow, let's wait a bit
-    sleep( 3 );
+    $out =~ m!/dev/(loop\d+)\s+!; # matches once for each partition, but that's okay
+    my $partitionLoopDeviceRoot = "/dev/mapper/$1";
 
     # Add file systems
     debug( 'Formatting file systems' );
 
     foreach my $i ( keys %mkfsTable ) {
-        my $cmd = "mkfs." . $mkfsTable{$i} . " '" . $partitionLoopDevice . 'p' . $i . "'";
+        my $device = $partitionLoopDeviceRoot . 'p' . $i;
+        my $cmd = "mkfs." . $mkfsTable{$i}->[0] . " '$device'";
+        if( 'btrfs' eq $mkfsTable{$i}->[0] ) {
+            # overwrite if exists already: but only mkfs.btrfs knows about that
+            $cmd .= ' -f';
+        }
         if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
             error( "$cmd error:", $err );
             ++$errors;
         }
+        $self->{mountpointToDevice}->{$mkfsTable{$i}->[1]} = $device;
     }
-exit 0;
     return $errors;
 }
-
 
 ##
 # Mount this disk layout at the specified target directory
@@ -327,6 +322,17 @@ sub mount {
     fatal( 'Must override:', ref( $self ));
 }
 
+##
+# Unmount the previous mounts. Override because we need to take care of the
+# loopback devices.
+sub unmount {
+    my $self = shift;
+
+    my $errors = $self->SUPER::unmount();
+
+    
+    return $errors;
+}
 
 ############
 
