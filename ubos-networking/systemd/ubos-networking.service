@@ -1,5 +1,5 @@
 [Unit]
-Description=Set up UBOS networking
+Description=UBOS networking
 Wants=network.target
 Before=network.target
 Requires=ubos-admin.service
