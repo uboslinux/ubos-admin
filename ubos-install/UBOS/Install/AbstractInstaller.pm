@@ -14,7 +14,8 @@ use fields qw( hostname
                channel
                rootdevice
                basepackages devicepackages additionalpackages
-               baseservices deviceservices additionalservices );
+               baseservices deviceservices additionalservices
+               packagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
@@ -39,10 +40,13 @@ sub new {
         $self->{channel} = 'green';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = \qw( base ubos-admin ubos-networking );
+        $self->{basepackages} = [ qw( base ubos-admin ubos-networking ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = \qw( ubos-admin );
+        $self->{baseservices} = [ 'ubos-admin' ];
+    }
+    unless( $self->{packagedbs} ) {
+        $self->{packagedbs} = [ qw( os hl ) ];
     }
 
     return $self;
@@ -119,19 +123,21 @@ sub install {
 
     $self->check(); # will exit if not valid
 
+    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs} );
+
     my $errors = 0;
 
     $errors += $self->parameterizeDiskLayout( $diskLayout );
     $errors += $diskLayout->formatDisks();
-exit 0;
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
-    $errors += $self->installPackages( );
+    $errors += $self->installPackages( $pacmanConfigInstall->filename );
     $errors += $self->generateHostname();
-    $errors += $self->generateFstab();
+    $errors += $diskLayout->generateFstab( $self->{target} );
     $errors += $self->generateSecuretty();
     $errors += $self->generateOther();    
-
+    $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout->determineBootDevice() );
+ 
     my $chrootScript = <<S;
 #!/bin/bash
 # Script to be run in chroot
@@ -141,13 +147,13 @@ S
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "sudo arch-chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
+    if( UBOS::Utils::myexec( "sudo chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
         error( "chroot script failed", $err );
         ++$errors;
     }
 
-    $errors += $self->unmountSpecial();
-    $errors += $diskLayout->unmount();
+    $errors += $self->umountSpecial();
+    $errors += $diskLayout->umountDisks( $self->{target} );
 
     return $errors;
 }
@@ -240,6 +246,7 @@ sub umountSpecial {
     my $self = shift;
 
     debug( "Executing unmountSpecial" );
+getc();
 
     my $target = $self->{target};
     my $errors = 0;
@@ -335,7 +342,7 @@ sub installPackages {
     my $out;
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
-        error( "pacman failed:", $err, "\nconfiguration was:\n", UBOS::Utils::slurpFile( $pacmanConfig->filename ) );
+        error( "pacman failed:", $err, "\nconfiguration was:\n", UBOS::Utils::slurpFile( $pacmanConfig ) );
         ++$errors;
     }
 
@@ -346,6 +353,8 @@ sub installPackages {
 # Generate the /etc/hostname file
 sub generateHostname {
     my $self = shift;
+
+    debug( "Executing generateHostname" );
 
     # hostname
     if( UBOS::Utils::saveFile(
@@ -383,10 +392,14 @@ sub generateOther {
 }
 
 ##
-# Install the bootloader for this BootImage
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# $bootDevice: device to install the bootloader on
 # return: number of errors
 sub installBootLoader {
-    my $self = shift;
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $bootDevice       = shift;
 
     error( 'Method installBootLoader() must be overridden for', ref( $self ));
 
@@ -400,15 +413,17 @@ sub addEnableServicesToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
+    debug( "Executing addEnableServicesToScript" );
+
     my @allServices = ();
     
-    if( @{$self->{baseservices}} ) {
+    if( defined( $self->{baseservices} )) {
         push @allServices, @{$self->{baseservices}};
     }
-    if( @{$self->{deviceservices}} ) {
+    if( defined( $self->{deviceservices} )) {
         push @allServices, @{$self->{deviceservices}};
     }
-    if( @{$self->{additionalservices}} ) {
+    if( defined( $self->{additionalservices} )) {
         push @allServices, @{$self->{additionalservices}};
     }
     if( @allServices ) {

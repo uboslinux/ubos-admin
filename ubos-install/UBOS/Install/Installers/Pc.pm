@@ -83,5 +83,90 @@ sub mountDisks {
     $errors += $diskLayout->mountVarIfExists( 'brtfs' );
 }
 
+##
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# $bootDevice: device to install the bootloader on
+# return: number of errors
+sub installBootLoader {
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $bootDevice       = shift;
+
+    my $errors = 0;
+    my $target = $self->{target};
+
+    # Ramdisk
+    debug( "Generating ramdisk" );
+
+    # The optimized ramdisk doesn't always boot, so we always skip the optimization step
+    UBOS::Utils::saveFile( "$target/etc/mkinitcpio.d/linux.preset", <<'END', 0644, 'root', 'root' );
+# mkinitcpio preset file for the 'linux' package, modified for UBOS
+#
+# Do not autodetect, as the device booting the image is most likely different
+# from the device that created the image
+
+ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="/boot/vmlinuz-linux"
+
+PRESETS=('default')
+BINARIES="/usr/bin/btrfsck"
+
+#default_config="/etc/mkinitcpio.conf"
+default_image="/boot/initramfs-linux.img"
+default_options="-S autodetect"
+END
+
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "sudo chroot '$target' mkinitcpio -p linux", undef, \$out, \$err ) ) {
+        error( "Generating ramdisk failed:", $err );
+        ++$errors;
+    }
+
+    # Boot loader
+    debug( "Installing grub" );
+    my $pacmanCmd = "sudo pacman"
+            . " -r '$target'"
+            . " -S"
+            . " '--config=" . $pacmanConfigFile . "'"
+            . " --cachedir '$target/var/cache/pacman/pkg'"
+            . " --noconfirm"
+            . " grub";
+    if( UBOS::Utils::myexec( $pacmanCmd, undef, \$out, \$err )) {
+        error( "pacman failed", $err );
+        ++$errors;
+    }
+    if( UBOS::Utils::myexec( "sudo grub-install '--boot-directory=$target/boot' --recheck '$bootDevice'", undef, \$out, \$err )) {
+        error( "grub-install failed", $err );
+        ++$errors;
+    }
+
+    # Create a script that can be passed to chroot:
+    # 1. grub configuration
+    # 2. Depmod so modules can be found. This needs to use the image's kernel version,
+    #    not the currently running one
+    # 3. Default "run-level" (multi-user, not graphical)
+    # 4. Enable services
+    
+    my $chrootScript = <<'END';
+set -e
+
+perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
+perl -pi -e 's/^.*SystemMaxUse=.*$/SystemMaxUse=50M/'          /etc/systemd/journald.conf
+
+grub-mkconfig -o /boot/grub/grub.cfg
+
+for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+
+systemctl set-default multi-user.target
+END
+
+    if( UBOS::Utils::myexec( "sudo chroot '$target'", $chrootScript, \$out, \$err )) {
+        error( "bootloader chroot script failed", $err );
+    }
+
+    return $errors;
+}
 
 1;

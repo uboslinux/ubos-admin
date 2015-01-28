@@ -124,9 +124,51 @@ sub synopsisHelpQuit {
     my $long = shift;
     my $exit = shift || 0;
 
-    fatal( 'synopsisHelpQuit not implemented' );
+    if( $long ) {
+        print <<END;
+Install UBOS.
 
-    exit $exit;
+END
+    } else {
+        print "Synopsis:\n";
+    }
+    print "    $0 [ --verbose | --logConfFile <log4perlconf> ][ --channel <channel> ][ --hostname <hostname> ]";
+    print "[ --bootloaderdevice <device> ][ --bootpartition <device> ][ --varpartition <device> ]...";
+    print " --target <target> --rootpartition <device> ... --deviceclass <deviceclass>\n";
+    
+    if( $long ) {
+        print <<END;
+        Install UBOS
+        channel:          the UBOS release channel; defaults to green
+        hostname:         the hostname to set; defaults to a deviceclass-specific name
+        bootloaderdevice: the device which will contain the boot loader. Only needed
+                          on x86_64 architecture. Defaults to the root partition
+        bootpartition:    the device which will contain the /boot partition. If not
+                          specified, /boot will be created on the root device
+        varpartition:     the device which will contain the /var partition. If more
+                          than one device is specified, RAID 1 will be set up across
+                          all the devices. If not specified, /var will be created on
+                          the root device.
+        target:           the directory to which the new system will be mounted
+                          temporarily during assembly
+        rootpartition:    the device, or image file, which will contain the root
+                          partition. If more than one device is specified, RAID 1 will
+                          be set up across all the devices.
+        deviceclass:      the device class, e.g. rpi (Raspberry Pi), pc (x86_64)
+
+END
+    }
+    print "    $0 --help\n";
+    if( $long ) {
+        print <<END;
+        Display help text.
+
+END
+    }
+
+    exit 0;
 }
+
+
 
 1;

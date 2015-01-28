@@ -110,12 +110,12 @@ sub mountDisks {
     if( defined( $self->{mountpointToDevice} )) {
         # shortest first
         foreach my $dir ( sort { length( $a ) <=> length( $b ) } keys %{$self->{mountpointToDevice}} ) {
-            my $device = $self->{mountpointToDevice}->{$dir};
+            my( $device, $fs ) = @{$self->{mountpointToDevice}->{$dir}};
 
             unless( -d "$target$dir" ) {
                 UBOS::Utils::mkdir( "$target$dir" );
             }
-            if( UBOS::Utils::myexec( "mount '$device' '$target$dir'" )) {
+            if( UBOS::Utils::myexec( "mount -t $fs '$device' '$target$dir'" )) {
                 ++$errors;
             }
         }
@@ -126,7 +126,7 @@ sub mountDisks {
 ##
 # Unmount the previous mounts
 # $target: the target directory
-sub unmountDisks {
+sub umountDisks {
     my $self   = shift;
     my $target = shift;
 
@@ -174,6 +174,59 @@ END
     }
     return $script;
 }
+
+##
+# Generate and save /etc/fstab
+# $@mountPathSequence: the sequence of paths to mount
+# %$partitions: map of paths to devices
+# $targetDir: the path where the bootimage has been mounted
+# return: number of errors
+sub generateFstab {
+    my $self   = shift;
+    my $target = shift;
+    
+    my $fsTab = <<FSTAB;
+#
+# /etc/fstab: static file system information
+#
+# <file system> <dir>	<type>	<options>	<dump>	<pass>
+
+FSTAB
+
+    if( defined( $self->{mountpointToDevice} )) {
+        my $i=0;
+
+        # shortest first
+        foreach my $dir ( sort { length( $a ) <=> length( $b ) } keys %{$self->{mountpointToDevice}} ) {
+            my( $device, $fs ) = @{$self->{mountpointToDevice}->{$dir}};
+
+            my $uuid;
+            UBOS::Utils::myexec( "sudo blkid -s UUID -o value '$device'", undef, \$uuid );
+            $uuid =~ s!^\s+!!g;
+            $uuid =~ s!\s+$!!g;
+
+            my $passno = ( $dir eq '/' ) ? 1 : 2;
+
+            $fsTab .= <<FSTAB;
+UUID=$uuid $dir $fs rw,relatime $i $passno
+FSTAB
+            ++$i;
+        }
+    }
+
+    UBOS::Utils::saveFile( "$target/etc/fstab", $fsTab, 0644, 'root', 'root' );
+
+    return 0;
+}
+
+##
+# Determine the boot device for this DiskLayout
+sub determineBootDevice {
+    my $self = shift;
+
+    fatal( 'Must override:', ref( $self ));
+}
+
 
 ############
 
@@ -314,8 +367,10 @@ END
 
     foreach my $i ( keys %mkfsTable ) {
         my $device = $partitionLoopDeviceRoot . 'p' . $i;
-        my $cmd = "mkfs." . $mkfsTable{$i}->[0] . " '$device'";
-        if( 'btrfs' eq $mkfsTable{$i}->[0] ) {
+        my $fs     = $mkfsTable{$i}->[0];
+
+        my $cmd = "mkfs.$fs '$device'";
+        if( 'btrfs' eq $fs ) {
             # overwrite if exists already: but only mkfs.btrfs knows about that
             $cmd .= ' -f';
         }
@@ -323,7 +378,7 @@ END
             error( "$cmd error:", $err );
             ++$errors;
         }
-        $self->{mountpointToDevice}->{$mkfsTable{$i}->[1]} = $device;
+        $self->{mountpointToDevice}->{$mkfsTable{$i}->[1]} = [ $device, $fs ];
     }
     return $errors;
 }
@@ -332,11 +387,11 @@ END
 # Unmount the previous mounts. Override because we need to take care of the
 # loopback devices.
 # $target: the target directory
-sub unmountDisks {
+sub umountDisks {
     my $self   = shift;
     my $target = shift;
 
-    my $errors = $self->SUPER::unmountDisks( $target );
+    my $errors = $self->SUPER::umountDisks( $target );
 
     my $err;
     if( UBOS::Utils::myexec( "kpartx -d '" . $self->{rootpartition} . "'", undef, undef, \$err )) {
@@ -345,6 +400,14 @@ sub unmountDisks {
     }
     
     return $errors;
+}
+
+##
+# Determine the boot device for this DiskLayout
+sub determineBootDevice {
+    my $self = shift;
+
+    return $self->{rootpartition};
 }
 
 ############
@@ -407,6 +470,17 @@ sub new {
     $self->{bootloaderdevice} = $bootloaderdevice;
 
     return $self;
+}
+
+##
+# Determine the boot device for this DiskLayout
+sub determineBootDevice {
+    my $self = shift;
+
+    if( defined( $self->{bootloaderdevice} )) {
+        return $self->{bootloaderdevice};
+    }
+    return $self->{rootpartitions}->[0]; 
 }
 
 1;
