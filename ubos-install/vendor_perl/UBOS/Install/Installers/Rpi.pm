@@ -25,6 +25,10 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-raspberry-pi';
     }
+    unless( $self->{devicepackages} ) {
+        $self->{devicepackages} = [ qw( linux-raspberrypi raspberrypi-firmware raspberrypi-firmware-bootloader
+                                        raspberrypi-firmware-bootloader-x archlinuxarm-keyring ) ];
+    }
     $self->SUPER::new( @args );
 
     return $self;

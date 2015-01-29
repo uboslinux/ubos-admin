@@ -40,10 +40,10 @@ sub new {
         $self->{channel} = 'green';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( base ubos-admin ubos-networking ) ];
+        $self->{basepackages} = [ qw( base openssh btrfs-progs ntp ubos-admin ubos-networking rng-tools ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ 'ubos-admin' ];
+        $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ntpd sshd ) ];
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl ) ];
