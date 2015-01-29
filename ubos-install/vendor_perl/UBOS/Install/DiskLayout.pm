@@ -181,7 +181,7 @@ END
 # %$partitions: map of paths to devices
 # $targetDir: the path where the bootimage has been mounted
 # return: number of errors
-sub generateFstab {
+sub saveFstab {
     my $self   = shift;
     my $target = shift;
     

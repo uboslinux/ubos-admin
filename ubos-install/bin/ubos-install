@@ -46,9 +46,9 @@ my $channel          = undef;
 my $hostname         = undef;
 my $deviceclassname  = undef;
 my $target           = undef;
+my $repo             = undef;
 my $bootloaderdevice = undef;
 my $bootpartition    = undef;
-my @rootpartitions   = ();
 my @varpartitions    = ();
 my $help             = 0;
 
@@ -59,9 +59,9 @@ my $parseOk = GetOptions(
         'hostname=s'         => \$hostname,
         'deviceclass=s'      => \$deviceclassname,
         'target=s'           => \$target,
+        'repository=s'       => \$repo,
         'bootloaderdevice=s' => \$bootloaderdevice,
         'bootpartition=s'    => \$bootpartition,
-        'rootpartition=s'    => \@rootpartitions,
         'varpartition=s'     => \@varpartitions,
         'help'                => \$help );
 
@@ -70,8 +70,26 @@ UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile );
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-if( @ARGV || !$deviceclassname || !$target || !@rootpartitions ) {
+
+my @rootpartitions = @ARGV;
+
+if( !$parseOk || !@rootpartitions ) {
     synopsisHelpQuit( 0 );
+}
+if( $target && ! -d $target ) {
+    fatal( 'Target is not a directory:', $target );
+}
+unless( $deviceclassname ) {
+    # Use current device class
+    my $out;
+    UBOS::Utils::myexec( 'uname -a', undef, \$out, undef );
+    if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
+        $deviceclassname = 'rpi';
+    } elsif( $out =~ m!x86_64! ) {
+        $deviceclassname = 'pc';
+    } else {
+        fatal( 'Cannot automatically determine --deviceclass. Need to specify as argument.' );
+    }
 }
 
 my $installer = findInstaller( $deviceclassname );
@@ -79,12 +97,24 @@ unless( $installer ) {
     fatal( 'Cannot find installer for device class', $deviceclassname );
 }
 
-$installer->setTarget( $target );
+if( $target ) {
+    $installer->setTarget( $target );
+} else {
+    $installer->useTempTarget();
+}
 if( $hostname ) {
     $installer->setHostname( $hostname );
 }
+if( !$channel && -r '/etc/ubos/channel' ) {
+    $channel = UBOS::Utils::slurpFile( '/etc/ubos/channel' );
+    $channel =~ s!^\s+!!;
+    $channel =~ s!\s+$!!;
+}
 if( $channel ) {
     $installer->setChannel( $channel );
+}
+if( $repo ) {
+    $installer->setRepo( $repo );
 }
 
 debug( 'Using installer', $installer );
@@ -132,15 +162,16 @@ END
     } else {
         print "Synopsis:\n";
     }
-    print "    $0 [ --verbose | --logConfFile <log4perlconf> ][ --channel <channel> ][ --hostname <hostname> ]";
-    print "[ --bootloaderdevice <device> ][ --bootpartition <device> ][ --varpartition <device> ]...";
-    print " --target <target> --rootpartition <device> ... --deviceclass <deviceclass>\n";
-    
+    print "    $0 [ --verbose | --logConfFile <log4perlconf> ][ --channel <channel> ][ --hostname <hostname> ][ --repository <repo> ]";
+    print " [ --target <target> ][ --bootloaderdevice <device> ][ --bootpartition <device> ][ --varpartition <device> ]...";
+    print " --deviceclass <deviceclass> <device> ...\n";
+
     if( $long ) {
         print <<END;
-        Install UBOS
+        Install UBOS on <device>.
         channel:          the UBOS release channel; defaults to green
         hostname:         the hostname to set; defaults to a deviceclass-specific name
+        repository:       use this local UBOS repository instead of http://depot.ubos.net/
         bootloaderdevice: the device which will contain the boot loader. Only needed
                           on x86_64 architecture. Defaults to the root partition
         bootpartition:    the device which will contain the /boot partition. If not
@@ -150,7 +181,8 @@ END
                           all the devices. If not specified, /var will be created on
                           the root device.
         target:           the directory to which the new system will be mounted
-                          temporarily during assembly
+                          temporarily during assembly. Defaults to temp directory
+                          in current working directory
         rootpartition:    the device, or image file, which will contain the root
                           partition. If more than one device is specified, RAID 1 will
                           be set up across all the devices.
@@ -168,7 +200,5 @@ END
 
     exit 0;
 }
-
-
 
 1;

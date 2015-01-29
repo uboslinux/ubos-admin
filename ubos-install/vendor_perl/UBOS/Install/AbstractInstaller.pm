@@ -9,7 +9,7 @@ use warnings;
 package UBOS::Install::AbstractInstaller;
 
 use fields qw( hostname
-               target
+               target tempTarget
                repo
                channel
                rootdevice
@@ -21,6 +21,7 @@ use fields qw( hostname
 # additionalpackages: packages installed because added on the command-line
 
 use File::Spec;
+use File::Temp;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -70,6 +71,15 @@ sub setTarget {
     my $target = shift;
 
     $self->{target} = $target;
+}
+
+##
+# Use a temporary target directory
+sub useTempTarget {
+    my $self = shift;
+
+    $self->{tempTarget} = File::Temp->newdir( UNLINK => 1 );
+    $self->{target}     = $self->{tempTarget}->dirname;
 }
 
 ##
@@ -123,7 +133,7 @@ sub install {
 
     $self->check(); # will exit if not valid
 
-    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs} );
+    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( [ qw( os hl tools ) ] );
 
     my $errors = 0;
 
@@ -132,10 +142,12 @@ sub install {
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
-    $errors += $self->generateHostname();
-    $errors += $diskLayout->generateFstab( $self->{target} );
-    $errors += $self->generateSecuretty();
-    $errors += $self->generateOther();    
+    $errors += $self->savePacmanConfigProduction( $self->{packagedbs} );
+    $errors += $self->saveHostname();
+    $errors += $self->saveChannel();
+    $errors += $diskLayout->saveFstab( $self->{target} );
+    $errors += $self->saveSecuretty();
+    $errors += $self->saveOther();    
     $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout->determineBootDevice() );
  
     my $chrootScript = <<S;
@@ -154,6 +166,8 @@ S
 
     $errors += $self->umountSpecial();
     $errors += $diskLayout->umountDisks( $self->{target} );
+
+    unlink( $pacmanConfigInstall->filename );
 
     return $errors;
 }
@@ -349,11 +363,50 @@ sub installPackages {
 }
 
 ##
-# Generate the /etc/hostname file
-sub generateHostname {
+# Generate and save the pacman config file for production
+sub savePacmanConfigProduction {
+    my $self = shift;
+    my $dbs  = shift;
+
+    debug( "Executing savePacmanConfigProduction" );
+
+    my $arch    = $self->arch;
+    my $channel = $self->{channel};
+
+    my $pacmanConfigProduction = <<END;
+#
+# Pacman config file for UBOS
+#
+
+[options]
+Architecture = $arch
+CheckSpace
+
+SigLevel           = Required TrustedOnly
+LocalFileSigLevel  = Required TrustedOnly
+RemoteFileSigLevel = Required TrustedOnly
+
+END
+    foreach my $db ( @$dbs ) {
+        $pacmanConfigProduction .= <<END; # Note what is and isn't escaped here
+
+[$db]
+Server = http://depot.ubos.net/$channel/\$arch/$db
+END
+    }
+    if( UBOS::Utils::saveFile( $self->{target} . '/etc/pacman.conf', $pacmanConfigProduction, 0644, 'root', 'root' )) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+##
+# Generate and save the /etc/hostname file
+sub saveHostname {
     my $self = shift;
 
-    debug( "Executing generateHostname" );
+    debug( "Executing saveHostname" );
 
     # hostname
     if( UBOS::Utils::saveFile(
@@ -369,9 +422,29 @@ sub generateHostname {
 }
 
 ##
+# Generate and save the /etc/ubos/channel file
+sub saveChannel {
+    my $self = shift;
+    
+    debug( "Executing saveHostname" );
+
+    # hostname
+    if( UBOS::Utils::saveFile(
+            $self->{target}   . '/etc/ubos/channel',
+            $self->{channel} . "\n",
+            0644, 'root', 'root' )) {
+
+        return 0;
+
+    } else {
+        return 1;
+    }
+}
+
+##
 # Generate and save a different /etc/securetty if needed
 # return: number of errors
-sub generateSecuretty {
+sub saveSecuretty {
     my $self  = shift;
 
     # do nothing by default
@@ -382,7 +455,7 @@ sub generateSecuretty {
 ##
 # Generate and save different other files if needed
 # return: number of errors
-sub generateOther {
+sub saveOther {
     my $self = shift;
 
     # do nothing by default
