@@ -246,7 +246,6 @@ sub umountSpecial {
     my $self = shift;
 
     debug( "Executing unmountSpecial" );
-getc();
 
     my $target = $self->{target};
     my $errors = 0;

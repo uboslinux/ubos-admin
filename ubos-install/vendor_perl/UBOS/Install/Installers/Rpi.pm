@@ -84,11 +84,11 @@ sub installBootLoader {
 
     # Copied from the ArmLinuxARM Raspberry Pi image
     
-    UBOS::Utils::saveFile( $targetDir . '/boot/cmdline.txt', <<CONTENT, 0644, 'root', 'root' );
+    UBOS::Utils::saveFile( $self->{target} . '/boot/cmdline.txt', <<CONTENT, 0644, 'root', 'root' );
 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 console=ttyAMA0,115200 kgdboc=ttyAMA0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=btrfs elevator=noop rootwait
 CONTENT
 
-    UBOS::Utils::saveFile( $targetDir . '/boot/config.txt', <<CONTENT, 0644, 'root', 'root' );
+    UBOS::Utils::saveFile( $self->{target} . '/boot/config.txt', <<CONTENT, 0644, 'root', 'root' );
 # uncomment if you get no picture on HDMI for a default "safe" mode
 #hdmi_safe=1
 
