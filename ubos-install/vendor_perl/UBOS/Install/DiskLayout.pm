@@ -438,7 +438,7 @@ sub new {
         }
         $haveAlready{$part} = 1;
     }
-    if( @{$self->{varpartitions}} ) {
+    if( @$varpartitions ) {
         foreach my $part ( @$varpartitions ) {
             unless( -b $part ) {
                 fatal( 'All varpartitions must be block devices, is not:', $part );

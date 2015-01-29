@@ -3,13 +3,13 @@
 # Install UBOS on one or more currently unmounted devices.
 #
 # Examples:
-#     ubos-install --class pc --rootpartition /dev/sda
-#     ubos-install --class pc --rootpartition /dev/sda --rootpartition /dev/sdb --hostname rpi
-#     ubos-install --class rpi --rootpartition /dev/sdb
-#     ubos-install --class pc --bootloader-device /dev/sda --rootpartition /dev/sda1 --varpartition /dev/sda2
+#     ubos-install /dev/sda
+#     ubos-install --hostname myserver /dev/sda /dev/sdb
+#     ubos-install --deviceclass rpi /dev/sdb
+#     ubos-install --deviceclass pc --bootloader-device /dev/sda --varpartition /dev/sda2 /dev/sda1
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
