@@ -16,7 +16,7 @@ package() {
     mkdir -p ${pkgdir}/usr/bin
     install -m755 ${startdir}/bin/ubos-install ${pkgdir}/usr/bin/
 
-    for d in Disklayouts Installers; do
+    for d in DiskLayouts Installers; do
         mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/UBOS/Install/$d
         for f in $startdir/vendor_perl/UBOS/Install/$d/*.pm; do
             install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/Install/$d/
