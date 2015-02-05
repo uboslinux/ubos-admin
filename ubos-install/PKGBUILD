@@ -2,13 +2,14 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.5
+pkgver=0.6
 pkgrel=1
 pkgdesc="UBOS installation tool"
 arch=('any')
 license=('GPL')
 depends=(
-    'ubos-admin' )
+    'ubos-admin'
+    'parted' )
 options=('!strip')
 
 package() {
