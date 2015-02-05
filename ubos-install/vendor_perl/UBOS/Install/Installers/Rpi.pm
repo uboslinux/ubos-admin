@@ -10,6 +10,12 @@ package UBOS::Install::Installers::Rpi;
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
+use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskLayout;
+use UBOS::Install::DiskLayouts::DiskBlockDevices;
+use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::PartitionBlockDevices;
+use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -35,6 +41,156 @@ sub new {
 }
 
 ##
+# Create a DiskLayout object that goes with this Installer.
+# $argvp: remaining command-line arguments
+sub createDiskLayout {
+    my $self  = shift;
+    my $argvp = shift;
+
+    # Option 1: a single image file
+    # ubos-install ... image.img
+    
+    # Option 2: a single disk device
+    # ubos-install ... /dev/sda
+
+    # Option 3: a boot partition device, one or more root partition devices
+    # ubos-install ... --bootpartition /dev/sda1 --rootpartition /dev/sda2 --rootpartition /dev/sdb1
+
+    # Option 4: a boot partition device, one or more root partition devices, one or more var partition devices
+    # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
+
+    my $bootpartition;
+    my @rootpartitions;
+    my @varpartitions;
+
+    my $parseOk = GetOptionsFromArray(
+            $argvp,
+            'bootpartition=s' => \$bootpartition,
+            'rootpartition=s' => \@rootpartitions,
+            'varpartition=s'  => \@varpartitions );
+    if( !$parseOk ) {
+        error( 'Invalid invocation.' );
+        return undef;
+    }
+
+    my $ret = 1; # set to something, so undef can mean error
+    if( $bootpartition || @rootpartitions || @varpartitions ) {
+        # Option 3 or 4
+        if( @$argvp ) {
+            error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
+            $ret = undef;
+        }
+        if( $ret && !$bootpartition ) {
+            error( 'Invalid invocation: Device class rpi requires a --bootpartition parameter when specifying partitions' );
+            $ret = undef;
+        }
+        if( $ret && @rootpartitions == 0 ) {
+            error( 'Invalid invocation: A --rootpartition must be provided when specifying partitions' );
+            $ret = undef;
+        }
+        if( $ret && !UBOS::Install::AbstractDiskLayout::isPartition( $bootpartition )) {
+            error( 'Not a partition:', $bootpartition );
+        }
+        my %haveAlready = ( $bootpartition => 1 );
+
+        if( $ret ) {
+            foreach my $part ( @rootpartitions, @varpartitions ) {
+                if( $haveAlready{$part} ) {
+                    error( 'Specified more than once:', $part );
+                    $ret = undef;
+                    last;
+                }
+                unless( UBOS::Install::AbstractDiskLayout::isPartition( $part )) {
+                    error( 'Not a partition:', $part );
+                    $ret = undef;
+                    last;
+                }
+                $haveAlready{$part} = 1;
+            }
+        }
+        if( @varpartitions == 0 ) {
+            # Option 3
+            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
+                    {   '/boot' => {
+                            'index'   => 1,
+                            'fs'      => 'ext4',
+                            'devices' => [ $bootpartition ],
+                            'boot'    => 1
+                        },
+                        '/' => {
+                            'index'  => 2,
+                            'fs'      => 'btrfs',
+                            'devices' => \@rootpartitions
+                        }
+                    } );
+        } else {
+            # Options 4
+            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
+                    {   '/boot' => {
+                            'index'   => 1,
+                            'fs'      => 'ext4',
+                            'devices' => [ $bootpartition ],
+                            'boot'    => 1
+                        },
+                        '/' => {
+                            'index'   => 2,
+                            'fs'      => 'btrfs',
+                            'devices' => \@rootpartitions
+                        },
+                        '/var' => {
+                            'index'  => 3,
+                            'fs'      => 'btrfs',
+                            'devices' => \@varpartitions
+                        }
+                    } );
+        }
+            
+    } else {
+        # Option 1 or 2
+        unless( @$argvp == 1 ) {
+            # Don't do RAID here
+            error( 'Do not specify more than one file or image for deviceclass=rpi' );
+            $ret = undef;
+        }
+        my $rootDiskOrImage = $argvp->[0];
+        if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
+            # Option 1
+            $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                    $rootDiskOrImage,
+                    {   '/boot' => {
+                            'index' => 1,
+                            'fs'    => 'vfat',
+                            'size'  => '100M'
+                        },
+                        '/' => {
+                            'index' => 2,
+                            'fs'    => 'btrfs'
+                        },
+                    } );
+        } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
+            # Option 2
+            $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                    [   $rootDiskOrImage    ],
+                    {   '/boot' => {
+                            'index' => 1,
+                            'fs'    => 'vfat',
+                            'size'  => '100M'
+                        },
+                        '/' => {
+                            'index' => 2,
+                            'fs'    => 'btrfs'
+                        },
+                    } );
+        } else {
+            error( 'Must be file or disk:', $rootDiskOrImage );
+            $ret = undef;
+        }
+    }
+    
+    return $ret;
+}
+
+##
 # Returns the arch for this device.
 # return: the arch
 sub arch {
@@ -44,43 +200,14 @@ sub arch {
 }
 
 ##
-# Parameterized the DiskLayout as appropriate for this Installer.
-# $diskLayout: the DiskLayout
-sub parameterizeDiskLayout {
-    my $self       = shift;
-    my $diskLayout = shift;
-
-    $diskLayout->setBootParameters( 'vfat',  '100M' );
-    $diskLayout->setRootParameters( 'btrfs' );
-
-    return 0;
-}
-
-##
-# Mount the disk(s) as appropriate for the provided DiskLayout
-# $diskLayout: the DiskLayout
-# $target: the directory to which to mount the disk(s)
-sub mountDisks {
-    my $self       = shift;
-    my $diskLayout = shift;
-    my $target     = shift;
-
-    my $errors = 0;
-    $errors += $diskLayout->mountRoot( 'brtfs' );
-    $errors += $diskLayout->mountBootIfExists( 'vfat' );
-
-    return $errors;
-}
-
-##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
-# $bootDevice: device to install the bootloader on
+# $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $bootDevice       = shift;
+    my $diskLayout       = shift;
 
     # Copied from the ArmLinuxARM Raspberry Pi image
     

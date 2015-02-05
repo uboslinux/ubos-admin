@@ -12,7 +12,6 @@ use fields qw( hostname
                target tempTarget
                repo
                channel
-               rootdevice
                basepackages devicepackages additionalpackages
                baseservices deviceservices additionalservices
                packagedbs );
@@ -20,6 +19,7 @@ use fields qw( hostname
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
 
+use Cwd;
 use File::Spec;
 use File::Temp;
 use UBOS::Logging;
@@ -54,6 +54,16 @@ sub new {
 }
 
 ##
+# Create a DiskLayout object that goes with this Installer.
+# $argvp: remaining command-line arguments
+sub createDiskLayout {
+    my $self  = shift;
+    my $argvp = shift;
+
+    fatal( 'Must override:', ref( $self ));
+}
+
+##
 # Set a different hostname
 # $hostname: the new hostname
 sub setHostname {
@@ -78,7 +88,7 @@ sub setTarget {
 sub useTempTarget {
     my $self = shift;
 
-    $self->{tempTarget} = File::Temp->newdir( UNLINK => 1 );
+    $self->{tempTarget} = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
     $self->{target}     = $self->{tempTarget}->dirname;
 }
 
@@ -131,13 +141,13 @@ sub install {
 
     debug( 'Installing UBOS with hostname', $self->{hostname} );
 
-    $self->check(); # will exit if not valid
+    $self->check( $diskLayout ); # will exit if not valid
 
     my $pacmanConfigInstall = $self->generatePacmanConfigTarget( [ qw( os hl tools ) ] );
-
+            # only dbs available on all platforms; not virt
     my $errors = 0;
 
-    $errors += $self->parameterizeDiskLayout( $diskLayout );
+    $errors += $diskLayout->createDisks();
     $errors += $diskLayout->formatDisks();
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
@@ -148,7 +158,7 @@ sub install {
     $errors += $diskLayout->saveFstab( $self->{target} );
     $errors += $self->saveSecuretty();
     $errors += $self->saveOther();    
-    $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout->determineBootDevice() );
+    $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
  
     my $chrootScript = <<S;
 #!/bin/bash
@@ -175,7 +185,8 @@ S
 ##
 # Check that provided parameters are correct. Exit if not.
 sub check {
-    my $self = shift;
+    my $self       = shift;
+    my $diskLayout = shift;
 
     unless( $self->{hostname} ) {
         fatal( 'Hostname must not be empty' );
@@ -198,7 +209,7 @@ sub check {
         }
         my $archRepo = $self->{repo} . '/' . $self->arch;
         my $osDb     = $archRepo . '/os/os.db';
-        unless( -d $osDb ) {
+        unless( -l $osDb ) {
             fatal( 'Not a valid repo, cannot find:', $osDb );
         }
     }
@@ -212,16 +223,6 @@ sub check {
 
     # Would be nice to check that packages actually exist, but that's hard if
     # they are remote
-}
-
-##
-# Parameterized the DiskLayout as appropriate for this Installer.
-# $diskLayout: the DiskLayout
-sub parameterizeDiskLayout {
-    my $self       = shift;
-    my $diskLayout = shift;
-
-    fatal( 'Must override:', ref( $self ));
 }
 
 ##
@@ -426,7 +427,7 @@ sub saveHostname {
 sub saveChannel {
     my $self = shift;
     
-    debug( "Executing saveHostname" );
+    debug( "Executing saveChannel" );
 
     # hostname
     if( UBOS::Utils::saveFile(
@@ -466,12 +467,12 @@ sub saveOther {
 ##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
-# $bootDevice: device to install the bootloader on
+# $bootLoaderDevice: device to install the bootloader on
 # return: number of errors
 sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $bootDevice       = shift;
+    my $bootLoaderDevice = shift;
 
     error( 'Method installBootLoader() must be overridden for', ref( $self ));
 

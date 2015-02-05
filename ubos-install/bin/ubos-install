@@ -1,10 +1,15 @@
 #!/usr/bin/perl
 #
-# Install UBOS on one or more currently unmounted devices.
+# Install UBOS on one or more currently unmounted devices or disk images.
 #
 # Examples:
 #     ubos-install /dev/sda
+#             Install on a hard drive
 #     ubos-install --hostname myserver /dev/sda /dev/sdb
+#             Install on two hard drives in raid mode. Use provided hostname
+#     ubos-install /some/file
+#             Install on an image file. File must exist.
+
 #     ubos-install --deviceclass rpi /dev/sdb
 #     ubos-install --deviceclass pc --bootloader-device /dev/sda --varpartition /dev/sda2 /dev/sda1
 #
@@ -28,12 +33,10 @@
 use strict;
 use warnings;
 
-use Getopt::Long qw( GetOptionsFromArray );
+use Getopt::Long qw( :config pass_through );
 
 use UBOS::Logging;
 use UBOS::Utils;
-use UBOS::Install::DiskLayout;
-use UBOS::Install::Installers::Pc;
 
 if ( $< != 0 ) {
     fatal( "This command must be run as root" ); 
@@ -47,23 +50,17 @@ my $hostname         = undef;
 my $deviceclassname  = undef;
 my $target           = undef;
 my $repo             = undef;
-my $bootloaderdevice = undef;
-my $bootpartition    = undef;
-my @varpartitions    = ();
 my $help             = 0;
 
 my $parseOk = GetOptions(
-        'verbose+'           => \$verbose,
-        'logConfig=s'        => \$logConfigFile,
-        'channel=s'          => \$channel,
-        'hostname=s'         => \$hostname,
-        'deviceclass=s'      => \$deviceclassname,
-        'target=s'           => \$target,
-        'repository=s'       => \$repo,
-        'bootloaderdevice=s' => \$bootloaderdevice,
-        'bootpartition=s'    => \$bootpartition,
-        'varpartition=s'     => \@varpartitions,
-        'help'                => \$help );
+        'verbose+'      => \$verbose,
+        'logConfig=s'   => \$logConfigFile,
+        'channel=s'     => \$channel,
+        'hostname=s'    => \$hostname,
+        'deviceclass=s' => \$deviceclassname,
+        'target=s'      => \$target,
+        'repository=s'  => \$repo,
+        'h|help'        => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile );
 
@@ -71,9 +68,7 @@ if( $help ) {
     synopsisHelpQuit( 1 );
 }
 
-my @rootpartitions = @ARGV;
-
-if( !$parseOk || !@rootpartitions ) {
+if( !$parseOk ) {
     synopsisHelpQuit( 0 );
 }
 if( $target && ! -d $target ) {
@@ -119,12 +114,10 @@ if( $repo ) {
 
 debug( 'Using installer', $installer );
 
-my $diskLayout = UBOS::Install::DiskLayout->new(
-        \@rootpartitions,
-        \@varpartitions,
-        $bootpartition,
-        $bootloaderdevice );
-
+my $diskLayout = $installer->createDiskLayout( \@ARGV );
+unless( $diskLayout ) {
+    synopsisHelpQuit( 0 );
+}
 $installer->install( $diskLayout );
 
 exit( $ret );
@@ -157,37 +150,76 @@ sub synopsisHelpQuit {
     if( $long ) {
         print <<END;
 Install UBOS.
-
 END
     } else {
         print "Synopsis:\n";
     }
-    print "    $0 [ --verbose | --logConfFile <log4perlconf> ][ --channel <channel> ][ --hostname <hostname> ][ --repository <repo> ]";
-    print " [ --target <target> ][ --bootloaderdevice <device> ][ --bootpartition <device> ][ --varpartition <device> ]...";
-    print " --deviceclass <deviceclass> <device> ...\n";
-
+    print "    $0 <device> ...\n";
     if( $long ) {
         print <<END;
-        Install UBOS on <device>.
-        channel:          the UBOS release channel; defaults to green
-        hostname:         the hostname to set; defaults to a deviceclass-specific name
-        repository:       use this local UBOS repository instead of http://depot.ubos.net/
-        bootloaderdevice: the device which will contain the boot loader. Only needed
-                          on x86_64 architecture. Defaults to the root partition
-        bootpartition:    the device which will contain the /boot partition. If not
-                          specified, /boot will be created on the root device
-        varpartition:     the device which will contain the /var partition. If more
-                          than one device is specified, RAID 1 will be set up across
-                          all the devices. If not specified, /var will be created on
-                          the root device.
-        target:           the directory to which the new system will be mounted
-                          temporarily during assembly. Defaults to temp directory
-                          in current working directory
-        rootpartition:    the device, or image file, which will contain the root
-                          partition. If more than one device is specified, RAID 1 will
-                          be set up across all the devices.
-        deviceclass:      the device class, e.g. rpi (Raspberry Pi), pc (x86_64)
+        Install UBOS on <device>. <device> must be a disk device, or a pre-allocated disk image.
+        If more than one <device> is given, mirror across at least two disks (RAID1).
+        WARNING: THIS WILL FORMAT <device>. ALL YOUR DATA ON IT WILL BE LOST.
+        
+        Optional arguments:
+            --verbose:
+                  Increase amount of status output.
+            --logConfFile <log4perlconf>:
+                  Alternate logging configuration file (not common).
+            --channel <channel>:
+                  The UBOS release channel; defaults to green.
+            --hostname <hostname>:
+                  The hostname to set; defaults to a deviceclass-specific name.
+            --repository <path>:
+                  Use this local UBOS repository instead of http://depot.ubos.net/
+            --target <path>:
+                  The directory to which the new system will be mounted temporarily during assembly.
+                  Defaults to a temp directoy in the current working directory. Make sure there
+                  is enough disk space for the entire system
+            --deviceclass <class>:
+                  The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
+                  is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
+END
+    }
+        
+    print "    $0 [ --bootpartition <part> ][ --varpartition <part> ][ --bootloaderdevice <dev>] --rootpartition <part>\n";
+    if( $long ) {
+        print <<END;
+        Install UBOS on root partition <part>. <part> must be a partition such as /dev/sda3.
+        If more than one root partition is given, mirror across at least two partitions (RAID1).
+        WARNING: THIS WILL OVERWRITE all partitions you specify. ALL YOUR DATA ON THEM WILL BE LOST.
+        However, it will not change the partition table, nor will it touch other partitions.
 
+        Optional arguments:
+            --verbose:
+                  Increase amount of status output.
+            --logConfFile <log4perlconf>:
+                  Alternate logging configuration file (not common).
+            --channel <channel>:
+                  The UBOS release channel; defaults to green.
+            --hostname <hostname>:
+                  The hostname to set; defaults to a deviceclass-specific name.
+            --repository <path>:
+                  Use this local UBOS repository instead of http://depot.ubos.net/
+            --target <path>:
+                  The directory to which the new system will be mounted temporarily during assembly.
+                  Defaults to a temp directoy in the current working directory. Make sure there
+                  is enough disk space for the entire system
+            --deviceclass <class>:
+                  The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
+                  is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
+            --bootpartition <part>:
+                  Use this block device as boot partition. If not provided, there will be no
+                  separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
+                  boot from a btrfs filesystem, and thus require that you specify a separate
+                  boot partition that can be formatted as vfat.
+            --bootloaderdevice <dev>:
+                  Install the boot loader on this block device. This is only required for
+                  some systems (e.g. x86_64) where boot loaders are written to a special place
+                  on the hard disk.
+            --varpartition <part>:
+                  Use a separate /var partition. If more than one var partition is given, mirror
+                  across at least two partitions (RAID1).
 END
     }
     print "    $0 --help\n";
