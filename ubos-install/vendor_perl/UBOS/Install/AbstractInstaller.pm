@@ -54,7 +54,7 @@ sub new {
         $self->{hostname} = 'ubos-device';
     }
     unless( $self->{channel} ) {
-        $self->{channel} = 'green';
+        $self->{channel} = 'yellow'; # FIXME once we have 'green';
     }
     unless( $self->{basepackages} ) {
         $self->{basepackages} = [ qw( base openssh btrfs-progs ntp ubos-admin ubos-networking rng-tools ) ];
