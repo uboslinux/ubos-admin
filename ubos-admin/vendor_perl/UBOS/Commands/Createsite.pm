@@ -316,7 +316,7 @@ sub run {
             map { $appConfigJson->{accessories} = @_->packageName } @accs;
         }
 
-        if( %$custPointValues ) {
+        if( keys %$custPointValues ) {
             $appConfigJson->{customizationpoints} = $custPointValues;
         }
         $newSiteJson->{appconfigs} = [ $appConfigJson ];
