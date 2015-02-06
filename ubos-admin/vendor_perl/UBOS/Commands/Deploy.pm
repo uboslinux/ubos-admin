@@ -122,17 +122,26 @@ sub run {
         }
         $haveIdAlready->{$newSiteId} = $newSite;
 
-        if( $haveAnyHostAlready && '*' ne $newSite->hostname() ) {
-            fatal( "There is already a site with hostname * (any), so no other site can be created." );
-        }
         my $newSiteHostName = $newSite->hostname;
+        if( $newSiteHostName eq '*' ) {
+            if( keys %$oldSites > 0 ) {
+                if( !$haveAnyHostAlready ) {
+                    fatal( "You can only create a site with hostname * (any) if no other sites exist." );
+                }
+                if( $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
+                    fatal( 'There is already a different site with hostname', $newSiteHostName );
+                }
+            }
 
-        if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
-            fatal( 'There is already a site with hostname', $newSiteHostName );
-        } elsif( '*' eq $newSiteHostName && %$haveHostAlready ) {
-            print "You can only create a site with hostname * (any) if no other sites exist.\n";
+        } else {
+            if( $haveAnyHostAlready ) {
+                fatal( "There is already a site with hostname * (any), so no other site can be created." );
+            }
+            if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
+                fatal( 'There is already a different site with hostname', $newSiteHostName );
+            }
+            $haveHostAlready->{$newSiteHostName} = $newSite;
         }
-        $haveHostAlready->{$newSiteHostName} = $newSite;
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             my $newAppConfigId = $newAppConfig->appConfigId;
