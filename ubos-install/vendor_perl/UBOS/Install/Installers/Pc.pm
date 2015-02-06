@@ -317,6 +317,7 @@ ALL_kver="/boot/vmlinuz-linux"
 
 PRESETS=('default')
 BINARIES="/usr/bin/btrfsck"
+MODULES=('btrfs')
 
 #default_config="/etc/mkinitcpio.conf"
 default_image="/boot/initramfs-linux.img"
