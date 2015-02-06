@@ -174,6 +174,8 @@ sub install {
     $errors += $diskLayout->saveFstab( $self->{target} );
     $errors += $self->saveSecuretty();
     $errors += $self->saveOther();    
+    $errors += $self->configureOs();
+
     $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
  
     my $chrootScript = <<S;
@@ -181,6 +183,7 @@ sub install {
 # Script to be run in chroot
 set -e
 S
+    $errors += $self->addGenerateLocaleToScript( \$chrootScript );
     $errors += $self->addEnableServicesToScript( \$chrootScript );
 
     my $out;
@@ -189,6 +192,7 @@ S
         error( "chroot script failed", $err );
         ++$errors;
     }
+
 
     $errors += $self->umountSpecial();
     $errors += $diskLayout->umountDisks( $self->{target} );
@@ -481,6 +485,55 @@ sub saveOther {
 }
 
 ##
+# Configure the installed OS
+# return: number of errors
+sub configureOs {
+    my $self = shift;
+
+    my $target  = $self->{target};
+    my $channel = $self->{channel};
+    my $buildId = UBOS::Utils::time2string( time() );
+    my $errors  = 0;
+
+    # Limit size of system journal
+    debug( "System journal" );
+    UBOS::Utils::myexec( "sudo perl -pi -e 's/^\\s*(#\\s*)?SystemMaxUse=.*\$/SystemMaxUse=50M/ '$target/etc/systemd/journald.conf'" );
+
+    # version
+    debug( "OS version info" );
+    my $issue = <<ISSUE;
+
++------------------------------------------+
+|                                          |
+|           Welcome to UBOS (tm)           |
+|                                          |
+|                 ubos.net                 |
+|                                          |
+ISSUE
+        $issue .= sprintf( "|%42s|\n", "channel: $channel " );
+        $issue .= <<ISSUE;
++------------------------------------------+
+
+ISSUE
+        UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
+
+        UBOS::Utils::saveFile( $target . '/etc/os-release', <<OSRELEASE, 0644, 'root', 'root' );
+NAME="UBOS"
+ID="ubos"
+ID_LIKE="arch"
+PRETTY_NAME="UBOS"
+HOME_URL="http://ubos.net/"
+BUILD_ID="$buildId"
+OSRELEASE
+
+    # Clean up
+    if( -e "$target/root/.bash_history" ) {
+        UBOS::Utils::deleteFile( "$target/root/.bash_history" );
+    }
+    return $errors;
+}
+
+##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
 # $bootLoaderDevice: device to install the bootloader on
@@ -493,6 +546,22 @@ sub installBootLoader {
     error( 'Method installBootLoader() must be overridden for', ref( $self ));
 
     return 1;
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that generates the locale
+# $chrootScriptP: pointer to script
+sub addGenerateLocaleToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    debug( "Executing addGenerateLocaleToScript" );
+
+    $$chrootScriptP .= "echo LANG=en_US.utf8 > /etc/locale.conf\n";
+    $$chrootScriptP .= "perl -pi -e 's/^#.*en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
+    $$chrootScriptP .= "locale-gen\n";
+
+    return 0;
 }
 
 ##
