@@ -159,9 +159,9 @@ sub run {
 
                     my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                     unless( $custPointValidation->{valuecheck}->( $value )) {
-                        fatal(  $custPointValidation->{valuecheckerror} );
+                        fatal( $custPointValidation->{valuecheckerror} );
                     }
-                    $custPointValues->{$installable->packageName}->{$custPointName} = $value;
+                    $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $value;
                 }
             }
         }
@@ -317,15 +317,7 @@ sub run {
         }
 
         if( %$custPointValues ) {
-            foreach my $packageName ( sort keys %$custPointValues ) {
-                my $packageInfo   = $custPointValues->{$packageName};
-                my $custPointJson = {};
-
-                foreach my $name ( sort keys %$packageInfo ) {
-                    $custPointJson->{$name} = $packageInfo->{$name};
-                }
-                $newSiteJson->{customizationpoints}->{$packageName} = $custPointJson;
-            }
+            $appConfigJson->{customizationpoints} = $custPointValues;
         }
         $newSiteJson->{appconfigs} = [ $appConfigJson ];
     }
