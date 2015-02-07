@@ -188,7 +188,7 @@ S
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "sudo chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
+    if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
         error( "chroot script failed", $err );
         ++$errors;
     }
@@ -256,17 +256,17 @@ sub mountSpecial {
     my $errors = 0;
 
     my $s = <<END;
-sudo mkdir -m 0755 -p $target/var/{cache/pacman/pkg,lib/pacman,log} $target/{dev,run,etc}
-sudo mkdir -m 1777 -p $target/tmp
-sudo mkdir -m 0555 -p $target/{sys,proc}
+mkdir -m 0755 -p $target/var/{cache/pacman/pkg,lib/pacman,log} $target/{dev,run,etc}
+mkdir -m 1777 -p $target/tmp
+mkdir -m 0555 -p $target/{sys,proc}
 
-sudo mount proc   $target/proc    -t proc     -o nosuid,noexec,nodev
-sudo mount sys    $target/sys     -t sysfs    -o nosuid,noexec,nodev,ro
-sudo mount udev   $target/dev     -t devtmpfs -o mode=0755,nosuid
-sudo mount devpts $target/dev/pts -t devpts   -o mode=0620,gid=5,nosuid,noexec
-sudo mount shm    $target/dev/shm -t tmpfs    -o mode=1777,nosuid,nodev
-sudo mount run    $target/run     -t tmpfs    -o nosuid,nodev,mode=0755
-sudo mount tmp    $target/tmp     -t tmpfs    -o mode=1777,strictatime,nodev,nosuid
+mount proc   $target/proc    -t proc     -o nosuid,noexec,nodev
+mount sys    $target/sys     -t sysfs    -o nosuid,noexec,nodev,ro
+mount udev   $target/dev     -t devtmpfs -o mode=0755,nosuid
+mount devpts $target/dev/pts -t devpts   -o mode=0620,gid=5,nosuid,noexec
+mount shm    $target/dev/shm -t tmpfs    -o mode=1777,nosuid,nodev
+mount run    $target/run     -t tmpfs    -o nosuid,nodev,mode=0755
+mount tmp    $target/tmp     -t tmpfs    -o mode=1777,strictatime,nodev,nosuid
 END
 
     if( UBOS::Utils::myexec( $s )) {
@@ -286,13 +286,13 @@ sub umountSpecial {
     my $errors = 0;
 
     my $s = <<END;
-sudo umount $target/tmp
-sudo umount $target/run
-sudo umount $target/dev/shm
-sudo umount $target/dev/pts
-sudo umount $target/dev
-sudo umount $target/sys
-sudo umount $target/proc
+umount $target/tmp
+umount $target/run
+umount $target/dev/shm
+umount $target/dev/pts
+umount $target/dev
+umount $target/sys
+umount $target/proc
 END
     if( UBOS::Utils::myexec( $s )) {
         ++$errors;
@@ -365,7 +365,7 @@ sub installPackages {
         push @allPackages, @{$self->{additionalpackages}};
     }
 
-    my $cmd = "sudo pacman"
+    my $cmd = "pacman"
             . " -r '$target'"
             . " -Sy"
             . " '--config=$pacmanConfig'"
@@ -497,7 +497,7 @@ sub configureOs {
 
     # Limit size of system journal
     debug( "System journal" );
-    UBOS::Utils::myexec( "sudo perl -pi -e 's/^\\s*(#\\s*)?SystemMaxUse=.*\$/SystemMaxUse=50M/ '$target/etc/systemd/journald.conf'" );
+    UBOS::Utils::myexec( "perl -pi -e 's/^\\s*(#\\s*)?SystemMaxUse=.*\$/SystemMaxUse=50M/' '$target/etc/systemd/journald.conf'" );
 
     # version
     debug( "OS version info" );

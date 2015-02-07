@@ -215,7 +215,7 @@ FSTAB
 
                 # Take blkid from first device
                 my $uuid;
-                UBOS::Utils::myexec( "sudo blkid -s UUID -o value '" . $devices[0] . "'", undef, \$uuid );
+                UBOS::Utils::myexec( "blkid -s UUID -o value '" . $devices[0] . "'", undef, \$uuid );
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
@@ -231,7 +231,7 @@ FSTAB
                 my $device = $deviceTable->{devices}->[0];
 
                 my $uuid;
-                UBOS::Utils::myexec( "sudo blkid -s UUID -o value '$device'", undef, \$uuid );
+                UBOS::Utils::myexec( "blkid -s UUID -o value '$device'", undef, \$uuid );
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 

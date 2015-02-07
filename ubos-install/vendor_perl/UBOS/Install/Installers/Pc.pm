@@ -326,14 +326,14 @@ END
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "sudo chroot '$target' mkinitcpio -p linux", undef, \$out, \$err ) ) {
+    if( UBOS::Utils::myexec( "chroot '$target' mkinitcpio -p linux", undef, \$out, \$err ) ) {
         error( "Generating ramdisk failed:", $err );
         ++$errors;
     }
 
     # Boot loader
     debug( "Installing grub" );
-    my $pacmanCmd = "sudo pacman"
+    my $pacmanCmd = "pacman"
             . " -r '$target'"
             . " -S"
             . " '--config=" . $pacmanConfigFile . "'"
@@ -344,7 +344,7 @@ END
         error( "pacman failed", $err );
         ++$errors;
     }
-    if( UBOS::Utils::myexec( "sudo grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
+    if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
         error( "grub-install failed", $err );
         ++$errors;
     }
@@ -360,7 +360,6 @@ END
 set -e
 
 perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
-perl -pi -e 's/^.*SystemMaxUse=.*$/SystemMaxUse=50M/'          /etc/systemd/journald.conf
 
 grub-mkconfig -o /boot/grub/grub.cfg
 
@@ -369,7 +368,7 @@ for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
 systemctl set-default multi-user.target
 END
 
-    if( UBOS::Utils::myexec( "sudo chroot '$target'", $chrootScript, \$out, \$err )) {
+    if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
         error( "bootloader chroot script failed", $err );
     }
 
