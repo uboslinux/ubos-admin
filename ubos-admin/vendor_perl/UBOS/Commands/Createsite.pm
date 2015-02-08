@@ -99,9 +99,7 @@ sub run {
             foreach my $oldSite ( values %$oldSites ) {
                 if( $oldSite->hostname eq $hostname ) {
                     print "There is already a site with hostname $hostname.\n";
-                    if( $noapp ) {
-                        next outer;
-                    }
+                    next outer;
                 }
             }
         }
