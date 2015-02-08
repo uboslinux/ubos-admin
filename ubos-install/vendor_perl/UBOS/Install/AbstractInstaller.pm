@@ -155,12 +155,11 @@ sub install {
     my $self       = shift;
     my $diskLayout = shift;
 
-    debug( 'Installing UBOS with hostname', $self->{hostname} );
+    info( 'Installing UBOS with hostname', $self->{hostname} );
 
     $self->check( $diskLayout ); # will exit if not valid
 
-    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( [ qw( os hl tools ) ] );
-            # only dbs available on all platforms; not virt
+    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs} );
     my $errors = 0;
 
     $errors += $diskLayout->createDisks();
@@ -352,7 +351,7 @@ sub installPackages {
     my $self         = shift;
     my $pacmanConfig = shift;
 
-    debug( "Executing installPackages" );
+    info( "Executing installPackages" );
 
     my $target = $self->{target};
     my $errors = 0;

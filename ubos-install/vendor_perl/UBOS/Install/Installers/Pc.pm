@@ -273,21 +273,6 @@ sub arch {
 }
 
 ##
-# Format the disks as appropriate for the provided DiskLayout
-# $diskLayout: the DiskLayout
-sub formatDisks {
-    my $self       = shift;
-    my $diskLayout = shift;
-
-    my $errors = 0;
-    $errors += $diskLayout->formatRoot( 'btrfs' );
-    $errors += $diskLayout->formatVarIfExists( 'brtfs' );
-    $errors += $diskLayout->formatBootIfExists( 'ext4' );
-
-    return $errors;
-}
-
-##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
@@ -296,6 +281,8 @@ sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
+
+    info( 'Installing boot loader' );
 
     my $errors = 0;
     my $target = $self->{target};

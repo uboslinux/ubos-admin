@@ -225,6 +225,8 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
+    info( 'Installing boot loader' );
+
     # Copied from the ArmLinuxARM Raspberry Pi image
     
     UBOS::Utils::saveFile( $self->{target} . '/boot/cmdline.txt', <<CONTENT, 0644, 'root', 'root' );
