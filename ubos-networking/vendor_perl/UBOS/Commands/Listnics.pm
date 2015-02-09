@@ -3,7 +3,7 @@
 # Command that lists the known network interfaces.
 #
 # This file is part of ubos-networking.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-networking is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,11 +36,19 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
-    my $verbose   = 0;
+    my $verbose       = 0;
+    my $logConfigFile = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose' => \$verbose );
+            'verbose+'      => \$verbose,
+            'logConfig=s'   => \$logConfigFile );
+
+    UBOS::Logging::initialize( 'ubos-admin', 'listnics', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args || ( $verbose && $logConfigFile ) ) {
+        fatal( 'Invalid invocation: listnics', @_, '(add --help for help)' );
+    }
 
     my $nics = UBOS::Networking::NetConfigUtils::getAllNics();
 

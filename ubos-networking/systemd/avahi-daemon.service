@@ -1,15 +1,17 @@
+# This must be called avahi-daemon and be installed into /etc
+# to override the default that comes with the package
 [Unit]
-Description=Avahi mDNS/DNS-SD for UBOS
+Description=mDNS/DNS-SD for UBOS
 Requires=ubos-networking.service avahi-daemon.socket
 After=ubos-networking.service
 
 [Service]
 Type=dbus
 BusName=org.freedesktop.Avahi
-ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-avahi-daemon
-ExecStart=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi-daemon.conf -s
-ExecReload=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi-daemon.conf -r
-ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-avahi-daemon
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart avahi-daemon
+ExecStart=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi.conf -s
+ExecReload=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi.conf -r
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop avahi-daemon
 NotifyAccess=main
 
 [Install]

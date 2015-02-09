@@ -3,7 +3,7 @@
 # Collection of utility methods for UBOS network configuration management.
 #
 # This file is part of ubos-networking.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-networking is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -195,10 +195,10 @@ sub setNetConfig {
         
     # start/stop daemons
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
-        _startService( 'dhcpcd',     'dhcpcd' );
-        _startService( 'ubos-avahi', 'avahi' );
+        _startService( 'dhcpcd',       'dhcpcd' );
+        _startService( 'avahi-daemon', 'avahi' );
     } else {
-        _stopService( 'ubos-avahi' );
+        _stopService( 'avahi-daemon' );
         _stopService( 'dhcpcd' );
     }
 }

@@ -6,7 +6,7 @@
 # tries to clean up as many cases as it can before activating.
 #
 # This file is part of ubos-networking.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-networking is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,14 +39,21 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
-    unless( @args ) {
-        fatal( 'Invalid command-line arguments' );
-    }
-    my $newConfigName = shift @args;
+    my $verbose       = 0;
+    my $logConfigFile = undef;
 
-    if( @args) {
-        fatal( 'Invalid command-line arguments' );
+    my $parseOk = GetOptionsFromArray(
+            \@args,
+            'verbose+'      => \$verbose,
+            'logConfig=s'   => \$logConfigFile );
+
+    UBOS::Logging::initialize( 'ubos-admin', 'setnetconfig', $verbose, $logConfigFile );
+
+    if( !$parseOk || @args != 1 || ( $verbose && $logConfigFile ) ) {
+        fatal( 'Invalid invocation: setnetconfig', @_, '(add --help for help)' );
     }
+
+    my $newConfigName = shift @args;
 
     return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName );
 }

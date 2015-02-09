@@ -1,7 +1,7 @@
 pkgname=$(basename $(pwd))
-pkgver=0.10
+pkgver=0.11
 pkgrel=1
-pkgdesc="Network management tools"
+pkgdesc="UBOS Network management tools"
 arch=('any')
 url="http://ubos.net/"
 developer=$url
@@ -18,11 +18,11 @@ package() {
     done
 
 # dnsmasq directory
-    mkdir -p -m755 ${pkgdir}/etc/dnsmasq.d
+#    mkdir -p -m755 ${pkgdir}/etc/dnsmasq.d
 
 # Avahi
     mkdir -p m755 ${pkgdir}/etc/avahi/services
-    install -m 644 ${startdir}/avahi/ubos-avahi-daemon.conf ${pkgdir}/etc/avahi/
+    install -m 644 ${startdir}/avahi/ubos-avahi.conf ${pkgdir}/etc/avahi/
     install -m 644 ${startdir}/avahi/{http,https}.service ${pkgdir}/etc/avahi/services/
 
 # Code
@@ -37,9 +37,9 @@ package() {
     
 # Systemd
     mkdir -p -m 755 ${pkgdir}/usr/lib/systemd/system/
-    install -m 644 ${startdir}/systemd/ubos-networking.service   ${pkgdir}/usr/lib/systemd/system/
+    install -m 644 ${startdir}/systemd/ubos-networking.service  ${pkgdir}/usr/lib/systemd/system/
 
-    # I can't get an ubos-avahi-daemon service to not hang, so it gets installed as an override
+    # Override system file
     mkdir -p -m 755 ${pkgdir}/etc/systemd/system/
     install -m 644 ${startdir}/systemd/avahi-daemon.service ${pkgdir}/etc/systemd/system/
 
