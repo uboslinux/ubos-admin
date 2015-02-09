@@ -57,10 +57,10 @@ sub new {
         $self->{channel} = 'yellow'; # FIXME once we have 'green';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( base openssh btrfs-progs ntp ubos-admin ubos-networking rng-tools ) ];
+        $self->{basepackages} = [ qw( base openssh btrfs-progs ntp ubos-admin ubos-install ubos-networking rng-tools ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ubos-install ntpd sshd ) ];
+        $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ntpd sshd ) ];
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl ) ];
@@ -557,7 +557,7 @@ sub addGenerateLocaleToScript {
     debug( "Executing addGenerateLocaleToScript" );
 
     $$chrootScriptP .= "echo LANG=en_US.utf8 > /etc/locale.conf\n";
-    $$chrootScriptP .= "perl -pi -e 's/^#.*en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
+    $$chrootScriptP .= "perl -pi -e 's/^#en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
     $$chrootScriptP .= "locale-gen\n";
 
     return 0;
