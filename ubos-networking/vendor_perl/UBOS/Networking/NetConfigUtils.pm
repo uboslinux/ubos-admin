@@ -424,7 +424,9 @@ sub _startService {
     my $out;
     my $err;
     UBOS::Utils::myexec( 'systemctl enable '  . $service, undef, \$out, \$err );
-    UBOS::Utils::myexec( 'systemctl restart ' . $service, undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl restart ' . $service . ' &', undef, \$out, \$err );
+            # FIXME? Is there a better way? If this isn't started in the background,
+            # systemctl start ubos-networking may deadlock
 }
 
 ##
