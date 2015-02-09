@@ -196,66 +196,67 @@ sub createDiskLayout {
             
     } else {
         # Option 1 or 2
-        unless( @$argvp ) {
+        if( @$argvp ) {
+            my $first = $argvp->[0];
+            if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
+                # Option 1
+                if( @$argvp>1 ) {
+                    error( 'Do not specify more than one disk image; cannot RAID disk images' );
+                    $ret = undef;
+                } else {
+                    $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                            $first,
+                            {   '/boot' => {
+                                    'index' => 1,
+                                    'fs'    => 'ext4',
+                                    'size'  => '100M'
+                                },
+                                '/' => {
+                                    'index' => 2,
+                                    'fs'    => 'btrfs'
+                                },
+                            } );
+                }
+            } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
+                # Option 2
+                my %haveAlready = ( $first => 1 );
+                foreach my $disk ( @$argvp ) {
+                    if( $first eq $disk ) {
+                        next;
+                    }
+                    if( $haveAlready{$disk} ) {
+                        error( 'Specified more than once:', $disk );
+                        $ret = undef;
+                        last;
+                    }
+                    unless( UBOS::Install::AbstractDiskLayout::isBlockDevice( $disk )) {
+                        error( 'Not a block device:', $disk );
+                        $ret = undef;
+                        last;
+                    }
+                    $haveAlready{$disk} = 1;
+                }
+                if( $ret ) {
+                    $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                            $argvp,
+                            {   '/boot' => {
+                                    'index' => 1,
+                                    'fs'    => 'ext4',
+                                    'size'  => '100M'
+                                },
+                                '/' => {
+                                    'index' => 2,
+                                    'fs'    => 'btrfs'
+                                },
+                            } );
+                }
+            } elsif( $ret ) {
+                error( 'Must be file or disk:', $first );
+                $ret = undef;
+            }
+        } else {
             # Need at least one disk
             error( 'Must specify at least than one file or image for deviceclass=pc' );
-            $ret = undef;
-        }
-        my $first = $argvp->[0];
-        if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
-            # Option 1
-            if( @$argvp>1 ) {
-                error( 'Do not specify more than one disk image; cannot RAID disk images' );
-                $ret = undef;
-            } else {
-                $ret = UBOS::Install::DiskLayouts::DiskImage->new(
-                        $first,
-                        {   '/boot' => {
-                                'index' => 1,
-                                'fs'    => 'ext4',
-                                'size'  => '100M'
-                            },
-                            '/' => {
-                                'index' => 2,
-                                'fs'    => 'btrfs'
-                            },
-                        } );
-            }
-        } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
-            # Option 2
-            my %haveAlready = ( $first => 1 );
-            foreach my $disk ( @$argvp ) {
-                if( $first eq $disk ) {
-                    next;
-                }
-                if( $haveAlready{$disk} ) {
-                    error( 'Specified more than once:', $disk );
-                    $ret = undef;
-                    last;
-                }
-                unless( UBOS::Install::AbstractDiskLayout::isBlockDevice( $disk )) {
-                    error( 'Not a block device:', $disk );
-                    $ret = undef;
-                    last;
-                }
-                $haveAlready{$disk} = 1;
-            }
-            if( $ret ) {
-                $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
-                        $argvp,
-                        {   '/boot' => {
-                                'index' => 1,
-                                'fs'    => 'ext4',
-                                'size'  => '100M'
-                            },
-                            '/' => {
-                                'index' => 2,
-                                'fs'    => 'btrfs'
-                            },
-                        } );
-            }
-        } elsif( $ret ) {
-            error( 'Must be file or disk:', $first );
             $ret = undef;
         }
     }

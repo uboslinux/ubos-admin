@@ -163,42 +163,47 @@ sub createDiskLayout {
             
     } else {
         # Option 1 or 2
-        unless( @$argvp == 1 ) {
+        if( @$argvp == 1 ) {
+            my $rootDiskOrImage = $argvp->[0];
+            if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
+                # Option 1
+                $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                        $rootDiskOrImage,
+                        {   '/boot' => {
+                                'index' => 1,
+                                'fs'    => 'vfat',
+                                'size'  => '100M'
+                            },
+                            '/' => {
+                                'index' => 2,
+                                'fs'    => 'btrfs'
+                            },
+                        } );
+            } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
+                # Option 2
+                $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                        [   $rootDiskOrImage    ],
+                        {   '/boot' => {
+                                'index' => 1,
+                                'fs'    => 'vfat',
+                                'size'  => '100M'
+                            },
+                            '/' => {
+                                'index' => 2,
+                                'fs'    => 'btrfs'
+                            },
+                        } );
+            } else {
+                error( 'Must be file or disk:', $rootDiskOrImage );
+                $ret = undef;
+            }
+        } elsif( @argvp > 1 ) {
             # Don't do RAID here
             error( 'Do not specify more than one file or image for deviceclass=rpi' );
             $ret = undef;
-        }
-        my $rootDiskOrImage = $argvp->[0];
-        if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
-            # Option 1
-            $ret = UBOS::Install::DiskLayouts::DiskImage->new(
-                    $rootDiskOrImage,
-                    {   '/boot' => {
-                            'index' => 1,
-                            'fs'    => 'vfat',
-                            'size'  => '100M'
-                        },
-                        '/' => {
-                            'index' => 2,
-                            'fs'    => 'btrfs'
-                        },
-                    } );
-        } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
-            # Option 2
-            $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
-                    [   $rootDiskOrImage    ],
-                    {   '/boot' => {
-                            'index' => 1,
-                            'fs'    => 'vfat',
-                            'size'  => '100M'
-                        },
-                        '/' => {
-                            'index' => 2,
-                            'fs'    => 'btrfs'
-                        },
-                    } );
         } else {
-            error( 'Must be file or disk:', $rootDiskOrImage );
+            # Need at least one disk
+            error( 'Must specify at least than one file or image for deviceclass=rpi' );
             $ret = undef;
         }
     }
