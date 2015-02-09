@@ -35,7 +35,7 @@ my $locale = 'en_US'; # for now
 if( $site ) {
     my $hostname = $site->hostname;
     if( '*' eq $hostname ) {
-        $hostname = 'Indie Box';
+        $hostname = $q->virtual_host() || $q->server_name();
     }
     print $q->header( -type => 'text/html' );
     print <<HTML;
