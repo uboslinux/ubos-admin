@@ -60,7 +60,7 @@ sub new {
         $self->{basepackages} = [ qw( base openssh btrfs-progs ntp ubos-admin ubos-networking rng-tools ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ntpd sshd ) ];
+        $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ubos-install ntpd sshd ) ];
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl ) ];
