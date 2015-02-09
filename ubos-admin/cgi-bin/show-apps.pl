@@ -47,7 +47,7 @@ if( $site ) {
  </head>
  <body>
   <div class="page">
-   <div class="logo"><a href="http://indiebox.net/"><img src="/_common/images/indiebox-logo-horizontal-142x41.png" /></a></div>
+   <div class="logo"><a href="http://ubos.net/"><img src="/_common/images/ubos-logo-128x41.png"/></a></div>
    <div class="content">
     <h1>$hostname</h1>
 HTML
@@ -115,7 +115,7 @@ HTML
     print <<HTML;
    </div>
    <div class="footer">
-    <p>&copy; 2012-2014 Indie Computing Corp. To learn more, visit <a href="http://indiebox.net/">indiebox.net</a>.
+    <p>&copy; 2012-2015 Indie Computing Corp.<br/>
     Indie Box, UBOS, the Indie Box logo and the UBOS logo are trademarks or registered trademarks of Indie Computing Corp.</p>
    </div>
   </div>
@@ -133,13 +133,13 @@ HTML
  </head>
  <body>
   <div class="page">
-   <div class="logo"><a href="http://indiebox.net/"><img src="/_common/images/indiebox-logo-horizontal-142x41.png" /></a></div>
+   <div class="logo"><a href="http://ubos.net/"><img src="/_common/images/ubos-logo-128x41.png" /></a></div>
    <div class="content">
     <h1 class="error">404 Site not found</h1>
     <p>A site with siteid $siteId could not be found. Perhaps you want to try again later.</p>
    </div>
    <div class="footer">
-    <p>&copy; 2012-2014 Indie Computing Corp. To learn more, visit <a href="http://indiebox.net/">indiebox.net</a>.
+    <p>&copy; 2012-2015 Indie Computing Corp.<br/>
     Indie Box, UBOS, the Indie Box logo and the UBOS logo are trademarks or registered trademarks of Indie Computing Corp.</p>
    </div>
   </div>
