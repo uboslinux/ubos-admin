@@ -197,7 +197,7 @@ sub createDiskLayout {
                 error( 'Must be file or disk:', $rootDiskOrImage );
                 $ret = undef;
             }
-        } elsif( @argvp > 1 ) {
+        } elsif( @$argvp > 1 ) {
             # Don't do RAID here
             error( 'Do not specify more than one file or image for deviceclass=rpi' );
             $ret = undef;
