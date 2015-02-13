@@ -45,6 +45,7 @@ sub run {
     my $askAll        = 0;
     my $tls           = 0;
     my $selfSigned    = 0;
+    my $out           = undef;
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $dryRun;
@@ -55,6 +56,7 @@ sub run {
             'askForAllCustomizationPoints' => \$askAll,
             'tls'                          => \$tls,
             'selfsigned'                   => \$selfSigned,
+            'out=s',                       => \$out,
             'verbose+'                     => \$verbose,
             'logConfig=s'                  => \$logConfigFile,
             'dry-run|n'                    => \$dryRun );
@@ -174,9 +176,18 @@ sub run {
     my $adminCredential;
     my $adminEmail;
 
-    do {
+    while( 1 ) {
         $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S+$', undef, 1 );
-    } while( $adminCredential =~ m!s3cr3t!i );
+        if( $adminCredential =~ m!s3cr3t!i ) {
+            print "Not that one!\n";
+        } elsif( $adminCredential eq $adminUserId ) {
+            print "Password must be different from username.\n";
+        } elsif( length( $adminCredential ) < 6 ) {
+            print "At least 6 characters please.\n";
+        } else {
+            last;
+        }
+    }
     $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
 
 
@@ -322,9 +333,17 @@ sub run {
 
     my $ret = 1;
     if( $dryRun ) {
-        print UBOS::Utils::writeJsonToString( $newSiteJson );
+        if( $out ) {
+            print UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+        } else {
+            print UBOS::Utils::writeJsonToString( $newSiteJson );
+        }
 
     } else {
+        if( $out ) {
+            print UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+        }
+
         my $newSite = UBOS::Site->new( $newSiteJson );
 
         my $prerequisites = {};
@@ -406,19 +425,21 @@ sub ask {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]]
+    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>]
 SSS
     Interactively define and install a new site. Unless --noapp is
     provided, the site will run one app. If --tls is provided, the
-    site will be secured with SSL.
+    site will be secured with SSL. If --out is provided, also save
+    the created Site JSON to a file.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed
     using 'ubos-admin deploy'.  If --tls is provided, the site will
-    be secured with SSL.
+    be secured with SSL. If --out is provided, save the created Site
+    JSON to a file instead of writing it to stdout.
 HHH
     };
 }
