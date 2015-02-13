@@ -334,14 +334,14 @@ sub run {
     my $ret = 1;
     if( $dryRun ) {
         if( $out ) {
-            print UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+            UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
         } else {
             print UBOS::Utils::writeJsonToString( $newSiteJson );
         }
 
     } else {
         if( $out ) {
-            print UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+            UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
         }
 
         my $newSite = UBOS::Site->new( $newSiteJson );
