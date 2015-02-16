@@ -172,7 +172,7 @@ sub install {
     $errors += $self->saveChannel();
     $errors += $diskLayout->saveFstab( $self->{target} );
     $errors += $self->saveSecuretty();
-    $errors += $self->saveOther();    
+    $errors += $self->saveOther();
     $errors += $self->configureOs();
 
     $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
@@ -191,7 +191,7 @@ S
         error( "chroot script failed", $err );
         ++$errors;
     }
-
+    $errors += $self->cleanup();
 
     $errors += $self->umountSpecial();
     $errors += $diskLayout->umountDisks( $self->{target} );
@@ -524,12 +524,6 @@ PRETTY_NAME="UBOS"
 HOME_URL="http://ubos.net/"
 BUILD_ID="$buildId"
 OSRELEASE
-
-    # Clean up
-    if( -e "$target/root/.bash_history" ) {
-        UBOS::Utils::deleteFile( "$target/root/.bash_history" );
-    }
-    return $errors;
 }
 
 ##
@@ -587,6 +581,19 @@ sub addEnableServicesToScript {
         $$chrootScriptP .= 'systemctl enable ' . join( ' ', @allServices ) . "\n\n";
     }
     return 0;
+}
+
+##
+# Clean up after install is done
+sub cleanup {
+    my $self = shift;
+    
+    my $target  = $self->{target};
+
+    if( -e "$target/root/.bash_history" ) {
+        UBOS::Utils::deleteFile( "$target/root/.bash_history" );
+    }
+    return $errors;
 }
 
 ##
