@@ -211,7 +211,13 @@ sub resolvedCustomizationPoints {
                 my $custPointDef = $installableCustPoints->{$custPointName};
 
                 # check data type
-                my $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
+                my $value = undef;
+                if(    exists( $appConfigCustPoints->{$packageName} )
+                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName} )
+                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
+                {
+                    $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
+                }
                 if( defined( $value )) {
                     $ret->{$packageName}->{$custPointName}->{value} = $value;
                 } else {

@@ -47,6 +47,7 @@ sub run {
     my $selfSigned    = 0;
     my $out           = undef;
     my $verbose       = 0;
+    my $quiet         = 0;
     my $logConfigFile = undef;
     my $dryRun;
 
@@ -58,6 +59,7 @@ sub run {
             'selfsigned'                   => \$selfSigned,
             'out=s',                       => \$out,
             'verbose+'                     => \$verbose,
+            'quiet',                       => \$quiet,
             'logConfig=s'                  => \$logConfigFile,
             'dry-run|n'                    => \$dryRun );
 
@@ -71,7 +73,6 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-
     my $oldSites = UBOS::Host::sites();
     my $appId;
     my $app;
@@ -83,7 +84,8 @@ sub run {
 
     unless( $noapp ) {
         $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
-        UBOS::Host::ensurePackages( $appId );
+
+        UBOS::Host::ensurePackages( $appId, $quiet );
 
         $app = UBOS::App->new( $appId );
     }
@@ -130,11 +132,15 @@ sub run {
         my $accessories = ask( "Any accessories for $appId? Enter list: " );
         $accessories =~ s!^\s+!!;
         $accessories =~ s!\s+$!!;
-        foreach my $accId ( split( /\s+,?\s*/, $accessories )) {
-            UBOS::Host::ensurePackages( $accId );
-            my $acc = UBOS::Accessory->new( $accId );
+        my @accList = split( /\s+,?\s*/, $accessories );
+        if( @accList ) {
+            UBOS::Host::ensurePackages( \@accList, $quiet );
 
-            push @accs, $acc;
+            foreach my $accId ( @accList ) {
+                my $acc = UBOS::Accessory->new( $accId );
+
+                push @accs, $acc;
+            }
         }
 
         foreach my $installable ( $app, @accs ) {
@@ -167,8 +173,6 @@ sub run {
         }
     }
 
-    my $newSiteJsonString;
-    
     my $siteId        = UBOS::Host::createNewSiteId();
     my $appConfigId   = UBOS::Host::createNewAppConfigId();
     my $adminUserId   = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
@@ -322,7 +326,8 @@ sub run {
             $appConfigJson->{context} = $context;
         }
         if( @accs ) {
-            map { $appConfigJson->{accessories} = @_->packageName } @accs;
+            $appConfigJson->{accessories} = [];
+            map { push @{$appConfigJson->{accessoryids}}, $_->packageName; } @accs;
         }
 
         if( keys %$custPointValues ) {
@@ -342,6 +347,10 @@ sub run {
     } else {
         if( $out ) {
             UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+        }
+
+        unless( $quiet ) {
+            print "Deploying ...\n";
         }
 
         my $newSite = UBOS::Site->new( $newSiteJson );
@@ -425,21 +434,23 @@ sub ask {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>]
+    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>]
 SSS
     Interactively define and install a new site. Unless --noapp is
     provided, the site will run one app. If --tls is provided, the
     site will be secured with SSL. If --out is provided, also save
-    the created Site JSON to a file.
+    the created Site JSON to a file. Adding --quiet will skip progress
+    messages.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed
     using 'ubos-admin deploy'.  If --tls is provided, the site will
     be secured with SSL. If --out is provided, save the created Site
-    JSON to a file instead of writing it to stdout.
+    JSON to a file instead of writing it to stdout. Adding --quiet will
+    skip progress messages.
 HHH
     };
 }

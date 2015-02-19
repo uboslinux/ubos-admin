@@ -139,13 +139,17 @@ sub _siteJsonWithout {
         if( exists( $appConfig->{json}->{accessoryids} )) {
             $appConfigRet->{accessoryids} = $appConfig->{json}->{accessoryids}; # by reference is fine
         }
-        foreach my $custPointInstallableName ( keys %{$appConfig->{json}->{customizationpoints}} ) {
-            my $custPointInstallableJson = $appConfig->{json}->{customizationpoints}->{$custPointInstallableName};
-            foreach my $custPointName ( keys %{$custPointInstallableJson} ) {
-                my $custPointDefJson = $appConfig->customizationPointDefinition( $custPointInstallableName, $custPointName );
-                unless( exists( $custPointDefJson->{private} ) && $custPointDefJson->{private} ) {
-                    $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
-                            = $custPointInstallableJson->{$custPointName};
+        if( exists( $appConfig->{json}->{customizationpoints} )) {
+            foreach my $custPointInstallableName ( keys %{$appConfig->{json}->{customizationpoints}} ) {
+                my $custPointInstallableJson = $appConfig->{json}->{customizationpoints}->{$custPointInstallableName};
+                if( defined( $custPointInstallableJson )) {
+                    foreach my $custPointName ( keys %{$custPointInstallableJson} ) {
+                        my $custPointDefJson = $appConfig->customizationPointDefinition( $custPointInstallableName, $custPointName );
+                        unless( exists( $custPointDefJson->{private} ) && $custPointDefJson->{private} ) {
+                            $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
+                                    = $custPointInstallableJson->{$custPointName};
+                        }
+                    }
                 }
             }
         }
@@ -886,7 +890,7 @@ sub _checkJson {
                 }
                 foreach my $packageName ( keys %{$appConfigJson->{customizationpoints}} ) {
                     unless( $installables{$packageName} ) {
-                        fatal( 'Site JSON: customizationpoint specified for non-installed installable' );
+                        fatal( 'Site JSON: customizationpoint specified for non-installed installable', $packageName, ', installed:', keys %installables );
                     }
                     my $custPointsForPackage = $appConfigJson->{customizationpoints}->{$packageName};
                     if( !$custPointsForPackage || ref( $custPointsForPackage ) ne 'HASH' ) {

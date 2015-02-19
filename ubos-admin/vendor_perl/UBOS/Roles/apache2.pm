@@ -428,28 +428,33 @@ sub checkAppManifestForRole {
     my $retentionBuckets = shift;
     my $config           = shift;
 
-    # There is more to check for apps, so this gets inserted here
-    if( defined( $jsonFragment->{defaultcontext} )) {
-        if( defined( $jsonFragment->{fixedcontext} )) {
-            $installable->myFatal( "roles section: role $roleName: must not specify both defaultcontext and fixedcontext" );
-        }
-        if( ref( $jsonFragment->{defaultcontext} )) {
-            $installable->myFatal( "roles section: role $roleName: field 'defaultcontext' must be string" );
-        }
-        unless( $jsonFragment->{defaultcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
-            $installable->myFatal( "roles section: role $roleName: invalid defaultcontext: " . $jsonFragment->{defaultcontext} );
-        }
+    if( $installable->isa( 'UBOS::App' )) {
+        if( defined( $jsonFragment->{defaultcontext} )) {
+            if( defined( $jsonFragment->{fixedcontext} )) {
+                $installable->myFatal( "roles section: role $roleName: must not specify both defaultcontext and fixedcontext" );
+            }
+            if( ref( $jsonFragment->{defaultcontext} )) {
+                $installable->myFatal( "roles section: role $roleName: field 'defaultcontext' must be string" );
+            }
+            unless( $jsonFragment->{defaultcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
+                $installable->myFatal( "roles section: role $roleName: invalid defaultcontext: " . $jsonFragment->{defaultcontext} );
+            }
 
+        } elsif( defined( $jsonFragment->{fixedcontext} )) {
+            if( ref( $jsonFragment->{fixedcontext} )) {
+                $installable->myFatal( "roles section: role $roleName: field 'fixedcontext' must be string" );
+            }
+            unless( $jsonFragment->{fixedcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
+                $installable->myFatal( "roles section: role $roleName: invalid fixedcontext: " . $jsonFragment->{fixedcontext} );
+            }
+        } else {
+            $installable->myFatal( "roles section: role $roleName: either defaultcontext or fixedcontext must be given" );
+        }
+    } elsif( defined( $jsonFragment->{defaultcontext} )) {
+        $installable->myFatal( "roles section: role $roleName: only provide field 'defaultcontext' for apps" );
     } elsif( defined( $jsonFragment->{fixedcontext} )) {
-        if( ref( $jsonFragment->{fixedcontext} )) {
-            $installable->myFatal( "roles section: role $roleName: field 'fixedcontext' must be string" );
-        }
-        unless( $jsonFragment->{fixedcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
-            $installable->myFatal( "roles section: role $roleName: invalid fixedcontext: " . $jsonFragment->{fixedcontext} );
-        }
-    } else {
-        $installable->myFatal( "roles section: role $roleName: either defaultcontext or fixedcontext must be given" );
-    }
+        $installable->myFatal( "roles section: role $roleName: only provide field 'fixedcontext' for apps" );
+    }        
 
     $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
 }

@@ -123,25 +123,38 @@ sub run {
         $haveIdAlready->{$newSiteId} = $newSite;
 
         my $newSiteHostName = $newSite->hostname;
-        if( $newSiteHostName eq '*' ) {
-            if( keys %$oldSites > 0 ) {
-                if( !$haveAnyHostAlready ) {
-                    fatal( "You can only create a site with hostname * (any) if no other sites exist." );
+        if( defined( $oldSites->{$newSiteId} )) {
+            my $existingSite = $oldSites->{$newSiteId};
+
+            # site is being redeployed
+            if( $newSiteHostName eq '*' ) {
+                if( keys %$oldSites > 1 ) {
+                    fatal( "You can only redeploy a site with hostname * (any) if no other sites exist." );
                 }
-                if( $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
+                
+            } else {
+                if( $haveHostAlready->{$newSiteHostName} ) {
                     fatal( 'There is already a different site with hostname', $newSiteHostName );
                 }
             }
 
         } else {
-            if( $haveAnyHostAlready ) {
-                fatal( "There is already a site with hostname * (any), so no other site can be created." );
-            }
-            if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $haveHostAlready->{$newSiteHostName}->siteId ) {
-                fatal( 'There is already a different site with hostname', $newSiteHostName );
-            }
-            $haveHostAlready->{$newSiteHostName} = $newSite;
+            # site is new
+            if( $newSiteHostName eq '*' ) {
+                if( keys %$oldSites > 0 ) {
+                    fatal( "You can only create a site with hostname * (any) if no other sites exist." );
+                }
+
+            } else {
+                if( $haveAnyHostAlready ) {
+                    fatal( "There is already a site with hostname * (any), so no other site can be created." );
+                }
+                if( $haveHostAlready->{$newSiteHostName} ) {
+                    fatal( 'There is already a different site with hostname', $newSiteHostName );
+                }
+            }            
         }
+        $haveHostAlready->{$newSiteHostName} = $newSite;
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             my $newAppConfigId = $newAppConfig->appConfigId;
@@ -206,17 +219,23 @@ sub run {
                         my $custPointDef = $installableCustPoints->{$custPointName};
 
                         # check data type
-                        my $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
-                        if( defined( $value )) {
-                            my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
-                            my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                            # checked earlier that this is non-null
-                            unless( $custPointValidation->{valuecheck}->( $value )) {
-                                fatal(   'Site ' . $newSite->siteId
-                                       . ', AppConfiguration ' . $newAppConfig->appConfigId
-                                       . ', package ' . $packageName
-                                       . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
-                                       . ', is ' . ( ref( $value ) || $value ));
+                        my $value = undef;
+                        if(    exists( $appConfigCustPoints->{$packageName} )
+                            && exists( $appConfigCustPoints->{$packageName}->{$custPointName} )
+                            && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
+                        {
+                            $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
+                            if( defined( $value )) {
+                                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+                                my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                                # checked earlier that this is non-null
+                                unless( $custPointValidation->{valuecheck}->( $value )) {
+                                    fatal(   'Site ' . $newSite->siteId
+                                           . ', AppConfiguration ' . $newAppConfig->appConfigId
+                                           . ', package ' . $packageName
+                                           . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
+                                           . ', is ' . ( ref( $value ) || $value ));
+                                }
                             }
                         }
                         

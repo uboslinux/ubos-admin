@@ -427,11 +427,16 @@ sub purgeCache {
 
 ##
 # Make sure the named packages are installed
-# $packages: List of packages
+# $packages: List or hash of packages
+# $quiet: if false, and an actual download needs to be performed, print progress message
 # return: number of actually installed packages
 sub ensurePackages {
     my $packages = shift;
+    my $quiet    = shift;
 
+    unless( defined( $quiet )) {
+        $quiet = 1;
+    }
     my @packageList;
     if( ref( $packages ) eq 'HASH' ) {
         @packageList = keys %$packages;
@@ -447,6 +452,9 @@ sub ensurePackages {
     my @filteredPackageList = grep { myexec( "pacman -Q $_ > /dev/null 2>&1" ) } @packageList;
 
     if( @filteredPackageList ) {
+        unless( $quiet ) {
+            print "Downloading packages...\n";
+        }
         my $err;
         my $cmd = 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
         unless( UBOS::Logging::isDebugActive() ) {
@@ -588,6 +596,69 @@ sub ensurePacmanInit {
     UBOS::Utils::myexec( "pacman -Q archlinux-keyring    > /dev/null 2>&1 && pacman-key --populate archlinux",    undef, undef, \$err );
     UBOS::Utils::myexec( "pacman -Q archlinuxarm-keyring > /dev/null 2>&1 && pacman-key --populate archlinuxarm", undef, undef, \$err );
     UBOS::Utils::myexec( "pacman-key --populate ubos" );
+}
+
+##
+# Determine the fingerprint of the host key
+sub gpgHostKeyFingerprint {
+
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --fingerprint pacman@localhost', undef, \$out, \$err )) {
+        error( 'Cannot determine host key', $out, $err );
+        return '';
+    }
+    # gpg: WARNING: unsafe permissions on homedir '/etc/pacman.d/gnupg'
+    # pub   rsa2048/B0B434F0 2015-02-15
+    #       Key fingerprint = 26FC BC8B 874A 9744 7718  5E8C 5311 6A36 B0B4 34F0
+    # uid       [ultimate] Pacman Keyring Master Key <pacman@localhost>
+
+    my $ret;
+    if( $out =~ m!Key fingerprint = ([0-9A-Z\s]+)$!m ) {
+        $ret = $1;
+        $ret =~ s!\s+!!g;
+    } else {
+        error( 'Unexpected fingerprint format:', $out );
+        $ret = '';
+    }
+    return $ret;
+}
+
+##
+# Make sure an OS user with the provided userId exists.
+# If not, create the user with the specified group(s).
+# $userId: user id
+# @groupIds: zero or more groups
+# return: success or fail
+sub ensureOsUser {
+    my $userId   = shift;
+    my @groupIds = @_;
+
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "getent passwd $userId", undef, \$out, \$err )) {
+
+        debug( 'Creating user', $userId );
+
+        if( UBOS::Utils::myexec( "sudo useradd -e '' -m -U $userId", undef, undef, \$err )) {
+            error( 'Failed to create user', $userId, ', error:', $err );
+            return 0;
+        }
+
+        if( @groupIds ) {
+            debug( 'Adding user to groups:', $userId, @groupIds );
+
+            if( UBOS::Utils::myexec( "sudo usermod -a -G " . join(',', @groupIds ) . " $userId", undef, undef, \$err )) {
+                error( 'Failed to add user to groups:', $userId, @groupIds, 'error:', $err );
+                return 0;
+            }
+        }
+        if( UBOS::Utils::myexec( "sudo chown -R $userId /home/$userId" )) {
+            error( 'Failed to chown home dir of user', $userId );
+            return 0;
+        }
+    }
+    return 1;
 }
 
 1;
