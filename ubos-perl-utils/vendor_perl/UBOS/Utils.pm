@@ -384,6 +384,63 @@ sub mkdir {
 }
 
 ##
+# Make a directory, and parent directories if needed
+# $filename: path to the directory
+# $mask: permissions on the directory
+# $uname: owner of the directory
+# $gname: group of the directory
+# return: 1 if successful
+sub mkdirDashP {
+    my $filename = shift;
+    my $mask     = shift;
+    my $uid      = getUid( shift );
+    my $gid      = getGid( shift );
+
+    unless( defined( $mask )) {
+        $mask = 0755;
+    }
+
+    if( -d $filename ) {
+        warning( 'Directory exists already', $filename );
+        return 1;
+    }
+    if( -e $filename ) {
+        error( 'Failed to create directory, something is there already:', $filename );
+        return 0;
+    }
+
+    my $soFar = '';
+    if( $filename =~ m!^/! ) {
+        $soFar = '/';
+    }
+    foreach my $component ( split /\//, $filename ) {
+        unless( $component ) {
+            next;
+        }
+        if( $soFar && $soFar !~ m!/$! ) {
+            $soFar .= '/';
+        }
+        $soFar .= $component;
+        unless( -d $soFar ) {
+            debug( 'Creating directory', $soFar );
+
+            my $ret = CORE::mkdir $soFar;
+            unless( $ret ) {
+                error( "Failed to create directory $soFar:", $! );
+                return $ret;
+            }
+
+            chmod $mask, $soFar;
+
+            if( $uid >= 0 || $gid >= 0 ) {
+                chown $uid, $gid, $soFar;
+            }
+        }
+    }
+    return 0;
+}
+
+##
 # Make a symlink
 # $oldfile: the destination of the symlink
 # $newfile: the symlink to be created
