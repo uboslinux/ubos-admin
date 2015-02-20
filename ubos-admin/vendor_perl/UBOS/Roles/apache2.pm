@@ -218,7 +218,7 @@ sub setupSite {
 #
 # Apache config fragment for site $siteId at host $hostname
 #
-# (C) 2013-2014 Indie Computing Corp.
+# (C) 2013-2015 Indie Computing Corp.
 # Generated automatically, do not modify.
 #
 CONTENT
@@ -237,7 +237,9 @@ CONTENT
 <VirtualHost *:80>
 $serverDeclaration
 
-    Redirect / https://$hostname/
+    RewriteEngine On
+    RewriteRule ^(.*)\$ https://%{HTTP_HOST}\$1 [R=301,L]
+    # This also works for wildcard hostnames
 </VirtualHost>
 CONTENT
 
