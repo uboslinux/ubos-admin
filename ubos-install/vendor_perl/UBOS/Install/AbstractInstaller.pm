@@ -57,7 +57,7 @@ sub new {
         $self->{channel} = 'yellow'; # FIXME once we have 'green';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( base openssh btrfs-progs ntp ubos-admin ubos-install ubos-networking rng-tools ) ];
+        $self->{basepackages} = [ qw( ubos-base ) ];
     }
     unless( $self->{baseservices} ) {
         $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ntpd sshd ) ];
