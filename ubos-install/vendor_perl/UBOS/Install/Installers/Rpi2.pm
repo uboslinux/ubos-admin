@@ -1,5 +1,5 @@
 # 
-# Install UBOS on an SD Card for a Raspberry Pi.
+# Install UBOS on an SD Card for a Raspberry Pi 2.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Rpi;
+package UBOS::Install::Installers::Rpi2;
 
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
@@ -45,7 +45,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-raspberry-pi';
+        $self->{hostname} = 'ubos-raspberry-pi2';
     }
 
     $self->SUPER::new( @args );
@@ -59,7 +59,7 @@ sub new {
 sub arch {
     my $self = shift;
 
-    return 'armv6h';
+    return 'armv7h';
 }
 
 1;

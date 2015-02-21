@@ -73,6 +73,9 @@ sub formatDisks {
             if( @{$data->{devices}} > 1 ) {
                 $cmd .= '-m raid1 -d raid1 ';
             }
+            if( exists( $data->{mkfsflags} )) {
+                $cmd .= $data->{mkfsflags} . ' ';
+            }
             $cmd .= join( ' ', @{$data->{devices}} );
 
             my $out;
@@ -83,7 +86,11 @@ sub formatDisks {
             }
         } else {
             foreach my $device ( @{$data->{devices}} ) {
-                my $cmd = "mkfs.$fs '$device'";
+                my $cmd = "mkfs.$fs";
+                if( exists( $data->{mkfsflags} )) {
+                    $cmd .= $data->{mkfsflags} . ' ';
+                }
+                $cmd .= " '$device'";
 
                 my $out;
                 my $err;

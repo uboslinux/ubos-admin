@@ -167,31 +167,33 @@ sub install {
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
-    $errors += $self->savePacmanConfigProduction( $self->{packagedbs} );
-    $errors += $self->saveHostname();
-    $errors += $self->saveChannel();
-    $errors += $diskLayout->saveFstab( $self->{target} );
-    $errors += $self->saveSecuretty();
-    $errors += $self->saveOther();
-    $errors += $self->configureOs();
+    unless( $errors ) {
+        $errors += $self->savePacmanConfigProduction( $self->{packagedbs} );
+        $errors += $self->saveHostname();
+        $errors += $self->saveChannel();
+        $errors += $diskLayout->saveFstab( $self->{target} );
+        $errors += $self->saveSecuretty();
+        $errors += $self->saveOther();
+        $errors += $self->configureOs();
 
-    $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
- 
-    my $chrootScript = <<S;
+        $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
+     
+        my $chrootScript = <<S;
 #!/bin/bash
 # Script to be run in chroot
 set -e
 S
-    $errors += $self->addGenerateLocaleToScript( \$chrootScript );
-    $errors += $self->addEnableServicesToScript( \$chrootScript );
+        $errors += $self->addGenerateLocaleToScript( \$chrootScript );
+        $errors += $self->addEnableServicesToScript( \$chrootScript );
 
-    my $out;
-    my $err;
-    if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
-        error( "chroot script failed", $err );
-        ++$errors;
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
+            error( "chroot script failed", $err );
+            ++$errors;
+        }
+        $errors += $self->cleanup();
     }
-    $errors += $self->cleanup();
 
     $errors += $self->umountSpecial();
     $errors += $diskLayout->umountDisks( $self->{target} );
@@ -593,7 +595,7 @@ sub cleanup {
     if( -e "$target/root/.bash_history" ) {
         UBOS::Utils::deleteFile( "$target/root/.bash_history" );
     }
-    return $errors;
+    return 0;
 }
 
 ##

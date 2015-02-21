@@ -80,6 +80,12 @@ unless( $deviceclassname ) {
     UBOS::Utils::myexec( 'uname -a', undef, \$out, undef );
     if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
         $deviceclassname = 'rpi';
+    } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
+        $deviceclassname = 'rpi2';
+    } elsif( $out =~ m!bone.*armv7l! ) {
+        $deviceclassname = 'bbb';
+    } elsif( $out =~ m!pcduino3.*armv7l! ) {
+        $deviceclassname = 'pcduino3';
     } elsif( $out =~ m!x86_64! ) {
         $deviceclassname = 'pc';
     } else {
