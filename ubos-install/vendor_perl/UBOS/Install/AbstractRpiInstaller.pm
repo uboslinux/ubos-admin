@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::AbstractRpiInstaller;
+package UBOS::Install::AbstractRpiInstaller;
 
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
@@ -105,9 +105,13 @@ sub createDiskLayout {
             $ret = undef;
         }
         if( $ret && !UBOS::Install::AbstractDiskLayout::isPartition( $bootpartition )) {
-            error( 'Not a partition:', $bootpartition );
+            error( 'Provided bootpartition is not a partition:', $bootpartition );
+            $ret = undef;
         }
-        my %haveAlready = ( $bootpartition => 1 );
+        my %haveAlready = ();
+        if( defined( $bootpartition )) {
+            $haveAlready{$bootpartition} = 1;
+        }
 
         if( $ret ) {
             foreach my $part ( @rootpartitions, @varpartitions ) {
@@ -124,7 +128,7 @@ sub createDiskLayout {
                 $haveAlready{$part} = 1;
             }
         }
-        if( @varpartitions == 0 ) {
+        if( $ret && @varpartitions == 0 ) {
             # Option 3
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
                     {   '/boot' => {
@@ -139,7 +143,7 @@ sub createDiskLayout {
                             'devices' => \@rootpartitions
                         }
                     } );
-        } else {
+        } elsif( $ret ) {
             # Options 4
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
                     {   '/boot' => {
@@ -165,7 +169,7 @@ sub createDiskLayout {
         # Option 1 or 2
         if( @$argvp == 1 ) {
             my $rootDiskOrImage = $argvp->[0];
-            if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
+            if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
                 # Option 1
                 $ret = UBOS::Install::DiskLayouts::DiskImage->new(
                         $rootDiskOrImage,
@@ -179,7 +183,7 @@ sub createDiskLayout {
                                 'fs'    => 'btrfs'
                             },
                         } );
-            } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
+            } elsif( $ret && UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
                 $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
                         [   $rootDiskOrImage    ],
@@ -193,7 +197,7 @@ sub createDiskLayout {
                                 'fs'    => 'btrfs'
                             },
                         } );
-            } else {
+            } elsif( $ret ) {
                 error( 'Must be file or disk:', $rootDiskOrImage );
                 $ret = undef;
             }

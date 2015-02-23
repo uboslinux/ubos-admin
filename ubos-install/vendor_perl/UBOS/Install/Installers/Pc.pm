@@ -105,13 +105,18 @@ sub createDiskLayout {
             error( 'Invalid invocation: A --rootpartition must be provided when specifying partitions' );
             $ret = undef;
         }
-        if( $ret && !UBOS::Install::AbstractDiskLayout::isDisk( $bootloaderdevice )) {
-            error( 'Not a disk:', $bootloaderdevice );
+        if( $ret && !UBOS::Install::AbstractDiskLayout::isDisk( $bootloaderdevice ) && !UBOS::Install::AbstractDiskLayout::isLoopDevice( $bootloaderdevice )) {
+            error( 'Provided bootloaderdevice is not a disk:', $bootloaderdevice );
+            $ret = undef;
         }
         if( $ret && $bootpartition && !UBOS::Install::AbstractDiskLayout::isPartition( $bootpartition )) {
-            error( 'Not a partition:', $bootpartition );
+            error( 'Provided bootpartition is not a partition:', $bootpartition );
+            $ret = undef;
         }
-        my %haveAlready = ( $bootpartition => 1 );
+        my %haveAlready = ();
+        if( defined( $bootpartition )) {
+            $haveAlready{$bootpartition} = 1;
+        }
 
         if( $ret ) {
             foreach my $part ( @rootpartitions, @varpartitions ) {

@@ -278,6 +278,8 @@ sub _determineDeviceType {
             UBOS::Utils::myexec( "lsblk -o TYPE -n '$path'", undef, \$out );
             if( $out =~ m!disk! ) {
                 $ret = 'disk';
+            } elsif( $out =~ m!loop! ) {
+                $ret = 'loop';
             } elsif( $out =~ m!part! ) {
                 $ret = 'part';
             }
@@ -328,6 +330,16 @@ sub isBlockDevice {
 
     my $type = _determineDeviceType( $path );
     return $type eq 'disk' || $type eq 'part';
+}
+
+##
+# Helper method to determine whether a given device is a loop device
+# $path: the file's name
+sub isLoopDevice {
+    my $path = shift;
+
+    my $type = _determineDeviceType( $path );
+    return $type eq 'loop';
 }
 
 1;
