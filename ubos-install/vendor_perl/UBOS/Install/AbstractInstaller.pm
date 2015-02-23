@@ -511,14 +511,14 @@ sub configureOs {
 |                 ubos.net                 |
 |                                          |
 ISSUE
-        $issue .= sprintf( "|%42s|\n", "channel: $channel " );
-        $issue .= <<ISSUE;
+    $issue .= sprintf( "|%42s|\n", "channel: $channel " );
+    $issue .= <<ISSUE;
 +------------------------------------------+
 
 ISSUE
-        UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
+    UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
 
-        UBOS::Utils::saveFile( $target . '/etc/os-release', <<OSRELEASE, 0644, 'root', 'root' );
+    UBOS::Utils::saveFile( $target . '/etc/os-release', <<OSRELEASE, 0644, 'root', 'root' );
 NAME="UBOS"
 ID="ubos"
 ID_LIKE="arch"
@@ -526,6 +526,8 @@ PRETTY_NAME="UBOS"
 HOME_URL="http://ubos.net/"
 BUILD_ID="$buildId"
 OSRELEASE
+
+    return 0;
 }
 
 ##

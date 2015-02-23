@@ -122,10 +122,12 @@ sub mountDisks {
 
         unless( $fs ) {
             error( 'No fs given for', $mountPoint );
+            ++$errors;
             next;
         }
         unless( $fs ) {
             error( 'No device known for', $mountPoint );
+            ++$errors;
             next;
         }
 

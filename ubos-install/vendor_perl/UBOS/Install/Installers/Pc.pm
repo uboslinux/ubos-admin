@@ -363,6 +363,7 @@ END
 
     if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
         error( "bootloader chroot script failed", $err );
+        ++$errors;
     }
 
     return $errors;

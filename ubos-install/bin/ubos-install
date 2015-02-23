@@ -126,6 +126,7 @@ unless( $diskLayout ) {
 }
 my $errors = $installer->install( $diskLayout );
 if( $errors ) {
+    info( 'There were', $error, 'errors.' );
     $ret = 1;
 }
 
