@@ -124,7 +124,10 @@ my $diskLayout = $installer->createDiskLayout( \@ARGV );
 unless( $diskLayout ) {
     synopsisHelpQuit( 0 );
 }
-$installer->install( $diskLayout );
+my $errors = $installer->install( $diskLayout );
+if( $errors ) {
+    $ret = 1;
+}
 
 exit( $ret );
 
