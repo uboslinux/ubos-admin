@@ -88,7 +88,7 @@ sub formatDisks {
             foreach my $device ( @{$data->{devices}} ) {
                 my $cmd = "mkfs.$fs";
                 if( exists( $data->{mkfsflags} )) {
-                    $cmd .= $data->{mkfsflags} . ' ';
+                    $cmd .= ' ' . $data->{mkfsflags};
                 }
                 $cmd .= " '$device'";
 
