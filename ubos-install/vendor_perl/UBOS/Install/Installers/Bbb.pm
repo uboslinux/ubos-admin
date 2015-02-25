@@ -49,7 +49,7 @@ sub new {
     }
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( uboot-beaglebone uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( linux-am33x uboot-beaglebone uboot-tools archlinuxarm-keyring ) ];
     }
 
     $self->SUPER::new( @args );
