@@ -242,7 +242,7 @@ sub installBootLoader {
     my $errors = 0;
     my $target = $self->{target};
 
-    foreach my $file ( qw( MLO, u-boot.img uEnv.txt )) {
+    foreach my $file ( qw( MLO u-boot.img uEnv.txt )) {
         if( UBOS::Utils::myexec( "cp '$target/boot/$file' '$target/bootpart/'" )) {
             ++$errors;
         }
