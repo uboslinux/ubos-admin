@@ -1,5 +1,5 @@
 # 
-# Install UBOS on an SD Card for a Beagle Bone Black
+# Install UBOS on an SD Card for a Beagle Bone Black.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -17,6 +17,15 @@
 # You should have received a copy of the GNU General Public License
 # along with ubos-install.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+# This device is a bit strange: it needs a boot partition separate from /boot.
+# * During installation, the boot partition gets mounted at /boot, and it
+#   drops dtbs, MLO, u-boot.img, uEnv.txt and zImage there
+# * When booting, the bootloader looks for MLO, u-boot.img and uEnv.txt in
+#   the umounted first partition, but then it looks for dtbs and zImage in
+#   /boot of the second partition
+# We fix this by copying files from /boot to /bootpart at the end of the
+# process.
 
 use strict;
 use warnings;
@@ -128,7 +137,7 @@ sub createDiskLayout {
         if( @varpartitions == 0 ) {
             # Option 3
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
-                    {   '/boot' => {
+                    {   '/bootpart' => {
                             'index'     => 1,
                             'fs'        => 'vfat',
                             'mkfsflags' => '-F 16',
@@ -137,14 +146,14 @@ sub createDiskLayout {
                         },
                         '/' => {
                             'index'  => 2,
-                            'fs'      => 'btrfs',
+                            'fs'      => 'ext4',
                             'devices' => \@rootpartitions
                         }
                     } );
         } else {
             # Options 4
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
-                    {   '/boot' => {
+                    {   '/bootpart' => {
                             'index'     => 1,
                             'fs'        => 'vfat',
                             'mkfsflags' => '-F 16',
@@ -153,12 +162,12 @@ sub createDiskLayout {
                         },
                         '/' => {
                             'index'   => 2,
-                            'fs'      => 'btrfs',
+                            'fs'      => 'ext4',
                             'devices' => \@rootpartitions
                         },
                         '/var' => {
                             'index'  => 3,
-                            'fs'      => 'btrfs',
+                            'fs'      => 'ext4',
                             'devices' => \@varpartitions
                         }
                     } );
@@ -172,7 +181,7 @@ sub createDiskLayout {
                 # Option 1
                 $ret = UBOS::Install::DiskLayouts::DiskImage->new(
                         $rootDiskOrImage,
-                        {   '/boot' => {
+                        {   '/bootpart' => {
                                 'index'     => 1,
                                 'fs'        => 'vfat',
                                 'mkfsflags' => '-F 16',
@@ -180,14 +189,14 @@ sub createDiskLayout {
                             },
                             '/' => {
                                 'index' => 2,
-                                'fs'    => 'btrfs'
+                                'fs'    => 'ext4'
                             },
                         } );
             } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
                 $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
                         [   $rootDiskOrImage    ],
-                        {   '/boot' => {
+                        {   '/bootpart' => {
                                 'index'     => 1,
                                 'fs'        => 'vfat',
                                 'mkfsflags' => '-F 16',
@@ -195,7 +204,7 @@ sub createDiskLayout {
                             },
                             '/' => {
                                 'index' => 2,
-                                'fs'    => 'btrfs'
+                                'fs'    => 'ext4'
                             },
                         } );
             } else {
@@ -226,7 +235,20 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    return 0;
+    # Need to "fix this up": some files need to be moved from /boot to /bootpart
+    # Actually we move them. FIXME: This needs to happen again when the
+    # respective package gets updated, but currently doesn't.
+
+    my $errors = 0;
+    my $target = $self->{target};
+
+    foreach my $file ( qw( MLO, u-boot.img uEnv.txt )) {
+        if( UBOS::Utils::myexec( "cp '$target/boot/$file' '$target/bootpart/'" )) {
+            ++$errors;
+        }
+    }
+    
+    return $errors;
 }
 
 ##
