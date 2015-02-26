@@ -71,8 +71,12 @@ sub defaultContext {
 sub robotstxtAllow {
     my $self = shift;
 
-    if( defined( $self->{json}->{roles}->{apache2}->{robotstext}->{allow} ) && @{$self->{json}->{roles}->{apache2}->{robotstext}->{allow}} ) {
-        return @{$self->{json}->{roles}->{apache2}->{robotstext}->{allow}};
+    if(    exists( $self->{json}->{roles}->{apache2} )
+        && exists( $self->{json}->{roles}->{apache2}->{robotstxt} )
+        && exists( $self->{json}->{roles}->{apache2}->{robotstxt}->{allow} )
+        && @{$self->{json}->{roles}->{apache2}->{robotstxt}->{allow}} )
+    {
+        return @{$self->{json}->{roles}->{apache2}->{robotstxt}->{allow}};
     } else {
         return ();
     }
@@ -85,8 +89,12 @@ sub robotstxtAllow {
 sub robotstxtDisallow {
     my $self = shift;
 
-    if( defined( $self->{json}->{roles}->{apache2}->{robotstext}->{disallow} ) && @{$self->{json}->{roles}->{apache2}->{robotstext}->{disallow}} ) {
-        return @{$self->{json}->{roles}->{apache2}->{robotstext}->{disallow}};
+    if(    exists( $self->{json}->{roles}->{apache2} )
+        && exists( $self->{json}->{roles}->{apache2}->{robotstxt} )
+        && exists( $self->{json}->{roles}->{apache2}->{robotstxt}->{disallow} )
+        && @{$self->{json}->{roles}->{apache2}->{robotstxt}->{disallow}} )
+    {
+        return @{$self->{json}->{roles}->{apache2}->{robotstxt}->{disallow}};
     } else {
         return ();
     }
