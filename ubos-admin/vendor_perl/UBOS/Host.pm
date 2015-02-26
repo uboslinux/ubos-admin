@@ -575,7 +575,8 @@ sub ensurePacmanInit {
     # If the time is completely off, chances are we are on a Raspberry Pi or
     # such that hasn't connected to the network. In which case we set the system
     # time to the time of the last build
-    if( time() < 100000000 ) { # in 1973
+    # The BeagleBone Black apparently initializes with Jan 1, 2000.
+    if( time() < 1000000000 ) { # September 2001
         my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
         if( $osRelease =~ m!^BUILD_ID="?(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)"?$!m ) {
             my( $year, $month, $day, $hour, $min, $sec ) = ( $1, $2, $3, $4, $5, $6 );
