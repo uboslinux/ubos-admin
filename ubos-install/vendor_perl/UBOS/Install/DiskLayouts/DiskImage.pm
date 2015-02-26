@@ -70,12 +70,16 @@ END
     foreach my $mountPath ( @mountPathIndexSequence ) {
         my $data  = $self->{devicetable}->{$mountPath};
         my $index = $data->{index};
+        my $startsector = ''; # default
+        if( exists( $data->{startsector} )) {
+            $startsector = $data->{startsector};
+        }
 
         $fdiskScript .= <<END;
 n
 p
 $index
-
+$startsector
 END
         if( exists( $data->{size} )) {
             my $size  = $data->{size};

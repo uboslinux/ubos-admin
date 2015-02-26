@@ -49,7 +49,7 @@ sub new {
     }
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( uboot-pcduino3 uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( linux-armv7 uboot-pcduino3 uboot-tools archlinuxarm-keyring ) ];
     }
 
     $self->SUPER::new( @args );
@@ -70,19 +70,17 @@ sub createDiskLayout {
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
-    # Option 3: a boot partition device, one or more root partition devices
-    # ubos-install ... --bootpartition /dev/sda1 --rootpartition /dev/sda2 --rootpartition /dev/sdb1
+    # Option 3: a bootloader device, one or more root partition devices
+    # ubos-install ... --bootloaderdevice /dev/sda --rootpartition /dev/sda2 --rootpartition /dev/sdb1
 
-    # Option 4: a boot partition device, one or more root partition devices, one or more var partition devices
+    # Option 4: a bootloaderdevice device, one or more root partition devices, one or more var partition devices
     # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
 
-    my $bootpartition;
     my @rootpartitions;
     my @varpartitions;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
-            'bootpartition=s' => \$bootpartition,
             'rootpartition=s' => \@rootpartitions,
             'varpartition=s'  => \@varpartitions );
     if( !$parseOk ) {
@@ -91,23 +89,25 @@ sub createDiskLayout {
     }
 
     my $ret = 1; # set to something, so undef can mean error
-    if( $bootpartition || @rootpartitions || @varpartitions ) {
+    if( @rootpartitions || @varpartitions ) {
         # Option 3 or 4
         if( @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
             $ret = undef;
         }
-        if( $ret && !$bootpartition ) {
-            error( 'Invalid invocation: Device class pcduino3 requires a --bootpartition parameter when specifying partitions' );
+        if( $ret && !$bootloaderdevice ) {
+            error( 'Invalid invocation: Device class pcduino requires a --bootloaderdevice parameter when specifying partitions' );
             $ret = undef;
         }
         if( $ret && @rootpartitions == 0 ) {
             error( 'Invalid invocation: A --rootpartition must be provided when specifying partitions' );
             $ret = undef;
         }
-        if( $ret && !UBOS::Install::AbstractDiskLayout::isPartition( $bootpartition )) {
-            error( 'Not a partition:', $bootpartition );
+        if( $ret && !UBOS::Install::AbstractDiskLayout::isDisk( $bootloaderdevice ) && !UBOS::Install::AbstractDiskLayout::isLoopDevice( $bootloaderdevice )) {
+            error( 'Provided bootloaderdevice is not a disk:', $bootloaderdevice );
+            $ret = undef;
         }
+
         my %haveAlready = ( $bootpartition => 1 );
 
         if( $ret ) {
@@ -127,37 +127,29 @@ sub createDiskLayout {
         }
         if( @varpartitions == 0 ) {
             # Option 3
-            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
-                    {   '/boot' => {
-                            'index'     => 1,
-                            'fs'        => 'vfat',
-                            'devices'   => [ $bootpartition ],
-                            'boot'      => 1
-                        },
-                        '/' => {
-                            'index'  => 2,
-                            'fs'      => 'btrfs',
-                            'devices' => \@rootpartitions
+            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
+                    $bootloaderdevice,
+                    {   '/' => {
+                            'index'       => 1,
+                            'fs'          => 'ext4',
+                            'devices'     => \@rootpartitions,
+                            'startsector' => '2048'
                         }
                     } );
         } else {
             # Options 4
-            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
-                    {   '/boot' => {
-                            'index'     => 1,
-                            'fs'        => 'vfat',
-                            'devices'   => [ $bootpartition ],
-                            'boot'      => 1
-                        },
-                        '/' => {
-                            'index'   => 2,
-                            'fs'      => 'btrfs',
-                            'devices' => \@rootpartitions
+            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
+                    $bootloaderdevice,
+                    {   '/' => {
+                            'index'       => 1,
+                            'fs'          => 'ext4',
+                            'devices'     => \@rootpartitions,
+                            'startsector' => '2048'
                         },
                         '/var' => {
-                            'index'  => 3,
-                            'fs'      => 'btrfs',
-                            'devices' => \@varpartitions
+                            'index'       => 2,
+                            'fs'          => 'btrfs',
+                            'devices'     => \@varpartitions
                         }
                     } );
         }
@@ -170,28 +162,20 @@ sub createDiskLayout {
                 # Option 1
                 $ret = UBOS::Install::DiskLayouts::DiskImage->new(
                         $rootDiskOrImage,
-                        {   '/boot' => {
-                                'index'     => 1,
-                                'fs'        => 'vfat',
-                                'size'      => '64M'
-                            },
-                            '/' => {
-                                'index' => 2,
-                                'fs'    => 'btrfs'
+                        {   '/' => {
+                                'index'       => 1,
+                                'fs'          => 'ext4',
+                                'startsector' => '2048'
                             },
                         } );
             } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
                 $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
                         [   $rootDiskOrImage    ],
-                        {   '/boot' => {
-                                'index'     => 1,
-                                'fs'        => 'vfat',
-                                'size'      => '64M'
-                            },
-                            '/' => {
-                                'index' => 2,
-                                'fs'    => 'btrfs'
+                        {   '/' => {
+                                'index'       => 1,
+                                'fs'          => 'ext4',
+                                'startsector' => '2048'
                             },
                         } );
             } else {
@@ -200,11 +184,11 @@ sub createDiskLayout {
             }
         } elsif( @$argvp > 1 ) {
             # Don't do RAID here
-            error( 'Do not specify more than one file or image for deviceclass=rpi' );
+            error( 'Do not specify more than one file or image for deviceclass=pcduino3' );
             $ret = undef;
         } else {
             # Need at least one disk
-            error( 'Must specify at least than one file or image for deviceclass=rpi' );
+            error( 'Must specify at least than one file or image for deviceclass=pcduino3' );
             $ret = undef;
         }
     }
@@ -222,7 +206,19 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    return 0;
+    my $errors           = 0;
+    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
+    my $target           = $self->{target};
+
+    # zero out the beginning -- from Arch Linux ARM instructions
+    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$bootLoaderDevice' bs=1M count=8'" )) {
+        ++$errors;
+    }
+    if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8'" )) {
+        ++$errors;
+    }
+
+    return $errors;
 }
 
 ##
