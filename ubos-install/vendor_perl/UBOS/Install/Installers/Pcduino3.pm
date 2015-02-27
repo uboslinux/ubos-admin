@@ -214,7 +214,7 @@ sub installBootLoader {
     my $target           = $self->{target};
 
     # zero out the beginning -- from Arch Linux ARM instructions
-    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$bootLoaderDevice' bs=1M count=8'" )) {
+    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$bootLoaderDevice' bs=1M count=8" )) {
         ++$errors;
     }
 
@@ -236,7 +236,7 @@ sub installBootLoader {
     }
 
     # Instead, we do it ourselves  
-    if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8'" )) {
+    if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8" )) {
         ++$errors;
     }
 
