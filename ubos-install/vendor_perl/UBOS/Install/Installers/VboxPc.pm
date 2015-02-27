@@ -67,7 +67,7 @@ sub new {
         $self->{hostname} = 'ubos-vbox-pc';
     }
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( virtualbox-guest cloud-init mkinitcpio ) ];
+        $self->{devicepackages} = [ qw( linux mkinitcpio virtualbox-guest cloud-init ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( vboxservice cloud-final ) ];
