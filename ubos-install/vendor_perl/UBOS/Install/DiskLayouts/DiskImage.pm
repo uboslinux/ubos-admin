@@ -61,9 +61,8 @@ sub createDisks {
     my $errors = 0;
 
     # zero out the beginning -- sometimes there are strange leftovers
-        if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8" )) {
-            ++$errors;
-        }
+    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8 conv=notrunc" )) {
+        ++$errors;
     }
 
     my $fdiskScript = '';
