@@ -133,7 +133,7 @@ sub run {
                 }
                 
             } else {
-                if( $haveHostAlready->{$newSiteHostName} ) {
+                if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $existingSite->siteId ) {
                     fatal( 'There is already a different site with hostname', $newSiteHostName );
                 }
             }
