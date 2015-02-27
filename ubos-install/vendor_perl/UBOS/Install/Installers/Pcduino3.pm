@@ -110,7 +110,7 @@ sub createDiskLayout {
             $ret = undef;
         }
 
-        my %haveAlready = ( $bootpartition => 1 );
+        my %haveAlready = ();
 
         if( $ret ) {
             foreach my $part ( @rootpartitions, @varpartitions ) {
