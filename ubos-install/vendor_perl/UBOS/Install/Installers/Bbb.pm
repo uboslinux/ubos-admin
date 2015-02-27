@@ -56,11 +56,9 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-bbb';
     }
-
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux-am33x uboot-beaglebone uboot-tools archlinuxarm-keyring ) ];
     }
-
     $self->SUPER::new( @args );
 
     return $self;

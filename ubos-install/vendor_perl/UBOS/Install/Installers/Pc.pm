@@ -47,6 +47,9 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-pc';
     }
+    unless( $self->{devicepackages} ) {
+        $self->{devicepackages} = [ qw( mkinitcpio ) ];
+    }
     $self->SUPER::new( @args );
 
     return $self;

@@ -47,12 +47,10 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-pcduino3';
     }
-
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
-
     $self->SUPER::new( @args );
 
     return $self;
