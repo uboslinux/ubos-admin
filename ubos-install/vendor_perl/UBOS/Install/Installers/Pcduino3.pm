@@ -76,13 +76,15 @@ sub createDiskLayout {
     # Option 4: a bootloaderdevice device, one or more root partition devices, one or more var partition devices
     # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
 
+    my $bootloaderdevice;
     my @rootpartitions;
     my @varpartitions;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
-            'rootpartition=s' => \@rootpartitions,
-            'varpartition=s'  => \@varpartitions );
+            'bootloaderdevice=s' => \$bootloaderdevice,
+            'rootpartition=s'    => \@rootpartitions,
+            'varpartition=s'     => \@varpartitions );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
