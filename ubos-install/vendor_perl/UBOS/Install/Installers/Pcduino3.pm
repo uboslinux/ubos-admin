@@ -213,11 +213,6 @@ sub installBootLoader {
     my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
     my $target           = $self->{target};
 
-    # zero out the beginning -- from Arch Linux ARM instructions
-    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$bootLoaderDevice' bs=1M count=8" )) {
-        ++$errors;
-    }
-
     # Boot loader
     debug( "Installing uboot-pcduino3" );
     my $pacmanCmd = "pacman"

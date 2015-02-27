@@ -58,7 +58,14 @@ sub new {
 sub createDisks {
     my $self = shift;
 
-    my $errors      = 0;
+    my $errors = 0;
+
+    # zero out the beginning -- sometimes there are strange leftovers
+        if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8" )) {
+            ++$errors;
+        }
+    }
+
     my $fdiskScript = '';
 
     $fdiskScript .= <<END; # first clear out everything
