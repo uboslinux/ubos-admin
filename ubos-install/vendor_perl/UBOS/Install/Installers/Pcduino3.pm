@@ -227,6 +227,9 @@ sub installBootLoader {
             . " --cachedir '$target/var/cache/pacman/pkg'"
             . " --noconfirm"
             . " uboot-pcduino3  --noscriptlet"; # DO NOT RUN the install script
+
+    my $out;
+    my $err;
     if( UBOS::Utils::myexec( $pacmanCmd, undef, \$out, \$err )) {
         error( "pacman failed", $err );
         ++$errors;
