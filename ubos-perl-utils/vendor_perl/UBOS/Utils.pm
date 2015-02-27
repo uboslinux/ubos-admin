@@ -525,6 +525,31 @@ sub copyRecursively {
 }
 
 ##
+# Determine whether the provided directory is empty
+# $dir: the directory
+# return: 1 if empty
+sub isDirEmpty {
+    my $dir = shift;
+
+    my $ret = 1;
+    if( opendir( DIR, $dir )) {
+        while( my $entry = readdir DIR ) {
+            if( $entry ne '.' && $entry ne '..' ) {
+                $ret = 0;
+                last;
+            }
+        }
+        closedir DIR;
+
+    } else {
+        error( "Not a directory:", $dir );
+        $ret = 0;
+    }
+
+    return $ret;
+}
+
+##
 # Read all files matching a pattern in a directory.
 # $pattern: the file name pattern, e.g. '\.pm$'
 # $dir: directory to look in
