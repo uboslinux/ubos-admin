@@ -49,7 +49,8 @@ sub new {
     }
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux-armv7 uboot-pcduino3 uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
+        # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
 
     $self->SUPER::new( @args );
@@ -216,6 +217,22 @@ sub installBootLoader {
     if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$bootLoaderDevice' bs=1M count=8'" )) {
         ++$errors;
     }
+
+    # Boot loader
+    debug( "Installing uboot-pcduino3" );
+    my $pacmanCmd = "pacman"
+            . " -r '$target'"
+            . " -S"
+            . " '--config=" . $pacmanConfigFile . "'"
+            . " --cachedir '$target/var/cache/pacman/pkg'"
+            . " --noconfirm"
+            . " uboot-pcduino3  --noscriptlet"; # DO NOT RUN the install script
+    if( UBOS::Utils::myexec( $pacmanCmd, undef, \$out, \$err )) {
+        error( "pacman failed", $err );
+        ++$errors;
+    }
+
+    # Instead, we do it ourselves  
     if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8'" )) {
         ++$errors;
     }
