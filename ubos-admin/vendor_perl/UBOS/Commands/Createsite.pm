@@ -415,14 +415,16 @@ sub ask {
             system('stty','echo');
             print "\n";
         }
-        unless( $dontTrim ) {
-            $ret =~ s!\s+$!!;
-            $ret =~ s!^\s+!!;
-        }
-        if( $ret =~ $regex ) {
-            last;
-        } else {
-            print "(input not valid: regex is $regex)\n";
+        if( defined( $ret )) { # apparently ^D becomes undef
+            unless( $dontTrim ) {
+                $ret =~ s!\s+$!!;
+                $ret =~ s!^\s+!!;
+            }
+            if( $ret =~ $regex ) {
+                last;
+            } else {
+                print "(input not valid: regex is $regex)\n";
+            }
         }
     }
     return $ret;
