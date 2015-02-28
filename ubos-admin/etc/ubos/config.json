@@ -1,6 +1,7 @@
 {
     "ubos" : {
-        "checkmanifest" : true
+        "checkmanifest" : true,
+        "readstaffonboot" : true
     },
 
     "host" : {

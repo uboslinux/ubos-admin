@@ -23,7 +23,7 @@
 #
 # Comments:
 # Cannot check that device is removable: some USB disks have that at 0
-#
+# We accept partitions or entire disks
 
 use strict;
 use warnings;
@@ -31,6 +31,7 @@ use warnings;
 package UBOS::ConfigurationManager;
 
 use File::Temp;
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -39,6 +40,11 @@ my $LABEL = 'UBOS-STAFF';
 ##
 # Initialize the configuration if there's a configuration device attached
 sub initializeIfNeeded {
+    unless( UBOS::Host::config()->get( 'ubos.readstaffonboot', 1 )) {
+        debug( 'Not looking for staff, ubos.readstaffonboot is false' );
+        return;
+    }
+
     my $device = guessConfigurationDevice();
     unless( $device ) {
         debug( 'No configuration device found' );
@@ -49,7 +55,6 @@ sub initializeIfNeeded {
 
     my $targetFile = File::Temp->newdir( DIR => '/var/run', UNLINK => 1 );
     my $target     = $targetFile->dirname;
-    my $errors     = 0;
 
     if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
         error( 'Failed to mount:', $device, $target );
@@ -92,10 +97,6 @@ sub checkConfigurationDevice {
 
     while( $out =~ m!NAME="([^"]+)"\s+TYPE="([^"]+)"\s+FSTYPE="([^"]+)"\s+LABEL="([^"]+)"!g ) {
         my( $name, $type, $fstype, $label ) = ( $1, $2, $3, $4 );
-        unless( $name =~ m!\d$! ) {
-            # need a partition, not a disk
-            next;
-        }
         unless( $fstype eq 'vfat' ) {
             next;
         }
@@ -106,7 +107,7 @@ sub checkConfigurationDevice {
             $@ = 'More than one suitable partition found: ' . $ret . ' ' . $name;
             return undef;
         }
-        $ret = $name;
+        $ret = "/dev/$name";
     }
     unless( $ret ) {
         $@ = 'No suitable partition found on: ' . $device;
@@ -134,10 +135,6 @@ sub guessConfigurationDevice {
 
     while( $out =~ m!NAME="([^"]+)"\s+TYPE="([^"]+)"\s+FSTYPE="([^"]+)"\s+LABEL="([^"]+)"!g ) {
         my( $name, $type, $fstype, $label ) = ( "/dev/$1", $2, $3, $4 );
-        unless( $name =~ m!\d$! ) {
-            # need a partition, not a disk
-            next;
-        }
         unless( $fstype eq 'vfat' ) {
             next;
         }
@@ -148,7 +145,7 @@ sub guessConfigurationDevice {
             $@ = 'More than one suitable partition found: ' . $ret . ' ' . $name;
             return undef;
         }
-        $ret = $name;
+        $ret = "/dev/$name";
     }
     unless( $ret ) {
         $@ = 'No suitable partition found.';
