@@ -96,7 +96,7 @@ sub checkConfigurationDevice {
     # NAME="sda2" TYPE="part" FSTYPE="vfat" LABEL=""
 
     while( $out =~ m!NAME="([^"]+)"\s+TYPE="([^"]+)"\s+FSTYPE="([^"]+)"\s+LABEL="([^"]+)"!g ) {
-        my( $name, $type, $fstype, $label ) = ( $1, $2, $3, $4 );
+        my( $name, $type, $fstype, $label ) = ( "/dev/$1", $2, $3, $4 );
         unless( $fstype eq 'vfat' ) {
             next;
         }
@@ -145,7 +145,7 @@ sub guessConfigurationDevice {
             $@ = 'More than one suitable partition found: ' . $ret . ' ' . $name;
             return undef;
         }
-        $ret = "/dev/$name";
+        $ret = $name;
     }
     unless( $ret ) {
         $@ = 'No suitable partition found.';
