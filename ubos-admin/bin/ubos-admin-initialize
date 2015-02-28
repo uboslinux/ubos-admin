@@ -23,6 +23,7 @@
 use strict;
 use warnings;
 
+use UBOS::ConfigurationManager;
 use UBOS::Databases::MySqlDriver;
 use UBOS::Host;
 use UBOS::Logging;
@@ -35,5 +36,7 @@ UBOS::Host::ensurePacmanInit();
 UBOS::Databases::MySqlDriver::ensureRootPassword();
 
 UBOS::ResourceManager::initializeIfNeeded();
+
+UBOS::ConfigurationManager::initializeIfNeeded();
 
 1;

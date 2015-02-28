@@ -30,9 +30,42 @@ use warnings;
 
 package UBOS::ConfigurationManager;
 
+use File::Temp;
 use UBOS::Logging;
+use UBOS::Utils;
 
 my $LABEL = 'UBOS-STAFF';
+
+##
+# Initialize the configuration if there's a configuration device attached
+sub initializeIfNeeded {
+    my $device = guessConfigurationDevice();
+    unless( $device ) {
+        debug( 'No configuration device found' );
+        return;
+    }
+
+    debug( 'Configuration device:', $device );
+
+    my $targetFile = File::Temp->newdir( DIR => '/var/run', UNLINK => 1 );
+    my $target     = $targetFile->dirname;
+    my $errors     = 0;
+
+    if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
+        error( 'Failed to mount:', $device, $target );
+        return;
+    }
+
+    my $errors = loadCurrentConfiguration( $target );
+    if( $errors ) {
+        error( 'Loading current configuration failed from', $device, $target );
+    }
+
+    if( UBOS::Utils::myexec( "umount '$target'" )) {
+        error( 'Failed to unmount:', $device, $target );
+    }
+    return;
+}
 
 ##
 # Check that a candidate device is indeed a configuration device
