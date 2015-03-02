@@ -58,7 +58,7 @@ sub createDisks {
 
     # zero out the beginning -- sometimes there are strange leftovers
     foreach my $disk ( @{$self->{disks}} ) {
-        if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$disk' bs=1M count=8" )) {
+        if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$disk' bs=1M count=8 status=none" )) {
             ++$errors;
         }
     }

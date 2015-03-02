@@ -251,7 +251,7 @@ sub installBootLoader {
     }
 
     # Instead, we do it ourselves  
-    if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8 conv=notrunc" )) {
+    if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8 conv=notrunc status=none" )) {
         ++$errors;
     }
 

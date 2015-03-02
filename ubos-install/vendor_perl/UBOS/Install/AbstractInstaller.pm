@@ -148,12 +148,12 @@ sub install {
 
     info( 'Installing UBOS with hostname', $self->{hostname} );
 
-    $self->check( $diskLayout ); # will exit if not valid
-
     unless( $self->{target} ) {
         $self->{tempTarget} = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
         $self->{target}     = $self->{tempTarget}->dirname;
     }
+
+    $self->check( $diskLayout ); # will exit if not valid
 
     my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs} );
     my $errors = 0;
