@@ -98,7 +98,7 @@ sub createDiskLayout {
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
         # Option 5
-        if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @$argvp ) {
+        if( $bootloaderdevice || @rootpartitions || @varpartitions || @$argvp ) {
             error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
             $ret = undef;
         } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
