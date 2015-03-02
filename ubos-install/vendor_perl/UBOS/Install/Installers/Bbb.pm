@@ -83,22 +83,42 @@ sub createDiskLayout {
     # Option 4: a boot partition device, one or more root partition devices, one or more var partition devices
     # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
 
+    # Option 5: a directory
+
     my $bootpartition;
     my @rootpartitions;
     my @varpartitions;
+    my $directory;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
             'bootpartition=s' => \$bootpartition,
             'rootpartition=s' => \@rootpartitions,
-            'varpartition=s'  => \@varpartitions );
+            'varpartition=s'  => \@varpartitions,
+            'directory=s'     => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
     }
 
     my $ret = 1; # set to something, so undef can mean error
-    if( $bootpartition || @rootpartitions || @varpartitions ) {
+    if( $directory ) {
+        # Option 5
+        if( $bootpartition || @rootpartitions || @varpartitions || @$argvp ) {
+            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
+            $ret = undef;
+        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
+            error( 'Invalid invocation: directory must exist and be empty:', $directory );
+            $ret = undef;
+        } elsif( $self->{target} ) {
+            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
+            $ret = undef;
+        } else {
+            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
+            $self->setTarget( $directory );
+        }
+
+    } elsif( $bootpartition || @rootpartitions || @varpartitions ) {
         # Option 3 or 4
         if( @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );

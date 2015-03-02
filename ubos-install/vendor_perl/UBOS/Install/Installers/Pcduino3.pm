@@ -1,5 +1,5 @@
 # 
-# Install UBOS on an SD Card for a Pcduino3
+# Install UBOS on an SD Card for a Pcduino3.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -48,7 +48,9 @@ sub new {
         $self->{hostname} = 'ubos-pcduino3';
     }
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
+        # $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
+        # The armv7 kernel has problems talking to the network
+        $self->{devicepackages} = [ qw( linux-sun7i uboot-tools archlinuxarm-keyring ) ];
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
     $self->SUPER::new( @args );
@@ -75,22 +77,42 @@ sub createDiskLayout {
     # Option 4: a bootloaderdevice device, one or more root partition devices, one or more var partition devices
     # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
 
+    # Option 5: a directory
+
     my $bootloaderdevice;
     my @rootpartitions;
     my @varpartitions;
+    my $directory;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
             'bootloaderdevice=s' => \$bootloaderdevice,
             'rootpartition=s'    => \@rootpartitions,
-            'varpartition=s'     => \@varpartitions );
+            'varpartition=s'     => \@varpartitions,
+            'directory=s'        => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
     }
 
     my $ret = 1; # set to something, so undef can mean error
-    if( @rootpartitions || @varpartitions ) {
+    if( $directory ) {
+        # Option 5
+        if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @$argvp ) {
+            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
+            $ret = undef;
+        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
+            error( 'Invalid invocation: directory must exist and be empty:', $directory );
+            $ret = undef;
+        } elsif( $self->{target} ) {
+            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
+            $ret = undef;
+        } else {
+            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
+            $self->setTarget( $directory );
+        }
+
+    } elsif( @rootpartitions || @varpartitions ) {
         # Option 3 or 4
         if( @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );

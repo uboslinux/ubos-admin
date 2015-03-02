@@ -100,8 +100,6 @@ unless( $installer ) {
 
 if( $target ) {
     $installer->setTarget( $target );
-} else {
-    $installer->useTempTarget();
 }
 if( $hostname ) {
     $installer->setHostname( $hostname );
@@ -230,6 +228,28 @@ END
             --varpartition <part>:
                   Use a separate /var partition. If more than one var partition is given, mirror
                   across at least two partitions (RAID1).
+END
+    }
+    print "    $0 --directory <dir>\n";
+    if( $long ) {
+        print <<END;
+        Install UBOS into a local directory, so it can be run in a Linux container.
+        The directory must exist, and must be empty.
+
+        Optional arguments:
+            --verbose:
+                  Increase amount of status output.
+            --logConfFile <log4perlconf>:
+                  Alternate logging configuration file (not common).
+            --channel <channel>:
+                  The UBOS release channel; defaults to green.
+            --hostname <hostname>:
+                  The hostname to set; defaults to a deviceclass-specific name.
+            --repository <path>:
+                  Use this local UBOS repository instead of http://depot.ubos.net/
+            --deviceclass <class>:
+                  The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
+                  is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
 END
     }
     print "    $0 --help\n";

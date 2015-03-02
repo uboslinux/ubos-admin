@@ -100,15 +100,6 @@ sub setTarget {
 }
 
 ##
-# Use a temporary target directory
-sub useTempTarget {
-    my $self = shift;
-
-    $self->{tempTarget} = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
-    $self->{target}     = $self->{tempTarget}->dirname;
-}
-
-##
 # Set the directory which contains the package databases
 # $repo: the directory, so that $repo/<arch>/os/os.db exists
 sub setRepo {
@@ -159,6 +150,11 @@ sub install {
 
     $self->check( $diskLayout ); # will exit if not valid
 
+    unless( $self->{target} ) {
+        $self->{tempTarget} = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
+        $self->{target}     = $self->{tempTarget}->dirname;
+    }
+
     my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs} );
     my $errors = 0;
 
@@ -178,11 +174,16 @@ sub install {
 
         $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
      
-        my $chrootScript = <<S;
+        my $chrootScript = <<'SCRIPT';
 #!/bin/bash
 # Script to be run in chroot
 set -e
-S
+
+for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+
+systemctl set-default multi-user.target
+
+SCRIPT
         $errors += $self->addGenerateLocaleToScript( \$chrootScript );
         $errors += $self->addEnableServicesToScript( \$chrootScript );
 

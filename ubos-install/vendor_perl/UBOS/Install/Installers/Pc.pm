@@ -28,6 +28,7 @@ use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Install::AbstractDiskLayout;
+use UBOS::Install::DiskLayouts::Directory;
 use UBOS::Install::DiskLayouts::DiskBlockDevices;
 use UBOS::Install::DiskLayouts::DiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
@@ -77,24 +78,44 @@ sub createDiskLayout {
     # Option 4: a boot partition device, a root partition device, one or more var partition devices
     # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
 
+    # Option 5: a directory
+
     my $bootloaderdevice;
     my $bootpartition;
     my @rootpartitions;
     my @varpartitions;
+    my $directory;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
             'bootloaderdevice=s' => \$bootloaderdevice,
             'bootpartition=s'    => \$bootpartition,
             'rootpartition=s'    => \@rootpartitions,
-            'varpartition=s'     => \@varpartitions );
+            'varpartition=s'     => \@varpartitions,
+            'directory=s'        => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
     }
 
     my $ret = 1; # set to something, so undef can mean error
-    if( $bootloaderdevice || $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions ) {
+    if( $directory ) {
+        # Option 5
+        if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @$argvp ) {
+            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
+            $ret = undef;
+        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
+            error( 'Invalid invocation: directory must exist and be empty:', $directory );
+            $ret = undef;
+        } elsif( $self->{target} ) {
+            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
+            $ret = undef;
+        } else {
+            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
+            $self->setTarget( $directory );
+        }
+
+    } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions ) {
         # Option 3 or 4
         if( @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
@@ -273,15 +294,6 @@ sub createDiskLayout {
 }
 
 ##
-# Returns the arch for this device.
-# return: the arch
-sub arch {
-    my $self = shift;
-
-    return 'x86_64';
-}
-
-##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
@@ -340,36 +352,36 @@ END
         error( "pacman failed", $err );
         ++$errors;
     }
-    if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
-        error( "grub-install failed", $err );
-        ++$errors;
-    }
+    if( $bootLoaderDevice ) {
+        if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
+            error( "grub-install failed", $err );
+            ++$errors;
+        }
 
-    # Create a script that can be passed to chroot:
-    # 1. grub configuration
-    # 2. Depmod so modules can be found. This needs to use the image's kernel version,
-    #    not the currently running one
-    # 3. Default "run-level" (multi-user, not graphical)
-    # 4. Enable services
-    
-    my $chrootScript = <<'END';
+        my $chrootScript = <<'END';
 set -e
 
 perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
 
 grub-mkconfig -o /boot/grub/grub.cfg
-
-for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
-
-systemctl set-default multi-user.target
 END
 
-    if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
-        error( "bootloader chroot script failed", $err );
-        ++$errors;
+        if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
+            error( "bootloader chroot script failed", $err );
+            ++$errors;
+        }
     }
 
     return $errors;
+}
+
+##
+# Returns the arch for this device.
+# return: the arch
+sub arch {
+    my $self = shift;
+
+    return 'x86_64';
 }
 
 1;
