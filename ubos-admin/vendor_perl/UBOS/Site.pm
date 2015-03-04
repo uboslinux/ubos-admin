@@ -278,14 +278,17 @@ sub robotsTxt {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{wellknown} )) {
-        return $json->{wellknown}->{robotstxt};
-	}
-    my $robotsTxt = $json->{wellknown}->{robotstxtprefix};
-    if( $robotsTxt ) {
-        $robotsTxt .= "\n";
-    }
+    my $robotsTxt;
 
+    if( exists( $json->{wellknown} )) {
+        if( exists( $json->{wellknown}->{robotstxt} )) {
+            debug( 'Have robots.txt in site json for', $self->siteId );
+            return $json->{wellknown}->{robotstxt};
+        }
+        if( exists( $json->{wellknown}->{robotstxtprefix} )) {
+            $robotsTxt = $json->{wellknown}->{robotstxtprefix} . "\n";
+        }
+    }
     my $thisFirst = "User-Agent: *\n";
     foreach my $appConfig ( @{$self->appConfigs} ) {
         my $app     = $appConfig->app();
@@ -301,6 +304,7 @@ sub robotsTxt {
         }
     }
     if( $robotsTxt ) {
+        debug( 'Constructed robots.txt for site', $self->siteId );
         return $robotsTxt;
     } else {
         return undef;
@@ -314,7 +318,7 @@ sub sitemapXml {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{wellknown} )) {
+    if( exists( $json->{wellknown} ) && exists( $json->{wellknown}->{sitemapxml} )) {
         return $self->{json}->{wellknown}->{sitemapxml};
     } else {
 		return undef;
@@ -328,10 +332,8 @@ sub faviconIco {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{wellknown} )) {
-        if( defined( $json->{wellknown}->{faviconicobase64} ) && $json->{wellknown}->{faviconicobase64} ) {
-			return decode_base64( $self->{json}->{wellknown}->{faviconicobase64} );
-		}
+    if( exists( $json->{wellknown} ) && exists( $json->{wellknown}->{faviconicobase64} ) && $json->{wellknown}->{faviconicobase64} ) {
+        return decode_base64( $self->{json}->{wellknown}->{faviconicobase64} );
     }
     return undef;
 }
@@ -571,11 +573,9 @@ sub _deployOrCheck {
             $ret &= $role->setupSiteOrCheck( $self, $doIt, $triggers );
         }
     }
-    
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $ret &= $appConfig->_deployOrCheck( $doIt, $triggers );
     }
-
     if( $doIt ) {
         UBOS::Host::siteDeployed( $self );
     }
@@ -684,7 +684,7 @@ sub resume {
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $ret &= $role->setupSite( $self, $triggers );
+            $ret &= $role->resumeSite( $self, $triggers );
         }
     }
     return $ret;
@@ -822,7 +822,7 @@ sub _checkJson {
         unless( ref( $json->{wellknown} ) eq 'HASH' ) {
             fatal( 'Site JSON: wellknown section: not a JSON object' );
         }
-        if( $json->{wellknown}->{robotstxt} ) {
+        if( exists( $json->{wellknown}->{robotstxt} )) {
             if( ref( $json->{wellknown}->{robotstxt} )) {
                 fatal( 'Site JSON: wellknown section: invalid robotstxt' );
             }
@@ -830,23 +830,23 @@ sub _checkJson {
                 fatal( 'Site JSON: wellknown section: specifiy robotstxt or robotstxtprefix, not both' );
             }
         }
-        if( $json->{wellknown}->{robotstxtprefix} ) {
+        if( exists( $json->{wellknown}->{robotstxtprefix} )) {
             if( ref( $json->{wellknown}->{robotstxtprefix} )) {
                 fatal( 'Site JSON: wellknown section: invalid robotstxtprefix' );
             }
         }
-        if(    $json->{wellknown}->{sitemapxml}
+        if(    exists( $json->{wellknown}->{sitemapxml} )
             && (    ref( $json->{wellknown}->{sitemapxml} )
                  || $json->{wellknown}->{sitemapxml} !~ m!^<\?xml! ))
         {
             fatal( 'Site JSON: wellknown section: invalid sitemapxml' );
         }
-        if( $json->{wellknown}->{faviconicobase64} && ref( $json->{wellknown}->{faviconicobase64} )) {
+        if( exists( $json->{wellknown}->{faviconicobase64} ) && ref( $json->{wellknown}->{faviconicobase64} )) {
             fatal( 'Site JSON: wellknown section: invalid faviconicobase64' );
         }
     }
     
-    if( $json->{appconfigs} ) {
+    if( exists( $json->{appconfigs} )) {
         unless( ref( $json->{appconfigs} ) eq 'ARRAY' ) {
             fatal( 'Site JSON: appconfigs section: not a JSON array' );
         }

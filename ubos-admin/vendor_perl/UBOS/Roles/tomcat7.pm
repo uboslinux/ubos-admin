@@ -87,7 +87,7 @@ sub setupSiteOrCheck {
 }
 
 ##
-# Do what is necessary to set up a Site.
+# Do what is necessary to set up a Site, without activating/resuming it.
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
@@ -118,11 +118,24 @@ sub setupSite {
         UBOS::Utils::mkdir( $siteDocumentDir );
     }
 
-    $self->sitesUpdated();
-    $triggers->{'tomcat7-reload'} = 1;
-
     return 1;
 }
+
+##
+# Do what is necessary to activate/resume an already set-up Site
+# $site: the Site
+# $triggers: triggers to be executed may be added to this hash
+# return: success or fail
+sub resumeSite {
+    my $self     = shift;
+    my $site     = shift;
+    my $triggers = shift;
+
+    $self->sitesUpdated();
+
+    $triggers->{'tomcat7-reload'} = 1;
+}
+
 
 ##
 # Do what is necessary to remove a Site.

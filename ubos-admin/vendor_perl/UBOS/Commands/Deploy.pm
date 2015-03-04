@@ -65,9 +65,15 @@ sub run {
     my $json;
     if( $file ) {
         $json = readJsonFromFile( $file );
+        unless( $json ) {
+            exit 1;
+        }
         $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
     } else {
         $json = readJsonFromStdin();
+        unless( $json ) {
+            fatal( 'No JSON input provided on stdin' );
+        }
         $json = UBOS::Utils::insertSlurpedFiles( $json, getcwd() );
     }
 

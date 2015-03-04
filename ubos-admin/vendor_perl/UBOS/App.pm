@@ -71,15 +71,17 @@ sub defaultContext {
 sub robotstxtAllow {
     my $self = shift;
 
-    if(    exists( $self->{json}->{roles}->{apache2} )
-        && exists( $self->{json}->{roles}->{apache2}->{robotstxt} )
-        && exists( $self->{json}->{roles}->{apache2}->{robotstxt}->{allow} )
-        && @{$self->{json}->{roles}->{apache2}->{robotstxt}->{allow}} )
-    {
-        return @{$self->{json}->{roles}->{apache2}->{robotstxt}->{allow}};
-    } else {
-        return ();
+    my @ret = ();
+    if( exists( $self->{json}->{roles}->{apache2} )) {
+        my $apache2Json = $self->{json}->{roles}->{apache2};
+        if(    exists( $apache2Json->{wellknown} )
+            && exists( $apache2Json->{wellknown}->{robotstxt} )
+            && exists( $apache2Json->{wellknown}->{robotstxt}->{allow} ))
+        {
+            @ret = @{$apache2Json->{wellknown}->{robotstxt}->{allow}};
+        }
     }
+    return @ret;
 }
 
 ##
@@ -89,15 +91,17 @@ sub robotstxtAllow {
 sub robotstxtDisallow {
     my $self = shift;
 
-    if(    exists( $self->{json}->{roles}->{apache2} )
-        && exists( $self->{json}->{roles}->{apache2}->{robotstxt} )
-        && exists( $self->{json}->{roles}->{apache2}->{robotstxt}->{disallow} )
-        && @{$self->{json}->{roles}->{apache2}->{robotstxt}->{disallow}} )
-    {
-        return @{$self->{json}->{roles}->{apache2}->{robotstxt}->{disallow}};
-    } else {
-        return ();
+    my @ret = ();
+    if( exists( $self->{json}->{roles}->{apache2} )) {
+        my $apache2Json = $self->{json}->{roles}->{apache2};
+        if(    exists( $apache2Json->{wellknown} )
+            && exists( $apache2Json->{wellknown}->{robotstxt} )
+            && exists( $apache2Json->{wellknown}->{robotstxt}->{disallow} ))
+        {
+            @ret = @{$apache2Json->{wellknown}->{robotstxt}->{disallow}};
+        }
     }
+    return @ret;
 }
             
 1;

@@ -174,7 +174,7 @@ CONTENT
 }
 
 ##
-# Do what is necessary to set up a Site.
+# Do what is necessary to set up a Site, without activating/resuming it.
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
@@ -184,12 +184,8 @@ sub setupSite {
     my $triggers = shift;
 
     my $siteId            = $site->siteId;
-    my $hostname          = $site->hostname;
-    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
-    my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
-    my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
     debug( 'apache2::setupSite', $siteId );
 
@@ -199,6 +195,27 @@ sub setupSite {
     unless( -d $appConfigFilesDir ) {
         UBOS::Utils::mkdir( $appConfigFilesDir );
     }
+
+    return 1;
+}
+
+##
+# Do what is necessary to activate/resume an already set-up Site
+# $site: the Site
+# $triggers: triggers to be executed may be added to this hash
+# return: success or fail
+sub resumeSite {
+    my $self     = shift;
+    my $site     = shift;
+    my $triggers = shift;
+
+    my $siteId            = $site->siteId;
+    my $hostname          = $site->hostname;
+    my $appConfigFilesDir = "$appConfigsDir/$siteId";
+    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
+    my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
+    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+    my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
     my $robotsTxt  = $site->robotsTxt();
     my $sitemapXml = $site->sitemapXml();

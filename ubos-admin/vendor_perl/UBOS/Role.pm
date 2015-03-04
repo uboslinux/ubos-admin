@@ -166,11 +166,25 @@ sub setupPlaceholderSite {
 }
 
 ##
-# Do what is necessary to set up a Site.
+# Do what is necessary to set up a Site, without activating/resuming it.
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
 sub setupSite {
+    my $self     = shift;
+    my $site     = shift;
+    my $triggers = shift;
+
+    # no op on this level
+    return 1;
+}
+
+##
+# Do what is necessary to activate/resume an already set-up Site
+# $site: the Site
+# $triggers: triggers to be executed may be added to this hash
+# return: success or fail
+sub resumeSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;
