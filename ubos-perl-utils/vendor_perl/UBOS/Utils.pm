@@ -45,6 +45,9 @@ sub readJsonFromFile {
     my $file = shift;
 
     my $fileContent = slurpFile( $file );
+    unless( $fileContent ) {
+        return undef;
+    }
 
     my $json;
     eval {
@@ -228,8 +231,7 @@ sub slurpFile {
     debug( 'slurpFile(', $filename, ')' );
 
     local $/;
-    open( my $fh, '<', $filename );
-    if( $fh ) {
+    if( open( my $fh, '<', $filename )) {
         my $fileContent = <$fh>;
         close $fh;
 
