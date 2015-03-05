@@ -1,6 +1,6 @@
 [Unit]
 Description=ubos-admin configuration
-Wants=rngd.service network.target cronie.service ntpd.service ubos-httpd.service
+Wants=network.target cronie.service ntpd.service ubos-httpd.service
 Requires=ubos-mysqld.service 
 # ubos-admin wants to set a root password for mysql, so start mysqld first
 After=ubos-mysqld.service 
