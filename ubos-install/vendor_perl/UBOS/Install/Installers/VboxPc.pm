@@ -37,9 +37,14 @@
 # along with ubos-install.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Device-specific notes:
+# * random number generator: haveged for artificial entropy. VirtualBox does not
+#   currently have any support for (virtual) hardware random devices:
+#   https://www.virtualbox.org/pipermail/vbox-dev/2015-March/012909.html
+
 use strict;
 use warnings;
-
+                                                  
 package UBOS::Install::Installers::VboxPc;
 
 use base qw( UBOS::Install::Installers::Pc );
@@ -67,10 +72,10 @@ sub new {
         $self->{hostname} = 'ubos-vbox-pc';
     }
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux mkinitcpio virtualbox-guest ) ];
+        $self->{devicepackages} = [ qw( linux mkinitcpio haveged virtualbox-guest ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( vboxservice ) ];
+        $self->{deviceservices} = [ qw( haveged vboxservice ) ];
     }
     $self->SUPER::new( @args );
 

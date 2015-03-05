@@ -18,6 +18,12 @@
 # along with ubos-install.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Device-specific notes:
+# * random number generator: PI has /dev/hwrng, so we run rngd, and patch its
+#   configuration file during ubos-install, as long as Arch ARM hasn't updated the
+#   default configuration they ship, which is identical as the x86 one:
+#   http://archlinuxarm.org/forum/viewtopic.php?f=60&t=8571
+
 use strict;
 use warnings;
 
@@ -49,8 +55,12 @@ sub new {
     }
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux-raspberrypi raspberrypi-firmware raspberrypi-firmware-bootloader
-                                        raspberrypi-firmware-bootloader-x archlinuxarm-keyring ) ];
+                                        raspberrypi-firmware-bootloader-x archlinuxarm-keyring rng-tools ) ];
     }
+    unless( $self->{deviceservices} ) {
+        $self->{deviceservices} = [ qw( rngd ) ];
+    }
+
     $self->SUPER::new( @args );
 
     return $self;
@@ -233,6 +243,24 @@ sub createDiskLayout {
     }
     
     return $ret;
+}
+
+##
+# Generate and save different other files if needed
+# return: number of errors
+sub saveOther {
+    my $self = shift;
+
+    my $target = $self->{target};
+
+    # Use hardware random generator by default
+
+    UBOS::Utils::saveFile( "$target/etc/conf.d/rngd", <<CONTENT );
+# Changed for UBOS 
+RNGD_OPTS="-o /dev/random -r /dev/hwrng"
+CONTENT
+
+    return 0;
 }
 
 1;

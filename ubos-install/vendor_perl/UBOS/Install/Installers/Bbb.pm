@@ -18,14 +18,17 @@
 # along with ubos-install.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# This device is a bit strange: it needs a boot partition separate from /boot.
-# * During installation, the boot partition gets mounted at /boot, and it
-#   drops dtbs, MLO, u-boot.img, uEnv.txt and zImage there
-# * When booting, the bootloader looks for MLO, u-boot.img and uEnv.txt in
-#   the umounted first partition, but then it looks for dtbs and zImage in
-#   /boot of the second partition
-# We fix this by copying files from /boot to /bootpart at the end of the
-# process.
+# Device-specific notes:
+
+# * This device is a bit strange: it needs a boot partition separate from /boot.
+#   * During installation, the boot partition gets mounted at /boot, and it
+#     drops dtbs, MLO, u-boot.img, uEnv.txt and zImage there
+#   * When booting, the bootloader looks for MLO, u-boot.img and uEnv.txt in
+#     the umounted first partition, but then it looks for dtbs and zImage in
+#     /boot of the second partition
+#   * We fix this by copying files from /boot to /bootpart at the end of the
+#     process.
+# * random number generator: we do nothing
 
 use strict;
 use warnings;

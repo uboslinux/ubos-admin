@@ -18,6 +18,9 @@
 # along with ubos-install.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Device-specific notes:
+# * random number generator: we do nothing
+
 use strict;
 use warnings;
 
