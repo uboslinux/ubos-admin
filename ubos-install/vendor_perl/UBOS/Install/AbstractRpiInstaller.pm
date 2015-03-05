@@ -60,6 +60,9 @@ sub new {
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd ) ];
     }
+    unless( $self->{devicemodules} ) {
+        $self->{devicemodules} = [ qw( bcm2708-rng snd-bcm2835 ) ];
+    }
 
     $self->SUPER::new( @args );
 

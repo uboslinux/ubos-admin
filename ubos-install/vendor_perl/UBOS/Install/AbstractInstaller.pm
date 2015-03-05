@@ -30,10 +30,13 @@ use fields qw( hostname
                channel
                basepackages devicepackages additionalpackages
                baseservices deviceservices additionalservices
+               basemodules  devicemodules  additionalmodules
                packagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
+# *services: same for systemd services
+# *modules: same for kernel modules
 
 use Cwd;
 use File::Spec;
@@ -61,6 +64,9 @@ sub new {
     }
     unless( $self->{baseservices} ) {
         $self->{baseservices} = [ qw( ubos-admin ubos-networking ntpd sshd ) ];
+    }
+    unless( $self->{basemodules} ) {
+        $self->{basemodules} = [];
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl tools ) ];
@@ -168,6 +174,7 @@ sub install {
         $errors += $self->saveHostname();
         $errors += $self->saveChannel();
         $errors += $diskLayout->saveFstab( $self->{target} );
+        $errors += $self->saveModules();
         $errors += $self->saveSecuretty();
         $errors += $self->saveOther();
         $errors += $self->configureOs();
@@ -462,6 +469,26 @@ sub saveChannel {
     } else {
         return 1;
     }
+}
+
+##
+# Generate and save kernel module load files if needed
+sub saveModules {
+    my $self  = shift;
+
+    my $target = $self->{target};
+    my $errors = 0;
+
+    foreach my $t ( qw( basemodules devicemodules additionalmodules )) {
+        if( defined( $self->{$t} ) && @{$self->{$t}} ) {
+            if( UBOS::Utils::saveFile( "$target/etc/modules-load.d/$t.conf", join( "\n", @{$self->{$t}} ) . "\n" )) {
+                error( 'Failed to save modules load file for', $t );
+                ++$errors;
+            }
+        }
+    }
+
+    return $errors;
 }
 
 ##
