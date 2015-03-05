@@ -60,7 +60,7 @@ sub new {
         $self->{basepackages} = [ qw( ubos-base ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( rngd ubos-admin ubos-networking ntpd sshd ) ];
+        $self->{baseservices} = [ qw( ubos-admin ubos-networking ntpd sshd ) ];
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl tools ) ];
