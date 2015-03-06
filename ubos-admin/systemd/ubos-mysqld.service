@@ -6,7 +6,7 @@ Conflicts=mysqld.service
 [Service]
 User=mysql
 Group=mysql
-ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-mysqld
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-mysqld-start-pre
 ExecStart=/usr/bin/mysqld --defaults-file=/etc/mysql/mysql-ubos.cnf --pid-file=/run/mysqld/mysqld.pid
 ExecStartPost=/usr/bin/mysqld-post
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-mysqld

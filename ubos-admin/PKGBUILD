@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.132
+pkgver=0.133
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -49,7 +49,7 @@ package() {
     done
 
     mkdir -p $pkgdir/usr/share/$pkgname/bin
-    install -m755 $startdir/bin/{ubos-admin-initialize,ubos-apachectl,ubos-service-prestart,ubos-service-poststop} $pkgdir/usr/share/$pkgname/bin/
+    install -m755 $startdir/bin/{ubos-admin-initialize,ubos-mysqld-start-pre,ubos-apachectl,ubos-service-prestart,ubos-service-poststop} $pkgdir/usr/share/$pkgname/bin/
 
 # Config files
     mkdir -p $pkgdir/etc/ubos/ssl
