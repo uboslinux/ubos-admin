@@ -39,6 +39,10 @@ use UBOS::Utils;
 sub run {
     my @args = @_;
 
+    if ( $< != 0 ) {
+        fatal( "This command must be run as root" ); 
+    }
+
     my $verbose       = 0;
     my $logConfigFile = undef;
 
