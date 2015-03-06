@@ -78,8 +78,11 @@ sub run {
     my $app;
 
     if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostname ) {
-        fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
-        exit 1;
+        if( $dryRun ) {
+            print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
+        } else {
+            fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
+        }
     }
 
     unless( $noapp ) {
@@ -96,14 +99,22 @@ sub run {
 
         if( '*' eq $hostname ) {
             if( %$oldSites ) {
-                print "You can only create a site with hostname * (any) if no other sites exist.\n";
-                next outer;
+                if( $dryRun ) {
+                    print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
+                } else {
+                    print "You can only create a site with hostname * (any) if no other sites exist.\n";
+                    next outer;
+                }
             }
         } else {
             foreach my $oldSite ( values %$oldSites ) {
                 if( $oldSite->hostname eq $hostname ) {
-                    print "There is already a site with hostname $hostname.\n";
-                    next outer;
+                    if( $dryRun ) {
+                        print "There is already a site with hostname $hostname. You will not be able to deploy the site you are creating on this device.\n";
+                    } else {
+                        print "There is already a site with hostname $hostname.\n";
+                        next outer;
+                    }
                 }
             }
         }
@@ -192,7 +203,14 @@ sub run {
             last;
         }
     }
-    $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
+    while( 1 ) {
+        $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
+        if( $adminEmail =~ m!foo\@bar.com! ) {
+            print "Not that one!\n";
+        } else {
+            last;
+        }
+    }
 
 
     my $tlsKey;
