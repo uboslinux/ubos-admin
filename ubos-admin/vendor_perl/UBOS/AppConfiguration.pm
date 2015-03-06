@@ -187,7 +187,11 @@ sub installables {
 sub customizationPoints {
     my $self = shift;
 
-    return $self->{json}->{customizationpoints};
+    if( exists( $self->{json}->{customizationpoints} )) {
+        return $self->{json}->{customizationpoints};
+    } else {
+        return undef;
+    }
 }
 
 ##

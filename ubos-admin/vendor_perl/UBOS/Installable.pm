@@ -194,7 +194,11 @@ sub installableJson {
 sub customizationPoints {
     my $self = shift;
 
-    return $self->{json}->{customizationpoints};
+    if( exists( $self->{json}->{customizationpoints} )) {
+        return $self->{json}->{customizationpoints};
+    } else {
+        return undef;
+    }
 }
 
 ##
@@ -364,7 +368,7 @@ sub checkManifestCustomizationPointsSection {
     my $json   = $self->{json};
     my $config = $self->{config};
 
-    if( $json->{customizationpoints} ) {
+    if( exists( $json->{customizationpoints} )) {
         unless( ref( $json->{customizationpoints} ) eq 'HASH' ) {
             $self->myFatal( "customizationpoints section: not a JSON object" );
         }
