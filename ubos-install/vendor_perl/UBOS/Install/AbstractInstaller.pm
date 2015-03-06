@@ -481,7 +481,7 @@ sub saveModules {
 
     foreach my $t ( qw( basemodules devicemodules additionalmodules )) {
         if( defined( $self->{$t} ) && @{$self->{$t}} ) {
-            if( UBOS::Utils::saveFile( "$target/etc/modules-load.d/$t.conf", join( "\n", @{$self->{$t}} ) . "\n" )) {
+            unless( UBOS::Utils::saveFile( "$target/etc/modules-load.d/$t.conf", join( "\n", @{$self->{$t}} ) . "\n" )) {
                 error( 'Failed to save modules load file for', $t );
                 ++$errors;
             }
