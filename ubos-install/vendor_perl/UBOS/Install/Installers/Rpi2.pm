@@ -65,9 +65,14 @@ sub installBootLoader {
     info( 'Installing boot loader' );
 
     # Copied from the ArmLinuxARM Raspberry Pi image
+
+    my $addParString = '';
+    if( defined( $self->{additionalkernelparameters} )) {
+        map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
+    }
     
     UBOS::Utils::saveFile( $self->{target} . '/boot/cmdline.txt', <<CONTENT, 0644, 'root', 'root' );
-root=/dev/mmcblk0p2 rw rootwait console=ttyAMA0,115200 console=tty1 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 kgdboc=ttyAMA0,115200 elevator=noop
+root=/dev/mmcblk0p2 rw rootwait console=ttyAMA0,115200 console=tty1 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 kgdboc=ttyAMA0,115200 elevator=noop$addParString
 CONTENT
     # needed? rootfstype=btrfs
 

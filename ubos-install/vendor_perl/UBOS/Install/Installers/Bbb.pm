@@ -68,6 +68,17 @@ sub new {
 }
 
 ##
+# Add kernel parameters for the kernel boot
+# @modules: array of parameter strings
+sub addKernelParameters {
+    my $self = shift;
+    my @pars = @_;
+
+    fatal( 'Cannot add kernel parameters on device class bbb at this time' );
+}
+
+
+##
 # Create a DiskLayout object that goes with this Installer.
 # $argvp: remaining command-line arguments
 sub createDiskLayout {

@@ -31,6 +31,7 @@ use fields qw( hostname
                basepackages devicepackages additionalpackages
                baseservices deviceservices additionalservices
                basemodules  devicemodules  additionalmodules
+               additionalkernelparameters
                packagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
@@ -126,23 +127,43 @@ sub setChannel {
 }
 
 ##
-# Set the packages that are to be installed in addition
-# $packages: array of package names
-sub setAdditionalPackages {
+# Add packages that are to be installed in addition
+# @packages: array of package names
+sub addPackages {
     my $self     = shift;
-    my $packages = shift;
+    my @packages = @_;
 
-    $self->{additionalpackages} = $packages;
+    push @{$self->{additionalpackages}}, @packages;
 }
 
 ##
-# Set the services that are to be enabled in addition
-# $services: array of service names
-sub setAdditionalServices {
+# Add services that are to be enabled in addition
+# @services: array of service names
+sub addServices {
     my $self     = shift;
-    my $services = shift;
+    my @services = @_;
 
-    $self->{additionalservices} = $services;
+    push @{$self->{additionalservices}}, @services;
+}
+
+##
+# Add kernel modules that are to be loaded in addition
+# @modules: array of kernel module names
+sub addModules {
+    my $self    = shift;
+    my @modules = @_;
+
+    push @{$self->{additionalmodules}}, @modules;
+}
+
+##
+# Add kernel parameters for the kernel boot
+# @modules: array of parameter strings
+sub addKernelParameters {
+    my $self = shift;
+    my @pars = @_;
+
+    push @{$self->{additionalkernelparameters}}, @pars;
 }
 
 ##

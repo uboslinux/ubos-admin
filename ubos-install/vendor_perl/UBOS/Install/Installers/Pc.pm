@@ -356,6 +356,7 @@ END
         ++$errors;
     }
     if( $bootLoaderDevice ) {
+        
         if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
             error( "grub-install failed", $err );
             ++$errors;
@@ -365,12 +366,24 @@ END
 set -e
 
 perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
+END
 
+        if( defined( $self->{additionalkernelparameters} ) && @{$self->{additionalkernelparameters}} ) {
+            my $addParString = '';
+            map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
+            $addParString =~ s!(["'/])!\$1!g; # escape quotes and slash
+
+            $chrootScript .= <<END;
+perl -pi -e 's/GRUB_CMDLINE_LINUX_DEFAULT="(.*)"/GRUB_CMDLINE_LINUX_DEFAULT="\$1$addParString"/' /etc/default/grub
+END
+        }
+
+        $chrootScript .= <<'END';
 grub-mkconfig -o /boot/grub/grub.cfg
 END
 
         if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
-            error( "bootloader chroot script failed", $err );
+            error( "bootloader chroot script failed:", $err, "\nwas", $chrootScript );
             ++$errors;
         }
     }
