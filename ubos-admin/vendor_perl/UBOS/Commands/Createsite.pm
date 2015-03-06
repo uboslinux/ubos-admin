@@ -387,7 +387,11 @@ sub run {
             $ret &= $appConfig->runInstaller();
         }
 
-        print "Installed site $siteId at http://$hostname/\n";
+        if( $tls ) {
+            print "Installed site $siteId at https://$hostname/\n";
+        } else {
+            print "Installed site $siteId at http://$hostname/\n";
+        }
     }
     return $ret;
 }
