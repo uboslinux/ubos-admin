@@ -28,7 +28,11 @@
 #     /boot of the second partition
 #   * We fix this by copying files from /boot to /bootpart at the end of the
 #     process.
-# * random number generator: we do nothing
+# * random number generator: BBB has /dev/hwrng, so we run rngd, and patch its
+#   configuration file during ubos-install, as long as Arch ARM hasn't updated the
+#   default configuration they ship, which is identical as the x86 one:
+#   http://archlinuxarm.org/forum/viewtopic.php?f=60&t=8571,
+#   see also AbstractRpiInstaller
 
 use strict;
 use warnings;
@@ -60,8 +64,12 @@ sub new {
         $self->{hostname} = 'ubos-bbb';
     }
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux-am33x uboot-beaglebone uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( linux-am33x uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
     }
+    unless( $self->{deviceservices} ) {
+        $self->{deviceservices} = [ qw( rngd ) ];
+    }
+
     $self->SUPER::new( @args );
 
     return $self;
@@ -281,6 +289,24 @@ sub installBootLoader {
     }
     
     return $errors;
+}
+
+##
+# Generate and save different other files if needed
+# return: number of errors
+sub saveOther {
+    my $self = shift;
+
+    my $target = $self->{target};
+
+    # Use hardware random generator by default
+
+    UBOS::Utils::saveFile( "$target/etc/conf.d/rngd", <<CONTENT );
+# Changed for UBOS 
+RNGD_OPTS="-o /dev/random -r /dev/hwrng"
+CONTENT
+
+    return 0;
 }
 
 ##
