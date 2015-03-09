@@ -51,9 +51,10 @@ sub new {
         $self->{hostname} = 'ubos-pcduino3';
     }
     unless( $self->{devicepackages} ) {
-        # $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
         # The armv7 kernel has problems talking to the network
-        $self->{devicepackages} = [ qw( linux-sun7i uboot-tools archlinuxarm-keyring ) ];
+        # $self->{devicepackages} = [ qw( linux-sun7i uboot-tools archlinuxarm-keyring ) ];
+        # The sun7i kernel has problems booting at all
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
     $self->SUPER::new( @args );
