@@ -3,7 +3,7 @@
 # Apache2 abstraction.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ my $phpModulesConfDir = '/etc/php/conf.d';
 
 my $logFile  = '/var/log/httpd/error_log';
 
-my @minimumApacheModules = qw( alias authz_core authz_host cgi deflate dir env log_config mime mpm_prefork setenvif unixd ); # always need those
+my @minimumApacheModules = qw( alias authz_core authz_host cgi deflate dir env log_config mime mpm_prefork rewrite setenvif unixd ); # always need those
 
 ##
 # Reload configuration
