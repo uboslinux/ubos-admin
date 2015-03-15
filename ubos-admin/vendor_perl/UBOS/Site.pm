@@ -897,7 +897,7 @@ sub _checkJson {
                         fatal( 'Site JSON: customizationpoints for package ' . $packageName . ' must be a JSON hash' );
                     }
                     foreach my $pointName ( keys %$custPointsForPackage ) {
-                        unless( $pointName =~ m!^[a-z]+$! ) {
+                        unless( $pointName =~ m!^[a-z][a-z0-9_]*$! ) {
                             fatal( 'Site JSON: invalid name for customizationpoint: ' . $pointName );
                         }
                         my $pointValue = $custPointsForPackage->{$pointName};
