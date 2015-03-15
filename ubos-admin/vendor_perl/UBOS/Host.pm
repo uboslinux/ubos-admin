@@ -412,6 +412,15 @@ sub updateCode {
         $cmd .= ' > /dev/null';
     }
     myexec( $cmd );
+
+    if( -x '/usr/bin/pacman-db-upgrade' ) {
+        # not sure when this can be removed again
+        $cmd = 'pacman-db-upgrade';
+        unless( UBOS::Logging::isDebugActive() ) {
+            $cmd .= ' > /dev/null';
+        }
+        myexec( $cmd );
+    }
 }
 
 ##
