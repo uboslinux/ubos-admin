@@ -72,7 +72,7 @@ sub new {
         $self->{hostname} = 'ubos-vbox-pc';
     }
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux mkinitcpio haveged virtualbox-guest ) ];
+        $self->{devicepackages} = [ qw( linux mkinitcpio virtualbox-guest ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged vboxservice ) ];
