@@ -221,7 +221,12 @@ sub run {
     my $newSiteJson = {};
     if( $tls ) {
         if( $selfSigned ) {
-            my $dir = File::Temp->newdir();
+
+        unless( $quiet ) {
+            print "Generating TLS keys...\n";
+        }
+
+        my $dir = File::Temp->newdir();
             chmod 0700, $dir;
     
             my $err;
