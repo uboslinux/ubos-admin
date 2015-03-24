@@ -643,8 +643,31 @@ sub cleanup {
     
     my $target  = $self->{target};
 
+    # don't need installation history
     if( -e "$target/root/.bash_history" ) {
         UBOS::Utils::deleteFile( "$target/root/.bash_history" );
+    }
+
+    # Removing content of /var/cache makes image smaller
+
+    my $ret = 0;
+
+    opendir(DIR, '/var/cache' ) or return $ret;
+    my @dirs = ();
+    while( my $file = readdir(DIR) ) {
+        if( $file eq '.' || $file eq '..' ) {
+            next;
+        }
+        if( -d "$dir/$file" ) {
+            push @dirs, $file;
+        }
+    }
+    closedir(DIR);
+
+    if( @dirs ) {
+        unless( UBOS::Utils::deleteRecursively( @dirs )) {
+            $ret = 1;
+        }
     }
     return 0;
 }
