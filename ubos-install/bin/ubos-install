@@ -83,8 +83,12 @@ if ( $< != 0 ) {
 if( $target && ! -d $target ) {
     fatal( 'Target is not a directory:', $target );
 }
+# Use current device class if not given as parameter
 unless( $deviceclassname ) {
-    # Use current device class
+    $deviceclassname = UBOS::Host::deviceClass();
+}
+unless( $deviceclassname ) {
+    # now we guess
     my $out;
     UBOS::Utils::myexec( 'uname -a', undef, \$out, undef );
     if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {

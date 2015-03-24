@@ -28,6 +28,7 @@ use fields qw( hostname
                target tempTarget
                repo
                channel
+               kernelpackage
                basepackages devicepackages additionalpackages
                baseservices deviceservices additionalservices
                basemodules  devicemodules  additionalmodules
@@ -387,7 +388,7 @@ sub installPackages {
     my $target = $self->{target};
     my $errors = 0;
 
-    my @allPackages = ( @{$self->{basepackages}} );
+    my @allPackages = ( $self->{kernelpackage}, @{$self->{basepackages}} );
     if( defined( $self->{devicepackages} )) {
         push @allPackages, @{$self->{devicepackages}};
     }
@@ -540,11 +541,12 @@ sub saveOther {
 sub configureOs {
     my $self = shift;
 
-    my $target      = $self->{target};
-    my $channel     = $self->{channel};
-    my $buildId     = UBOS::Utils::time2string( time() );
-    my $deviceClass = $self->deviceClass();
-    my $errors      = 0;
+    my $target        = $self->{target};
+    my $channel       = $self->{channel};
+    my $buildId       = UBOS::Utils::time2string( time() );
+    my $deviceClass   = $self->deviceClass();
+    my $kernelPackage = $self->{kernelpackage};
+    my $errors        = 0;
 
     # Limit size of system journal
     debug( "System journal" );
@@ -576,6 +578,7 @@ PRETTY_NAME="UBOS"
 HOME_URL="http://ubos.net/"
 BUILD_ID="$buildId"
 UBOS_DEVICECLASS="$deviceClass"
+UBOS_KERNELPACKAGE="$kernelPackage"
 OSRELEASE
 
     return 0;
@@ -660,8 +663,9 @@ sub cleanup {
         if( $file eq '.' || $file eq '..' ) {
             next;
         }
-        if( -d "$dir/$file" ) {
-            push @dirs, $file;
+        my $d = "/var/cache/$file";
+        if( -d $d ) {
+            push @dirs, $d;
         }
     }
     closedir(DIR);

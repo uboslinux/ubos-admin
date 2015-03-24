@@ -54,8 +54,9 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-raspberry-pi';
     }
+    $self->{kernelpackage} = 'linux-raspberrypi';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux-raspberrypi raspberrypi-firmware raspberrypi-firmware-bootloader
+        $self->{devicepackages} = [ qw( raspberrypi-firmware raspberrypi-firmware-bootloader
                                         raspberrypi-firmware-bootloader-x archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {

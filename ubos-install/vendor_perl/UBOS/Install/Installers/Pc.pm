@@ -51,8 +51,9 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
+    $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux mkinitcpio ) ];
+        $self->{devicepackages} = [ qw( mkinitcpio ) ];
     }
     $self->SUPER::new( @args );
 

@@ -63,8 +63,9 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
+    $self->{kernelpackage} = 'linux-am33x';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( linux-am33x uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
+        $self->{devicepackages} = [ qw( uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd ) ];
