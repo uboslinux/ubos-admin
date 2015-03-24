@@ -3,7 +3,7 @@
 # Tomcat7 abstraction.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ my $ourServerXmlTemplate = '/etc/tomcat7/server-ubos.xml.tmpl';
 ##
 # Ensure that Tomcat7 is running.
 sub ensureRunning {
-    UBOS::Host::ensurePackages( [ 'tomcat7', 'apr' ] );
+    UBOS::Host::ensurePackages( [ 'tomcat7', 'tomcat-native' ] );
 
     UBOS::Utils::myexec( 'systemctl enable tomcat7' );
     UBOS::Utils::myexec( 'systemctl restart tomcat7' );
