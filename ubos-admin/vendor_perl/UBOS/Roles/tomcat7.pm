@@ -99,7 +99,7 @@ sub setupSite {
     UBOS::Host::ensurePackages( 'tomcat7' );
 
     my $siteId          = $site->siteId;
-    my $hostname        = $site->hostname;
+    my $hostname        = $site->hostnameorwildcard;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
@@ -150,7 +150,7 @@ sub removeSite {
     my $triggers = shift;
 
     my $siteId          = $site->siteId;
-    my $hostname        = $site->hostname;
+    my $hostname        = $site->hostnameorwildcard;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
@@ -181,7 +181,7 @@ END
     foreach my $site ( values %$sites ) {
         if( $site->needsRole( $self )) {
             my $siteId   = $site->siteId;
-            my $hostname = $site->hostname;
+            my $hostname = $site->hostnameorwildcard;
             my $appBase  = "$sitesAppsDir/$siteId";
             my $logFile  = $siteId . '_access_log.';
             

@@ -46,7 +46,9 @@
                <!-- UBOS: added URIEncoding per Jenkins' complaint about Tomcat violating RFCs:
                     http://wiki.jenkins-ci.org/display/JENKINS/Tomcat#Tomcat-i18n -->
 
-    <Engine name="Catalina" defaultHost="localhost">
+    <Engine name="Catalina" defaultHost="__wildcard">
+
+               <!-- UBOS: the __wildcard hostname corresponds to UBOS::Site::$WILDCARDHOSTNAME -->
 
 INSERT-UBOS-SITES-HERE
 

@@ -33,6 +33,8 @@ use MIME::Base64;
 
 use fields qw{json appConfigs config};
 
+my $WILDCARDHOSTNAME = "__wildcard";
+
 ##
 # Constructor.
 # $json: JSON object containing Site JSON
@@ -170,6 +172,19 @@ sub hostname {
 }
 
 ##
+# Obtain the site's host name, or, if it is *, a replacement that looks like a real hostname
+# return: string
+sub hostnameorwildcard {
+    my $self = shift;
+
+    my $ret = $self->hostname();
+    if( $ret eq '*' ) {
+        $ret = $WILDCARDHOSTNAME;
+    }
+    return $ret;
+}
+
+##
 # Obtain the Configuration object
 # return: the Configuration object
 sub config {
@@ -178,17 +193,18 @@ sub config {
     unless( $self->{config} ) {
         my $siteId    = $self->siteId();
         my $adminJson = $self->{json}->{admin};
-        
+
         $self->{config} = UBOS::Configuration->new(
                     "Site=$siteId",
                     {
-                        "site.hostname"         => $self->hostname(),
-                        "site.siteid"           => $siteId,
-                        "site.protocol"         => ( $self->hasTls() ? 'https' : 'http' ),
-                        "site.admin.userid"     => $adminJson->{userid},
-                        "site.admin.username"   => $adminJson->{username},
-                        "site.admin.credential" => $adminJson->{credential},
-                        "site.admin.email"      => $adminJson->{email}
+                        "site.hostname"           => $self->hostname(),
+                        "site.hostnameorwildcard" => $self->hostnameorwildcard(),
+                        "site.siteid"             => $siteId,
+                        "site.protocol"           => ( $self->hasTls() ? 'https' : 'http' ),
+                        "site.admin.userid"       => $adminJson->{userid},
+                        "site.admin.username"     => $adminJson->{username},
+                        "site.admin.credential"   => $adminJson->{credential},
+                        "site.admin.email"        => $adminJson->{email}
                     },
                 UBOS::Host::config() );
     }

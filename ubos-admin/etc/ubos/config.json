@@ -28,7 +28,8 @@
         "uname" : "tomcat7",
         "gname" : "tomcat7",
 
-        "sitesdir" : "/var/lib/tomcat7/sites"
+        "sitesdir"    : "/var/lib/tomcat7/sites",
+        "contextsdir" : "/etc/tomcat7/Catalina"
     },
 
     "site" : {
@@ -41,7 +42,7 @@
         },
         "tomcat7" : {
             "sitedocumentdir"      : "${tomcat7.sitesdir}/${site.siteid}",
-            "contextdir"           : "/etc/tomcat7/Catalina/${site.hostname}"
+            "contextdir"           : "${tomcat7.contextsdir}/${site.hostnameorwildcard}"
         }
     },
 
