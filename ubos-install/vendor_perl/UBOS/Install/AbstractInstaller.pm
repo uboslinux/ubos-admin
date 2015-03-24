@@ -540,10 +540,11 @@ sub saveOther {
 sub configureOs {
     my $self = shift;
 
-    my $target  = $self->{target};
-    my $channel = $self->{channel};
-    my $buildId = UBOS::Utils::time2string( time() );
-    my $errors  = 0;
+    my $target      = $self->{target};
+    my $channel     = $self->{channel};
+    my $buildId     = UBOS::Utils::time2string( time() );
+    my $deviceClass = $self->deviceClass();
+    my $errors      = 0;
 
     # Limit size of system journal
     debug( "System journal" );
@@ -553,16 +554,16 @@ sub configureOs {
     debug( "OS version info" );
     my $issue = <<ISSUE;
 
-+------------------------------------------+
-|                                          |
-|           Welcome to UBOS (tm)           |
-|                                          |
-|                 ubos.net                 |
-|                                          |
++--------------------------------------------------------------------------+
+|                                                                          |
+|                           Welcome to UBOS (tm)                           |
+|                                                                          |
+|                                 ubos.net                                 |
+|                                                                          |
 ISSUE
-    $issue .= sprintf( "|%42s|\n", "channel: $channel " );
+    $issue .= sprintf( "|%74s|\n", "device class: $deviceClass, channel: $channel " );
     $issue .= <<ISSUE;
-+------------------------------------------+
++--------------------------------------------------------------------------+
 
 ISSUE
     UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
@@ -574,6 +575,7 @@ ID_LIKE="arch"
 PRETTY_NAME="UBOS"
 HOME_URL="http://ubos.net/"
 BUILD_ID="$buildId"
+UBOS_DEVICECLASS="$deviceClass"
 OSRELEASE
 
     return 0;
@@ -679,6 +681,14 @@ sub arch {
     my $self = shift;
 
     fatal( 'Method arch() must be overridden in', ref( $self ));
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    fatal( 'Method deviceClass() must be overridden in', ref( $self ));
 }
 
 1;

@@ -61,7 +61,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-bbb';
+        $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux-am33x uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
@@ -316,6 +316,14 @@ sub arch {
     my $self = shift;
 
     return 'armv7h';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'bbb';
 }
 
 1;

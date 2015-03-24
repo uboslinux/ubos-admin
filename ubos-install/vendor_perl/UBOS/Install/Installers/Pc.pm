@@ -49,7 +49,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-pc';
+        $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux mkinitcpio ) ];
@@ -398,6 +398,14 @@ sub arch {
     my $self = shift;
 
     return 'x86_64';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'pc';
 }
 
 1;

@@ -45,7 +45,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-raspberry-pi';
+        $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
     $self->SUPER::new( @args );
 
@@ -165,6 +165,14 @@ sub arch {
     my $self = shift;
 
     return 'armv6h';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'raspberry-pi';
 }
 
 1;

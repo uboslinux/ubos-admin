@@ -69,7 +69,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-vbox-pc';
+        $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux mkinitcpio virtualbox-guest ) ];
@@ -82,6 +82,14 @@ sub new {
     push @{$self->{packagedbs}}, 'virt';
 
     return $self;
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'vbox-pc';
 }
 
 1;

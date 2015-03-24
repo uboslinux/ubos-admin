@@ -48,7 +48,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-pcduino3';
+        $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( linux-armv7 uboot-tools archlinuxarm-keyring ) ];
@@ -269,6 +269,14 @@ sub arch {
     my $self = shift;
 
     return 'armv7h';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'pcduino3';
 }
 
 1;
