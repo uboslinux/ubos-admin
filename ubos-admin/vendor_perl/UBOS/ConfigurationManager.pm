@@ -47,11 +47,11 @@ sub initializeIfNeeded {
 
     my $device = guessConfigurationDevice();
     unless( $device ) {
-        debug( 'No configuration device found' );
+        debug( 'No staff device found' );
         return;
     }
 
-    debug( 'Configuration device:', $device );
+    debug( 'Staff device:', $device );
 
     my $targetFile = File::Temp->newdir( DIR => '/var/run', UNLINK => 1 );
     my $target     = $targetFile->dirname;
@@ -61,8 +61,13 @@ sub initializeIfNeeded {
         return;
     }
 
-    my $errors = loadCurrentConfiguration( $target );
-    if( $errors ) {
+    if( UBOS::Host::config()->get( 'ubos.initializestaffonboot', 1 )) {
+        if( initializeConfigurationIfNeeded( $target )) {
+            error( 'Initialization staff device failed:', $device, $target );
+        }
+    }
+    
+    if( loadCurrentConfiguration( $target )) {
         error( 'Loading current configuration failed from', $device, $target );
     }
 
@@ -172,6 +177,25 @@ sub saveCurrentConfiguration {
     UBOS::Utils::saveFile( "$target/$sshDir/ssh_host_key.pub", $sshHostKey );
 
     return 0;
+}
+
+##
+# If this is a valid staff device, but it has not been initialized, initialize
+# $target: the target directory from which to read (root directory of stick)
+# return: number of errors
+sub initializeConfigurationIfNeeded {
+    my $target = shift;
+
+    my $errors = 0;
+    unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( "ssh-keygen -N '' -f '$target/shepherd/ssh/id_rsa'", undef, \$out, \$err )) {
+            error( 'SSH key generation failed:', $out, $err );
+            $errors += 1;
+        }
+    }
+    return $errors;
 }
 
 ##

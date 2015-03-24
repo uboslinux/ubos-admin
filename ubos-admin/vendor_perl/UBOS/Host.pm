@@ -36,11 +36,13 @@ use Sys::Hostname;
 
 my $SITES_DIR        = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE   = '/etc/ubos/config.json';
+my $AFTER_BOOT_FILE  = '/etc/ubos/after-boot';
 my $hostConf         = undef;
 my $now              = time();
 my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
+my $_osReleaseInfo         = undef; # allocated as needed
 
 ##
 # Obtain the host Configuration object.
@@ -55,6 +57,49 @@ sub config {
 
         $hostConf = UBOS::Configuration->new( 'Host', $raw );
     }
+}
+
+##
+# Helper method to read /etc/os-release
+# Return: hash with found values (may be empty)
+sub _getOsReleaseInfo {
+    unless( defined( $_osReleaseInfo )) {
+        $_osReleaseInfo = {};
+        
+        if( -e '/etc/os-release' ) {
+            my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
+            while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9])\"!mg ) {
+                $_osReleaseInfo->{$1} = $2;
+            }
+        }
+    }
+    return $_osReleaseInfo;
+}
+
+##
+# Determine the current device's class.
+# return: deviceClass, or undef
+sub deviceClass {
+    my $ret;
+
+    my $osReleaseInfo = _getOsReleaseInfo();
+    if( exists( $osReleaseInfo->{'UBOS_DEVICECLASS'} )) {
+        return $osReleaseInfo->{'UBOS_DEVICECLASS'};
+    }
+    return undef;
+}
+
+##
+# Determine the current device's kernel package name.
+# return: kernel package name, or undef
+sub kernelPackageName {
+    my $ret;
+
+    my $osReleaseInfo = _getOsReleaseInfo();
+    if( exists( $osReleaseInfo->{'UBOS_KERNELPACKAGE'} )) {
+        return $osReleaseInfo->{'UBOS_KERNELPACKAGE'};
+    }
+    return undef;
 }
 
 ##
@@ -405,7 +450,17 @@ sub executeTriggers {
 
 ##
 # Update all the code currently installed on this host.
+# return: if -1, reboot
 sub updateCode {
+    my $ret = 0;
+    if( -x '/usr/bin/pacman-db-upgrade' ) {
+        # not sure when this can be removed again
+        my $cmd = 'pacman-db-upgrade';
+        unless( UBOS::Logging::isDebugActive() ) {
+            $cmd .= ' > /dev/null';
+        }
+        myexec( $cmd );
+    }
 
     my $cmd = 'pacman -Syu --noconfirm';
     unless( UBOS::Logging::isDebugActive() ) {
@@ -413,14 +468,23 @@ sub updateCode {
     }
     myexec( $cmd );
 
-    if( -x '/usr/bin/pacman-db-upgrade' ) {
-        # not sure when this can be removed again
-        $cmd = 'pacman-db-upgrade';
-        unless( UBOS::Logging::isDebugActive() ) {
-            $cmd .= ' > /dev/null';
+    # if installed kernel package is now different from running kernel: signal to reboot
+    my $kernelPackageName = kernelPackageName();
+    if( $kernelPackageName ) {
+        my $kernelPackageVersion = packageVersion( $kernelPackageName );
+        if( $kernelPackageVersion ) {
+            my $kernelVersion;
+            UBOS::Utils::myexec( 'uname -r', undef, \$kernelVersion );
+            $kernelVersion =~ s!^\s+!!;
+            $kernelVersion =~ s!\s+$!!;
+
+            if( $kernelPackageVersion ne $kernelVersion ) {
+                # reboot necessary
+                $ret = -1;
+            }
         }
-        myexec( $cmd );
     }
+    return $ret;
 }
 
 ##
@@ -669,6 +733,41 @@ sub ensureOsUser {
         }
     }
     return 1;
+}
+
+##
+# Add a command to run after the next boot. They must be bash-executable
+# and will run as root.
+# @cmds: one or more commands
+sub addAfterBootCommands {
+    my @cmds = @_;
+
+    my $afterBoot;
+    if( -e $AFTER_BOOT_FILE ) {
+        $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
+    }
+    foreach my $cmd ( @cmds ) {
+        $afterBoot .= $cmd;
+        $afterBoot .= "\n";
+    }
+    UBOS::Utils::saveFile( $AFTER_BOOT_FILE, $afterBoot );
+}
+
+##
+# If there are commands in the after-boot file, execute them, and then remove
+# the file
+sub runAfterBootCommandsIfNeeded {
+    if( -e $AFTER_BOOT_FILE ) {
+        my $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
+
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( "/bin/bash", $afterBoot, \$out, \$err )) {
+            error( "Problem when running after-boot commands. Script:\n" . $afterBoot . "\nout: " . $out . "\nerr: " . $err );
+        } else {
+            UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
+        }
+    }    
 }
 
 1;

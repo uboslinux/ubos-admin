@@ -123,24 +123,32 @@ sub run {
     if( $stage1Only ) {
         print "Stopping after stage 1 as requested. To complete the update:\n";
         print "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n";
-        print "2. Manually run stage 2: $stage2Cmd\n";
+        print "2. If you installed a new kernel: reboot. Stage 2 of the update will run automatically\n";
+        print "3. If you did not reboot: manually run stage 2: $stage2Cmd\n";
         exit 0;
     }
 
     info( 'Updating code' );
 
+    my $reboot = 0;
     if( @packageFiles ) {
         UBOS::Host::installPackageFiles( \@packageFiles );
     } else {
-        UBOS::Host::updateCode();
+        if( UBOS::Host::updateCode() == -1 ) {
+            $reboot = 1;
+        }
     }
 
-    # Will look into the know spot and restore from there
-    
-    debug( 'Handing over to update-stage2' );
+    if( $reboot ) {
+        debug( 'Detected kernel update. Rebooting.' );
+        UBOS::Host::addAfterBootCommands( $stage2Cmd );
+        
+        exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
-    exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
-
+    } else {
+        debug( 'Handing over to update-stage2' );
+        exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
+    }
     # Never gets here
 }
 

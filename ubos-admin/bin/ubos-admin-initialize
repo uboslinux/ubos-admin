@@ -39,4 +39,6 @@ UBOS::ResourceManager::initializeIfNeeded();
 
 UBOS::ConfigurationManager::initializeIfNeeded();
 
+UBOS::Host::runAfterBootCommandsIfNeeded();
+
 1;
