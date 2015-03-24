@@ -281,7 +281,6 @@ CONTENT
             UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
         }
 
-
     } else {
         # No SSL
         $siteAtPort = 80;
@@ -409,6 +408,7 @@ sub removeSite {
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteDocumentDir   = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+    my $sslDir            = $site->config->getResolve( 'apache2.ssldir' );
 
     debug( 'apache2::removeSite', $siteId, $doIt );
 
@@ -423,6 +423,17 @@ sub removeSite {
         }
 
         UBOS::Utils::rmdir( $siteDocumentDir );
+
+        my @toDelete = ();
+        foreach my $ext ( qw( .key .crt .crtchain .cacrt )) {
+            my $f = "$sslDir/$siteId$ext";
+            if( -e $f ) {
+                push @toDelete, $f;
+            }
+        }
+        if( @toDelete ) {
+            UBOS::Utils::deleteFile( @toDelete );
+        }
 
         $triggers->{'httpd-reload'} = 1;
     }
