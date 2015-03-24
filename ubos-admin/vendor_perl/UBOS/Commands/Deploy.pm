@@ -211,12 +211,26 @@ sub run {
     }
     UBOS::Host::ensurePackages( $prerequisites );
 
-    debug( 'Checking customization points' );
+    debug( 'Checking context paths and customization points' );
     
     foreach my $newSite ( @newSites ) {
+        my %contexts = ();
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
-            my $appConfigCustPoints = $newAppConfig->customizationPoints();
+            # check contexts
+            my $context = $newAppConfig->context();
             
+            if( exists( $contexts{$context} )) {
+                fatal(   'Site ' . $newSite->siteId . ': more than one appconfig with context ' . $context );
+            }
+            if( keys %contexts ) {
+                if( $context eq '' || defined( $contexts{''} ) ) {
+                    fatal(   'Site ' . $newSite->siteId . ': cannot deploy app at root context if other apps are deployed at other contexts' );
+                }
+            }
+            $contexts{$context} = $newAppConfig;
+
+            # check customizationpoints
+            my $appConfigCustPoints = $newAppConfig->customizationPoints();
             foreach my $installable ( $newAppConfig->installables ) {
                 my $packageName           = $installable->packageName;
                 my $installableCustPoints = $installable->customizationPoints;
