@@ -186,7 +186,7 @@ sub createDiskLayout {
                         },
                         '/' => {
                             'index'  => 2,
-                            'fs'      => 'ext4',
+                            'fs'      => 'btrfs',
                             'devices' => \@rootpartitions
                         }
                     } );
@@ -202,12 +202,12 @@ sub createDiskLayout {
                         },
                         '/' => {
                             'index'   => 2,
-                            'fs'      => 'ext4',
+                            'fs'      => 'btrfs',
                             'devices' => \@rootpartitions
                         },
                         '/var' => {
                             'index'  => 3,
-                            'fs'      => 'ext4',
+                            'fs'      => 'btrfs',
                             'devices' => \@varpartitions
                         }
                     } );
@@ -229,7 +229,7 @@ sub createDiskLayout {
                             },
                             '/' => {
                                 'index' => 2,
-                                'fs'    => 'ext4'
+                                'fs'    => 'btrfs'
                             },
                         } );
             } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
@@ -244,7 +244,7 @@ sub createDiskLayout {
                             },
                             '/' => {
                                 'index' => 2,
-                                'fs'    => 'ext4'
+                                'fs'    => 'btrfs'
                             },
                         } );
             } else {
