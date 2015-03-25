@@ -105,6 +105,10 @@ sub run {
     
     UBOS::Host::purgeCache( 1 );
 
+    debug( 'Looking for .pacnew files' );
+
+    UBOS::Host::findPacnewFiles();
+
     return $ret && !$stage1exit;
 }
 

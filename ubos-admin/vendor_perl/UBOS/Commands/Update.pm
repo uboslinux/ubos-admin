@@ -46,21 +46,23 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $stage1Only    = 0;
-    my @packageFiles  = ();
+    my $verbose         = 0;
+    my $logConfigFile    = undef;
+    my $noPackageUpgrade = 0;
+    my $stage1Only       = 0;
+    my @packageFiles     = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'pkgFile=s'   => \@packageFiles,
-            'stage1Only'  => \$stage1Only ); # This option is not public
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'pkgFile=s'        => \@packageFiles,
+            'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
+            'stage1Only'       => \$stage1Only ); # This option is not public
 
     UBOS::Logging::initialize( 'ubos-admin', 'update', $verbose, $logConfigFile );
 
-    if( !$parseOk || @args || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( @packageFiles && $noPackageUpgrade )) {
         fatal( 'Invalid invocation: update', @_, '(add --help for help)' );
     }
 
@@ -131,7 +133,9 @@ sub run {
     info( 'Updating code' );
 
     my $reboot = 0;
-    if( @packageFiles ) {
+    if( $noPackageUpgrade ) {
+        # do nothing
+    } elsif( @packageFiles ) {
         UBOS::Host::installPackageFiles( \@packageFiles );
     } else {
         if( UBOS::Host::updateCode() == -1 ) {

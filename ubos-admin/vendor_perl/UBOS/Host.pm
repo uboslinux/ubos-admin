@@ -767,7 +767,28 @@ sub runAfterBootCommandsIfNeeded {
         } else {
             UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
         }
-    }    
+    }
 }
+
+##
+# Find and print .pacnew files
+sub findPacnewFiles() {
+    my $out;
+    UBOS::Utils::myexec( "find / -name '*.pacnew' -print", undef, \$out );
+
+    if( $out ) {
+        my $count = scalar split /\n/, $out;
+        $out =~ s!^!    !gm;
+        my $msg = <<MSG;
+You manually modified $count configuration file(s) that need an upgrade.
+Because you modified them, UBOS cannot automatically upgrade them. Instead,
+the new versions were saved with the extension .pacnew.
+Please review them, one by one, and when you are done, remove the version
+with the .pacnew extension. Here's the list:
+MSG
+        UBOS::Logging::warning( $msg . $out );    
+    }
+}
+
 
 1;
