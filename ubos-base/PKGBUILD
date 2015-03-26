@@ -2,16 +2,18 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.3
+pkgver=0.4
 pkgrel=1
 pkgdesc="Metapackage for minimal UBOS"
 arch=('any')
 license=('GPL')
 depends=(
+    'apache'
     'bash'
     'btrfs-progs'
     'bzip2'
     'coreutils'
+    'cronie'
     'cryptsetup'
     'device-mapper'
     'dhcpcd'
@@ -31,24 +33,31 @@ depends=(
     'less'
     'licenses'
     'logrotate'
+    'mod_wsgi2'
     'nano'
     'ntp'
     'openssh'
     'pacman'
     'pciutils'
     'perl'
+    'perl-archive-zip'
+    'perl-cgi'
     'procps-ng'
     'psmisc'
     'sed'
     'shadow'
+    'sudo'
     'sysfsutils'
     'systemd-sysvcompat'
     'tar'
     'ubos-admin'
     'ubos-install'
+    'ubos-keyring'
     'ubos-networking'
+    'ubos-perl-utils'
     'usbutils'
     'util-linux'
     'vi'
     'which' )
+
 options=('!strip')
