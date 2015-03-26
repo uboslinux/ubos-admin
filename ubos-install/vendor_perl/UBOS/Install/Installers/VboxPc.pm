@@ -73,7 +73,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( mkinitcpio virtualbox-guest haveged ) ];
+        $self->{devicepackages} = [ qw( mkinitcpio virtualbox-guest ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged vboxservice ) ];
