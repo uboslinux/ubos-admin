@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #
-# Install UBOS on one or more currently unmounted devices or disk images.
+# Install UBOS on one or more currently unmounted devices or disk images,
+# or in a directory.
 #
 # Examples:
 #     ubos-install /dev/sda
@@ -9,10 +10,9 @@
 #             Install on two hard drives in raid mode. Use provided hostname
 #     ubos-install /some/file
 #             Install on an image file. File must exist.
-
-#     ubos-install --deviceclass rpi /dev/sdb
-#     ubos-install --deviceclass pc --bootloader-device /dev/sda --varpartition /dev/sda2 /dev/sda1
-# 
+#     ubos-install --directory /some/directory
+#             Install in a directory, to be run in a Linux container. Directory must exist.
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -35,6 +35,7 @@ use warnings;
 
 use Getopt::Long qw( :config pass_through );
 
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 

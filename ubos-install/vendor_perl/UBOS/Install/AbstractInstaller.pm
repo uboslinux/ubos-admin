@@ -216,6 +216,7 @@ SCRIPT
         $errors += $self->addGenerateLocaleToScript( \$chrootScript );
         $errors += $self->addEnableServicesToScript( \$chrootScript );
 
+        debug( "chroot script:\n" . $chrootScript );
         my $out;
         my $err;
         if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
