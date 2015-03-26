@@ -222,11 +222,11 @@ sub run {
     if( $tls ) {
         if( $selfSigned ) {
 
-        unless( $quiet ) {
-            print "Generating TLS keys...\n";
-        }
+            unless( $quiet ) {
+                print "Generating TLS keys...\n";
+            }
 
-        my $dir = File::Temp->newdir();
+            my $dir = File::Temp->newdir();
             chmod 0700, $dir;
     
             my $err;

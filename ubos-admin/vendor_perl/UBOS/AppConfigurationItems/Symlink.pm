@@ -108,8 +108,8 @@ sub installOrCheck {
             }
 
         } else {
-            error( 'File does not exist:', $fromName );
-            $ret = 0;
+            # Cannot produce error message here, because some AppConfigItem before this one
+            # might have created it.
         }
     }
     return $ret;
