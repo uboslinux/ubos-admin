@@ -646,7 +646,8 @@ sub addEnableServicesToScript {
 sub cleanup {
     my $self = shift;
     
-    my $target  = $self->{target};
+    my $target = $self->{target};
+    my $ret    = 0;
 
     # don't need installation history
     if( -e "$target/root/.bash_history" ) {
@@ -654,9 +655,6 @@ sub cleanup {
     }
 
     # Removing content of /var/cache makes image smaller
-
-    my $ret = 0;
-
     opendir(DIR, '/var/cache' ) or return $ret;
     my @dirs = ();
     while( my $file = readdir(DIR) ) {
@@ -675,7 +673,8 @@ sub cleanup {
             $ret = 1;
         }
     }
-    return 0;
+
+    return $ret;
 }
 
 ##
