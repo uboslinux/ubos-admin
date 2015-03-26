@@ -27,6 +27,7 @@ package UBOS::AppConfigurationItems::GenericDatabase;
 use base   qw( UBOS::AppConfigurationItems::AppConfigurationItem );
 use fields qw( dbType );
 
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::ResourceManager;
 use UBOS::Utils qw( saveFile slurpFile );
@@ -153,7 +154,7 @@ sub backup {
 
     my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
 
-    my $ret = UBOS::ResourceManager::exportLocalDatabase(
+    my $ret = exportLocalDatabase(
             $dbType,
             $self->{appConfig}->appConfigId,
             $self->{installable}->packageName,
@@ -191,7 +192,7 @@ sub restore {
     }
 
     my ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = UBOS::ResourceManager::importLocalDatabase(
+            = importLocalDatabase(
                     $dbType,
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
@@ -207,6 +208,64 @@ sub restore {
 
         return 1;
 
+    } else {
+        return 0;
+    }
+}
+
+##
+# Export the content of a local database.
+# $dbType: database type
+# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
+# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
+# $itemName: the symbolic database name per application manifest
+# $fileName: the file to write to
+# return: success or fail
+sub exportLocalDatabase {
+    my $dbType        = shift;
+    my $appConfigId   = shift;
+    my $installableId = shift;
+    my $itemName      = shift;
+    my $fileName      = shift;
+
+    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+            = UBOS::ResourceManager::getDatabase( $dbType, $appConfigId, $installableId, $itemName );
+
+    my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
+    unless( $dbDriver ) {
+        error( 'Unknown database type', $dbType );
+        return 0;
+    }
+
+    return $dbDriver->exportLocalDatabase( $dbName, $fileName );
+}
+
+##
+# Replace the content of a local database.
+# $dbType: database type
+# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
+# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
+# $itemName: the symbolic database name per application manifest
+# $fileName: the file to write to
+# return: ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType ) or 0
+sub importLocalDatabase {
+    my $dbType        = shift;
+    my $appConfigId   = shift;
+    my $installableId = shift;
+    my $itemName      = shift;
+    my $fileName      = shift;
+
+    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+            = UBOS::ResourceManager::getDatabase( $dbType, $appConfigId, $installableId, $itemName );
+
+    my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
+    unless( $dbDriver ) {
+        error( 'Unknown database type', $dbType );
+        return 0;
+    }
+
+    if( $dbDriver->importLocalDatabase( $dbName, $fileName )) {
+        return ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
     } else {
         return 0;
     }

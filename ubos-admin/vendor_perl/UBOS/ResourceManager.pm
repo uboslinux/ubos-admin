@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 #
-# Manages resources.
+# Manages resources. This now works without depending on MySQL.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,8 +38,6 @@ use warnings;
 
 package UBOS::ResourceManager;
 
-use UBOS::Databases::MySqlDriver;
-# Modules supporting other databases are loaded on demand
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -287,68 +285,6 @@ SQL
         return $dbDriver->unprovisionLocalDatabase( $dbName );
     }
     return 0;
-}
-
-##
-# Export the content of a local database.
-# $dbType: database type
-# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
-# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
-# $itemName: the symbolic database name per application manifest
-# $fileName: the file to write to
-# return: success or fail
-sub exportLocalDatabase {
-    my $dbType        = shift;
-    my $appConfigId   = shift;
-    my $installableId = shift;
-    my $itemName      = shift;
-    my $fileName      = shift;
-
-    debug( 'ResourceManager::exportLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
-
-    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = getDatabase( $dbType, $appConfigId, $installableId, $itemName );
-
-    my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
-    unless( $dbDriver ) {
-        error( 'Unknown database type', $dbType );
-        return 0;
-    }
-
-    return $dbDriver->exportLocalDatabase( $dbName, $fileName );
-}
-
-##
-# Replace the content of a local database.
-# $dbType: database type
-# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
-# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
-# $itemName: the symbolic database name per application manifest
-# $fileName: the file to write to
-# return: ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType ) or 0
-sub importLocalDatabase {
-    my $dbType        = shift;
-    my $appConfigId   = shift;
-    my $installableId = shift;
-    my $itemName      = shift;
-    my $fileName      = shift;
-
-    debug( 'ResourceManager::importLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
-
-    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = getDatabase( $dbType, $appConfigId, $installableId, $itemName );
-
-    my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
-    unless( $dbDriver ) {
-        error( 'Unknown database type', $dbType );
-        return 0;
-    }
-
-    if( $dbDriver->importLocalDatabase( $dbName, $fileName )) {
-        return ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
-    } else {
-        return 0;
-    }
 }
 
 1;
