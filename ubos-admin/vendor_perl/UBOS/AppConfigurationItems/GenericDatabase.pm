@@ -74,7 +74,7 @@ sub installOrCheck {
     my $dbType = $self->{dbType};
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = UBOS::ResourceManager::getDatabase(
+            = UBOS::ResourceManager::findProvisionedDatabaseFor(
                     $dbType,
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
@@ -229,7 +229,7 @@ sub exportLocalDatabase {
     my $fileName      = shift;
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = UBOS::ResourceManager::getDatabase( $dbType, $appConfigId, $installableId, $itemName );
+            = UBOS::ResourceManager::findProvisionedDatabaseFor( $dbType, $appConfigId, $installableId, $itemName );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
@@ -256,7 +256,7 @@ sub importLocalDatabase {
     my $fileName      = shift;
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = UBOS::ResourceManager::getDatabase( $dbType, $appConfigId, $installableId, $itemName );
+            = UBOS::ResourceManager::findProvisionedDatabaseFor( $dbType, $appConfigId, $installableId, $itemName );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {

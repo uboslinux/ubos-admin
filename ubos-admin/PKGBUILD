@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.138
+pkgver=0.139
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -65,6 +65,9 @@ package() {
 # Backup files
     mkdir $pkgdir/var/lib/ubos/backups
     mkdir -m700 $pkgdir/var/lib/ubos/backups/update
+
+# Resource management
+    mkdir -p $pkgdir/var/lib/ubos/resources
 
 # Web server config files
     mkdir -p $pkgdir/etc/httpd/conf

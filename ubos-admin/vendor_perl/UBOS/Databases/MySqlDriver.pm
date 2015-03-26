@@ -3,7 +3,7 @@
 # MySQL/MariaDB database driver.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,6 +29,8 @@ use UBOS::Logging;
 use UBOS::Utils;
 use fields qw( dbHost dbPort );
 
+my $running = 0;
+
 my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 
 ## Note that this driver has both 'static' and 'instance' methods
@@ -36,9 +38,21 @@ my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 ## ---- STATIC METHODS ---- ##
 
 ##
-# Ensure that the mysql installation on this host has a root password.
-sub ensureRootPassword {
+# Ensure that the mysql installation on this host is present and has a root password.
+sub ensureRunning {
+    if( $running ) {
+        return 1;
+    }
+
     unless( -r $rootConfiguration ) {
+        if( UBOS::Host::ensurePackages( 'mariadb' )) {
+            
+            UBOS::Utils::myexec( 'systemctl enable ubos-mysqld' );
+            UBOS::Utils::myexec( 'systemctl start  ubos-mysqld' );
+        }
+         
+        $running = 1;
+
         my $dbh = DBI->connect( "DBI:mysql:host=localhost", 'root', '' );
 
         if( defined( $dbh )) {
@@ -83,6 +97,8 @@ sub dbConnect {
     my $pass     = shift;
     my $host     = shift || 'localhost';
     my $port     = shift || 3306;
+
+    ensureRunning();
 
     my $connectString = "database=$database;" if( $database );
     $connectString .= "host=$host;";

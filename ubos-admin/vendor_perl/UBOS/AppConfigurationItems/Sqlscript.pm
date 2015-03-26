@@ -142,7 +142,7 @@ sub _runIt {
         my( $rootUser, $rootPass ) = UBOS::Databases::MySqlDriver::findRootUserPass();
 
         my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-                = UBOS::ResourceManager::getDatabase(
+                = UBOS::ResourceManager::findProvisionedDatabaseFor(
                         'mysql',
                         $self->{appConfig}->appConfigId,
                         $self->{installable}->packageName,
