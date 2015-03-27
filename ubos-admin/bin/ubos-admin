@@ -64,7 +64,7 @@ sub checkReady {
     if( -e $readyFile ) {
         return;
     }
-    my @services = qw( ubos-mysqld ubos-admin ubos-httpd );
+    my @services = qw( ubos-admin ubos-httpd );
 
     my $prefix = '';
     if( $< != 0 ) {

@@ -45,7 +45,7 @@ sub ensureRunning {
     }
 
     unless( -r $rootConfiguration ) {
-        if( UBOS::Host::ensurePackages( 'mariadb' )) {
+        if( UBOS::Host::ensurePackages( 'mariadb', 'perl-dbd-mysql' )) {
             
             UBOS::Utils::myexec( 'systemctl enable ubos-mysqld' );
             UBOS::Utils::myexec( 'systemctl start  ubos-mysqld' );
@@ -125,6 +125,8 @@ sub dbConnect {
 # return: database handle
 sub dbConnectAsRoot {
     my $database = shift;
+
+    ensureRunning();
 
     my( $rootUser, $rootPass ) = findRootUserPass();
     return dbConnect( $database, $rootUser, $rootPass );
