@@ -29,34 +29,38 @@ use UBOS::Configuration;
 use UBOS::Logging;
 use UBOS::Roles::apache2;
 use UBOS::Roles::mysql;
+use UBOS::Roles::postgresql;
 use UBOS::Roles::tomcat7;
 use UBOS::Site;
 use UBOS::Utils qw( readJsonFromFile myexec );
-use Sys::Hostname;
+use Socket;
+use Sys::Hostname qw();
 
 my $SITES_DIR        = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE   = '/etc/ubos/config.json';
 my $AFTER_BOOT_FILE  = '/etc/ubos/after-boot';
-my $hostConf         = undef;
-my $now              = time();
+my $_hostConf        = undef;
+my $_now             = time();
 my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
 my $_osReleaseInfo         = undef; # allocated as needed
+my $_ip                    = undef; # allocated as needed
 
 ##
 # Obtain the host Configuration object.
 # return: Configuration object
 sub config {
-    unless( $hostConf ) {
+    unless( $_hostConf ) {
         my $raw = readJsonFromFile( $HOST_CONF_FILE );
 
-        $raw->{hostname}        = hostname;
-        $raw->{now}->{unixtime} = $now;
-        $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $now );
+        $raw->{hostname}        = Sys::Hostname::hostname;
+        $raw->{now}->{unixtime} = $_now;
+        $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $_now );
 
-        $hostConf = UBOS::Configuration->new( 'Host', $raw );
+        $_hostConf = UBOS::Configuration->new( 'Host', $raw );
     }
+    return $_hostConf;
 }
 
 ##
@@ -100,6 +104,26 @@ sub kernelPackageName {
         return $osReleaseInfo->{'UBOS_KERNELPACKAGE'};
     }
     return undef;
+}
+
+##
+# Determine this host's hostname.
+# return: hostname
+sub hostname {
+    return config()->get( 'hostname' );
+}
+
+##
+# Determine this host's IP address.
+# return: IP address
+sub ip {
+    unless( $_ip ) {
+        my( $ip ) = inet_ntoa( (gethostbyname(hostname()))[4] );
+        unless( $_ip ) {
+            $_ip = '127.0.0.1';
+        }
+    }
+    return $_ip;
 }
 
 ##
@@ -339,7 +363,7 @@ sub rolesOnHostInSequence {
     unless( $_rolesOnHostInSequence ) {
         $_rolesOnHostInSequence = [
                 UBOS::Roles::mysql->new,
-                # UBOS::Roles::postgresql->new,
+                UBOS::Roles::postgresql->new,
                 # UBOS::Roles::mongo->new,
                 UBOS::Roles::tomcat7->new,
                 UBOS::Roles::apache2->new ];

@@ -30,7 +30,6 @@ use UBOS::Utils;
 use fields qw( dbHost dbPort );
 
 my $running = 0;
-my $dataDir = '/var/lib/postgres/data';
 
 ## Note that this driver has both 'static' and 'instance' methods
 
@@ -45,21 +44,25 @@ sub ensureRunning {
 
     debug( 'Installing postgresql' );
     
-    if( UBOS::Host::ensurePackages( 'postgresql' )) {
-        unless( -d $dataDir ) {
-            # not initialized yet
-            
-            executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D \"$dataDir\"" );
+    UBOS::Host::ensurePackages( 'postgresql' );
+    
+    my $dataDir = '/var/lib/postgres/data';
 
-        }
-        
+    unless( -d $dataDir ) {
+        # somehow that directory has disappeared; package postgresql puts it there
+        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'postgres', 'postgres' );
+    }
+    $running = 1; # need to set this here, so executeCmdAsAdmin can be done
+
+    if( UBOS::Utils::isDirEmpty( $dataDir )) {
+        executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D \"$dataDir\"" );
+
         UBOS::Utils::myexec( 'systemctl enable postgresql' );
         UBOS::Utils::myexec( 'systemctl start  postgresql' );
 
         sleep( 3 ); # Needed, otherwise might not be able to connect
     }
-     
-    $running = 1;
+
     1;
 }
 
