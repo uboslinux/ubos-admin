@@ -25,6 +25,7 @@ use warnings;
 package UBOS::Databases::MySqlDriver;
 
 use DBI;
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 use fields qw( dbHost dbPort );

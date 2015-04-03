@@ -25,6 +25,7 @@ use warnings;
 package UBOS::Databases::PostgreSqlDriver;
 
 use File::Basename;
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 use fields qw( dbHost dbPort );
