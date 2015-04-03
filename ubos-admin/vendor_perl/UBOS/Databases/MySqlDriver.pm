@@ -266,6 +266,8 @@ sub provisionLocalDatabase {
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
 
+    debug( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges );
+
     my $dbh = dbConnectAsRoot( undef );
 
     my $sth = sqlPrepareExecute( $dbh, <<SQL );
@@ -298,6 +300,8 @@ sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
 
+    debug( 'MySqlDriver::unprovisionLocalDatabase', $dbName );
+
     my $dbh = dbConnectAsRoot( undef );
 
     my $sth = sqlPrepareExecute( $dbh, <<SQL );
@@ -318,6 +322,8 @@ sub exportLocalDatabase {
     my $dbName   = shift;
     my $fileName = shift;
 
+    debug( 'MySqlDriver::exportLocalDatabase', $dbName );
+
     my( $rootUser, $rootPass ) = findRootUserPass();
     unless( $rootUser ) {
         error( 'Cannot find MySQL root user credentials' );
@@ -334,18 +340,87 @@ sub exportLocalDatabase {
 # Import data into a local database, overwriting its previous content
 # $dbName: name of the database to unprovision
 # $fileName: name of the file to create with the exported data
+# $dbUserLid: database username to use
+# $dbUserLidCredential: credential for the database user to use
+# $dbUserLidCredTypeL: type of credential for the database user to use
 # return: success or fail
 sub importLocalDatabase {
-    my $self     = shift;
-    my $dbName   = shift;
-    my $fileName = shift;
+    my $self                = shift;
+    my $dbName              = shift;
+    my $fileName            = shift;
+    my $dbUserLid           = shift;
+    my $dbUserLidCredential = shift;
+    my $dbUserLidCredType   = shift;
     
+    debug( 'MySqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
+
     my( $rootUser, $rootPass ) = findRootUserPass();
 
     if( UBOS::Utils::myexec( "mysql -u $rootUser -p$rootPass $dbName < '$fileName'" )) {
         return 0;
     }
     return 1;
+}
+
+##
+# Run bulk SQL against a database, as the provided user.
+# $dbName: name of the database to run against
+# $dbHost: host of the database to run against
+# $dbPort: port of the database to run against
+# $dbUserLid: database username to use
+# $dbUserLidCredential: credential for the database user to use
+# $dbUserLidCredTypeL: type of credential for the database user to use
+# $sql: the SQL to run
+# $delimiter: if given, the delimiter to use with the SQL
+# return: success or fail
+sub runBulkSql {
+    my $self                = shift;
+    my $dbName              = shift;
+    my $dbHost              = shift;
+    my $dbPort              = shift;
+    my $dbUserLid           = shift;
+    my $dbUserLidCredential = shift;
+    my $dbUserLidCredType   = shift;
+    my $sql                 = shift;
+    my $delimiter           = shift;
+
+    debug( sub {
+        ( 'MySqlDriver::runBulkSql', $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, 'SQL (' . length( $sql ) . ') bytes', $delimiter ) } );
+
+    # from the command-line; that way we don't have to deal with messy statement splitting
+    my $cmd = "mysql '--host=$dbHost' '--port=$dbPort'";
+    $cmd .= " '--user=$dbUserLid' '--password=$dbUserLidCredential'";
+    if( $delimiter ) {
+        $cmd .= " '--delimiter=$delimiter'";
+    }
+    $cmd .= " '$dbName'";
+
+    my $ret = 1;
+    if( UBOS::Utils::myexec( $cmd, $sql )) {
+        $ret = 0;
+    }
+    return $ret;
+}
+
+##
+# Run bulk SQL against a database, as the administrator.
+# $dbName: name of the database to run against
+# $dbHost: host of the database to run against
+# $dbPort: port of the database to run against
+# $sql: the SQL to run
+# $delimiter: if given, the delimiter to use with the SQL
+# return: success or fail
+sub runBulkSqlAsAdmin {
+    my $self                = shift;
+    my $dbName              = shift;
+    my $dbHost              = shift;
+    my $dbPort              = shift;
+    my $sql                 = shift;
+    my $delimiter           = shift;
+
+    my( $rootUser, $rootPass ) = findRootUserPass();
+
+    return $self->runBulkSql( $dbName, $dbHost, $dbPort, $rootUser, $rootPass, undef, $sql, $delimiter );
 }
 
 1;

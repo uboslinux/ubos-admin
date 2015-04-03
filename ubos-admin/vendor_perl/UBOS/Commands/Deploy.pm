@@ -3,7 +3,7 @@
 # Command that deploys one or more sites.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -195,7 +195,7 @@ sub run {
         fatal( 'Cannot backup; backup directory not empty' );
     }
 
-    debug( 'Installing prerequisites' );
+    info( 'Installing prerequisites' );
     # This is a two-step process: first we need to install the applications that haven't been
     # installed yet, and then we need to install their dependencies
 
@@ -211,7 +211,7 @@ sub run {
     }
     UBOS::Host::ensurePackages( $prerequisites );
 
-    debug( 'Checking context paths and customization points' );
+    debug( 'Checking context paths and customization points', $ret );
     
     foreach my $newSite ( @newSites ) {
         my %contexts = ();
@@ -285,7 +285,7 @@ sub run {
         }
     }
 
-    debug( 'Setting up placeholder sites or suspending existing sites' );
+    info( 'Setting up placeholder sites or suspending existing sites', $ret );
 
     my $suspendTriggers = {};
     foreach my $site ( @newSites ) {
@@ -298,7 +298,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    debug( 'Backing up, undeploying and redeploying' );
+    info( 'Backing up, undeploying and redeploying', $ret );
 
     my $deployUndeployTriggers = {};
     foreach my $site ( @newSites ) {
@@ -319,7 +319,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
-    debug( 'Resuming sites' );
+    info( 'Resuming sites', $ret );
 
     my $resumeTriggers = {};
     foreach my $site ( @newSites ) {
@@ -327,7 +327,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
-    debug( 'Running installers/upgraders' );
+    info( 'Running installers/upgraders', $ret );
 
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
@@ -346,6 +346,9 @@ sub run {
         }
     }
 
+    unless( $ret ) {
+        error( "Deploy failed." );
+    }
     return $ret;
 }
 

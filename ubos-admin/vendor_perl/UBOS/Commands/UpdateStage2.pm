@@ -109,6 +109,9 @@ sub run {
 
     UBOS::Host::findPacnewFiles();
 
+    unless( $ret && !$stage1exit ) {
+        error( "Update failed." );
+    }
     return $ret && !$stage1exit;
 }
 

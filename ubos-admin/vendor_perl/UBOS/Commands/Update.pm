@@ -144,7 +144,7 @@ sub run {
     }
 
     if( $reboot ) {
-        debug( 'Detected kernel update. Rebooting.' );
+        info( 'Detected kernel update. Rebooting.' );
         UBOS::Host::addAfterBootCommands( $stage2Cmd );
         
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );

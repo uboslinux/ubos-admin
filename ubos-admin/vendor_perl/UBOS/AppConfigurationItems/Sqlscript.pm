@@ -36,19 +36,21 @@ use UBOS::Utils qw( saveFile slurpFile );
 ##
 # Constructor
 # $json: the JSON fragment from the manifest JSON
+# $role: the Role to which this item belongs to
 # $appConfig: the AppConfiguration object that this item belongs to
 # $installable: the Installable to which this item belongs to
 # return: the created File object
 sub new {
     my $self        = shift;
     my $json        = shift;
+    my $role        = shift;
     my $appConfig   = shift;
     my $installable = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $json, $appConfig, $installable );
+    $self->SUPER::new( $json, $role, $appConfig, $installable );
 
     return $self;
 }
@@ -137,28 +139,23 @@ sub _runIt {
         my $content           = slurpFile( $sourceOrTemplate );
         my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
 
-        my $sql = $templateProcessor->process( $content, $config, $sourceOrTemplate );
-
-        my( $rootUser, $rootPass ) = UBOS::Databases::MySqlDriver::findRootUserPass();
+        my $sql    = $templateProcessor->process( $content, $config, $sourceOrTemplate );
+        my $dbType = $self->{role}->name();
 
         my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
                 = UBOS::ResourceManager::findProvisionedDatabaseFor(
-                        'mysql',
+                        $dbType,
                         $self->{appConfig}->appConfigId,
                         $self->{installable}->packageName,
                         $name );
 
-        # from the command-line; that way we don't have to deal with messy statement splitting
-        my $cmd = "mysql '--host=$dbHost' '--port=$dbPort'";
-        $cmd .= " '--user=$rootUser' '--password=$rootPass'";
-        if( $delimiter ) {
-            $cmd .= " '--delimiter=$delimiter'";
+        my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
+        unless( $dbDriver ) {
+            error( 'Unknown database type', $dbType );
+            return 0;
         }
-        $cmd .= " '$dbName'";
 
-        if( UBOS::Utils::myexec( $cmd, $sql )) {
-            $ret = 0;
-        }
+        $ret = $dbDriver->runBulkSqlAsAdmin( $dbName, $dbHost, $dbPort, $sql, $delimiter );
     }
     return $ret;
 }

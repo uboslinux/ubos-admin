@@ -113,7 +113,7 @@ sub run {
         $sitesToSuspendResume->{$site->siteId} = $site; # may be set more than once
     }
 
-    debug( 'Suspending sites' );
+    info( 'Suspending sites', $ret );
 
     my $suspendTriggers = {};
     foreach my $site ( values %$sitesToSuspendResume ) {
@@ -122,12 +122,12 @@ sub run {
 
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    debug( 'Creating and exporting backup' );
+    info( 'Creating and exporting backup', $ret );
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
     $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $out );
 
-    debug( 'Resuming sites' );
+    info( 'Resuming sites', $ret );
 
     my $resumeTriggers = {};
     foreach my $site ( values %$sitesToSuspendResume ) {
@@ -135,6 +135,9 @@ sub run {
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
+    unless( $ret ) {
+        error( "Backup failed." );
+    }
     return $ret;
 }
 

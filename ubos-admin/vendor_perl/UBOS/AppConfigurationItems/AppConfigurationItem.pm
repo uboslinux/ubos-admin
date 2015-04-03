@@ -3,7 +3,7 @@
 # A general-purpose superclass for AppConfiguration items.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ use warnings;
 
 package UBOS::AppConfigurationItems::AppConfigurationItem;
 
-use fields qw( json appConfig installable );
+use fields qw( json role appConfig installable );
 
 use UBOS::Logging;
 use UBOS::TemplateProcessor::Passthrough;
@@ -35,17 +35,20 @@ use UBOS::TemplateProcessor::Varsubst;
 # Constructor
 # $json: the JSON fragment from the manifest JSON
 # $appConfig: the AppConfiguration object that this item belongs to
+# $role: the Role to which this item belongs to
 # $installable: the Installable to which this item belongs to
 sub new {
-    my $self      = shift;
-    my $json      = shift;
-    my $appConfig = shift;
+    my $self        = shift;
+    my $json        = shift;
+    my $role        = shift;
+    my $appConfig   = shift;
     my $installable = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
     $self->{json}        = $json;
+    $self->{role}        = $role;
     $self->{appConfig}   = $appConfig;
     $self->{installable} = $installable;
 

@@ -70,9 +70,9 @@ sub checkInstallableManifestForRole {
     }
 
     my $databaseOrScript = {
-        'postgresql-database' => 1,
-        'perlscript'          => 1,
-        'sqlscript'           => 1
+        'database'   => 1,
+        'perlscript' => 1,
+        'sqlscript'  => 1
     };
     my $perlOrSql = {
         'perlscript' => 1,

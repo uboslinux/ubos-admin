@@ -536,11 +536,12 @@ sub checkInstallableManifestForRole {
     }
 
     my $noDatabase = {
-        'directory'     => 1,
-        'directorytree' => 1,
-        'file'          => 1,
-        'perlscript'    => 1,
-        'symlink'       => 1
+        'directory'       => 1,
+        'directorytree'   => 1,
+        'file'            => 1,
+        'perlscript'      => 1,
+        'symlink'         => 1,
+        'systemd-service' => 1
     };
     my $perlOnly = {
         'perlscript' => 1

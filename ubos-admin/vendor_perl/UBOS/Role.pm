@@ -24,13 +24,15 @@ use warnings;
 
 package UBOS::Role;
 
+use UBOS::AppConfigurationItems::Database;
 use UBOS::AppConfigurationItems::Directory;
 use UBOS::AppConfigurationItems::DirectoryTree;
 use UBOS::AppConfigurationItems::File;
-use UBOS::AppConfigurationItems::GenericDatabase;
 use UBOS::AppConfigurationItems::Perlscript;
 use UBOS::AppConfigurationItems::Sqlscript;
 use UBOS::AppConfigurationItems::Symlink;
+use UBOS::AppConfigurationItems::SystemdService;
+use UBOS::AppConfigurationItems::SystemdTimer;
 use UBOS::Host;
 use UBOS::Installable;
 
@@ -225,26 +227,23 @@ sub instantiateAppConfigurationItem {
     my $type = $json->{type};
 
     if( 'file' eq $type ) {
-        $ret = UBOS::AppConfigurationItems::File->new( $json, $appConfig, $installable );
+        $ret = UBOS::AppConfigurationItems::File->new( $json, $self, $appConfig, $installable );
     } elsif( 'directory' eq $type ) {
-        $ret = UBOS::AppConfigurationItems::Directory->new( $json, $appConfig, $installable );
+        $ret = UBOS::AppConfigurationItems::Directory->new( $json, $self, $appConfig, $installable );
     } elsif( 'directorytree' eq $type ) {
-        $ret = UBOS::AppConfigurationItems::DirectoryTree->new( $json, $appConfig, $installable );
+        $ret = UBOS::AppConfigurationItems::DirectoryTree->new( $json, $self, $appConfig, $installable );
     } elsif( 'symlink' eq $type ) {
-        $ret = UBOS::AppConfigurationItems::Symlink->new( $json, $appConfig, $installable );
+        $ret = UBOS::AppConfigurationItems::Symlink->new( $json, $self, $appConfig, $installable );
     } elsif( 'perlscript' eq $type ) {
-        $ret = UBOS::AppConfigurationItems::Perlscript->new( $json, $appConfig, $installable );
+        $ret = UBOS::AppConfigurationItems::Perlscript->new( $json, $self, $appConfig, $installable );
     } elsif( 'sqlscript' eq $type ) {
-        $ret = UBOS::AppConfigurationItems::Sqlscript->new( $json, $appConfig, $installable );
-    } else {
-        if( $type =~ m!^(.*)-database$! ) {
-            my $rolesOnHost = UBOS::Host::rolesOnHost();
-            my $role        = $rolesOnHost->{$1};
-
-            if( $role ) {
-                $ret = UBOS::AppConfigurationItems::GenericDatabase->new( $role->name, $json, $appConfig, $installable );
-            }
-        }
+        $ret = UBOS::AppConfigurationItems::Sqlscript->new( $json, $self, $appConfig, $installable );
+    } elsif( 'systemd-service' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::SystemdService->new( $json, $self, $appConfig, $installable );
+    } elsif( 'systemd-timer' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::SystemdTimer->new( $json, $self, $appConfig, $installable );
+    } elsif( 'database' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::Database->new( $json, $self, $appConfig, $installable );
     }
     unless( $ret ) {
         error( 'Unknown AppConfigurationItem type:', $type );
@@ -370,7 +369,7 @@ sub checkManifestForRoleGenericAppConfigItems {
             }
             unless( $allowedTypes->{ $appConfigItem->{type}} ) {
                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown or disallowed type: " . $appConfigItem->{type}
-                                           . ". Allowed types are: " . join( ', ', keys %$allowedTypes ) );
+                                           . ". Allowed types are: " . join( ', ', sort keys %$allowedTypes ) );
             }
 
             if( $appConfigItem->{type} eq 'perlscript' ) {
@@ -429,6 +428,14 @@ sub checkManifestForRoleGenericAppConfigItems {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': must specify source or template" );
                 }
 
+            } elsif( $appConfigItem->{type} eq 'systemd-service' || $appConfigItem->{type} eq 'systemd-timer' ) {
+                if( defined( $appConfigItem->{names} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name; names not allowed" );
+                }
+                if( !defined( $appConfigItem->{name} ) || ref( $appConfigItem->{name} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
+                }
+                
             } else {
                 my @names = ();
                 if( defined( $appConfigItem->{name} )) {
@@ -528,7 +535,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         }
                     }
 
-                } elsif( $appConfigItem->{type} =~ m!-database$! ) {
+                } elsif( $appConfigItem->{type} =~ m!database$! ) {
                     # no op
 
                     if( $databaseNames{$appConfigItem->{name}} ) {
@@ -546,7 +553,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         
                 } else { # perlscript and sqlscript handled above
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type (1): " . $appConfigItem->{type}
-                                              . ". Allowed types are: " . join( ', ', keys %$allowedTypes ) );
+                                              . ". Allowed types are: " . join( ', ', sort keys %$allowedTypes ) );
                 }
 
                 if( $appConfigItem->{uname} ) {

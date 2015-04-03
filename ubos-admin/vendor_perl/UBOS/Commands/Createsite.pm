@@ -387,7 +387,7 @@ sub run {
         # May not be interrupted, bad things may happen if it is
         UBOS::Host::preventInterruptions();
 
-        debug( 'Setting up placeholder sites' );
+        info( 'Setting up placeholder sites', $ret );
 
         my $suspendTriggers = {};
         $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
@@ -397,23 +397,27 @@ sub run {
         $ret &= $newSite->deploy( $deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
-        debug( 'Resuming sites' );
+        info( 'Resuming sites', $ret );
 
         my $resumeTriggers = {};
         $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
         UBOS::Host::executeTriggers( $resumeTriggers );
 
-        debug( 'Running installers' );
+        info( 'Running installers', $ret );
         # no need to run any upgraders
 
         foreach my $appConfig ( @{$newSite->appConfigs} ) {
             $ret &= $appConfig->runInstaller();
         }
 
-        if( $tls ) {
-            print "Installed site $siteId at https://$hostname/\n";
+        if( $ret ) {
+            if( $tls ) {
+                print "Installed site $siteId at https://$hostname/\n";
+            } else {
+                print "Installed site $siteId at http://$hostname/\n";
+            }
         } else {
-            print "Installed site $siteId at http://$hostname/\n";
+            error( "Createsite failed." );
         }
     }
     return $ret;

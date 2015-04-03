@@ -22,10 +22,10 @@
 use strict;
 use warnings;
 
-package UBOS::AppConfigurationItems::GenericDatabase;
+package UBOS::AppConfigurationItems::Database;
 
 use base   qw( UBOS::AppConfigurationItems::AppConfigurationItem );
-use fields qw( dbType );
+use fields;
 
 use UBOS::Host;
 use UBOS::Logging;
@@ -34,25 +34,23 @@ use UBOS::Utils qw( saveFile slurpFile );
 
 ##
 # Constructor
-# $dbType: short name of the database type
 # $json: the JSON fragment from the manifest JSON
+# $role: the Role to which this item belongs to
 # $appConfig: the AppConfiguration object that this item belongs to
 # $installable: the Installable to which this item belongs to
 # return: the created File object
 sub new {
     my $self        = shift;
-    my $dbType      = shift;
     my $json        = shift;
+    my $role        = shift;
     my $appConfig   = shift;
     my $installable = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $json, $appConfig, $installable );
+    $self->SUPER::new( $json, $role, $appConfig, $installable );
     
-    $self->{dbType} = $dbType;
-
     return $self;
 }
 
@@ -71,7 +69,7 @@ sub installOrCheck {
     my $config         = shift;
 
     my $name   = $self->{json}->{name};
-    my $dbType = $self->{dbType};
+    my $dbType = $self->{role}->name();
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = UBOS::ResourceManager::findProvisionedDatabaseFor(
@@ -121,7 +119,7 @@ sub uninstallOrCheck {
     my $config         = shift;
 
     my $name   = $self->{json}->{name};
-    my $dbType = $self->{dbType};
+    my $dbType = $self->{role}->name();
 
     if( $doIt ) {
         return UBOS::ResourceManager::unprovisionLocalDatabase(
@@ -149,13 +147,11 @@ sub backup {
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
-    my $dbType = $self->{dbType};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
     my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
 
-    my $ret = exportLocalDatabase(
-            $dbType,
+    my $ret = $self->exportLocalDatabase(
             $self->{appConfig}->appConfigId,
             $self->{installable}->packageName,
             $name,
@@ -183,7 +179,6 @@ sub restore {
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
-    my $dbType = $self->{dbType};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
     my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
@@ -192,13 +187,13 @@ sub restore {
     }
 
     my ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = importLocalDatabase(
-                    $dbType,
+            = $self->importLocalDatabase(
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
                     $name,
                     $tmp->filename );
     if( $dbName ) {
+        my $dbType = $self->{role}->name();
         # now insert those values into the config object
         $config->put( "appconfig.$dbType.dbname.$name",           $dbName );
         $config->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
@@ -215,18 +210,19 @@ sub restore {
 
 ##
 # Export the content of a local database.
-# $dbType: database type
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $fileName: the file to write to
 # return: success or fail
 sub exportLocalDatabase {
-    my $dbType        = shift;
+    my $self          = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
     my $fileName      = shift;
+
+    my $dbType = $self->{role}->name();
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = UBOS::ResourceManager::findProvisionedDatabaseFor( $dbType, $appConfigId, $installableId, $itemName );
@@ -242,18 +238,19 @@ sub exportLocalDatabase {
 
 ##
 # Replace the content of a local database.
-# $dbType: database type
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $fileName: the file to write to
 # return: ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType ) or 0
 sub importLocalDatabase {
-    my $dbType        = shift;
+    my $self          = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
     my $fileName      = shift;
+
+    my $dbType = $self->{role}->name();
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = UBOS::ResourceManager::findProvisionedDatabaseFor( $dbType, $appConfigId, $installableId, $itemName );
@@ -264,7 +261,7 @@ sub importLocalDatabase {
         return 0;
     }
 
-    if( $dbDriver->importLocalDatabase( $dbName, $fileName )) {
+    if( $dbDriver->importLocalDatabase( $dbName, $fileName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )) {
         return ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
     } else {
         return 0;

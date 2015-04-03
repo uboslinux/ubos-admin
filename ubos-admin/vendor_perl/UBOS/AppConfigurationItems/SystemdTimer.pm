@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 #
-# An AppConfiguration item that is a symbolic link.
+# An AppConfiguration item that is the running of a systemd timer.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,12 +22,13 @@
 use strict;
 use warnings;
 
-package UBOS::AppConfigurationItems::Symlink;
+package UBOS::AppConfigurationItems::SystemdTimer;
 
 use base qw( UBOS::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
 use UBOS::Logging;
+use UBOS::Utils qw( saveFile slurpFile );
 
 ##
 # Constructor
@@ -65,55 +66,23 @@ sub installOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $ret   = 1;
-    my $names = $self->{json}->{names};
-    unless( $names ) {
-        $names = [ $self->{json}->{name} ];
-    }
+    my $ret  = 1;
+    my $name = $config->replaceVariables( $self->{json}->{name} );
 
-    my $source = $self->{json}->{source};
+    if( $doIt ) {
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( "systemctl start '$name.timer'", undef, \$out, \$err )) {
+            error( 'Failed to start systemd timer', "$name.timer:", $out, $err );
+            $ret = 0;
 
-    my $uname        = $self->{json}->{uname};
-    my $gname        = $self->{json}->{gname};
-
-    foreach my $name ( @$names ) {
-        my $localName  = $name;
-        $localName =~ s!^.+/!!;
-
-        my $fromName = $source;
-        $fromName =~ s!\$1!$name!g;      # $1: name
-        $fromName =~ s!\$2!$localName!g; # $2: just the name without directories
-
-        $fromName = $config->replaceVariables( $fromName );
-
-        my $toName = $name;
-        $toName = $config->replaceVariables( $toName );
-
-        unless( $fromName =~ m#^/# ) {
-            $fromName = "$defaultFromDir/$fromName";
-        }
-        unless( $toName =~ m#^/# ) {
-            $toName = "$defaultToDir/$toName";
-        }
-        if( -e $fromName ) {
-            if( $doIt ) {
-                unless( -e $toName ) {
-                    # These names sound a little funny for symlinks. Think "copy" instead of "link"
-                    # and they make sense. We keep the names for consistency with other items.
-                    # $fromName: the destination of the link
-                    # $toName: the source of the link
-                    UBOS::Utils::symlink( $fromName, $toName, $uname, $gname );
-                } else {
-                    error( 'Cannot create symlink:', $toName );
-                    $ret = 0;
-                }
-            }
-
-        } else {
-            # Cannot produce error message here, because some AppConfigItem before this one
-            # might have created it.
+        # only enable if start succeeded
+        } elsif( UBOS::Utils::myexec( "systemctl enable '$name.timer'", undef, \$out, \$err )) {
+            error( 'Failed to enable systemd timer', "$name.timer:", $out, $err );
+            $ret = 0;
         }
     }
+
     return $ret;
 }
 
@@ -131,32 +100,23 @@ sub uninstallOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $ret   = 1;
-    my $names = $self->{json}->{names};
-    unless( $names ) {
-        $names = [ $self->{json}->{name} ];
-    }
+    my $ret  = 1;
+    my $name = $config->replaceVariables( $self->{json}->{name} );
 
-    my $source = $self->{json}->{source};
-
-    foreach my $name ( @$names ) {
-        my $toName = $name;
-        $toName = $config->replaceVariables( $toName );
-
-        unless( $toName =~ m#^/# ) {
-            $toName = "$defaultToDir/$toName";
+    if( $doIt ) {
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( "systemctl disable '$name.timer'", undef, \$out, \$err )) {
+            error( 'Failed to disable systemd timer', "$name.timer:", $out, $err );
+            $ret = 0;
         }
-
-        if( $doIt ) {
-            if( -e $toName ) {
-                $ret &= UBOS::Utils::deleteFile( $toName );
-
-            } else {
-                error( 'File does not exist:', $toName );
-                $ret = 0;
-            }
+        # stop even if disable failed
+        if( UBOS::Utils::myexec( "systemctl stop '$name.timer'", undef, \$out, \$err )) {
+            error( 'Failed to stop systemd timer', "$name.timer:", $out, $err );
+            $ret = 0;
         }
     }
+
     return $ret;
 }
 

@@ -124,7 +124,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $disableTriggers );
 
-    debug( 'Undeploying' );
+    info( 'Undeploying' );
 
     my $undeployTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
@@ -132,6 +132,9 @@ sub run {
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
+    unless( $ret ) {
+        error( "Undeploy failed." );
+    }
     return $ret;
 }
 

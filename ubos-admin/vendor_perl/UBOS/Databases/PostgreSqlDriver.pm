@@ -3,7 +3,7 @@
 # PostgreSql database driver.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -70,13 +70,22 @@ sub ensureRunning {
 # Execute a command as administrator
 # $cmd: command, must not contain single quotes
 # $stdin: content to pipe into stdin, if any
+# return: success or fail
 sub executeCmdAsAdmin {
     my $cmd   = shift;
     my $stdin = shift;
     
     ensureRunning();
 
-    UBOS::Utils::myexec( "su - postgres -c '$cmd'", $stdin );
+    debug( 'PostgreSqlDriver::executeCmdAsAdmin', $cmd, $stdin );
+
+    my $out;
+    my $err;
+    my $ret = 1;
+    if( UBOS::Utils::myexec( "su - postgres -c '$cmd'", $stdin, \$out, \$err )) {
+        $ret = 0;
+    }
+    return $ret;
 }
 
 ##
@@ -91,16 +100,23 @@ sub executeCmdPipeAsAdmin {
     
     ensureRunning();
 
+    debug( 'PostgreSqlDriver::executeCmdPipeAsAdmin', $cmd, $stdinFile, $stdoutFile );
+
     my $fullCommand = "su - postgres -c '$cmd'";
     if( $stdinFile ) {
         $fullCommand .= " < $stdinFile";
     }
     if( $stdoutFile ) {
         $fullCommand .= " > $stdoutFile";
+    } else {
+        $fullCommand .= ' > /dev/null';
     }
-    UBOS::Utils::myexec( $fullCommand );
+    my $ret = 1;
+    if( UBOS::Utils::myexec( $fullCommand )) {
+        $ret = 0;
+    }
+    return $ret;
 }
-
 
 ## ---- INSTANCE METHODS ---- ##
 
@@ -148,11 +164,17 @@ sub provisionLocalDatabase {
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
 
+    debug( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges );
+
     my $ret = 1;
     $ret &= executeCmdAsAdmin( "createdb -E UNICODE \"$dbName\"" );
     $ret &= executeCmdAsAdmin( "createuser \"$dbUserLid\"" );
-    $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null", "grant $privileges on database \"$dbName\" to \"$dbUserLid\"" );
 
+    # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql
+    $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" );
+    $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT USAGE ON SEQUENCES TO \"$dbUserLid\"" );
+
+debug( 'PostgreSqlDriver::provisionLocalDatabase returns ', $ret );
     return $ret;
 }
 
@@ -164,10 +186,12 @@ sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
 
-    if( executeCmdAsAdmin( "dropdb \"$dbName\"" )) {
-        return 0;
-    }
-    return 1;
+    debug( 'PostgreSqlDriver::unprovisionLocalDatabase', $dbName );
+
+    my $ret = executeCmdAsAdmin( "dropdb \"$dbName\"" );
+
+debug( 'PostgreSqlDriver::unprovisionLocalDatabase returns ', $ret );
+    return $ret;
 }
 
 ##
@@ -180,26 +204,99 @@ sub exportLocalDatabase {
     my $dbName   = shift;
     my $fileName = shift;
 
-    if( executeCmdPipeAsAdmin( "pg_dump \"$dbName\"", undef, $fileName )) {
-        return 0;
-    }
-    return 1;
+    debug( 'PostgreSqlDriver::exportLocalDatabase', $dbName );
+
+    # --clean will drop the schema, which means we lose GRANTs on it
+    my $ret = executeCmdPipeAsAdmin( "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"", undef, $fileName );
+
+debug( 'PostgreSqlDriver::exportLocalDatabase returns ', $ret );
+    return $ret;
 }
 
 ##
 # Import data into a local database, overwriting its previous content
 # $dbName: name of the database to unprovision
 # $fileName: name of the file to create with the exported data
+# $dbUserLid: database username to use
+# $dbUserLidCredential: credential for the database user to use
+# $dbUserLidCredTypeL: type of credential for the database user to use
 # return: success or fail
 sub importLocalDatabase {
-    my $self     = shift;
-    my $dbName   = shift;
-    my $fileName = shift;
+    my $self                = shift;
+    my $dbName              = shift;
+    my $fileName            = shift;
+    my $dbUserLid           = shift;
+    my $dbUserLidCredential = shift;
+    my $dbUserLidCredType   = shift;
 
-    if( executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef )) {
-        return 0;
-    }
-    return 1;
+    debug( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
+
+    my $ret = executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef );
+
+debug( 'PostgreSqlDriver::importLocalDatabase returns ', $ret );
+    return $ret;
+}
+
+##
+# Run bulk SQL against a database.
+# $dbName: name of the database to run against
+# $dbHost: host of the database to run against
+# $dbPort: port of the database to run against
+# $dbUserLid: database username to use
+# $dbUserLidCredential: credential for the database user to use
+# $dbUserLidCredTypeL: type of credential for the database user to use
+# $sql: the SQL to run
+# no delimiter in Postgres, as far as I can tell
+# return: success or fail
+sub runBulkSql {
+    my $self                = shift;
+    my $dbName              = shift;
+    my $dbHost              = shift;
+    my $dbPort              = shift;
+    my $dbUserLid           = shift;
+    my $dbUserLidCredential = shift;
+    my $dbUserLidCredType   = shift;
+    my $sql                 = shift;
+
+    debug( sub {
+        ( 'PostgreSqlDriver::runBulkSql', $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, 'SQL (' . length( $sql ) . ') bytes' ) } );
+
+    # from the command-line; that way we don't have to deal with messy statement splitting
+    my $cmd = "psql -v HISTFILE=/dev/null '--host=$dbHost' '--port=$dbPort'";
+    $cmd .= " '--username=$dbUserLid' '--password=$dbUserLidCredential'";
+    $cmd .= " '$dbName'";
+
+    my $ret = executeCmdAsAdmin( $cmd, $sql );
+debug( 'PostgreSqlDriver::runBulkSql returns ', $ret );
+    return $ret;
+}
+
+##
+# Run bulk SQL against a database, as the administrator.
+# $dbName: name of the database to run against
+# $dbHost: host of the database to run against
+# $dbPort: port of the database to run against
+# $sql: the SQL to run
+# $delimiter: if given, the delimiter to use with the SQL
+# return: success or fail
+sub runBulkSqlAsAdmin {
+    my $self                = shift;
+    my $dbName              = shift;
+    my $dbHost              = shift;
+    my $dbPort              = shift;
+    my $sql                 = shift;
+    my $delimiter           = shift;
+
+    debug( sub {
+        ( 'PostgreSqlDriver::runBulkSqlAsAdmin', $dbName, $dbHost, $dbPort, 'SQL (' . length( $sql ) . ') bytes' ) } );
+
+    # from the command-line; that way we don't have to deal with messy statement splitting
+    my $cmd = "psql -v HISTFILE=/dev/null '--host=$dbHost' '--port=$dbPort'";
+    $cmd .= " '$dbName'";
+
+    my $ret = executeCmdAsAdmin( $cmd, $sql );
+debug( 'PostgreSqlDriver::runBulkSqlAsAdmin returns ', $ret );
+    return $ret;
 }
 
 1;
