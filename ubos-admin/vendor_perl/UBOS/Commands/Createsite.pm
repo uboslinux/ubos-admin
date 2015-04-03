@@ -127,8 +127,8 @@ sub run {
 
     unless( $noapp ) {
         my $defaultContext = $app->defaultContext;
-        if( $defaultContext ) {
-            print "App $appId suggests context path " . $app->defaultContext . "\n";
+        if( defined( $defaultContext )) {
+            print "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n";
             while( 1 ) {
                 $context = ask( 'Enter context path: ' );
 
