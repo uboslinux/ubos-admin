@@ -45,14 +45,13 @@ sub ensureRunning {
         return 1;
     }
 
-    unless( -r $rootConfiguration ) {
-        UBOS::Host::ensurePackages( 'mariadb', 'perl-dbd-mysql' );
-            
-        UBOS::Utils::myexec( 'systemctl enable ubos-mysqld' );
-        UBOS::Utils::myexec( 'systemctl start  ubos-mysqld' );
-         
-        $running = 1;
+    UBOS::Host::ensurePackages( [ 'mariadb', 'perl-dbd-mysql' ] );
+        
+    UBOS::Utils::myexec( 'systemctl enable ubos-mysqld' );
+    UBOS::Utils::myexec( 'systemctl start  ubos-mysqld' );
 
+    unless( -r $rootConfiguration ) {
+         
         my $dbh = DBI->connect( "DBI:mysql:host=localhost", 'root', '' );
 
         if( defined( $dbh )) {
@@ -81,6 +80,7 @@ SQL
             $dbh->disconnect();
         }
     }
+    $running = 1;
 }
 
 ##

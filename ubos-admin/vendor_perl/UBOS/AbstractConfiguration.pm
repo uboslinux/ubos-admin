@@ -84,6 +84,9 @@ sub get {
             last;
         }
     }
+    unless( defined( $ret )) {
+        $ret = $default;
+    }
 
     return $ret;
 }

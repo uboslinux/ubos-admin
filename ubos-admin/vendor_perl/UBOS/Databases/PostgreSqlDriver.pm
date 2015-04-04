@@ -58,8 +58,11 @@ sub ensureRunning {
     if( UBOS::Utils::isDirEmpty( $dataDir )) {
         executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D \"$dataDir\"" );
 
-        UBOS::Utils::myexec( 'systemctl enable postgresql' );
-        UBOS::Utils::myexec( 'systemctl start  postgresql' );
+        my $out;
+        my $err;
+
+        UBOS::Utils::myexec( 'systemctl enable postgresql', undef, \$out, \$err );
+        UBOS::Utils::myexec( 'systemctl start  postgresql', undef, \$out, \$err );
 
         sleep( 3 ); # Needed, otherwise might not be able to connect
     }
