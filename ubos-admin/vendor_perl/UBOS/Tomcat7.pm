@@ -29,13 +29,23 @@ use UBOS::Logging;
 my $mainServerXmlFile    = '/etc/tomcat7/server.xml';
 my $ourServerXmlTemplate = '/etc/tomcat7/server-ubos.xml.tmpl';
 
+my $running = 0;
+
 ##
 # Ensure that Tomcat7 is running.
 sub ensureRunning {
+    if( $running ) {
+        return 1;
+    }
+
     UBOS::Host::ensurePackages( [ 'tomcat7', 'tomcat-native' ] );
 
-    UBOS::Utils::myexec( 'systemctl enable tomcat7' );
-    UBOS::Utils::myexec( 'systemctl restart tomcat7' );
+    my $out;
+    my $err;
+    UBOS::Utils::myexec( 'systemctl enable tomcat7',  undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl restart tomcat7', undef, \$out, \$err );
+
+    $running = 1;
 
     1;
 }
@@ -43,6 +53,8 @@ sub ensureRunning {
 ##
 # Reload configuration
 sub reload {
+    ensureRunning();
+
     UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat7' );
 
     1;
@@ -51,6 +63,8 @@ sub reload {
 ##
 # Restart configuration
 sub restart {
+    ensureRunning();
+
     UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat7' );
 
     1;
@@ -62,6 +76,8 @@ sub restart {
 sub updateServerXmlFile {
     my $hostsSection = shift;
     
+    ensureRunning();
+
     my $content = UBOS::Utils::slurpFile( $ourServerXmlTemplate );
     $content =~ s!INSERT-UBOS-SITES-HERE!$hostsSection!;
 
