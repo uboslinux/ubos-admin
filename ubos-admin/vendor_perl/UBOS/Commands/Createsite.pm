@@ -4,7 +4,7 @@
 # then deploys the site.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -372,22 +372,22 @@ sub run {
             UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
         }
 
-        unless( $quiet ) {
-            print "Deploying ...\n";
-        }
-
         my $newSite = UBOS::Site->new( $newSiteJson );
 
         my $prerequisites = {};
         $newSite->addDependenciesToPrerequisites( $prerequisites );
-        UBOS::Host::ensurePackages( $prerequisites );
+        UBOS::Host::ensurePackages( $prerequisites, $quiet );
+
+        unless( $quiet ) {
+            print "Deploying...\n";
+        }
 
         $newSite->checkDeployable();
 
         # May not be interrupted, bad things may happen if it is
         UBOS::Host::preventInterruptions();
 
-        info( 'Setting up placeholder sites', $ret );
+        info( 'Setting up placeholder sites' );
 
         my $suspendTriggers = {};
         $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
@@ -397,13 +397,13 @@ sub run {
         $ret &= $newSite->deploy( $deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
-        info( 'Resuming sites', $ret );
+        info( 'Resuming sites' );
 
         my $resumeTriggers = {};
         $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
         UBOS::Host::executeTriggers( $resumeTriggers );
 
-        info( 'Running installers', $ret );
+        info( 'Running installers' );
         # no need to run any upgraders
 
         foreach my $appConfig ( @{$newSite->appConfigs} ) {

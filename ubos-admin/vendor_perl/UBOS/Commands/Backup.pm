@@ -3,7 +3,7 @@
 # Command that backs up data on this device.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -113,7 +113,7 @@ sub run {
         $sitesToSuspendResume->{$site->siteId} = $site; # may be set more than once
     }
 
-    info( 'Suspending sites', $ret );
+    info( 'Suspending sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( values %$sitesToSuspendResume ) {
@@ -122,12 +122,12 @@ sub run {
 
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Creating and exporting backup', $ret );
+    info( 'Creating and exporting backup' );
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
     $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $out );
 
-    info( 'Resuming sites', $ret );
+    info( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( values %$sitesToSuspendResume ) {

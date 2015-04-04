@@ -3,7 +3,7 @@
 # Command that restores data from a backup.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -171,13 +171,13 @@ sub restoreAppConfigs {
 	UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    info( 'Suspending site', $ret );
+    info( 'Suspending site' );
 
     my $suspendTriggers = {};
     $ret &= $toSite->suspend( $suspendTriggers ); # replace with "in progress page"
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Constructing new version of site', $ret );
+    info( 'Constructing new version of site' );
 
     my %appConfigIdTranslation = (); # maps old appconfigid -> new appconfigid
     my $siteJsonNew = dclone( $toSite->siteJson()); # create new Site JSON
@@ -197,14 +197,14 @@ sub restoreAppConfigs {
     }
     my $toSiteNew = UBOS::Site->new( $siteJsonNew );
 
-    info( 'Deploying new version of site', $ret );
+    info( 'Deploying new version of site' );
 
     my $deployUndeployTriggers = {};
     $ret &= $toSite->undeploy( $deployUndeployTriggers );
     $ret &= $toSiteNew->deploy( $deployUndeployTriggers );
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
-    info( 'Restoring data', $ret );
+    info( 'Restoring data' );
 
     foreach my $appConfigIdInBackup ( keys %appConfigIdTranslation ) {
         my $appConfigIdOnHost = $appConfigIdTranslation{$appConfigIdInBackup};
@@ -216,13 +216,13 @@ sub restoreAppConfigs {
                 $appConfigOnHost );
     }
 
-    info( 'Resuming site', $ret );
+    info( 'Resuming site' );
 
     my $resumeTriggers = {};
     $ret &= $toSiteNew->resume( $resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 
-    info( 'Running upgraders', $ret );
+    info( 'Running upgraders' );
 
     foreach my $appConfigIdOnHost ( values %appConfigIdTranslation ) {
         my $appConfigOnHost = $toSiteNew->appConfig( $appConfigIdOnHost );
@@ -321,7 +321,7 @@ sub restoreSites {
 	UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    info( 'Constructing new version of sites', $ret );
+    info( 'Constructing new version of sites' );
 
     my %appConfigIdTranslation = (); # maps old appconfigid -> new appconfigid
 
@@ -355,7 +355,7 @@ sub restoreSites {
         $sitesNew{$site->siteId} = $newSite;
     }
 
-    info( 'Setting up placeholders for restored sites', $ret );
+    info( 'Setting up placeholders for restored sites' );
 
     my $suspendTriggers = {};
     foreach my $siteNew ( values %sitesNew ) {
@@ -363,7 +363,7 @@ sub restoreSites {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Deploying new version of sites', $ret );
+    info( 'Deploying new version of sites' );
 
     my $deployUndeployTriggers = {};
     foreach my $siteNew ( values %sitesNew ) {
@@ -371,7 +371,7 @@ sub restoreSites {
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
-    info( 'Restoring data', $ret );
+    info( 'Restoring data' );
 
     foreach my $appConfigIdInBackup ( keys %appConfigIdTranslation ) {
         my $appConfigIdOnHost = $appConfigIdTranslation{$appConfigIdInBackup};
@@ -383,7 +383,7 @@ sub restoreSites {
                 $appConfigOnHost );
     }
 
-    info( 'Resuming site', $ret );
+    info( 'Resuming site' );
 
     my $resumeTriggers = {};
     foreach my $siteNew ( values %sitesNew ) {
@@ -391,7 +391,7 @@ sub restoreSites {
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
-    info( 'Running upgraders', $ret );
+    info( 'Running upgraders' );
 
     foreach my $appConfigIdOnHost ( values %appConfigIdTranslation ) {
         my $appConfigOnHost = UBOS::Host::findAppConfigurationById( $appConfigIdOnHost );

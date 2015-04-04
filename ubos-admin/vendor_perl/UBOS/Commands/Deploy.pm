@@ -285,7 +285,7 @@ sub run {
         }
     }
 
-    info( 'Setting up placeholder sites or suspending existing sites', $ret );
+    info( 'Setting up placeholder sites or suspending existing sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( @newSites ) {
@@ -298,7 +298,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Backing up, undeploying and redeploying', $ret );
+    info( 'Backing up, undeploying and redeploying' );
 
     my $deployUndeployTriggers = {};
     foreach my $site ( @newSites ) {
@@ -319,7 +319,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
-    info( 'Resuming sites', $ret );
+    info( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( @newSites ) {
@@ -327,7 +327,7 @@ sub run {
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
-    info( 'Running installers/upgraders', $ret );
+    info( 'Running installers/upgraders' );
 
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
