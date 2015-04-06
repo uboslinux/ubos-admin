@@ -436,7 +436,7 @@ Architecture = $arch
 CheckSpace
 
 SigLevel           = Required TrustedOnly
-LocalFileSigLevel  = Required TrustedOnly
+LocalFileSigLevel  = Optional TrustedOnly
 RemoteFileSigLevel = Required TrustedOnly
 
 END
