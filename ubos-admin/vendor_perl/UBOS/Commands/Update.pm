@@ -48,21 +48,25 @@ sub run {
 
     my $verbose         = 0;
     my $logConfigFile    = undef;
+    my @packageFiles     = ();
+    my $reboot           = 0;
+    my $noreboot         = 0;
     my $noPackageUpgrade = 0;
     my $stage1Only       = 0;
-    my @packageFiles     = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'         => \$verbose,
             'logConfig=s'      => \$logConfigFile,
             'pkgFile=s'        => \@packageFiles,
+            'reboot'           => \$reboot,
+            'noreboot'         => \$noreboot,
             'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
             'stage1Only'       => \$stage1Only ); # This option is not public
 
     UBOS::Logging::initialize( 'ubos-admin', 'update', $verbose, $logConfigFile );
 
-    if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( @packageFiles && $noPackageUpgrade )) {
+    if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( @packageFiles && $noPackageUpgrade ) || ( $reboot && $noreboot )) {
         fatal( 'Invalid invocation: update', @_, '(add --help for help)' );
     }
 
@@ -132,25 +136,44 @@ sub run {
 
     info( 'Updating code' );
 
-    my $reboot = 0;
+    my $rebootHeuristics = 0;
     if( $noPackageUpgrade ) {
         # do nothing
     } elsif( @packageFiles ) {
         UBOS::Host::installPackageFiles( \@packageFiles );
     } else {
         if( UBOS::Host::updateCode() == -1 ) {
-            $reboot = 1;
+            $rebootHeuristics = 1;
         }
     }
 
+    my $doReboot;
     if( $reboot ) {
-        info( 'Detected kernel update. Rebooting.' );
+        info( 'Rebooting.' );
+        $doReboot = 1;
+
+    } elsif( $rebootHeuristics ) {
+        if( $noreboot ) {
+            info( 'Reboot recommended, but --noreboot was specified. Not rebooting.' );
+            debug( 'Handing over to update-stage2' );
+            $doReboot = 0;
+
+        } else {
+            info( 'Detected updates that recommend a reboot. Rebooting.' );
+            $doReboot = 1;
+        }
+
+    } else {
+        debug( 'Handing over to update-stage2' );
+        $doReboot = 0;
+    }
+
+    if( $doReboot ) {
         UBOS::Host::addAfterBootCommands( $stage2Cmd );
         
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
     } else {
-        debug( 'Handing over to update-stage2' );
         exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
     }
     # Never gets here
@@ -162,19 +185,25 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>]
+    [--verbose | --logConfig <file>] [ --reboot | --noreboot ]
 SSS
     Update all code installed on this device. This will perform
     package updates, configuration updates, database migrations
     et al as needed.
+    Use heuristics to determine whether the device needs to be rebooted,
+    e.g. because the kernel was updated. If --reboot is specified, always
+    reboot. If --noreboot is specified, do not reboot.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] --pkgfile <package-file>
+    [--verbose | --logConfig <file>] [ --reboot | --noreboot ] --pkgfile <package-file>
 SSS
     Update this device, but only install the provided package files
     as if they were the only code that can be upgraded. This will perform
     package updates, configuration updates, database migrations
     et al as needed.
+    Use heuristics to determine whether the device needs to be rebooted,
+    e.g. because the kernel was updated. If --reboot is specified, always
+    reboot. If --noreboot is specified, do not reboot.
 HHH
     };
 }

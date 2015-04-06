@@ -476,21 +476,32 @@ sub executeTriggers {
 # Update all the code currently installed on this host.
 # return: if -1, reboot
 sub updateCode {
+
     my $ret = 0;
+    my $cmd;
     if( -x '/usr/bin/pacman-db-upgrade' ) {
         # not sure when this can be removed again
-        my $cmd = 'pacman-db-upgrade';
+        $cmd = 'pacman-db-upgrade';
         unless( UBOS::Logging::isDebugActive() ) {
             $cmd .= ' > /dev/null';
         }
         myexec( $cmd );
     }
 
-    my $cmd = 'pacman -Syu --noconfirm';
+    $cmd = 'pacman -Syu --noconfirm';
     unless( UBOS::Logging::isDebugActive() ) {
         $cmd .= ' > /dev/null';
     }
     myexec( $cmd );
+
+    if( -x '/usr/bin/pacman-db-upgrade' ) {
+        # not sure when this can be removed again
+        $cmd = 'pacman-db-upgrade';
+        unless( UBOS::Logging::isDebugActive() ) {
+            $cmd .= ' > /dev/null';
+        }
+        myexec( $cmd );
+    }
 
     # if installed kernel package is now different from running kernel: signal to reboot
     my $kernelPackageName = kernelPackageName();
