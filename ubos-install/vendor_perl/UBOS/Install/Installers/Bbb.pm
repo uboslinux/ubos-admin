@@ -28,6 +28,12 @@
 #     /boot of the second partition
 #   * We fix this by copying files from /boot to /bootpart at the end of the
 #     process.
+#   * Somehow, neither uEnv.txt nor the u-boot shell can overwrite the values
+#     of ${mmcroot} and ${mmcrootfstype} in the 'setenv mmcargs'. They remain
+#     what they were, or perhaps get overwritten somehow after they were set.
+#     So we need to hard-code the values in the setenv for the mmcargs
+#     directly, instead of saying
+#     mmcargs=setenv bootargs console=${console} ${optargs} root=${mmcroot} rootfstype=${mmcrootfstype}
 # * random number generator: BBB has /dev/hwrng, so we run rngd, and patch its
 #   configuration file during ubos-install, as long as Arch ARM hasn't updated the
 #   default configuration they ship, which is identical as the x86 one:
@@ -185,8 +191,13 @@ sub createDiskLayout {
                             'devices'   => [ $bootpartition ],
                             'boot'      => 1
                         },
+                        '/boot' => {
+                            'index'     => 2,
+                            'fs'        => 'ext4',
+                            'size'      => '64M'
+                        },
                         '/' => {
-                            'index'  => 2,
+                            'index'   => 3,
                             'fs'      => 'btrfs',
                             'devices' => \@rootpartitions
                         }
@@ -201,13 +212,18 @@ sub createDiskLayout {
                             'devices'   => [ $bootpartition ],
                             'boot'      => 1
                         },
+                        '/boot' => {
+                            'index'     => 2,
+                            'fs'        => 'ext4',
+                            'size'      => '64M'
+                        },
                         '/' => {
-                            'index'   => 2,
+                            'index'   => 3,
                             'fs'      => 'btrfs',
                             'devices' => \@rootpartitions
                         },
                         '/var' => {
-                            'index'  => 3,
+                            'index'  => 4,
                             'fs'      => 'btrfs',
                             'devices' => \@varpartitions
                         }
@@ -228,8 +244,13 @@ sub createDiskLayout {
                                 'mkfsflags' => '-F 16',
                                 'size'      => '64M'
                             },
+                            '/boot' => {
+                                'index'     => 2,
+                                'fs'        => 'ext4',
+                                'size'      => '64M'
+                            },
                             '/' => {
-                                'index' => 2,
+                                'index' => 3,
                                 'fs'    => 'btrfs'
                             },
                         } );
@@ -243,8 +264,13 @@ sub createDiskLayout {
                                 'mkfsflags' => '-F 16',
                                 'size'      => '64M'
                             },
+                            '/boot' => {
+                                'index'     => 2,
+                                'fs'        => 'ext4',
+                                'size'      => '64M'
+                            },
                             '/' => {
-                                'index' => 2,
+                                'index' => 3,
                                 'fs'    => 'btrfs'
                             },
                         } );
@@ -288,7 +314,14 @@ sub installBootLoader {
             ++$errors;
         }
     }
-    
+
+    # Also need to append kernel arguments 
+    my $uEnv = UBOS::Utils::slurpFile( "$target/bootpart/uEnv.txt" );
+    $uEnv .= <<'TXT'
+mmcargs=setenv bootargs console=${console} ${optargs} root=/dev/mmcblk0p3 rootfstype=btrfs
+TXT
+    UBOS::Utils::saveFile( "$target/bootpart/uEnv.txt", $uEnv );
+
     return $errors;
 }
 
