@@ -317,7 +317,7 @@ sub installBootLoader {
 
     # Also need to append kernel arguments 
     my $uEnv = UBOS::Utils::slurpFile( "$target/bootpart/uEnv.txt" );
-    $uEnv .= <<'TXT'
+    $uEnv .= <<'TXT';
 mmcargs=setenv bootargs console=${console} ${optargs} root=/dev/mmcblk0p3 rootfstype=btrfs
 TXT
     UBOS::Utils::saveFile( "$target/bootpart/uEnv.txt", $uEnv );
