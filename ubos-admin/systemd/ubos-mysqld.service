@@ -12,6 +12,8 @@ ExecStartPost=/usr/bin/mysqld-post
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-mysqld
 Restart=always
 PrivateTmp=true
+TimeoutStartSec=180
+# Doubling the timeout -- can take a long time on little devices with sd cards
 
 [Install]
 WantedBy=multi-user.target

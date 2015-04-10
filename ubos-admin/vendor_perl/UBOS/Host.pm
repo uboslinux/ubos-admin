@@ -38,7 +38,7 @@ use Sys::Hostname qw();
 
 my $SITES_DIR        = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE   = '/etc/ubos/config.json';
-my $AFTER_BOOT_FILE  = '/etc/ubos/after-boot';
+my $AFTER_BOOT_FILE  = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
 my $_hostConf        = undef;
 my $_now             = time();
 my $_rolesOnHostInSequence = undef; # allocated as needed
@@ -773,8 +773,11 @@ sub ensureOsUser {
 }
 
 ##
-# Add a command to run after the next boot. They must be bash-executable
-# and will run as root.
+# Add a command to run after the next boot. The command must be of the
+# form "<tag>:<command>" where <tag> is either "bash" or "perleval".
+# The bash commands must be bash-executable and will run as root.
+# The perleval commands will be executed by eval'ing the command
+# from ubos-admin-initialize
 # @cmds: one or more commands
 sub addAfterBootCommands {
     my @cmds = @_;
@@ -784,8 +787,11 @@ sub addAfterBootCommands {
         $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
     }
     foreach my $cmd ( @cmds ) {
-        $afterBoot .= $cmd;
-        $afterBoot .= "\n";
+        if( $cmd =~ m!^(bash|perleval):! ) {
+            $afterBoot .= "$cmd\n";
+        } else {
+            error( 'Invalid after-boot command syntax:', $cmd );
+        }
     }
     UBOS::Utils::saveFile( $AFTER_BOOT_FILE, $afterBoot );
 }
@@ -797,35 +803,24 @@ sub runAfterBootCommandsIfNeeded {
     if( -e $AFTER_BOOT_FILE ) {
         my $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
 
-        my $out;
-        my $err;
-        if( UBOS::Utils::myexec( "/bin/bash", $afterBoot, \$out, \$err )) {
-            error( "Problem when running after-boot commands. Script:\n" . $afterBoot . "\nout: " . $out . "\nerr: " . $err );
-        } else {
-            UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
+        my @lines = split( "\n", $afterBoot );
+        foreach my $line ( @lines ) {
+            if( $line =~ m!^bash:(.*)$! ) {
+                my $cmd = $1;
+                my $out;
+                my $err;
+                if( UBOS::Utils::myexec( "/bin/bash", $cmd, \$out, \$err )) {
+                    error( "Problem when running after-boot commands. Bash command:\n" . $cmd . "\nout: " . $out . "\nerr: " . $err );
+                }
+            } elsif( $line =~ m!^perleval:(.*)$! ) {
+                my $cmd = $1;
+                unless( eval( $cmd )) {
+                    error( "Problem when running after-boot commands. Perl command:\n" . $cmd );
+                }
+            }
         }
+        UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
     }
 }
-
-##
-# Find and print .pacnew files
-sub findPacnewFiles() {
-    my $out;
-    UBOS::Utils::myexec( "find / -name '*.pacnew' -print", undef, \$out );
-
-    if( $out ) {
-        my $count = scalar split /\n/, $out;
-        $out =~ s!^!    !gm;
-        my $msg = <<MSG;
-You manually modified $count configuration file(s) that need an upgrade.
-Because you modified them, UBOS cannot automatically upgrade them. Instead,
-the new versions were saved with the extension .pacnew.
-Please review them, one by one, and when you are done, remove the version
-with the .pacnew extension. Here's the list:
-MSG
-        UBOS::Logging::warning( $msg . $out );    
-    }
-}
-
 
 1;

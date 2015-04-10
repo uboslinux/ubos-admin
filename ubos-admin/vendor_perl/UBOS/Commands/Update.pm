@@ -75,6 +75,7 @@ sub run {
     if( $logConfigFile ) {
          my $tmp = File::Temp->new( UNLINK => 0, SUFFIX => '.conf' );
          $stage2LogConfigFile = $tmp->filename;
+         UBOS::Utils::myexec( "cp '$logConfigFile' '$stage2LogConfigFile'" );
     }
 
     my $oldSites = UBOS::Host::sites();
@@ -169,8 +170,9 @@ sub run {
     }
 
     if( $doReboot ) {
-        UBOS::Host::addAfterBootCommands( $stage2Cmd );
-        
+        UBOS::Host::addAfterBootCommands( 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate();' );
+print STDERR "Would do reboot now\n";
+exit( 0 );        
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
     } else {

@@ -188,6 +188,10 @@ sub initializeConfigurationIfNeeded {
 
     my $errors = 0;
     unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
+        unless( -d "$target/shepherd/ssh" ) {
+            UBOS::Utils::mkdirDashP( "$target/shepherd/ssh" );
+        }
+
         my $out;
         my $err;
         if( UBOS::Utils::myexec( "ssh-keygen -N '' -f '$target/shepherd/ssh/id_rsa'", undef, \$out, \$err )) {

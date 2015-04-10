@@ -65,6 +65,20 @@ sub run {
 
     info( 'Redeploying sites and restoring data' );
 
+    my $ret = finishUpdate();
+
+    unless( $ret && !$stage1exit ) {
+        error( "Update failed." );
+    }
+
+    return $ret && !$stage1exit;
+}
+
+##
+# Factored-out method that is invoked from UpdateStage2::run and from
+# ubos-admin-init after Update has invoked a reboot, and the system
+# has rebooted.
+sub finishUpdate {
     my $ret = 1;
 
     my $backup  = UBOS::UpdateBackup->new();
@@ -105,14 +119,7 @@ sub run {
     
     UBOS::Host::purgeCache( 1 );
 
-    debug( 'Looking for .pacnew files' );
-
-    UBOS::Host::findPacnewFiles();
-
-    unless( $ret && !$stage1exit ) {
-        error( "Update failed." );
-    }
-    return $ret && !$stage1exit;
+    return $ret;
 }
 
 ##
