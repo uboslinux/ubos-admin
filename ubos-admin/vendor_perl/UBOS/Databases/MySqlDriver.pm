@@ -46,9 +46,11 @@ sub ensureRunning {
     }
 
     UBOS::Host::ensurePackages( [ 'mariadb', 'perl-dbd-mysql' ] );
-        
-    UBOS::Utils::myexec( 'systemctl enable ubos-mysqld' );
-    UBOS::Utils::myexec( 'systemctl start  ubos-mysqld' );
+
+    my $out;
+    my $err;
+    UBOS::Utils::myexec( 'systemctl enable ubos-mysqld', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl start  ubos-mysqld', undef, \$out, \$err );
 
     unless( -r $rootConfiguration ) {
          
