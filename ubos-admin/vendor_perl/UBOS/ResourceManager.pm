@@ -118,7 +118,7 @@ sub provisionLocalDatabase {
 
     $dbDriver->provisionLocalDatabase( $dbName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType, $privileges );
 
-    UBOS::Utils::writeJsonToFile( $file, $json, '0600' );
+    UBOS::Utils::writeJsonToFile( $file, $json, 0600 );
 
     return( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
 }
