@@ -204,7 +204,7 @@ sub hostnameorsystemhostname {
 
     my $ret = $self->hostname();
     if( $ret eq '*' ) {
-        $ret = hostname();
+        $ret = UBOS::Host::hostname();
     }
     return $ret;
 }
