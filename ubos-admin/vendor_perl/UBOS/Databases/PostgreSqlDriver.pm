@@ -61,8 +61,8 @@ sub ensureRunning {
         my $out;
         my $err;
 
-        UBOS::Utils::myexec( 'systemctl enable postgresql', undef, \$out, \$err );
-        UBOS::Utils::myexec( 'systemctl start  postgresql', undef, \$out, \$err );
+        UBOS::Utils::myexec( 'systemctl is-enabled postgresql > /dev/null || systemctl enable postgresql', undef, \$out, \$err );
+        UBOS::Utils::myexec( 'systemctl is-active  postgresql > /dev/null || systemctl start  postgresql', undef, \$out, \$err );
 
         sleep( 3 ); # Needed, otherwise might not be able to connect
     }

@@ -49,11 +49,11 @@ sub ensureRunning {
 
     my $out;
     my $err;
-    UBOS::Utils::myexec( 'systemctl enable ubos-mysqld', undef, \$out, \$err );
-    UBOS::Utils::myexec( 'systemctl start  ubos-mysqld', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl is-enabled ubos-mysqld > /dev/null || systemctl enable ubos-mysqld', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl is-active  ubos-mysqld > /dev/null || systemctl start  ubos-mysqld', undef, \$out, \$err );
 
-    unless( -r $rootConfiguration ) {
-         
+    unless( -e $rootConfiguration ) {
+
         my $dbh = DBI->connect( "DBI:mysql:host=localhost", 'root', '' );
 
         if( defined( $dbh )) {
