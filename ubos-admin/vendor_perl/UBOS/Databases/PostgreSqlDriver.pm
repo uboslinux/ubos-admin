@@ -213,7 +213,6 @@ sub exportLocalDatabase {
     # --clean will drop the schema, which means we lose GRANTs on it
     my $ret = executeCmdPipeAsAdmin( "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"", undef, $fileName );
 
-debug( 'PostgreSqlDriver::exportLocalDatabase returns ', $ret );
     return $ret;
 }
 
