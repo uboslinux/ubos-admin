@@ -83,7 +83,7 @@ sub run {
                 my $count = scalar @items;
                 my $msg = <<MSG;
 pacnew:
-    Eplanation: You manually modified $count configuration file(s) that need an
+    Explanation: You manually modified $count configuration file(s) that need an
         upgrade. Because you modified them, UBOS cannot automatically upgrade
         them. Instead, the new versions were saved next to the modified files
         with the extension .pacnew. Please review them, one by one, update them,
