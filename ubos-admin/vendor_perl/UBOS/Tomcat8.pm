@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Tomcat7 abstraction.
+# Tomcat8 abstraction.
 #
 # This file is part of ubos-admin.
 # (C) 2012-2015 Indie Computing Corp.
@@ -22,28 +22,28 @@
 use strict;
 use warnings;
 
-package UBOS::Tomcat7;
+package UBOS::Tomcat8;
 
 use UBOS::Logging;
 
-my $mainServerXmlFile    = '/etc/tomcat7/server.xml';
-my $ourServerXmlTemplate = '/etc/tomcat7/server-ubos.xml.tmpl';
+my $mainServerXmlFile    = '/etc/tomcat8/server.xml';
+my $ourServerXmlTemplate = '/etc/tomcat8/server-ubos.xml.tmpl';
 
 my $running = 0;
 
 ##
-# Ensure that Tomcat7 is running.
+# Ensure that Tomcat8 is running.
 sub ensureRunning {
     if( $running ) {
         return 1;
     }
 
-    UBOS::Host::ensurePackages( [ 'tomcat7', 'tomcat-native' ] );
+    UBOS::Host::ensurePackages( [ 'tomcat8', 'tomcat-native' ] );
 
     my $out;
     my $err;
-    UBOS::Utils::myexec( 'systemctl enable tomcat7',  undef, \$out, \$err );
-    UBOS::Utils::myexec( 'systemctl restart tomcat7', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl enable tomcat8',  undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl restart tomcat8', undef, \$out, \$err );
 
     $running = 1;
 
@@ -55,7 +55,7 @@ sub ensureRunning {
 sub reload {
     ensureRunning();
 
-    UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat7' );
+    UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat8' );
 
     1;
 }
@@ -65,7 +65,7 @@ sub reload {
 sub restart {
     ensureRunning();
 
-    UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat7' );
+    UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat8' );
 
     1;
 }

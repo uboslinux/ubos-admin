@@ -24,12 +24,12 @@
         "ssldir"               : "/etc/httpd/ubos/ssl"
     },
 
-    "tomcat7" : {
-        "uname" : "tomcat7",
-        "gname" : "tomcat7",
+    "tomcat8" : {
+        "uname" : "tomcat8",
+        "gname" : "tomcat8",
 
-        "sitesdir"    : "/var/lib/tomcat7/sites",
-        "contextsdir" : "/etc/tomcat7/Catalina"
+        "sitesdir"    : "/var/lib/tomcat8/sites",
+        "contextsdir" : "/etc/tomcat8/Catalina"
     },
 
     "site" : {
@@ -40,9 +40,9 @@
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
             "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups"
         },
-        "tomcat7" : {
-            "sitedocumentdir"      : "${tomcat7.sitesdir}/${site.siteid}",
-            "contextdir"           : "${tomcat7.contextsdir}/${site.hostnameorwildcard}"
+        "tomcat8" : {
+            "sitedocumentdir"      : "${tomcat8.sitesdir}/${site.siteid}",
+            "contextdir"           : "${tomcat8.contextsdir}/${site.hostnameorwildcard}"
         }
     },
 
@@ -51,9 +51,9 @@
             "dir"                   : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
         },
-        "tomcat7" : {
-            "dir"         : "${tomcat7.sitesdir}/${site.siteid}/${appconfig.appconfigid}",
-            "contextfile" : "${site.tomcat7.contextdir}/${appconfig.contextnoslashorroot}.xml"
+        "tomcat8" : {
+            "dir"         : "${tomcat8.sitesdir}/${site.siteid}/${appconfig.appconfigid}",
+            "contextfile" : "${site.tomcat8.contextdir}/${appconfig.contextnoslashorroot}.xml"
         },
         "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
         "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"

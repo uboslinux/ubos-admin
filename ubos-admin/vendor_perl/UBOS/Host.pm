@@ -30,7 +30,7 @@ use UBOS::Logging;
 use UBOS::Roles::apache2;
 use UBOS::Roles::mysql;
 use UBOS::Roles::postgresql;
-use UBOS::Roles::tomcat7;
+use UBOS::Roles::tomcat8;
 use UBOS::Site;
 use UBOS::Utils qw( readJsonFromFile myexec );
 use Socket;
@@ -365,7 +365,7 @@ sub rolesOnHostInSequence {
                 UBOS::Roles::mysql->new,
                 UBOS::Roles::postgresql->new,
                 # UBOS::Roles::mongo->new,
-                UBOS::Roles::tomcat7->new,
+                UBOS::Roles::tomcat8->new,
                 UBOS::Roles::apache2->new ];
     }
     return @$_rolesOnHostInSequence;
@@ -462,10 +462,10 @@ sub executeTriggers {
             UBOS::Apache2::reload();
         } elsif( 'httpd-restart' eq $trigger ) {
             UBOS::Apache2::restart();
-        } elsif( 'tomcat7-reload' eq $trigger ) {
-            UBOS::Tomcat7::reload();
-        } elsif( 'tomcat7-restart' eq $trigger ) {
-            UBOS::Tomcat7::restart();
+        } elsif( 'tomcat8-reload' eq $trigger ) {
+            UBOS::Tomcat8::reload();
+        } elsif( 'tomcat8-restart' eq $trigger ) {
+            UBOS::Tomcat8::restart();
         } else {
             warning( 'Unknown trigger:', $trigger );
         }

@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 #
-# tomcat7 role. The interface to Tomcat7 is in Tomcat7.pm
+# tomcat8 role. The interface to Tomcat8 is in Tomcat8.pm
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2015 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,19 +22,19 @@
 use strict;
 use warnings;
 
-package UBOS::Roles::tomcat7;
+package UBOS::Roles::tomcat8;
 
 use base qw( UBOS::Role );
 use fields;
 
 use UBOS::Host;
 use UBOS::Logging;
-use UBOS::Tomcat7;
+use UBOS::Tomcat8;
 use UBOS::Utils;
 
-my $sitesDir     = '/var/lib/tomcat7/sites';
-my $sitesAppsDir = '/etc/tomcat7/ubos/sites-apps';
-my $contextDir   = '/etc/tomcat7/Catalina';
+my $sitesDir     = '/var/lib/tomcat8/sites';
+my $sitesAppsDir = '/etc/tomcat8/ubos/sites-apps';
+my $contextDir   = '/etc/tomcat8/Catalina';
 
 # $sitesDir: contains one directory per site with name $siteId, each of which contains
 #   one directory per AppConfiguration at this site, with name $appConfigId, which is that
@@ -61,7 +61,7 @@ sub new {
 sub name {
     my $self = shift;
 
-    return 'tomcat7';
+    return 'tomcat8';
 }
 
 ##
@@ -76,7 +76,7 @@ sub setupSiteOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    my $siteDocumentDir = $site->config->getResolve( 'site.tomcat7.sitedocumentdir' );
+    my $siteDocumentDir = $site->config->getResolve( 'site.tomcat8.sitedocumentdir' );
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
@@ -96,17 +96,17 @@ sub setupSite {
     my $site     = shift;
     my $triggers = shift;
 
-    UBOS::Host::ensurePackages( 'tomcat7' );
+    UBOS::Host::ensurePackages( 'tomcat8' );
 
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostnameorwildcard;
     my $siteContextDir  = "$contextDir/$hostname";
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
-    my $tomcatUser      = $site->config->getResolve( 'tomcat7.uname' );
-    my $tomcatGroup     = $site->config->getResolve( 'tomcat7.gname' );
+    my $tomcatUser      = $site->config->getResolve( 'tomcat8.uname' );
+    my $tomcatGroup     = $site->config->getResolve( 'tomcat8.gname' );
 
-    debug( 'tomcat7::setupSite', $siteId );
+    debug( 'tomcat8::setupSite', $siteId );
 
     unless( -d $siteContextDir ) {
         UBOS::Utils::mkdir( $siteContextDir );
@@ -133,7 +133,7 @@ sub resumeSite {
 
     $self->sitesUpdated();
 
-    $triggers->{'tomcat7-reload'} = 1;
+    $triggers->{'tomcat8-reload'} = 1;
 }
 
 
@@ -155,7 +155,7 @@ sub removeSite {
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
 
-    debug( 'tomcat7::removeSite', $siteId, $doIt );
+    debug( 'tomcat8::removeSite', $siteId, $doIt );
 
     if( $doIt ) {
         UBOS::Utils::rmdir( $siteDocumentDir );
@@ -163,7 +163,7 @@ sub removeSite {
         UBOS::Utils::rmdir( $siteContextDir );
 
         $self->sitesUpdated();
-        $triggers->{'tomcat7-reload'} = 1;
+        $triggers->{'tomcat8-reload'} = 1;
     }
 
     return 1;
@@ -209,7 +209,7 @@ END
 <!-- End hosts section -->
 END
     
-    UBOS::Tomcat7::updateServerXmlFile( $hostsSection );
+    UBOS::Tomcat8::updateServerXmlFile( $hostsSection );
 }
 
 # === Manifest checking routines from here ===
