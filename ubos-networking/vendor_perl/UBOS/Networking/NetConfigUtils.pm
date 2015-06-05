@@ -193,13 +193,21 @@ sub setNetConfig {
     }
     UBOS::Utils::saveFile( $dhcpConf, $dhcpcdContent );
         
-    # start/stop daemons
+    # start/stop daemons, and update /etc/nsswitch.conf appropriately
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
         _startService( 'dhcpcd',       'dhcpcd' );
         _startService( 'avahi-daemon', 'avahi' );
+
+        UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
+hosts: files mdns_minimal [NOTFOUND=return] dns myhostname
+END
     } else {
         _stopService( 'avahi-daemon' );
         _stopService( 'dhcpcd' );
+
+        UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
+hosts: files dns myhostname
+END
     }
 }
 
