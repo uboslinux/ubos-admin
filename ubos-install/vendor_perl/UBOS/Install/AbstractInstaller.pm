@@ -384,7 +384,7 @@ sub installPackages {
     my $self         = shift;
     my $pacmanConfig = shift;
 
-    info( "Executing installPackages" );
+    info( "Installing packages" );
 
     my $target = $self->{target};
     my $errors = 0;
@@ -423,6 +423,7 @@ sub savePacmanConfigProduction {
 
     debug( "Executing savePacmanConfigProduction" );
 
+    my $errors  = 0;
     my $arch    = $self->arch;
     my $channel = $self->{channel};
 
@@ -439,19 +440,21 @@ SigLevel           = Required TrustedOnly
 LocalFileSigLevel  = Optional TrustedOnly
 RemoteFileSigLevel = Required TrustedOnly
 
+Include /etc/pacman.d/repositories.d/*
 END
-    foreach my $db ( @$dbs ) {
-        $pacmanConfigProduction .= <<END; # Note what is and isn't escaped here
+    unless( UBOS::Utils::saveFile( $self->{target} . '/etc/pacman.conf', $pacmanConfigProduction, 0644 )) {
+        ++$errors;
+    }
 
+    foreach my $db ( @$dbs ) {
+        unless( UBOS::Utils::saveFile( $self->{target} . '/etc/pacman.d/repositories.d/' . $db, <<END, 0644 )) {
 [$db]
 Server = http://depot.ubos.net/$channel/\$arch/$db
 END
+        # Note what is and isn't escaped here
     }
-    if( UBOS::Utils::saveFile( $self->{target} . '/etc/pacman.conf', $pacmanConfigProduction, 0644, 'root', 'root' )) {
-        return 0;
-    } else {
-        return 1;
-    }
+
+    return $errors;
 }
 
 ##
