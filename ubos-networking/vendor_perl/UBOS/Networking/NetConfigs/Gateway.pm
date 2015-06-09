@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 #
-# A network configuration in which the network is off.
+# A network configuration for a device that obtains an IP address via
+# DHCP from one interface, and manages a local network with local IP addresses
+# issued by its DHCP server, with Network Address Translation, on all others.
 #
 # This file is part of ubos-networking.
 # (C) 2012-2015 Indie Computing Corp.
@@ -22,9 +24,7 @@
 use strict;
 use warnings;
 
-package UBOS::Networking::NetConfigs::Off;
-
-use UBOS::Networking::NetConfigUtils;
+package UBOS::Networking::NetConfigs::Gateway;
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -33,20 +33,27 @@ use UBOS::Networking::NetConfigUtils;
 # This will also return true if this configuration is currently active.
 # return: 1 or 0
 sub isPossible {
-    return 1;
+    my $allNics = UBOS::Host::nics();
+    
+    return ( keys %$allNics ) > 1;
 }
 
 ##
 # Activate this network configuration.
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'off', undef, undef );
+    UBOS::Networking::NetConfigUtils::setNetConfig(
+            'gateway',
+            [ UBOS::Networking::NetConfigUtils::determineUpstreamNic() ],
+            1 );
 }
+
+
 
 ##
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'The network is off.';
+    return 'Act as a home router with an upstream connection and a local network.';
 }
 
 1;

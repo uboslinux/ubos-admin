@@ -32,7 +32,7 @@ package UBOS::Networking::NetConfigs::Client;
 # This will also return true if this configuration is currently active.
 # return: 1 or 0
 sub isPossible {
-    my $allNics = UBOS::Networking::NetConfigUtils::getAllNics();
+    my $allNics = UBOS::Host::nics();
     
     return ( keys %$allNics ) > 0;
 }
@@ -40,7 +40,7 @@ sub isPossible {
 ##
 # Activate this network configuration.
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 1, undef );
+    UBOS::Networking::NetConfigUtils::setNetConfig( 'client', 1, undef );
 }
 
 ##

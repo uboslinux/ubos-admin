@@ -29,28 +29,44 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $ipLinks      = undef;
-my $dhcpConfHead = '/usr/share/ubos-networking/tmpl/dhcpcd.head';
-my $dhcpConf     = '/etc/dhcpcd.conf';
-my $ipAddrPrefix = '192.168.139.';
-my $confFile     = '/etc/ubos/networking.conf';
+my $ipLinks        = undef;
+my $confFile       = '/etc/ubos/networking.conf';
+my $_conf          = undef; # initialized as needed
+
+my $dotNetworkDefaultFile       = '/etc/systemd/network/99-ubos-default.network';
+my $dotNetworkDhcpFilePattern   = '/etc/systemd/network/50-ubos-dhcp-%s.network';
+my $dotNetworkStaticFilePattern = '/etc/systemd/network/50-ubos-static-%s.network';
+my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
+my $etherGlobs                  = 'en* eth*';
+my $wlanGlobs                   = 'wifi* wlan*';
 
 ##
 # Initialize if needed. Invoked at boot and when module is installed
 sub initializeIfNeeded {
 
-    my $conf;
     if( -e $confFile ) {
-        $conf = UBOS::Utils::readJsonFromFile( $confFile );
+        $_conf = UBOS::Utils::readJsonFromFile( $confFile );
     } else {
-        $conf = {
+        $_conf = {
             'netconfig' => 'client'
         };
-        UBOS::Utils::writeJsonToFile( $confFile, $conf );
+        UBOS::Utils::writeJsonToFile( $confFile, $_conf );
     }
     
-    my $netConfigName = $conf->{netconfig}; 
+    my $netConfigName = $_conf->{netconfig}; 
     activateNetConfig( $netConfigName );
+}
+
+##
+# Obtain the current configuration per config file
+#
+# return: hash
+sub netConfig {
+
+    unless( $_conf ) {
+        $_conf = UBOS::Utils::readJsonFromFile( $confFile );
+    }
+    return $_conf;
 }
 
 ##
@@ -102,6 +118,7 @@ sub getAllNics {
 ##
 # Set a particular networking configuration. This method has different
 # ways of invoking it, so pay attention.
+# $name: name of the configuration for reporting porpuses
 # $dhcpClientNicInfo:
 #      if this is an array, it contains the list of NIC names that shall
 #          receive their IP address via DHCP
@@ -119,16 +136,17 @@ sub getAllNics {
 # if both parameters are undef, it means deactivate all interfaces
 #
 # Examples:
-# setNetConfig( undef, undef ) -- deactivate all interfaces
-# setNetConfig( [ eth0 ], undef ) -- only activate eth0 as DHCP client
-# setNetConfig( 1, undef ) -- all interfaces are DHCP clients
-# setNetConfig( undef, [eth0, eth1] ) -- assign static IP addresses to eth0 and eth1
+# setNetConfig( 'off',    undef, undef ) -- deactivate all interfaces
+# setNetConfig( 'foo',    [ eth0 ], undef ) -- only activate eth0 as DHCP client
+# setNetConfig( 'client', 1, undef ) -- all interfaces are DHCP clients
+# setNetConfig( 'bar',    undef, [eth0, eth1] ) -- assign static IP addresses to eth0 and eth1
 
 sub setNetConfig {
+    my $name                  = shift;
     my $dhcpClientNicInfo     = shift;
     my $privateNetworkNicInfo = shift;
 
-    my $allNics = getAllNics();
+    my $allNics = UBOS::Host::nics();
 
     # error checking
     if(    defined( $dhcpClientNicInfo )     && !ref( $dhcpClientNicInfo )     && $dhcpClientNicInfo == 1
@@ -154,56 +172,91 @@ sub setNetConfig {
         }
     }
 
-    # determine new configuration -- IP and DHCP
-    my $dhcpcdFrag1;
-    my $dhcpcdFrag2;
-    if( ref( $dhcpClientNicInfo ) eq 'ARRAY' ) {
-        $dhcpcdFrag1 = _configureDhcpcd( $dhcpClientNicInfo, undef, $allNics ); # DHCP for named nics
-        
-    } elsif( defined( $dhcpClientNicInfo ) && $dhcpClientNicInfo == 1 ) {
-        if( ref( $privateNetworkNicInfo ) eq 'ARRAY' ) {
-            $dhcpcdFrag1 = _configureDhcpcd( undef, $privateNetworkNicInfo, $allNics ); # DHCP for all except named nics
+    # delete the current systemd-networkd settings
+    UBOS::Utils::deleteFile( glob $dotNetworkDeleteGlob );
+
+    # create new systemd-networkd settings
+    if( defined( $dhcpClientNicInfo )) {
+        if( ref( $dhcpClientNicInfo )) {
+            foreach my $nic ( @$dhcpClientNicInfo ) {
+                UBOS::Utils::saveFile( sprintf( $dotNetworkDhcpFilePattern, $nic ), <<END );
+#
+# DHCP interface configuration. Generated automatically, do not modify. Use
+#     ubos-admin setnetconfig
+# instead.
+#
+
+[Match]
+Name=$nic
+
+[Network]
+DHCP=ipv4
+END
+            }
         } else {
-            $dhcpcdFrag1 = _configureDhcpcd( undef, [], $allNics ); # DHCP for all
+            UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
+#
+# Fallback configuration. Generated automatically, do not modify. Use
+#     ubos-admin setnetconfig
+# instead.
+#
+
+[Match]
+Name=$etherGlobs $wlanGlobs
+
+[Network]
+DHCP=ipv4
+END
         }
-    } else {
-        $dhcpcdFrag1 = _configureDhcpcd( undef, undef, $allNics ); # DHCP for none
+    }
+    if( defined( $privateNetworkNicInfo )) {
+        if( ref( $privateNetworkNicInfo )) {
+            foreach my $nic ( @$privateNetworkNicInfo ) {
+                UBOS::Utils::saveFile( sprintf( $dotNetworkStaticFilePattern, $nic ), <<END );
+#
+# Static interface configuration. Generated automatically, do not modify. Use
+#     ubos-admin setnetconfig
+# instead.
+#
+
+[Match]
+Name=$nic
+
+[Network]
+Address=0.0.0.0/16
+END
+            }
+        } else {
+            UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
+#
+# Fallback configuration. Generated automatically, do not modify. Use
+#     ubos-admin setnetconfig
+# instead.
+#
+
+[Match]
+Name=$etherGlobs $wlanGlobs
+
+[Network]
+Address=0.0.0.0/16
+END
+        }
+    }
+    foreach my $nic ( keys %$allNics ) {
+        UBOS::Utils::myexec( "ip addr flush " . $nic );
     }
 
-    if( ref( $privateNetworkNicInfo ) eq 'ARRAY' ) {
-        $dhcpcdFrag2 = _configureStatic( $privateNetworkNicInfo, undef, $allNics ); # static for named nics
-        
-    } elsif( defined( $privateNetworkNicInfo ) && $privateNetworkNicInfo == 1 ) {
-        if( ref( $dhcpClientNicInfo ) eq 'ARRAY' ) {
-            $dhcpcdFrag2 = _configureStatic( undef, $dhcpClientNicInfo, $allNics ); # static for all except named nics
-        } else {
-            $dhcpcdFrag2 = _configureStatic( undef, [], $allNics ); # static for all
-        }
-    } else {
-        $dhcpcdFrag2 = _configureStatic( undef, undef, $allNics ); # static for none
-    }
-
-    # write config file
-    my $dhcpcdContent = UBOS::Utils::slurpFile( $dhcpConfHead );
-    if( $dhcpcdFrag1 ) {
-        $dhcpcdContent .= $dhcpcdFrag1;
-    }
-    if( $dhcpcdFrag2 ) {
-        $dhcpcdContent .= $dhcpcdFrag2;
-    }
-    UBOS::Utils::saveFile( $dhcpConf, $dhcpcdContent );
-        
     # start/stop daemons, and update /etc/nsswitch.conf appropriately
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
-        _startService( 'dhcpcd',       'dhcpcd' );
         _startService( 'avahi-daemon', 'avahi' );
+        _restartService( 'systemd-networkd' );
 
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
 hosts: files mdns_minimal [NOTFOUND=return] dns myhostname
 END
     } else {
         _stopService( 'avahi-daemon' );
-        _stopService( 'dhcpcd' );
+        _restartService( 'systemd-networkd' );
 
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
 hosts: files dns myhostname
@@ -212,172 +265,53 @@ END
 }
 
 ##
-# Internal helper to execute "ip link" and parse the output
-sub _ipLinks {
-	unless( defined( $ipLinks )) {
-		my $out;
-		UBOS::Utils::myexec( 'ip link show', undef, \$out );
-		
-# example output:
-# 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default 
-#     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-# 2: enp2s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
-#     link/ether 00:30:18:c0:53:6a brd ff:ff:ff:ff:ff:ff
-# 3: enp3s0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
-#     link/ether 00:30:18:c0:53:6b brd ff:ff:ff:ff:ff:ff
-# 8: enp0s29f7u3: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
-#     link/ether 00:50:b6:5c:8f:a9 brd ff:ff:ff:ff:ff:ff
-# 9: wlp0s29f7u4: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
-#     link/ether 5c:f3:70:03:6b:ed brd ff:ff:ff:ff:ff:ff
+# Helper method to determine which nic should be the upstream interface
+#
+# return: name of the nic
+sub determineUpstreamNic {
+    my $allNics = UBOS::Host::nics();
+    my $conf    = netConfig();
 
-        my @sections = split /\n\d+:\s*/, $out;
-        my $atts     = {
-			'mtu'   => '\d+',
-			'qdisc' => undef,
-			'noop'  => undef,
-			'state' => '\S+',
-			'mode'  => '\S+',
-			'group' => '\S+',
-			'qlen'  => '\d+'
-        };
-        foreach my $section ( @sections ) {
-			# first line may still have 1: prefix
-			if( $section =~ m!^(?:\d+:\s+)?([a-z0-9]+):\s*(?:<([^>]*)>)\s+(.*)\n\s+link/(\S+)\s+([0-9a-f:]+)\s+([a-z]+)\s+([0-9a-f:]+)$! ) {
-				my $devName      = $1; # e.g. enp2s0
+    my $upstreamNic = undef;
+    if( exists( $conf->{upstream} )) {
+        $upstreamNic = $conf->{upstream};
 
-                if( 'lo' eq $devName ) {
-                    next;
+        unless( exists( $allNics->{upstreamNic} )) {
+            UBOS::Logging::warning( 'Upstream NIC specified in', $confFile, 'not found:', $upstreamNic );
+            $upstreamNic = undef;
+        }
+    }
+    unless( $upstreamNic ) {
+        # take the first wired one, if that fails, the first wifi one
+        my $firstEther = undef;
+        my $firstWlan  = undef;
+        my $bestEtherIndex = 65535;
+        my $bestWlanIndex  = 65535;
+
+        foreach my $nic ( keys %$allNics ) {
+            my $data  = $allNics->{$nic};
+            my $index = $data->{index};
+            if( 'ether' eq $data->{type} ) {
+                if( $index < $bestEtherIndex ) {
+                    $bestEtherIndex = $index;
+                    $firstEther     = $nic;
                 }
-                
-				my $devFlags     = $2; # e.g. LOOPBACK,UP,LOWER_UP
-				my $devFirstLine = $3; # e.g. mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default 
-				my $devType      = $4; # e.g. loopback
-				my $macAddr      = $5; # e.g. 00:30:18:c0:53:6a
-				my $broadcast    = $6; # always seems to be brd
-				my $brdAddr      = $7; # e.g. ff:ff:ff:ff:ff:ff
-
-				unless( defined( $ipLinks )) {
-					$ipLinks = {};
-				}
-				my $h = {};
-				$h->{flags} = {};
-				$h->{atts}  = {};
-				map { $h->{flags}->{$_} = 1 } split ',', $devFlags;
-				# This loop isn't quite clean: att names may be parts of words, not entire words; does not seem to happen though
-                foreach my $att ( keys %$atts ) {
-                    my $regex = $atts->{$att};
-
-					if( $regex ) {
-                        if( $devFirstLine =~ m!$att ($regex)! ) {
-						    $h->{atts}->{$att} = $1;
-						}
-					} else {
-                        if( $devFirstLine =~ m!$att! ) {
-						    $h->{atts}->{$att} = 1;
-						}
-					}
-				}
-				$h->{type} = $devType;
-				$h->{mac}  = $macAddr;
-				$h->{brd}  = $brdAddr;
-				
-				$ipLinks->{$devName} = $h;
-			}
-		}
-	}
-	return $ipLinks;
+            } elsif( 'wlan' eq $data->{type} ) {
+                if( $index < $bestWlanIndex ) {
+                    $bestWlanIndex = $index;
+                    $firstWlan     = $nic;
+                }
+            } # ignore others
+        }
+        if( $firstEther ) {
+            $upstreamNic = $firstEther;
+        } else { # this may be null
+            $upstreamNic = $firstWlan;
+        }
+    }
+    return $upstreamNic;
 }
 
-##
-# Configure dhcpcd. Either par1 or par2 are provided
-# $these: activate dhcpcd on these interfaces
-# $notThese: activate dhcpcd on all interfaces but notThese
-# $allNics: hash of all known interfaces
-# return: fragment for dhcpcd conf file
-sub _configureDhcpcd {
-    my $these    = shift;
-    my $notThese = shift;
-    my $allNics  = shift;
-
-    my $ret;
-    if( $these ) {
-        if( @$these ) {
-            $ret = 'allowinterfaces ' . join( ' ', @$these ) . "\n";
-            notice( 'Activating DHCP on interfaces', @$these );
-        } else {
-            $ret = "allowinterfaces\n"; # none
-            notice( 'Activating DHCP on no interfaces' );
-        }
-
-    } elsif( $notThese ) {
-        if( @$notThese ) {
-            $ret = 'denyinterfaces ' . join( ' ', @$notThese ) . "\n";
-            notice( 'Activating DHCP on all interfaces BUT', @$notThese );
-        } else {
-            notice( 'Activating DHCP on all interfaces' );
-        }
-
-    } else {
-        $ret = "allowinterfaces\n"; # none
-        notice( 'Turning off DHCP' );
-    }
-    return $ret;
-}
-
-##
-# Configure static networking. Either par1 or par2 are provided
-# $these: set static IP on these interfaces
-# $notThese: set static IP on all interfaces but notThese
-# $allNics: hash of all known interfaces
-# return: fragment for dhcpcd conf file
-sub _configureStatic {
-    my $these    = shift;
-    my $notThese = shift;
-    my $allNics  = shift;
-
-    my @list;
-    if( $these ) {
-        if( @$these ) {
-            notice( 'Configuring static IP on interfaces', @$these );
-            @list = @$these;
-        } else {
-            notice( 'Configuring static IP on no interfaces' );
-            @list = ();
-        }
-    } elsif( $notThese ) {
-        if( @$notThese ) {
-            foreach my $nic1 ( keys @$allNics ) {
-                my $found = 0;
-                foreach my $nic2 ( @$notThese ) {
-                    if( $nic1 eq $nic2 ) {
-                        $found = 1;
-                        last;
-                    }
-                }
-                unless( $found ) {
-                    push @list, $nic1;
-                }
-            }
-            notice( 'Configuring static IP on interfaces', @list );
-        } else {
-            notice( 'Configuring static IP on all interfaces' );
-            @list = keys %$allNics;
-        }
-    } else {
-        notice( 'Configuring no static IP' );
-    }
-    
-    @list = sort compareNics @list;
-    
-    my $ret;
-    my $trailingIp = 1;
-    foreach my $nic ( @list ) {
-        $ret .= "interface $nic\n";
-        $ret .= "static ip_address=$ipAddrPrefix$trailingIp\n";
-        ++$trailingIp;
-    }
-    return $ret;
-}
 
 ##
 # Consistently sort NIC names. Keep numerically ordered within groups.
@@ -451,5 +385,14 @@ sub _stopService {
     }
 }
 
-1;
+##
+# Restart a daemon
+sub _restartService {
+    my $service = shift;
 
+    my $out;
+    my $err;
+    UBOS::Utils::myexec( 'systemctl restart ' . $service, undef, \$out, \$err );
+}
+    
+1;

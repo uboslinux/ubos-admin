@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.15
+pkgver=0.16
 pkgrel=1
 pkgdesc="UBOS Network management tools"
 arch=('any')
@@ -11,12 +11,6 @@ depends=('ubos-admin' 'avahi')
 options=('!strip')
 
 package() {
-# Template files
-    mkdir -p -m755 ${pkgdir}/usr/share/$pkgname/tmpl
-    for f in ${startdir}/tmpl/*; do
-        install -m644 $f ${pkgdir}/usr/share/$pkgname/tmpl/
-    done
-
 # dnsmasq directory
 #    mkdir -p -m755 ${pkgdir}/etc/dnsmasq.d
 
