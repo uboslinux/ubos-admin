@@ -200,6 +200,7 @@ sub install {
         $errors += $self->saveSecuretty();
         $errors += $self->saveOther();
         $errors += $self->configureOs();
+        $errors += $self->configureNetworkd();
 
         $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
      
@@ -584,6 +585,20 @@ BUILD_ID="$buildId"
 UBOS_DEVICECLASS="$deviceClass"
 UBOS_KERNELPACKAGE="$kernelPackage"
 OSRELEASE
+
+    return 0;
+}
+
+##
+# Configure systemd-networkd
+# return: number of errors
+sub configureNetworkd {
+    my $self = shift;
+
+    my $target        = $self->{target};
+
+    UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' );
+    UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' );
 
     return 0;
 }
