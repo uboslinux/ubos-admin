@@ -36,16 +36,19 @@ use UBOS::Utils qw( readJsonFromFile myexec );
 use Socket;
 use Sys::Hostname qw();
 
-my $SITES_DIR        = '/var/lib/ubos/sites';
-my $HOST_CONF_FILE   = '/etc/ubos/config.json';
-my $AFTER_BOOT_FILE  = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
-my $_hostConf        = undef;
-my $_now             = time();
+my $SITES_DIR          = '/var/lib/ubos/sites';
+my $HOST_CONF_FILE     = '/etc/ubos/config.json';
+my $HARDWARE_CONF_FILE = '/etc/ubos/hardware.json';
+my $AFTER_BOOT_FILE    = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
+my $_hostConf          = undef;
+my $_now               = time();
 my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
 my $_osReleaseInfo         = undef; # allocated as needed
 my $_ip                    = undef; # allocated as needed
+my $_nics                  = undef; # allocated as needed
+my $_hwConf                = undef; # allocated as needed
 
 ##
 # Obtain the host Configuration object.
@@ -821,6 +824,50 @@ sub runAfterBootCommandsIfNeeded {
         }
         UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
     }
+}
+
+##
+# Determine the current network interfaces of this host and their properties
+#
+# return: hash, e.g. { enp0s1 => { index => 1, type => "ethernet", operational => 'carrier', setup => 'configured' }}}
+sub nics {
+
+    unless( $_nics ) {
+        my $netctl;
+        UBOS::Utils::myexec( "networkctl --no-pager --no-legend", undef, \$netctl );
+
+        $_nics = {};
+        foreach my $line ( split "\n", $netctl ) {
+            if( $line =~ /^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$/ ) {
+                my( $index, $link, $type, $operational, $setup ) = ( $1, $2, $3, $4, $5 );
+
+                if( 'loopback' ne $type ) {
+                    my $n = {};
+
+                    $n->{index}       = $index;
+                    $n->{type}        = $type;
+                    $n->{operational} = $operational;
+                    $n->{setup}       = $setup;
+
+                    $_nics->{$link} = $n;
+                }
+            }
+        }
+    }
+    return $_nics;
+}
+
+##
+# Obtain hardware configuration information, if it exists.
+sub hwConf {
+    unless( $_hwConf ) {
+        if( -e $HARDWARE_CONF_FILE ) {
+            $_hwConf = UBOS::Utils::readJsonFile( $HARDWARE_CONF_FILE );
+        } else {
+            $_hwConf = {};
+        }
+    }
+    return $_hwConf;
 }
 
 1;
