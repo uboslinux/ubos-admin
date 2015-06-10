@@ -33,6 +33,7 @@ use fields qw( hostname
                baseservices deviceservices additionalservices
                basemodules  devicemodules  additionalmodules
                additionalkernelparameters
+               checksignatures
                packagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
@@ -165,6 +166,17 @@ sub addKernelParameters {
     my @pars = @_;
 
     push @{$self->{additionalkernelparameters}}, @pars;
+}
+
+##
+# Set whether package signatures should be checked. This applies to install
+# time and to run-time.
+# $check: never, optional or required
+sub setCheckSignatures {
+    my $self  = shift;
+    my $check = shift;
+
+    $self->{checksignatures} = $check;
 }
 
 ##
@@ -353,17 +365,19 @@ sub generatePacmanConfigTarget {
         $dbRoot = "http://depot.ubos.net/$channel/$arch";
     }
 
+    my $levelString = $self->getSigLevelString();
+
     # Generate pacman config file for creating the image
     my $file = File::Temp->new( UNLINK => 1 );
-    print $file <<'END';
+    print $file <<END;
 #
 # Pacman config file for installing packages
 #
 
 [options]
-SigLevel           = Required TrustedOnly
-LocalFileSigLevel  = Required TrustedOnly
-RemoteFileSigLevel = Required TrustedOnly
+SigLevel           = $levelString
+LocalFileSigLevel  = $levelString
+RemoteFileSigLevel = $levelString
 END
 
     foreach my $db ( @$dbs ) {
@@ -424,9 +438,10 @@ sub savePacmanConfigProduction {
 
     debug( "Executing savePacmanConfigProduction" );
 
-    my $errors  = 0;
-    my $arch    = $self->arch;
-    my $channel = $self->{channel};
+    my $errors      = 0;
+    my $arch        = $self->arch;
+    my $channel     = $self->{channel};
+    my $levelString = $self->getSigLevelString();
 
     my $pacmanConfigProduction = <<END;
 #
@@ -437,9 +452,9 @@ sub savePacmanConfigProduction {
 Architecture = $arch
 CheckSpace
 
-SigLevel           = Required TrustedOnly
-LocalFileSigLevel  = Optional TrustedOnly
-RemoteFileSigLevel = Required TrustedOnly
+SigLevel           = $levelString
+LocalFileSigLevel  = $levelString
+RemoteFileSigLevel = $levelString
 
 Include /etc/pacman.d/repositories.d/*
 END
@@ -452,7 +467,9 @@ END
 [$db]
 Server = http://depot.ubos.net/$channel/\$arch/$db
 END
-        # Note what is and isn't escaped here
+            # Note what is and isn't escaped here
+            ++$errors;
+        }
     }
 
     return $errors;
@@ -595,7 +612,7 @@ OSRELEASE
 sub configureNetworkd {
     my $self = shift;
 
-    my $target        = $self->{target};
+    my $target = $self->{target};
 
     UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' );
     UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' );
@@ -711,6 +728,24 @@ sub deviceClass {
     my $self = shift;
 
     fatal( 'Method deviceClass() must be overridden in', ref( $self ));
+}
+
+##
+# Convert the checksignatures field into a string that can be added to
+# a pacman.conf file.
+# return: string, such as "Optional TrustAll"
+sub getSigLevelString {
+    my $self = shift;
+
+    my $ret;
+    if( 'never' eq $self->{checksignatures} ) {
+        $ret = 'Never';
+    } elsif( 'optional' eq $self->{checksignatures} ) {
+        $ret = 'Optional TrustAll';
+    } else { # can't be anything else
+        $ret = 'Required TrustedOnly';
+    }
+    return $ret;
 }
 
 1;
