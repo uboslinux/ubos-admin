@@ -3,7 +3,7 @@ url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
 pkgver=0.152
-pkgrel=1
+pkgrel=2
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
 license=('GPL')
@@ -118,6 +118,9 @@ package() {
 # Systemd
     mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
     install -m 644 $startdir/systemd/ubos-*.service $pkgdir/usr/lib/systemd/system/
+
+# Repositories
+    mkdir -p $pkgdir/etc/pacman.d/repositories.d/
 
 # Other config files
     mkdir -p $pkgdir/etc/php/conf.d
