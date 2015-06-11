@@ -40,6 +40,8 @@ my $SITES_DIR          = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE     = '/etc/ubos/config.json';
 my $HARDWARE_CONF_FILE = '/etc/ubos/hardware.json';
 my $AFTER_BOOT_FILE    = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
+my $PACMAN_CONF_SEP    = '### DO NOT EDIT ANYTHING BELOW THIS LINE, ubos-admin WILL OVERWRITE ###';
+
 my $_hostConf          = undef;
 my $_now               = time();
 my $_rolesOnHostInSequence = undef; # allocated as needed
@@ -868,6 +870,43 @@ sub hwConf {
         }
     }
     return $_hwConf;
+}
+
+##
+# Regenerate the /etc/pacman.conf file. If a repository gets added,
+# the next pacman command must be to sync with the added repository,
+# otherwise a pacman error will occur.
+# $pacmanConfFile: the pacman config file, or default if not provided.
+# $pacmanRepoDir: directory containing the repository fragement statements.
+# This allows ubos-install to invoke this for staged images
+sub regeneratePacmanConf {
+    my $pacmanConfFile = shift || '/etc/pacman.conf';
+    my $pacmanRepoDir  = shift || '/etc/pacman.d/repositories.d';
+
+    my $pacmanConf    = UBOS::Utils::slurpFile( $pacmanConfFile );
+    my $oldPacmanConf = $pacmanConf;
+
+    if( $pacmanConf =~ m!^(.*?)$PACMAN_CONF_SEP!s ) {
+        # zap the trailer
+        $pacmanConf = $1;
+    }
+
+    $pacmanConf =~ s!\s+$!!; # zap white space at end
+    $pacmanConf .= "\n\n" . $PACMAN_CONF_SEP . "\n";
+
+    my @repoFiles = glob( "$pacmanRepoDir/*" );
+    @repoFiles = sort @repoFiles;
+
+    foreach my $repoFile ( @repoFiles ) {
+        my $toAdd = UBOS::Utils::slurpFile( $repoFile );
+        $toAdd =~ s!^\s+!!;
+        $toAdd =~ s!\s+$!!;
+        $pacmanConf .= "\n" . $toAdd . "\n";
+    }
+
+    unless( $pacmanConf eq $oldPacmanConf ) {
+        UBOS::Utils::saveFile( $pacmanConfFile, $pacmanConf );
+    }
 }
 
 1;

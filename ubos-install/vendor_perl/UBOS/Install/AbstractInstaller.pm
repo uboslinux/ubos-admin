@@ -441,6 +441,7 @@ sub savePacmanConfigProduction {
     my $errors      = 0;
     my $arch        = $self->arch;
     my $channel     = $self->{channel};
+    my $target      = $self->{target};
     my $levelString = $self->getSigLevelString();
 
     my $pacmanConfigProduction = <<END;
@@ -456,14 +457,13 @@ SigLevel           = $levelString
 LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
 
-Include /etc/pacman.d/repositories.d/*
 END
-    unless( UBOS::Utils::saveFile( $self->{target} . '/etc/pacman.conf', $pacmanConfigProduction, 0644 )) {
+    unless( UBOS::Utils::saveFile( "$target/etc/pacman.conf", $pacmanConfigProduction, 0644 )) {
         ++$errors;
     }
 
     foreach my $db ( @$dbs ) {
-        unless( UBOS::Utils::saveFile( $self->{target} . '/etc/pacman.d/repositories.d/' . $db, <<END, 0644 )) {
+        unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
 [$db]
 Server = http://depot.ubos.net/$channel/\$arch/$db
 END
@@ -472,6 +472,7 @@ END
         }
     }
 
+    UBOS::Host::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d" );
     return $errors;
 }
 
