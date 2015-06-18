@@ -24,6 +24,8 @@
 # Comments:
 # Cannot check that device is removable: some USB disks have that at 0
 # We accept partitions or entire disks
+# We also accept a directory called /UBOS-STAFF, to support containerization
+#
 
 use strict;
 use warnings;
@@ -46,22 +48,31 @@ sub initializeIfNeeded {
     }
 
     my $device = guessConfigurationDevice();
-    unless( $device ) {
-        debug( 'No staff device found' );
-        return;
+    my $target = undef;
+    my $init   = 0;
+    if( $device ) {
+        debug( 'Staff device:', $device );
+
+        my $targetFile = File::Temp->newdir( DIR => '/var/run', UNLINK => 1 );
+        $target     = $targetFile->dirname;
+
+        if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
+            error( 'Failed to mount:', $device, $target );
+            return;
+        }
+        $init = 1;
+
+    } else {
+        if( -d "/$LABEL" ) {
+            $target = "/$LABEL";
+            # don't init
+        } else {
+            debug( 'No staff device found' );
+            return;
+        }
     }
 
-    debug( 'Staff device:', $device );
-
-    my $targetFile = File::Temp->newdir( DIR => '/var/run', UNLINK => 1 );
-    my $target     = $targetFile->dirname;
-
-    if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
-        error( 'Failed to mount:', $device, $target );
-        return;
-    }
-
-    if( UBOS::Host::config()->get( 'ubos.initializestaffonboot', 1 )) {
+    if( $init && UBOS::Host::config()->get( 'ubos.initializestaffonboot', 1 )) {
         if( initializeConfigurationIfNeeded( $target )) {
             error( 'Initialization staff device failed:', $device, $target );
         }
@@ -71,8 +82,10 @@ sub initializeIfNeeded {
         error( 'Loading current configuration failed from', $device, $target );
     }
 
-    if( UBOS::Utils::myexec( "umount '$target'" )) {
-        error( 'Failed to unmount:', $device, $target );
+    if( $device ) {
+        if( UBOS::Utils::myexec( "umount '$target'" )) {
+            error( 'Failed to unmount:', $device, $target );
+        }
     }
     return;
 }
