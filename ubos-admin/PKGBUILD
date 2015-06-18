@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.154
+pkgver=0.155
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -125,4 +125,7 @@ package() {
 # Other config files
     mkdir -p $pkgdir/etc/php/conf.d
     install -m644 $startdir/etc/php/conf.d/*.ini $pkgdir/etc/php/conf.d/
+
+# A directory to mount a UBOS staff to in a container
+    mkdir -p $pkgdir/UBOS-STAFF
 }
