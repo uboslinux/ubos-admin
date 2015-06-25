@@ -37,6 +37,8 @@ our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
                   myexec saveFile slurpFile );
 my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
+my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
+
 ##
 # Read and parse JSON from a file
 # $from: file to read from
@@ -888,6 +890,43 @@ sub uri_escape {
     $s =~ s!([^-A-Za-z0-9\._~])!sprintf("%%%02X",ord($1))!ge;
 
     return $s;
+}
+
+##
+# Regenerate the /etc/pacman.conf file. If a repository gets added,
+# the next pacman command must be to sync with the added repository,
+# otherwise a pacman error will occur.
+# $pacmanConfFile: the pacman config file, or default if not provided.
+# $pacmanRepoDir: directory containing the repository fragement statements.
+# This allows ubos-install to invoke this for staged images
+sub regeneratePacmanConf {
+    my $pacmanConfFile = shift || '/etc/pacman.conf';
+    my $pacmanRepoDir  = shift || '/etc/pacman.d/repositories.d';
+
+    my $pacmanConf    = slurpFile( $pacmanConfFile );
+    my $oldPacmanConf = $pacmanConf;
+
+    if( $pacmanConf =~ m!^(.*?)$PACMAN_CONF_SEP!s ) {
+        # zap the trailer
+        $pacmanConf = $1;
+    }
+
+    $pacmanConf =~ s!\s+$!!; # zap white space at end
+    $pacmanConf .= "\n\n" . $PACMAN_CONF_SEP . "\n";
+
+    my @repoFiles = glob( "$pacmanRepoDir/*" );
+    @repoFiles = sort @repoFiles;
+
+    foreach my $repoFile ( @repoFiles ) {
+        my $toAdd = UBOS::Utils::slurpFile( $repoFile );
+        $toAdd =~ s!^\s+!!;
+        $toAdd =~ s!\s+$!!;
+        $pacmanConf .= "\n" . $toAdd . "\n";
+    }
+
+    unless( $pacmanConf eq $oldPacmanConf ) {
+        UBOS::Utils::saveFile( $pacmanConfFile, $pacmanConf );
+    }
 }
 
 ##

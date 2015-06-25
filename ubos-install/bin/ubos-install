@@ -35,7 +35,6 @@ use warnings;
 
 use Getopt::Long qw( :config pass_through );
 
-use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -91,7 +90,16 @@ if( $target && ! -d $target ) {
 }
 # Use current device class if not given as parameter
 unless( $deviceclassname ) {
-    $deviceclassname = UBOS::Host::deviceClass();
+    # see also UBOS::Host::deviceClass
+    if( -e '/etc/os-release' ) {
+        my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
+        while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9])\"!mg ) {
+            if( $1 eq 'UBOS_DEVICECLASS' ) {
+                $deviceclassname = $2;
+                last;
+            }
+        }
+    }
 }
 unless( $deviceclassname ) {
     # now we guess

@@ -112,6 +112,10 @@ package() {
     mkdir -p $pkgdir/var/lib/tomcat8/sites
 
 # Mysql
+    # Our mysql-ubos.service runs the mysql initialization as user mysql:mysql, and thus cannot
+    # create /var/lib/mysql
+    mkdir -p -m 700 $pkgdir/var/lib/mysql
+    chown 89:1 $pkg/var/lib/mysql
     mkdir -p -m 755 $pkgdir/etc/mysql
     install -m644 $startdir/etc/mysql/mysql-ubos.cnf $pkgdir/etc/mysql/
 

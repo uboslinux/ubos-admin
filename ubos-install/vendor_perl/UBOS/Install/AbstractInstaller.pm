@@ -472,7 +472,7 @@ END
         }
     }
 
-    UBOS::Host::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d" );
+    UBOS::Utils::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d" );
     return $errors;
 }
 
