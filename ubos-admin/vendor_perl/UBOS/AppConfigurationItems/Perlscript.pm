@@ -59,7 +59,7 @@ sub new {
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
 # return: success or fail
-sub installOrCheck {
+sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
@@ -80,7 +80,7 @@ sub installOrCheck {
 
     if( $doIt ) {
         my $scriptcontent = slurpFile( $script );
-        my $operation = 'install';
+        my $operation = 'deploy';
 
         debug( 'Running eval', $script, $operation );
 
@@ -99,7 +99,7 @@ sub installOrCheck {
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
 # return: success or fail
-sub uninstallOrCheck {
+sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
@@ -124,7 +124,7 @@ sub uninstallOrCheck {
 
     if( $doIt ) {
         my $scriptcontent = slurpFile( $script );
-        my $operation = 'uninstall';
+        my $operation = 'undeploy';
 
         debug( 'Running eval', $script, $operation );
 

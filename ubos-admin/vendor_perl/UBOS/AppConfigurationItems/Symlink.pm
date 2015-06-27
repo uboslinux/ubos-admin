@@ -58,7 +58,7 @@ sub new {
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
 # return: success or fail
-sub installOrCheck {
+sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
@@ -124,7 +124,7 @@ sub installOrCheck {
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
 # return: success or fail
-sub uninstallOrCheck {
+sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;

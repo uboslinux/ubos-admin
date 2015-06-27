@@ -89,7 +89,7 @@ sub deployOrCheck {
             foreach my $appConfigItem ( @$appConfigItems ) {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
-                    $ret &= $item->installOrCheck( $doIt, $codeDir, $dir, $config );
+                    $ret &= $item->deployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
             }
         }
@@ -127,7 +127,7 @@ sub undeployOrCheck {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
 
                 if( $item ) {
-                    $ret &= $item->uninstallOrCheck( $doIt, $codeDir, $dir, $config );
+                    $ret &= $item->undeployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
             }
         }
