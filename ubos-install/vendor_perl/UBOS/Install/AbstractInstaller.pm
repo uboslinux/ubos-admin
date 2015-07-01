@@ -213,6 +213,7 @@ sub install {
         $errors += $self->saveOther();
         $errors += $self->configureOs();
         $errors += $self->configureNetworkd();
+        $errors += $self->doUpstreamFixes();
 
         $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
      
@@ -617,6 +618,42 @@ sub configureNetworkd {
 
     UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' );
     UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' );
+
+    return 0;
+}
+
+##
+# Do whatever necessary to fix upstream bugs
+sub doUpstreamFixes {
+    my $self = shift;
+    
+    my $target = $self->{target};
+
+    # systemd-tmpfiles-setup.service should not be started in a container
+    
+    UBOS::Utils::saveFile( $target . '/etc/systemd/system/systemd-tmpfiles-setup.service', <<END );    
+#  This file is part of systemd, but with UBOS fixes: do not start in container.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+
+[Unit]
+Description=Create Volatile Files and Directories
+Documentation=man:tmpfiles.d(5) man:systemd-tmpfiles(8)
+DefaultDependencies=no
+Conflicts=shutdown.target
+After=local-fs.target systemd-sysusers.service
+Before=sysinit.target shutdown.target
+RefuseManualStop=yes
+ConditionVirtualization=!systemd-nspawn
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/systemd-tmpfiles --create --remove --boot --exclude-prefix=/dev
+END
 
     return 0;
 }
