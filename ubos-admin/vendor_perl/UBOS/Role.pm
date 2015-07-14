@@ -526,7 +526,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{source} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': field 'source' must be string" );
                     }
-                    unless( $appConfigItem->{source} =~ m!\${.*}! ) {
+                    unless( $appConfigItem->{source} =~ m!\$\{.*\}! ) {
                         # Symlinks get to have variables in their sources
                         foreach my $name ( @names ) {
                             unless( $name  && UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
