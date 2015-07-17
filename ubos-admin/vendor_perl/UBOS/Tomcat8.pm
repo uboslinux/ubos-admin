@@ -81,7 +81,7 @@ sub updateServerXmlFile {
     my $content = UBOS::Utils::slurpFile( $ourServerXmlTemplate );
     $content =~ s!INSERT-UBOS-SITES-HERE!$hostsSection!;
 
-    UBOS::Utils::saveFile( $mainServerXmlFile, $content, 0640 );
+    UBOS::Utils::saveFile( $mainServerXmlFile, $content, 0640, 'root', 'tomcat8' );
 }
 
 1;
