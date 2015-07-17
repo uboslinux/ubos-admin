@@ -123,7 +123,9 @@ sub hostname {
 sub ip {
     unless( $_ip ) {
         my( $ip ) = inet_ntoa( (gethostbyname(hostname()))[4] );
-        unless( $_ip ) {
+        if( $ip ) {
+            $_ip = $ip;
+        } else {
             $_ip = '127.0.0.1';
         }
     }
