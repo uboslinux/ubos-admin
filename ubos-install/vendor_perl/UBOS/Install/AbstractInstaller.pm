@@ -463,6 +463,10 @@ END
         ++$errors;
     }
 
+    unless( -d "$target/etc/pacman.d/repositories.d" ) {
+        UBOS::Utils::mkdir( "$target/etc/pacman.d/repositories.d" );
+    }
+
     foreach my $db ( @$dbs ) {
         unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
 [$db]
