@@ -48,12 +48,14 @@ sub initializeIfNeeded {
     }
 
     my $device = guessConfigurationDevice();
-    my $target = undef;
-    my $init   = 0;
+
+    my $targetFile = undef; # must be out here so unlinking happens at end of function
+    my $target     = undef;
+    my $init       = 0;
     if( $device ) {
         debug( 'Staff device:', $device );
 
-        my $targetFile = File::Temp->newdir( DIR => '/var/run', UNLINK => 1 );
+        $targetFile = File::Temp->newdir( DIR => '/var/tmp', UNLINK => 1 );
         $target     = $targetFile->dirname;
 
         if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
@@ -231,14 +233,8 @@ sub loadCurrentConfiguration {
             unless( -d '/home/shepherd/.ssh' ) {
                 UBOS::Utils::mkdir( "/home/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
             }
-            my $authorizedKeys = '';
-            if( -e "/home/shepherd/.ssh/authorized_keys" ) {
-                $authorizedKeys = UBOS::Utils::slurpFile( "/home/shepherd/.ssh/authorized_keys" );
-            }
-            if( $authorizedKeys !~ m!\Q$sshKey\E! ) {
-                $authorizedKeys .= $sshKey . "\n";
-            }
-            UBOS::Utils::saveFile( "/home/shepherd/.ssh/authorized_keys", $authorizedKeys, 0644, 'shepherd', 'shepherd' );
+            # only the current ssh key may be there
+            UBOS::Utils::saveFile( "/home/shepherd/.ssh/authorized_keys", $sshKey . "\n", 0644, 'shepherd', 'shepherd' );
 
             UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, '0600', 'root', 'root' );
 shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mount *, /usr/bin/umount *, /bin/bash *
