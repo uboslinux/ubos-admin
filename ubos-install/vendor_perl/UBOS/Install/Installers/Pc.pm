@@ -242,7 +242,8 @@ sub createDiskLayout {
                             {   '/boot' => {
                                     'index' => 1,
                                     'fs'    => 'ext4',
-                                    'size'  => '100M'
+                                    'size'  => '100M',
+                                    'boot'  => 1
                                 },
                                 '/' => {
                                     'index' => 2,
@@ -275,7 +276,8 @@ sub createDiskLayout {
                             {   '/boot' => {
                                     'index' => 1,
                                     'fs'    => 'ext4',
-                                    'size'  => '100M'
+                                    'size'  => '100M',
+                                    'boot'  => 1
                                 },
                                 '/' => {
                                     'index' => 2,
