@@ -168,23 +168,29 @@ sub insertSlurpedFiles {
 
 ##
 # Execute a command, and optionally read/write standard stream to/from strings
-# $cmd: the commaand
+# $cmd: the command
 # $inContent: optional string containing what will be sent to stdin
 # $outContentP: optional reference to variable into which stdout output will be written
 # $errContentP: optional reference to variable into which stderr output will be written.
 #               if this has the same non-null value as $outContentP, both streams will be
 #               redirected together
+# $logInstead: log this command instead of $cmd (because $cmd may contain a secret)
 sub myexec {
     my $cmd         = shift;
     my $inContent   = shift;
     my $outContentP = shift;
     my $errContentP = shift;
+    my $logInstead  = shift;
 
     my $inFile;
     my $outFile;
     my $errFile;
 
-    debug( 'Exec:', $cmd );
+    if( $logInstead ) {
+        debug( 'Exec:', $logInstead );
+    } else {
+        debug( 'Exec:', $cmd );
+    }
 
     if( $inContent ) {
         $inFile = File::Temp->new();
