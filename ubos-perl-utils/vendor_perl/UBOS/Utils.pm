@@ -39,6 +39,15 @@ my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
 my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
 
+my $_now = time(); # Time the script(s) started running, use now() to access
+
+##
+# Obtain the UNIX system time when the script(s) started running.
+# return: the UNIX system time
+sub now {
+    return $_now;
+}
+
 ##
 # Read and parse JSON from a file
 # $from: file to read from

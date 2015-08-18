@@ -41,8 +41,7 @@ my $HOST_CONF_FILE     = '/etc/ubos/config.json';
 my $HARDWARE_CONF_FILE = '/etc/ubos/hardware.json';
 my $AFTER_BOOT_FILE    = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
 
-my $_hostConf          = undef;
-my $_now               = time();
+my $_hostConf              = undef; # allocated as needed
 my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
@@ -57,10 +56,11 @@ my $_hwConf                = undef; # allocated as needed
 sub config {
     unless( $_hostConf ) {
         my $raw = readJsonFromFile( $HOST_CONF_FILE );
+        my $now = UBOS::Utils::now();
 
         $raw->{hostname}        = Sys::Hostname::hostname;
-        $raw->{now}->{unixtime} = $_now;
-        $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $_now );
+        $raw->{now}->{unixtime} = $now;
+        $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $now );
 
         $_hostConf = UBOS::Configuration->new( 'Host', $raw );
     }

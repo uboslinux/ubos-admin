@@ -752,6 +752,7 @@ sub getSigLevelString {
     my $self = shift;
 
     my $ret;
+    # ubos-install makde sure it is all lowercase
     if( 'never' eq $self->{checksignatures} ) {
         $ret = 'Never';
     } elsif( 'optional' eq $self->{checksignatures} ) {

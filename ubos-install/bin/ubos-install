@@ -76,6 +76,7 @@ if( $help ) {
 if( !$parseOk ) {
     synopsisHelpQuit( 0 );
 }
+$checkSignatures = lc( $checkSignatures );
 if( $checkSignatures ne 'never' && $checkSignatures ne 'optional' && $checkSignatures ne 'required' ) {
     synopsisHelpQuit( 0 );
 }
@@ -156,7 +157,7 @@ if( @addKernelParameter ) {
 }
 $installer->setCheckSignatures( $checkSignatures );
 
-debug( 'Using installer', $installer );
+debug( 'Using installer', ref( $installer ));
 
 my $diskLayout = $installer->createDiskLayout( \@ARGV );
 unless( $diskLayout ) {
@@ -205,7 +206,8 @@ END
     print "    $0 <device> ...\n";
     if( $long ) {
         print <<END;
-        Install UBOS on <device>. <device> must be a disk device, or a pre-allocated disk image.
+        Install UBOS on <device>. <device> must be a disk device, or a pre-allocated disk image,
+        or an empty directory.
         If more than one <device> is given, mirror across at least two disks (RAID1).
         WARNING: THIS WILL FORMAT <device>. ALL YOUR DATA ON IT WILL BE LOST.
         
@@ -292,39 +294,6 @@ END
                   Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
 END
     }
-    print "    $0 --directory <dir>\n";
-    if( $long ) {
-        print <<END;
-        Install UBOS into a local directory, so it can be run in a Linux container.
-        The directory must exist, and must be empty.
-
-        Optional arguments:
-            --verbose:
-                  Increase amount of status output.
-            --logConfFile <log4perlconf>:
-                  Alternate logging configuration file (not common).
-            --channel <channel>:
-                  The UBOS release channel; defaults to green.
-            --hostname <hostname>:
-                  The hostname to set; defaults to a deviceclass-specific name.
-            --repository <path>:
-                  Use this local UBOS repository instead of http://depot.ubos.net/
-            --deviceclass <class>:
-                  The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
-                  is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
-            --addpackage <package>:
-                  Name of an additional package to install beyond the default of the device class
-            --addservice <service>:
-                  Name of an additional systemd service to enable beyond the default of the device class
-            --addmodule <module>:
-                  Name of an additionl kernel module to load beyond the default of the device class
-            --addkernelparameter <parameter>:
-                  Verbatim string to be appended to the kernel boot parameter. This currently only
-                  works on some device classes.
-            --checksignatures <never|optional|required>
-                  Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
-END
-    }
     print "    $0 --help\n";
     if( $long ) {
         print <<END;
@@ -333,7 +302,7 @@ END
 END
     }
 
-    exit 0;
+    exit 1;
 }
 
 1;
