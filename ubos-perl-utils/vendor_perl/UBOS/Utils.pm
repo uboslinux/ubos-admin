@@ -408,7 +408,7 @@ sub mkdir {
 # $mask: permissions on the directory
 # $uname: owner of the directory
 # $gname: group of the directory
-# return: 1 if successful
+# return: 1 if successful, or if the directory existed already
 sub mkdirDashP {
     my $filename = shift;
     my $mask     = shift;
@@ -456,7 +456,7 @@ sub mkdirDashP {
             }
         }
     }
-    return 0;
+    return 1;
 }
 
 ##
@@ -575,14 +575,14 @@ sub isDirEmpty {
 # return: hash of file name to file content
 sub readFilesInDirectory {
     my $dir     = shift;
-    my $pattern = shift || '\.pm$';
+    my $pattern = shift;
 
     my $ret = {};
     
     opendir( DIR, $dir ) || error( $! );
 
     while( my $file = readdir( DIR )) {
-        if( $file =~ m/$pattern/ ) {
+        if( !$pattern || $file =~ m/$pattern/ ) {
             my $fileName = "$dir/$file";
             my $content  = UBOS::Utils::slurpFile( $fileName );
 
