@@ -424,7 +424,8 @@ sub installPackages {
     my $out;
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
-        error( "pacman failed:", $err, "\nconfiguration was:\n", UBOS::Utils::slurpFile( $pacmanConfig ) );
+        error( "pacman failed:", $err );
+        debug( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfig ) } );
         ++$errors;
     }
 
