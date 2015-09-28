@@ -480,8 +480,10 @@ sub executeTriggers {
 
 ##
 # Update all the code currently installed on this host.
+# $syncFirst: if true, perform a pacman -Sy; otherwise only a pacman -Su
 # return: if -1, reboot
 sub updateCode {
+    my $syncFirst = shift;
 
     my $ret = 0;
     my $cmd;
@@ -494,7 +496,11 @@ sub updateCode {
         myexec( $cmd );
     }
 
-    $cmd = 'pacman -Syu --noconfirm';
+    if( $syncFirst ) {
+        $cmd = 'pacman -Syu --noconfirm';
+    } else {
+        $cmd = 'pacman -Su --noconfirm';
+    }
     unless( UBOS::Logging::isDebugActive() ) {
         $cmd .= ' > /dev/null';
     }

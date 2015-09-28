@@ -51,6 +51,7 @@ sub run {
     my @packageFiles     = ();
     my $reboot           = 0;
     my $noreboot         = 0;
+    my $nosync           = 0;
     my $noPackageUpgrade = 0;
     my $stage1Only       = 0;
 
@@ -61,6 +62,7 @@ sub run {
             'pkgFile=s'        => \@packageFiles,
             'reboot'           => \$reboot,
             'noreboot'         => \$noreboot,
+            'nosynchronize'    => \$nosync,
             'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
             'stage1Only'       => \$stage1Only ); # This option is not public
 
@@ -146,7 +148,7 @@ sub run {
     } elsif( @packageFiles ) {
         UBOS::Host::installPackageFiles( \@packageFiles );
     } else {
-        if( UBOS::Host::updateCode() == -1 ) {
+        if( UBOS::Host::updateCode( $nosync ? 0 : 1 ) == -1 ) {
             $rebootHeuristics = 1;
         }
     }
@@ -174,8 +176,6 @@ sub run {
 
     if( $doReboot ) {
         UBOS::Host::addAfterBootCommands( 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate();' );
-print STDERR "Would do reboot now\n";
-exit( 0 );        
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
     } else {
@@ -199,13 +199,24 @@ SSS
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
 HHH
+        <<SSS => <<HHH,
+    [--verbose | --logConfig <file>] [ --reboot | --noreboot ] --nosynchronize
+SSS
+    Update all code installed on this device, but do not update the list
+    of available packages first. This will effectively only update code that
+    has been downloaded and cached already. This will perform package updates,
+    configuration updates, database migrations et al as needed.
+    Use heuristics to determine whether the device needs to be rebooted,
+    e.g. because the kernel was updated. If --reboot is specified, always
+    reboot. If --noreboot is specified, do not reboot.
+HHH
         <<SSS => <<HHH
     [--verbose | --logConfig <file>] [ --reboot | --noreboot ] --pkgfile <package-file>
 SSS
     Update this device, but only install the provided package files
     as if they were the only code that can be upgraded. This will perform
     package updates, configuration updates, database migrations
-    et al as needed.
+    et al as needed. This implies --nosynchronize.
     Use heuristics to determine whether the device needs to be rebooted,
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
