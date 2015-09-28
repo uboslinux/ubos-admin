@@ -508,7 +508,7 @@ sub updateCode {
     if( myexec( $cmd, undef, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
-    elsif( UBOS::Logging::isDebugActive() ) {
+    } elsif( UBOS::Logging::isDebugActive() ) {
         print $out;
     }
 
