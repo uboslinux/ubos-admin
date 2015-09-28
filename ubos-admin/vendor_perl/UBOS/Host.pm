@@ -481,9 +481,11 @@ sub executeTriggers {
 ##
 # Update all the code currently installed on this host.
 # $syncFirst: if true, perform a pacman -Sy; otherwise only a pacman -Su
+# $showPackages: if true, show the package files that were installed
 # return: if -1, reboot
 sub updateCode {
-    my $syncFirst = shift;
+    my $syncFirst    = shift;
+    my $showPackages = shift;
 
     my $ret = 0;
     my $cmd;
@@ -501,10 +503,30 @@ sub updateCode {
     } else {
         $cmd = 'pacman -Su --noconfirm';
     }
-    unless( UBOS::Logging::isDebugActive() ) {
-        $cmd .= ' > /dev/null';
+
+    my $out;
+    if( myexec( $cmd, undef, \$out ) != 0 ) {
+        error( 'Command failed:', $cmd, "\n$out" );
+
+    elsif( UBOS::Logging::isDebugActive() ) {
+        print $out;
     }
-    myexec( $cmd );
+
+    if( $showPackages ) {
+        my @lines     = split /\n/, $out;
+        my @installed = grep /^installing /, @lines;
+        my @upgraded  = grep /^upgrading / , @lines;
+
+        if( @installed ) {
+            print 'Packages installed: ' . join( ' ', @installed ) . "\n";
+        }
+        if( @upgraded ) {
+            print 'Packages upgraded: ' . join( ' ', @upgraded ) . "\n";
+        }
+        if( scalar( @installed ) + scalar( @upgraded ) == 0 ) {
+            print "No packages installed or upgraded.\n";
+        }
+    }
 
     if( -x '/usr/bin/pacman-db-upgrade' ) {
         # not sure when this can be removed again
@@ -593,9 +615,11 @@ sub ensurePackages {
 ##
 # Install the provided package files
 # $packageFiles: List of package files
+# $showPackages: if true, show the package files that were installed
 # return: number of installed packages
 sub installPackageFiles {
     my $packageFiles = shift;
+    my $showPackages = shift;
 
     my $err;
     my $cmd = 'pacman -U --noconfirm ' . join( ' ', @$packageFiles );
@@ -606,6 +630,13 @@ sub installPackageFiles {
     if( myexec( $cmd, undef, undef, \$err )) {
         error( 'Failed to install package file(s). Pacman says:', $err );
         return 0;
+    }
+    if( $showPackages ) {
+        if( @$packageFiles ) {
+            print 'Packages installed: ' . join( ' ', @$packageFiles ) . "\n";
+        } else {
+            print "No packages installed.\n";
+        }
     }
     return 0 + ( @$packageFiles );
 }

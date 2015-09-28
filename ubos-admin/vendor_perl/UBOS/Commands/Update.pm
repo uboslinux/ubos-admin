@@ -53,6 +53,7 @@ sub run {
     my $noreboot         = 0;
     my $nosync           = 0;
     my $noPackageUpgrade = 0;
+    my $showPackages     = 0;
     my $stage1Only       = 0;
 
     my $parseOk = GetOptionsFromArray(
@@ -63,6 +64,7 @@ sub run {
             'reboot'           => \$reboot,
             'noreboot'         => \$noreboot,
             'nosynchronize'    => \$nosync,
+            'showpackages'     => \$showPackages,
             'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
             'stage1Only'       => \$stage1Only ); # This option is not public
 
@@ -146,9 +148,9 @@ sub run {
     if( $noPackageUpgrade ) {
         # do nothing
     } elsif( @packageFiles ) {
-        UBOS::Host::installPackageFiles( \@packageFiles );
+        UBOS::Host::installPackageFiles( \@packageFiles, $showPackages );
     } else {
-        if( UBOS::Host::updateCode( $nosync ? 0 : 1 ) == -1 ) {
+        if( UBOS::Host::updateCode( $nosync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive() ) == -1 ) {
             $rebootHeuristics = 1;
         }
     }
@@ -190,7 +192,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --reboot | --noreboot ]
+    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages]
 SSS
     Update all code installed on this device. This will perform
     package updates, configuration updates, database migrations
@@ -198,9 +200,10 @@ SSS
     Use heuristics to determine whether the device needs to be rebooted,
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
+    --showpackages will print the packages that were updated.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --reboot | --noreboot ] --nosynchronize
+    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages] --nosynchronize
 SSS
     Update all code installed on this device, but do not update the list
     of available packages first. This will effectively only update code that
@@ -209,9 +212,10 @@ SSS
     Use heuristics to determine whether the device needs to be rebooted,
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
+    --showpackages will print the packages that were updated.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [ --reboot | --noreboot ] --pkgfile <package-file>
+    [--verbose | --logConfig <file>] [--reboot | --noreboot] --pkgfile <package-file>
 SSS
     Update this device, but only install the provided package files
     as if they were the only code that can be upgraded. This will perform
@@ -220,6 +224,7 @@ SSS
     Use heuristics to determine whether the device needs to be rebooted,
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
+    --showpackages will print the packages that were updated.
 HHH
     };
 }
