@@ -2,15 +2,16 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.55
+pkgver=0.57
 pkgrel=1
 pkgdesc="UBOS installation tool"
 arch=('any')
 license=('GPL')
 depends=(
-    'ubos-keyring'
     'multipath-tools'
-    'parted' )
+    'parted'
+    'ubos-keyring'
+    'ubos-perl-utils' )
 options=('!strip')
 
 package() {
