@@ -3,7 +3,7 @@ Description=UBOS networking
 Wants=network.target systemd-networkd.service systemd-resolved.service
 # Wants, not Requires: Do not restart ubos-networking if systemd-xxx gets restarted
 Requires=ubos-admin.service
-After=ubos-admin.service systemd-networkd.service systemd-resolved.service
+After=ubos-admin.service systemd-networkd.service systemd-resolved.service systemd-timesyncd.service
 
 [Service]
 Type=oneshot
