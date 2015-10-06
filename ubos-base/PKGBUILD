@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.8
+pkgver=0.9
 pkgrel=1
 pkgdesc="Metapackage for minimal UBOS"
 arch=('any')
@@ -35,7 +35,6 @@ depends=(
     'logrotate'
     'mod_wsgi2'
     'nano'
-    'ntp'
     'openssh'
     'pacman'
     'pciutils'
