@@ -8,6 +8,7 @@ pkgdesc="UBOS installation tool"
 arch=('any')
 license=('GPL')
 depends=(
+    'btrfs-progs'
     'multipath-tools'
     'parted'
     'ubos-keyring'
