@@ -54,7 +54,7 @@ sub new {
         $self->{devicepackages} = [ qw( mkinitcpio haveged cloud-init ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged ubos-networking@cloud ) ];
+        $self->{deviceservices} = [ qw( haveged ubos-networking-cloud ) ];
     }
 
     $self->SUPER::new( @args );

@@ -60,7 +60,7 @@ sub new {
                                         raspberrypi-firmware-bootloader-x archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ubos-networking@client ) ];
+        $self->{deviceservices} = [ qw( rngd ubos-networking-client ) ];
     }
     unless( $self->{devicemodules} ) {
         $self->{devicemodules} = [ qw( bcm2708-rng snd-bcm2835 ) ];
