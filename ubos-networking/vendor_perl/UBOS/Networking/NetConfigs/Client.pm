@@ -40,7 +40,7 @@ sub isPossible {
 ##
 # Activate this network configuration.
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'client', 1, undef );
+    UBOS::Networking::NetConfigUtils::setNetConfig( 'client', 1, undef, 0 );
 }
 
 ##

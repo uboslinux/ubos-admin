@@ -1,8 +1,7 @@
 #!/usr/bin/perl
 #
-# A network configuration for a device that obtains an IP address via
-# DHCP from one interface, and manages a local network with local IP addresses
-# issued by its DHCP server, with Network Address Translation, on all others.
+# A network configuration for a virtual cloud server, currently for EC2
+# only.
 #
 # This file is part of ubos-networking.
 # (C) 2012-2015 Indie Computing Corp.
@@ -24,7 +23,7 @@
 use strict;
 use warnings;
 
-package UBOS::Networking::NetConfigs::Gateway;
+package UBOS::Networking::NetConfigs::Cloud;
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -35,28 +34,20 @@ package UBOS::Networking::NetConfigs::Gateway;
 sub isPossible {
     my $allNics = UBOS::Host::nics();
     
-    return ( keys %$allNics ) > 1;
+    return ( keys %$allNics ) > 0;
 }
 
 ##
 # Activate this network configuration.
 sub activate {
-    my $upstreamNic = UBOS::Networking::NetConfigUtils::determineUpstreamNic();
-    
-    UBOS::Networking::NetConfigUtils::setNetConfig(
-            'gateway',
-            [ $upstreamNic ],
-            1,
-            [ $upstreamNic ] );
+    UBOS::Networking::NetConfigUtils::setNetConfig( 'cloud', 1, undef, 1 );
 }
-
-
 
 ##
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Act as a home router with an upstream connection and a local network.';
+    return 'Connect to a network as DHCP and DNS client.';
 }
 
 1;

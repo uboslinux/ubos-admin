@@ -58,6 +58,10 @@ sub new {
         $self->{devicepackages} = [ qw( uboot-tools archlinuxarm-keyring ) ];
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
+    unless( $self->{deviceservices} ) {
+        $self->{deviceservices} = [ qw( rngd ubos-networking@client ) ];
+    }
+
     $self->SUPER::new( @args );
 
     return $self;

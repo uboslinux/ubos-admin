@@ -1,0 +1,16 @@
+[Unit]
+Description=Netfilter Tables for UBOS
+Documentation=man:nft(8)
+Wants=network-pre.target
+Before=network-pre.target
+ConditionPathExists=/etc/ubos-nftables.conf
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/nft -f /etc/ubos-nftables.conf
+ExecReload=/usr/bin/nft -f /usr/share/ubos-networking/bin/ubos-nftables-reload
+ExecStop=/usr/bin/nft flush ruleset
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -2,8 +2,9 @@
 # to override the default that comes with the package
 [Unit]
 Description=mDNS/DNS-SD for UBOS
-Requires=ubos-networking.service avahi-daemon.socket
+Requires=ubos-networking.service
 After=ubos-networking.service
+Conflicts=avahi-daemon.service
 
 [Service]
 Type=dbus
@@ -16,5 +17,4 @@ NotifyAccess=main
 
 [Install]
 WantedBy=multi-user.target
-Also=avahi-daemon.socket
 Alias=dbus-org.freedesktop.Avahi.service

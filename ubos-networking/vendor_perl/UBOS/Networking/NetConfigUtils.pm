@@ -30,44 +30,16 @@ use UBOS::Logging;
 use UBOS::Utils;
 
 my $ipLinks        = undef;
-my $confFile       = '/etc/ubos/networking.conf';
-my $_conf          = undef; # initialized as needed
 
+my $avahiConfigFile             = '/etc/avahi/avahi.conf';
+my $nftablesConfigFile          = '/etc/ubos-nftables.conf';
+my $openPortsFilePattern        = '/etc/ubos/open-ports/*.open-port';
 my $dotNetworkDefaultFile       = '/etc/systemd/network/99-ubos-default.network';
 my $dotNetworkDhcpFilePattern   = '/etc/systemd/network/50-ubos-dhcp-%s.network';
 my $dotNetworkStaticFilePattern = '/etc/systemd/network/50-ubos-static-%s.network';
 my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
 my $etherGlobs                  = 'en* eth*';
 my $wlanGlobs                   = 'wifi* wlan*';
-
-##
-# Initialize if needed. Invoked at boot and when module is installed
-sub initializeIfNeeded {
-
-    if( -e $confFile ) {
-        $_conf = UBOS::Utils::readJsonFromFile( $confFile );
-    } else {
-        $_conf = {
-            'netconfig' => 'client'
-        };
-        UBOS::Utils::writeJsonToFile( $confFile, $_conf );
-    }
-    
-    my $netConfigName = $_conf->{netconfig}; 
-    activateNetConfig( $netConfigName );
-}
-
-##
-# Obtain the current configuration per config file
-#
-# return: hash
-sub netConfig {
-
-    unless( $_conf ) {
-        $_conf = UBOS::Utils::readJsonFromFile( $confFile );
-    }
-    return $_conf;
-}
 
 ##
 # Find all NetConfigs
@@ -85,22 +57,11 @@ sub activateNetConfig {
     my $newConfigName = shift;
     
     my $netConfigs = findNetConfigs();
-    my $newConfig  = $netConfigs->{$newConfigName};
 
-    if( $newConfig ) {
+    if( exists( $netConfigs->{$newConfigName} ) {
+        my $newConfig  = $netConfigs->{$newConfigName};
         UBOS::Utils::invokeMethod( $newConfig . '::activate' );
 
-        # update config file
-        
-        my $conf;
-        if( -e $confFile ) {
-            $conf = UBOS::Utils::readJsonFromFile( $confFile );
-        } else {
-            $conf = {};
-        }
-        $conf->{netconfig} = $newConfigName;
-        UBOS::Utils::writeJsonToFile( $confFile, $conf );
-        
     } else {
         fatal( 'Unknown netconfig', $newConfigName );
     }
@@ -118,7 +79,7 @@ sub getAllNics {
 ##
 # Set a particular networking configuration. This method has different
 # ways of invoking it, so pay attention.
-# $name: name of the configuration for reporting porpuses
+# $name: name of the configuration for reporting purposes
 # $dhcpClientNicInfo:
 #      if this is an array, it contains the list of NIC names that shall
 #          receive their IP address via DHCP
@@ -133,7 +94,15 @@ sub getAllNics {
 #          assigned a locally managed IP address
 #      if this is undef, it means no NIC shall be assigned a locally
 #          managed IP address
-# if both parameters are undef, it means deactivate all interfaces
+# if both parameters are undef, it means deactivate all interfaces.
+# if both parameters are NOT undef, NAT shall be setup between the two
+#
+# $notLocalNics:
+#      if this is an array, it contains the list of NIC names that go to the
+#          WAN and that should not advertise or let through any sensitive info
+#      if this is 1, it means that all NICs shall not advertise or let through
+#          any sensitive info
+#      if this is 0, it means that all NICs are on a friendly LAN
 #
 # Examples:
 # setNetConfig( 'off',    undef, undef ) -- deactivate all interfaces
@@ -145,6 +114,7 @@ sub setNetConfig {
     my $name                  = shift;
     my $dhcpClientNicInfo     = shift;
     my $privateNetworkNicInfo = shift;
+    my $notLocalNics          = shift;
 
     my $allNics = UBOS::Host::nics();
 
@@ -246,20 +216,195 @@ END
         UBOS::Utils::myexec( "ip addr flush " . $nic );
     }
 
-    # start/stop daemons, and update /etc/nsswitch.conf appropriately
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
-        _startService( 'avahi-daemon', 'avahi' );
-        _restartService( 'systemd-networkd' );
-
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
 hosts: files mdns_minimal [NOTFOUND=return] dns myhostname
 END
     } else {
-        _stopService( 'avahi-daemon' );
-        _restartService( 'systemd-networkd' );
-
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
 hosts: files dns myhostname
+END
+    }
+
+    # NAT
+    my @openPorts = _determineOpenPorts();
+    my $openPortsString;
+    foreach my $portSpec ( @openPorts ) {
+        # tcp dport ssh accept
+        if( $portsSpec =~ m!(.+)/tcp! ) {
+            $openPortsString .= "    tcp dport $1 accept\n";
+        } elsif( $portsSpec =~ m!(.+)/udp! ) {
+            $openPortsString .= "    udp dport $1 accept\n";
+        } else {
+            error( 'Unknown open ports spec:', $portsSpec );
+        }
+    }
+    if( defined( $dhcpClientNicInfo ) && defined( $privateNetworkNicInfo )) {
+        # NAT
+        UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
+#
+# The nftables configuration for UBOS. Generated automatically, do not modify
+#
+table inet filter {
+  chain input {
+    type filter hook input priority 0;
+
+    # allow established/related connections
+    ct state {established, related} accept
+
+    # early drop of invalid connections
+    ct state invalid drop
+
+    # allow from loopback
+    iifname lo accept
+
+    # allow icmp
+    ip protocol icmp accept
+    ip6 nexthdr icmpv6 accept
+
+$openPortsString
+
+    # everything else
+    reject with icmp type port-unreachable
+  }
+  chain forward {
+    type filter hook forward priority 0;
+    drop
+  }
+  chain output {
+    type filter hook output priority 0;
+  }
+}
+table nat {
+  chain prerouting {
+    type nat hook prerouting priority -150;
+  }
+  chain postrouting {
+    type nat hook postrouting priority -150;
+  }
+}
+END
+    } else {
+        # no NAT, just firewall
+        UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
+#
+# The nftables configuration for UBOS. Generated automatically, do not modify
+#
+table inet filter {
+  chain input {
+    type filter hook input priority 0;
+
+    # allow established/related connections
+    ct state {established, related} accept
+
+    # early drop of invalid connections
+    ct state invalid drop
+
+    # allow from loopback
+    iifname lo accept
+
+    # allow icmp
+    ip protocol icmp accept
+    ip6 nexthdr icmpv6 accept
+
+$openPortsString
+
+    # everything else
+    reject with icmp type port-unreachable
+  }
+  chain forward {
+    type filter hook forward priority 0;
+    drop
+  }
+  chain output {
+    type filter hook output priority 0;
+  }
+}
+END
+    }    
+
+    # Avahi
+    if( !defined( $notLocalNics ) || !$notLocalNics ) {
+        if( -e $avahiConfigFile ) {
+            UBOS::Utils::deleteFile( $avahiConfigFile );
+        }
+
+    } elsif( ref( $notLocalNics ) eq 'ARRAY' ) {
+        my $denyString = join( ', ', @$notLocalNics );
+        UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
+#
+# The avahi configuration for UBOS. Generated automatically, do not modify
+#
+
+[server]
+#domain-name=local
+browse-domains=
+use-ipv4=yes
+use-ipv6=no
+ratelimit-interval-usec=1000000
+ratelimit-burst=1000
+deny-interfaces=$denyString
+
+[wide-area]
+enable-wide-area=no
+
+[publish]
+publish-hinfo=no
+publish-workstation=no
+publish-domain=yes
+publish-resolv-conf-dns-servers=no
+publish-aaaa-on-ipv4=no
+publish-a-on-ipv6=no
+
+[reflector]
+enable-reflector=no
+reflect-ipv=no
+
+[rlimits]
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=768
+rlimit-stack=4194304
+rlimit-nproc=3
+END
+    } else {
+        # all friendly
+        UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
+#
+# The avahi configuration for UBOS. Generated automatically, do not modify
+#
+
+[server]
+#domain-name=local
+browse-domains=
+use-ipv4=yes
+use-ipv6=no
+ratelimit-interval-usec=1000000
+ratelimit-burst=1000
+
+[wide-area]
+enable-wide-area=no
+
+[publish]
+publish-hinfo=no
+publish-workstation=no
+publish-domain=yes
+publish-resolv-conf-dns-servers=no
+publish-aaaa-on-ipv4=no
+publish-a-on-ipv6=no
+
+[reflector]
+enable-reflector=no
+reflect-ipv=no
+
+[rlimits]
+rlimit-core=0
+rlimit-data=4194304
+rlimit-fsize=0
+rlimit-nofile=768
+rlimit-stack=4194304
+rlimit-nproc=3
 END
     }
 }
@@ -353,46 +498,19 @@ sub compareNics($$) {
 }
 
 ##
-# Start a daemon, but install first if needed
-sub _startService {
-    my $service = shift;
-    my $package = shift;
+# Determine the list of open ports
+# return: list of ports
+sub _determineOpenPorts {
 
-    if( defined( $package )) {
-        UBOS::Host::ensurePackages( $package );
+    my $all;
+    foreach my $file ( glob $openPortsFilePattern ) {
+        my $found = UBOS::Utils::slurpFile( $file );
+        $all .= "$found\n";
     }
+    my %ret = ();
+    map { my $s = $_; $s =~ s!^\s+!! ; $s =~ s!\s+$!! ; $ret{$s} = 1; } grep { $_ } split /\n/, $all;
 
-    # Status messages unfortunately go to stderr
-    my $out;
-    my $err;
-    UBOS::Utils::myexec( 'systemctl enable '  . $service, undef, \$out, \$err );
-    UBOS::Utils::myexec( 'systemctl restart ' . $service . ' &', undef, \$out, \$err );
-            # FIXME? Is there a better way? If this isn't started in the background,
-            # systemctl start ubos-networking may deadlock
+    return sort keys %$ret;
 }
 
-##
-# Stop a daemon
-sub _stopService {
-    my $service = shift;
-
-    my $out;
-    my $err;
-    UBOS::Utils::myexec( 'systemctl stop ' . $service, undef, \$out, \$err );
-
-    if( $err !~ m!No such file or directory! && $err !~ m!not loaded! ) {
-        UBOS::Utils::myexec( 'systemctl disable ' . $service, undef, \$out, \$err );
-    }
-}
-
-##
-# Restart a daemon
-sub _restartService {
-    my $service = shift;
-
-    my $out;
-    my $err;
-    UBOS::Utils::myexec( 'systemctl restart ' . $service, undef, \$out, \$err );
-}
-    
 1;

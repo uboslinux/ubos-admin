@@ -1,0 +1,15 @@
+[Unit]
+Description=UBOS networking (off)
+Requires=ubos-admin.service network.target systemd-networkd.service systemd-resolved.service ubos-avahi-daemon.service
+Conflicts=systemd-timesyncd ubos-networking-client.service ubos-networking-cloud.service ubos-networking-gateway.service ubos-networking-off.service
+Before=ubos-admin.service systemd-networkd.service systemd-resolved.service ubos-avahi-daemon.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-networking-standalone
+ExecStart=/usr/share/ubos-networking/bin/activate-netconfig standalone
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-networking-standalone
+
+[Install]
+WantedBy=multi-user.target

@@ -74,7 +74,7 @@ sub new {
         $self->{devicepackages} = [ qw( uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ) ];
+        $self->{deviceservices} = [ qw( rngd ubos-networking@client ) ];
     }
 
     $self->SUPER::new( @args );

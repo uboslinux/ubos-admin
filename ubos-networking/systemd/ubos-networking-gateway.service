@@ -1,0 +1,15 @@
+[Unit]
+Description=UBOS networking (gateway)
+Requires=ubos-admin.service network.target systemd-networkd.service systemd-resolved.service ubos-avahi-daemon.service
+Before=ubos-admin.service systemd-networkd.service systemd-resolved.service systemd-timesyncd.service ubos-avahi-daemon.service
+Conflicts=ubos-networking-client.service ubos-networking-cloud.service ubos-networking-off.service ubos-networking-standalone.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-networking-gateway
+ExecStart=/usr/share/ubos-networking/bin/activate-netconfig gateway
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-networking-gateway
+
+[Install]
+WantedBy=multi-user.target

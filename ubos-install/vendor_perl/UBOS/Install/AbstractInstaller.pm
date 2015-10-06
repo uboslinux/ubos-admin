@@ -69,7 +69,7 @@ sub new {
         $self->{baseservices} = [ qw( ubos-admin ubos-networking ntpd sshd ) ];
     }
     unless( $self->{basemodules} ) {
-        $self->{basemodules} = [];
+        $self->{basemodules} = [ qw( nft_nat nft_chain_nat_ipv4 ) ]; # nftables kernel module
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl tools ) ];

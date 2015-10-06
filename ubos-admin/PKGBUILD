@@ -2,8 +2,8 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.161
-pkgrel=2
+pkgver=0.162
+pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
 license=('GPL')
@@ -128,6 +128,8 @@ package() {
 # Other config files
     mkdir -p $pkgdir/etc/php/conf.d
     install -m644 $startdir/etc/php/conf.d/*.ini $pkgdir/etc/php/conf.d/
+    mkdir -p $pkgdir/etc/ubos/open-ports.d
+    install -m644 $startdir/etc/ubos/open-ports.d/* $pkgdir/etc/ubos/open-ports.d/
 
 # A directory to mount a UBOS staff to in a container
     mkdir -p $pkgdir/UBOS-STAFF

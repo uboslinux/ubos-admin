@@ -47,6 +47,7 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
+
     $self->SUPER::new( @args );
 
     return $self;

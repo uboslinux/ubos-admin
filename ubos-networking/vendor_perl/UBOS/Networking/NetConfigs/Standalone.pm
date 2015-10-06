@@ -38,7 +38,7 @@ sub isPossible {
 ##
 # Activate this network configuration.
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'standalone', undef, 1 );
+    UBOS::Networking::NetConfigUtils::setNetConfig( 'standalone', undef, 1, 0 );
 }
 
 ##

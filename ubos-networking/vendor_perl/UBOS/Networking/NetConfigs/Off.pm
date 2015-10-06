@@ -39,7 +39,7 @@ sub isPossible {
 ##
 # Activate this network configuration.
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'off', undef, undef );
+    UBOS::Networking::NetConfigUtils::setNetConfig( 'off', undef, undef, undef );
 }
 
 ##

@@ -1,0 +1,13 @@
+#!/usr/bin/perl
+#
+# Activate a netconfig. This shall only be invoked by systemd.service files.
+#
+
+use strict;
+use warnings;
+
+use UBOS::Networking::NetConfigUtils;
+
+UBOS::Networking::NetConfigUtils::activateNetConfig( $ARGV[0] || 'unknown' );
+
+1;

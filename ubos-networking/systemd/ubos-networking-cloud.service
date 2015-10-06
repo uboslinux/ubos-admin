@@ -1,0 +1,15 @@
+[Unit]
+Description=UBOS networking (cloud)
+Requires=ubos-admin.service network.target systemd-networkd.service systemd-resolved.service cloud-init.service
+Before=ubos-admin.service systemd-networkd.service systemd-resolved.service systemd-timesyncd.service cloud-init.service
+Conflicts=ubos-avahi-daemon.service avahi-daemon.service ubos-networking-client.service ubos-networking-gateway.service ubos-networking-off.service ubos-networking-standalone.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-networking-cloud
+ExecStart=/usr/share/ubos-networking/bin/activate-netconfig cloud
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-networking-cloud
+
+[Install]
+WantedBy=multi-user.target
