@@ -275,6 +275,8 @@ sub _determineDeviceType {
             $ret = 'missing';
         } elsif( -f $path ) {
             $ret = 'file';
+        } elsif( -d $path ) {
+            $ret = 'directory';
         } elsif( -b $path ) {
             my $out;
             UBOS::Utils::myexec( "lsblk -o TYPE -n '$path'", undef, \$out );

@@ -222,7 +222,10 @@ sub install {
 # Script to be run in chroot
 set -e
 
-for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+# In a container, there may be no /lib/modules
+if [ -d /lib/modules ]; then
+    for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+fi
 
 systemctl set-default multi-user.target
 
@@ -405,7 +408,11 @@ sub installPackages {
     my $target = $self->{target};
     my $errors = 0;
 
-    my @allPackages = ( $self->{kernelpackage}, @{$self->{basepackages}} );
+    my @allPackages = ();
+    if( $self->{kernelpackage} ) {
+        push @allPackages, $self->{kernelpackage};
+    }
+    push @allPackages, @{$self->{basepackages}};
     if( defined( $self->{devicepackages} )) {
         push @allPackages, @{$self->{devicepackages}};
     }
@@ -599,7 +606,7 @@ ISSUE
 ISSUE
     UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
 
-    UBOS::Utils::saveFile( $target . '/etc/os-release', <<OSRELEASE, 0644, 'root', 'root' );
+    my $osRelease = <<OSRELEASE;
 NAME="UBOS"
 ID="ubos"
 ID_LIKE="arch"
@@ -607,8 +614,13 @@ PRETTY_NAME="UBOS"
 HOME_URL="http://ubos.net/"
 BUILD_ID="$buildId"
 UBOS_DEVICECLASS="$deviceClass"
+OSRELEASE
+    if( $kernelPackage ) {
+        $osRelease .= <<OSRELEASE;
 UBOS_KERNELPACKAGE="$kernelPackage"
 OSRELEASE
+    }
+    UBOS::Utils::saveFile( $target . '/etc/os-release', $osRelease, 0644, 'root', 'root' );
 
     return 0;
 }
@@ -659,8 +671,9 @@ sub addGenerateLocaleToScript {
 
     debug( "Executing addGenerateLocaleToScript" );
 
-    $$chrootScriptP .= "echo LANG=en_US.utf8 > /etc/locale.conf\n";
+    # Run perl with the old locale 
     $$chrootScriptP .= "perl -pi -e 's/^#en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
+    $$chrootScriptP .= "echo LANG=en_US.utf8 > /etc/locale.conf\n";
     $$chrootScriptP .= "locale-gen\n";
 
     return 0;

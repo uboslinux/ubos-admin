@@ -26,7 +26,7 @@ use warnings;
 
 package UBOS::Install::Installers::Pc;
 
-use base qw( UBOS::Install::AbstractInstaller );
+use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( mkinitcpio ) ];
+        $self->{devicepackages} = [ qw( rng-tools mkinitcpio ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd ubos-networking-client ) ];
@@ -313,98 +313,7 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    info( 'Installing boot loader' );
-
-    my $errors = 0;
-    my $target = $self->{target};
-
-    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
-
-    # Ramdisk
-    debug( "Generating ramdisk" );
-
-    # The optimized ramdisk doesn't always boot, so we always skip the optimization step
-    UBOS::Utils::saveFile( "$target/etc/mkinitcpio.d/linux.preset", <<'END', 0644, 'root', 'root' );
-# mkinitcpio preset file for the 'linux' package, modified for UBOS
-#
-# Do not autodetect, as the device booting the image is most likely different
-# from the device that created the image
-
-ALL_config="/etc/mkinitcpio.conf"
-ALL_kver="/boot/vmlinuz-linux"
-
-PRESETS=('default')
-BINARIES="/usr/bin/btrfsck"
-MODULES=('btrfs')
-
-#default_config="/etc/mkinitcpio.conf"
-default_image="/boot/initramfs-linux.img"
-default_options="-S autodetect"
-END
-
-    my $out;
-    my $err;
-    if( UBOS::Utils::myexec( "chroot '$target' mkinitcpio -p linux", undef, \$out, \$err ) ) {
-        error( "Generating ramdisk failed:", $err );
-        ++$errors;
-    }
-
-    # Boot loader
-    debug( "Installing grub" );
-    my $pacmanCmd = "pacman"
-            . " -r '$target'"
-            . " -S"
-            . " '--config=" . $pacmanConfigFile . "'"
-            . " --cachedir '$target/var/cache/pacman/pkg'"
-            . " --noconfirm"
-            . " grub";
-    if( UBOS::Utils::myexec( $pacmanCmd, undef, \$out, \$err )) {
-        error( "pacman failed", $err );
-        ++$errors;
-    }
-    if( $bootLoaderDevice ) {
-        
-        if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
-            error( "grub-install failed", $err );
-            ++$errors;
-        }
-
-        my $chrootScript = <<'END';
-set -e
-
-perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
-END
-
-        if( defined( $self->{additionalkernelparameters} ) && @{$self->{additionalkernelparameters}} ) {
-            my $addParString = '';
-            map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
-            $addParString =~ s!(["'/])!\$1!g; # escape quotes and slash
-
-            $chrootScript .= <<END;
-perl -pi -e 's/GRUB_CMDLINE_LINUX_DEFAULT="(.*)"/GRUB_CMDLINE_LINUX_DEFAULT="\$1$addParString"/' /etc/default/grub
-END
-        }
-
-        $chrootScript .= <<'END';
-grub-mkconfig -o /boot/grub/grub.cfg
-END
-
-        if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
-            error( "bootloader chroot script failed:", $err, "\nwas", $chrootScript );
-            ++$errors;
-        }
-    }
-
-    return $errors;
-}
-
-##
-# Returns the arch for this device.
-# return: the arch
-sub arch {
-    my $self = shift;
-
-    return 'x86_64';
+    return $self->installGrub( $pacmanConfigFile, $diskLayout );
 }
 
 ##

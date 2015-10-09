@@ -1,5 +1,5 @@
 # 
-# Install UBOS for Amazon EC2
+# Install UBOS for a Linux container.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -19,21 +19,23 @@
 #
 
 # Device-specific notes:
-# * random number generator: haveged for artificial entropy.
-# * cloud-init for ssh keys
+# * no kernel, see https://bugs.archlinux.org/task/46591
 
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::Ec2;
+package UBOS::Install::Installers::ContainerPc;
 
-use base qw( UBOS::Install::Installers::Pc );
+use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Install::AbstractDiskLayout;
+use UBOS::Install::DiskLayouts::Directory;
 use UBOS::Install::DiskLayouts::DiskBlockDevices;
 use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::PartitionBlockDevices;
+use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -49,14 +51,13 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
-    $self->{kernelpackage} = 'linux';
+    $self->{kernelpackage} = undef; # no kernel
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( mkinitcpio haveged cloud-init ) ];
+        $self->{devicepackages} = [ qw() ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged ubos-networking-cloud ) ];
+        $self->{deviceservices} = [ qw( ubos-networking-client ) ];
     }
-
     $self->SUPER::new( @args );
 
     return $self;
@@ -72,11 +73,39 @@ sub createDiskLayout {
     # Option 1: a single image file
     # ubos-install ... image.img
 
-    # Option 2: a disk device
+    # Option 2: one device
     # ubos-install ... /dev/somedevice
 
+    # Option 3: a directory
+
+    my $directory;
+
+    my $parseOk = GetOptionsFromArray(
+            $argvp,
+            'directory=s'        => \$directory );
+    if( !$parseOk ) {
+        error( 'Invalid invocation.' );
+        return undef;
+    }
+
     my $ret = 1; # set to something, so undef can mean error
-    if( @$argvp ) {
+    if( $directory ) {
+        # Option 3
+        if( @$argvp ) {
+            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
+            $ret = undef;
+        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
+            error( 'Invalid invocation: directory must exist and be empty:', $directory );
+            $ret = undef;
+        } elsif( $self->{target} ) {
+            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
+            $ret = undef;
+        } else {
+            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
+            $self->setTarget( $directory );
+        }
+
+    } else {
         if( @$argvp > 1 ) {
             error( 'Do not specify more than one image file or device.' );
             $ret = undef;
@@ -88,7 +117,7 @@ sub createDiskLayout {
                     $first,
                     {   '/' => {
                             'index' => 1,
-                            'fs'    => 'ext4'
+                            'fs'    => 'btrfs'
                         },
                     } );
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
@@ -97,21 +126,35 @@ sub createDiskLayout {
                     $argvp,
                     {   '/' => {
                             'index' => 1,
-                            'fs'    => 'ext4'
+                            'fs'    => 'btrfs'
                         },
                     } );
 
         } elsif( $ret ) {
             error( 'Must be file or disk:', $first );
             $ret = undef;
+
+        } else {
+            # Need at least one disk
+            error( 'Must specify at least than one file or image for deviceclass=container-pc' );
+            $ret = undef;
         }
-    } else {
-        # Need at least one disk
-        error( 'Must specify at least than one file or image for deviceclass=ec2' );
-        $ret = undef;
     }
     
     return $ret;
+}
+
+##
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# $diskLayout: the disk layout
+# return: number of errors
+sub installBootLoader {
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
+
+    return 0;
 }
 
 ##
@@ -119,24 +162,7 @@ sub createDiskLayout {
 sub deviceClass {
     my $self = shift;
 
-    return 'ec2-instance';
-}
-
-##
-# Generate and save different other files if needed
-# return: number of errors
-sub saveOther {
-    my $self = shift;
-
-    my $target        = $self->{target};
-
-    UBOS::Utils::writeJsonToFile(
-            $target . '/etc/ubos/networking.conf',
-            {
-                'netconfig' => 'cloud'
-            } );
-
-    return 0;
+    return 'container-pc';
 }
 
 1;

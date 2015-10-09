@@ -28,7 +28,7 @@ use warnings;
                                                   
 package UBOS::Install::Installers::VboxPc;
 
-use base qw( UBOS::Install::Installers::Pc );
+use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
