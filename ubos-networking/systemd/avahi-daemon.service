@@ -4,7 +4,6 @@
 Description=mDNS/DNS-SD for UBOS
 Requires=ubos-networking.service
 After=ubos-networking.service
-Conflicts=avahi-daemon.service
 
 [Service]
 Type=dbus

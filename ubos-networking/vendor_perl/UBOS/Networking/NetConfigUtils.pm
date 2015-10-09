@@ -31,7 +31,7 @@ use UBOS::Utils;
 
 my $ipLinks        = undef;
 
-my $avahiConfigFile             = '/etc/avahi/avahi.conf';
+my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
 my $nftablesConfigFile          = '/etc/ubos-nftables.conf';
 my $openPortsFilePattern        = '/etc/ubos/open-ports/*.open-port';
 my $dotNetworkDefaultFile       = '/etc/systemd/network/99-ubos-default.network';
@@ -55,11 +55,14 @@ sub findNetConfigs {
 # $newConfigName: name of the NetConfig
 sub activateNetConfig {
     my $newConfigName = shift;
-    
+
     my $netConfigs = findNetConfigs();
 
-    if( exists( $netConfigs->{$newConfigName} ) {
+    if( exists( $netConfigs->{$newConfigName} )) {
         my $newConfig  = $netConfigs->{$newConfigName};
+
+        debug( 'Activating netconfig', $newConfigName );
+
         UBOS::Utils::invokeMethod( $newConfig . '::activate' );
 
     } else {
@@ -149,6 +152,7 @@ sub setNetConfig {
     if( defined( $dhcpClientNicInfo )) {
         if( ref( $dhcpClientNicInfo )) {
             foreach my $nic ( @$dhcpClientNicInfo ) {
+                debug( 'Generating DHCP client configuration for', $nic );
                 UBOS::Utils::saveFile( sprintf( $dotNetworkDhcpFilePattern, $nic ), <<END );
 #
 # DHCP interface configuration. Generated automatically, do not modify. Use
@@ -164,6 +168,7 @@ DHCP=ipv4
 END
             }
         } else {
+            debug( 'Generating fallback network configuration for', $etherGlobs, $wlanGlobs );
             UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
 #
 # Fallback configuration. Generated automatically, do not modify. Use
@@ -182,6 +187,7 @@ END
     if( defined( $privateNetworkNicInfo )) {
         if( ref( $privateNetworkNicInfo )) {
             foreach my $nic ( @$privateNetworkNicInfo ) {
+                debug( 'Generating static IP address configuration for', $nic );
                 UBOS::Utils::saveFile( sprintf( $dotNetworkStaticFilePattern, $nic ), <<END );
 #
 # Static interface configuration. Generated automatically, do not modify. Use
@@ -197,6 +203,7 @@ Address=0.0.0.0/16
 END
             }
         } else {
+            debug( 'Generating fallback static IP address configuration for', $etherGlobs, $wlanGlobs );
             UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
 #
 # Fallback configuration. Generated automatically, do not modify. Use
@@ -217,30 +224,33 @@ END
     }
 
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
+        debug( 'Generating nsswitch.conf with mdns_minimal' );
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
-hosts: files mdns_minimal [NOTFOUND=return] dns myhostname
+hosts: files mymachines mdns_minimal [NOTFOUND=return] dns myhostname
 END
     } else {
+        debug( 'Generating nsswitch.conf without mdns_minimal' );
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
-hosts: files dns myhostname
+hosts: files mymachines dns myhostname
 END
     }
 
     # NAT
     my @openPorts = _determineOpenPorts();
-    my $openPortsString;
+    my $openPortsString = '';
     foreach my $portSpec ( @openPorts ) {
         # tcp dport ssh accept
-        if( $portsSpec =~ m!(.+)/tcp! ) {
+        if( $portSpec =~ m!(.+)/tcp! ) {
             $openPortsString .= "    tcp dport $1 accept\n";
-        } elsif( $portsSpec =~ m!(.+)/udp! ) {
+        } elsif( $portSpec =~ m!(.+)/udp! ) {
             $openPortsString .= "    udp dport $1 accept\n";
         } else {
-            error( 'Unknown open ports spec:', $portsSpec );
+            error( 'Unknown open ports spec:', $portSpec );
         }
     }
     if( defined( $dhcpClientNicInfo ) && defined( $privateNetworkNicInfo )) {
         # NAT
+        debug( 'Generating nftables configuration for NAT with open ports', $openPortsString );
         UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
 #
 # The nftables configuration for UBOS. Generated automatically, do not modify
@@ -286,6 +296,7 @@ table nat {
 END
     } else {
         # no NAT, just firewall
+        debug( 'Generating nftables configuration with open ports', $openPortsString );
         UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
 #
 # The nftables configuration for UBOS. Generated automatically, do not modify
@@ -321,16 +332,18 @@ $openPortsString
   }
 }
 END
-    }    
+    }
 
     # Avahi
+    if( -e $avahiConfigFile ) {
+        UBOS::Utils::deleteFile( $avahiConfigFile );
+    }
     if( !defined( $notLocalNics ) || !$notLocalNics ) {
-        if( -e $avahiConfigFile ) {
-            UBOS::Utils::deleteFile( $avahiConfigFile );
-        }
+        UBOS::Utils::symlink( '/dev/null', $avahiConfigFile );
 
     } elsif( ref( $notLocalNics ) eq 'ARRAY' ) {
         my $denyString = join( ', ', @$notLocalNics );
+        debug( 'Generating avahi configuration denying interfaces', $denyString );
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
 #
 # The avahi configuration for UBOS. Generated automatically, do not modify
@@ -370,6 +383,7 @@ rlimit-nproc=3
 END
     } else {
         # all friendly
+        debug( 'Generating avahi configuration' );
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
 #
 # The avahi configuration for UBOS. Generated automatically, do not modify
@@ -407,6 +421,8 @@ rlimit-stack=4194304
 rlimit-nproc=3
 END
     }
+
+    UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$name");
 }
 
 ##
@@ -415,44 +431,33 @@ END
 # return: name of the nic
 sub determineUpstreamNic {
     my $allNics = UBOS::Host::nics();
-    my $conf    = netConfig();
 
+    # take the first wired one, if that fails, the first wifi one
     my $upstreamNic = undef;
-    if( exists( $conf->{upstream} )) {
-        $upstreamNic = $conf->{upstream};
+    my $firstEther = undef;
+    my $firstWlan  = undef;
+    my $bestEtherIndex = 65535;
+    my $bestWlanIndex  = 65535;
 
-        unless( exists( $allNics->{upstreamNic} )) {
-            UBOS::Logging::warning( 'Upstream NIC specified in', $confFile, 'not found:', $upstreamNic );
-            $upstreamNic = undef;
-        }
+    foreach my $nic ( keys %$allNics ) {
+        my $data  = $allNics->{$nic};
+        my $index = $data->{index};
+        if( 'ether' eq $data->{type} ) {
+            if( $index < $bestEtherIndex ) {
+                $bestEtherIndex = $index;
+                $firstEther     = $nic;
+            }
+        } elsif( 'wlan' eq $data->{type} ) {
+            if( $index < $bestWlanIndex ) {
+                $bestWlanIndex = $index;
+                $firstWlan     = $nic;
+            }
+        } # ignore others
     }
-    unless( $upstreamNic ) {
-        # take the first wired one, if that fails, the first wifi one
-        my $firstEther = undef;
-        my $firstWlan  = undef;
-        my $bestEtherIndex = 65535;
-        my $bestWlanIndex  = 65535;
-
-        foreach my $nic ( keys %$allNics ) {
-            my $data  = $allNics->{$nic};
-            my $index = $data->{index};
-            if( 'ether' eq $data->{type} ) {
-                if( $index < $bestEtherIndex ) {
-                    $bestEtherIndex = $index;
-                    $firstEther     = $nic;
-                }
-            } elsif( 'wlan' eq $data->{type} ) {
-                if( $index < $bestWlanIndex ) {
-                    $bestWlanIndex = $index;
-                    $firstWlan     = $nic;
-                }
-            } # ignore others
-        }
-        if( $firstEther ) {
-            $upstreamNic = $firstEther;
-        } else { # this may be null
-            $upstreamNic = $firstWlan;
-        }
+    if( $firstEther ) {
+        $upstreamNic = $firstEther;
+    } else { # this may be null
+        $upstreamNic = $firstWlan;
     }
     return $upstreamNic;
 }
@@ -477,10 +482,10 @@ sub compareNics($$) {
         }
     } elsif( $a =~ m!^([a-z]+)(\d+)([a-z]+)(\d+)$! ) { # e.g. enp0s0
         my( $a1, $a2, $a3, $a4 ) = ( $1, $2, $3, $4 );
-        
+
         if( $b =~ m!^([a-z]+)(\d+)([a-z]+)(\d+)$! ) {
             my( $b1, $b2, $b3, $b4 ) = ( $1, $2, $3, $4 );
-            
+
             if( $a1 eq $b1 ) {
                 if( $a2 == $b2 ) {
                     if( $a3 eq $b3 ) {
@@ -502,15 +507,18 @@ sub compareNics($$) {
 # return: list of ports
 sub _determineOpenPorts {
 
-    my $all;
+    my $all = '';
     foreach my $file ( glob $openPortsFilePattern ) {
         my $found = UBOS::Utils::slurpFile( $file );
         $all .= "$found\n";
     }
     my %ret = ();
-    map { my $s = $_; $s =~ s!^\s+!! ; $s =~ s!\s+$!! ; $ret{$s} = 1; } grep { $_ } split /\n/, $all;
+    map { $ret{$_} = 1; }
+        grep { $_ }
+        map { my $s = $_; $s =~ s!#.*!! ; $s =~ s!^\s+!! ; $s =~ s!\s+$!! ; $s }
+        split /\n/, $all;
 
-    return sort keys %$ret;
+    return sort keys %ret;
 }
 
 1;

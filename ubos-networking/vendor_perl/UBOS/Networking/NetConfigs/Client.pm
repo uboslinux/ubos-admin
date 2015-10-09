@@ -47,7 +47,7 @@ sub activate {
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Connect to a network as DHCP and DNS client.';
+    return 'Connect to a home network as DHCP and DNS client.';
 }
 
 1;
