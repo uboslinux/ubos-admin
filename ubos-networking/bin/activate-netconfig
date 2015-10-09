@@ -8,6 +8,6 @@ use warnings;
 
 use UBOS::Networking::NetConfigUtils;
 
-UBOS::Networking::NetConfigUtils::activateNetConfig( $ARGV[0] || 'unknown' );
+UBOS::Networking::NetConfigUtils::activateNetConfig( $ARGV[0] || 'unknown', 0 );
 
 1;

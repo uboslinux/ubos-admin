@@ -1,7 +1,18 @@
 [Unit]
 Description=UBOS networking (off)
-Requires=ubos-admin.service
-Conflicts=network.target systemd-networkd.service systemd-resolved.service systemd-timedated.service avahi-daemon.service ubos-networking-client.service ubos-networking-cloud.service ubos-networking-gateway.service ubos-networking-standalone.service
+Requires=\
+    ubos-admin.service
+Conflicts=\
+    avahi-daemon.service \
+    cloud-init.service \
+    systemd-networkd.service \
+    systemd-resolved.service \
+    systemd-timedated.service \
+    ubos-networking-client.service \
+    ubos-networking-cloud.service \
+    ubos-networking-gateway.service \
+    ubos-networking-standalone.service \
+    ubos-nftables.service
 
 [Service]
 Type=oneshot

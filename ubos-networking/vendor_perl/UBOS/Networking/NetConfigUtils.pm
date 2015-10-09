@@ -33,13 +33,14 @@ my $ipLinks        = undef;
 
 my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
 my $nftablesConfigFile          = '/etc/ubos-nftables.conf';
-my $openPortsFilePattern        = '/etc/ubos/open-ports/*.open-port';
+my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
 my $dotNetworkDefaultFile       = '/etc/systemd/network/99-ubos-default.network';
 my $dotNetworkDhcpFilePattern   = '/etc/systemd/network/50-ubos-dhcp-%s.network';
 my $dotNetworkStaticFilePattern = '/etc/systemd/network/50-ubos-static-%s.network';
 my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
 my $etherGlobs                  = 'en* eth*';
 my $wlanGlobs                   = 'wifi* wlan*';
+my $containerVeth               = 'host0';
 
 ##
 # Find all NetConfigs
@@ -53,8 +54,10 @@ sub findNetConfigs {
 ##
 # Activate a NetConfig by name
 # $newConfigName: name of the NetConfig
+# $restartService: if 1, restart the ubos-networking-xxx service
 sub activateNetConfig {
-    my $newConfigName = shift;
+    my $newConfigName  = shift;
+    my $restartService = shift;
 
     my $netConfigs = findNetConfigs();
 
@@ -64,6 +67,10 @@ sub activateNetConfig {
         debug( 'Activating netconfig', $newConfigName );
 
         UBOS::Utils::invokeMethod( $newConfig . '::activate' );
+
+        if( $restartService ) {
+            UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$newConfigName");
+        }
 
     } else {
         fatal( 'Unknown netconfig', $newConfigName );
@@ -168,7 +175,7 @@ DHCP=ipv4
 END
             }
         } else {
-            debug( 'Generating fallback network configuration for', $etherGlobs, $wlanGlobs );
+            debug( 'Generating fallback network configuration for', $etherGlobs, $wlanGlobs, $containerVeth );
             UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
 #
 # Fallback configuration. Generated automatically, do not modify. Use
@@ -177,7 +184,7 @@ END
 #
 
 [Match]
-Name=$etherGlobs $wlanGlobs
+Name=$etherGlobs $wlanGlobs $containerVeth
 
 [Network]
 DHCP=ipv4
@@ -203,7 +210,7 @@ Address=0.0.0.0/16
 END
             }
         } else {
-            debug( 'Generating fallback static IP address configuration for', $etherGlobs, $wlanGlobs );
+            debug( 'Generating fallback static IP address configuration for', $etherGlobs, $wlanGlobs, $containerVeth );
             UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
 #
 # Fallback configuration. Generated automatically, do not modify. Use
@@ -212,7 +219,7 @@ END
 #
 
 [Match]
-Name=$etherGlobs $wlanGlobs
+Name=$etherGlobs $wlanGlobs $containerVeth
 
 [Network]
 Address=0.0.0.0/16
@@ -421,8 +428,6 @@ rlimit-stack=4194304
 rlimit-nproc=3
 END
     }
-
-    UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$name");
 }
 
 ##

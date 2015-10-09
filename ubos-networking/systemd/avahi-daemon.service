@@ -2,8 +2,10 @@
 # to override the default that comes with the package
 [Unit]
 Description=mDNS/DNS-SD for UBOS
-Requires=ubos-networking.service
-After=ubos-networking.service
+After=\
+    ubos-networking-client.service \
+    ubos-networking-gateway.service \
+    ubos-networking-standalone.service
 
 [Service]
 Type=dbus

@@ -59,7 +59,7 @@ sub run {
 
     my $newConfigName = shift @args;
 
-    return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName );
+    return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName, 1 );
 }
 
 ##

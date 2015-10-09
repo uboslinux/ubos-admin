@@ -4,6 +4,7 @@ Documentation=man:nft(8)
 Wants=network-pre.target
 Before=network-pre.target
 ConditionPathExists=/etc/ubos-nftables.conf
+# /etc/ubos-nftables.conf should always exist; just a defensive measure
 
 [Service]
 Type=oneshot
