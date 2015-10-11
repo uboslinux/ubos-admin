@@ -1,0 +1,43 @@
+This is all a little tricky.
+
+We want to be able to do things like:
+    > ubos-admin setnetconfig client
+    > ubos-admin setnetconfig gateway
+
+This transition from 'client' to 'gateway' requires a new configuration for
+systemd-networkd, different firewall/nat/nft settings, different avahi
+configuration, and running dns in case of the gateway but not the client.
+
+systemd wasn't entirely made for that, and getting all the right services
+started and stopped with the correct configuration for each netconfig is
+a little tricky.
+
+So we do this:
+
+ * Each netconfig with name foo comes with a systemd service called
+   ubos-networking-foo. Changing the netconfig via ubos-admin setnetconfig
+   recalculates configuration files, writes them, and then enables and starts
+   the corresponding ubos-networking-foo service
+
+ * We thought of making it ubos-networking@foo, rather than ubos-networking-foo,
+   but the systemd-devel list thought that was not what parameterization was
+   for.
+
+ * Each one of those ubos-networking-foo services depends on the
+   services it depends on, like systemd-networkd. We rely on systemd to
+   start them. Specifically, we rely on systemd to start the correct services
+   after reboot.
+
+ * However, two netconfigs may rely on the same service (say systemd-networkd).
+   When switching from one netconfig to another, the configuration for the
+   dependent service may have changed. Some daemons (avahi) are smart enough
+   to realize that and automatically reconfigure. Others (systemd-networkd)
+   do not. And systemd does not restart dependent processes.
+
+ * So instead of several ubos-networking-foo services depending on the same
+   systemd-networkd service, we have them depend on ubos-systemd-networkd@foo
+   instead. So from systemd's perspective, these are all different services,
+   and it will correctly restart the daemons.
+
+ * Of course, those different services have a lot of "Conflicts" sections.
+ 

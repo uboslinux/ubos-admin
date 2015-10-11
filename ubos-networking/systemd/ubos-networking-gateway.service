@@ -3,20 +3,19 @@ Description=UBOS networking (gateway)
 Requires=\
     avahi-daemon.service \
     network.target \
-    systemd-networkd.service \
-    systemd-resolved.service \
-    systemd-timedated.service \
+    ubos-systemd-networkd@gateway.service \
+    ubos-systemd-resolved@gateway.service \
+    ubos-systemd-timedated@gateway.service \
     ubos-admin.service \
-    ubos-nftables.service
+    ubos-nftables@gateway.service
 Before=\
     avahi-daemon.service \
-    systemd-networkd.service \
-    systemd-resolved.service \
-    systemd-timedated.service \
+    ubos-systemd-networkd@gateway.service \
+    ubos-systemd-resolved@gateway.service \
+    ubos-systemd-timedated@gateway.service \
     ubos-admin.service \
-    ubos-nftables.service
+    ubos-nftables@gateway.service
 Conflicts=\
-    cloud-init.service \
     ubos-networking-client.service \
     ubos-networking-cloud.service \
     ubos-networking-off.service \

@@ -3,19 +3,17 @@ Description=UBOS networking (off)
 Requires=\
     avahi-daemon.service \
     network.target \
-    systemd-networkd.service \
-    systemd-resolved.service \
+    ubos-systemd-networkd@standalone.service \
+    ubos-systemd-resolved@standalone.service \
     ubos-admin.service \
-    ubos-nftables.service
+    ubos-nftables@standalone.service
 Before=\
     avahi-daemon.service \
-    systemd-networkd.service \
-    systemd-resolved.service \
+    ubos-systemd-networkd@standalone.service \
+    ubos-systemd-resolved@standalone.service \
     ubos-admin.service \
-    ubos-nftables.service
+    ubos-nftables@standalone.service
 Conflicts=\
-    cloud-init.service \
-    systemd-timedated.service \
     ubos-networking-client.service \
     ubos-networking-cloud.service \
     ubos-networking-gateway.service \
