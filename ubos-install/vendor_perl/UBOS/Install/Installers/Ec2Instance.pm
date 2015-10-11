@@ -51,7 +51,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( mkinitcpio haveged cloud-init ) ];
+        $self->{devicepackages} = [ qw( mkinitcpio haveged ubos-networking-cloud ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged ubos-networking-cloud ) ];

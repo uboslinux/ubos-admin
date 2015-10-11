@@ -69,6 +69,15 @@ sub activateNetConfig {
         UBOS::Utils::invokeMethod( $newConfig . '::activate' );
 
         if( $restartService ) {
+            # We need to stop existing units first, otherwise dependent units will not get restarted
+            # parsing systemctl list-units seems brittle, so we go directly to the files
+            my @ubosNetworkingServices = glob '/usr/lib/systemd/system/ubos-networking-*.service';
+            if( @ubosNetworkingServices ) {
+                my $cmd = 'sudo systemctl stop ';
+                $cmd .= join( ' ', map { my $s = $_; $s =~ s!.*/!!; $s } @ubosNetworkingServices );
+
+                UBOS::Utils::myexec( $cmd );
+            }
             UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$newConfigName");
         }
 

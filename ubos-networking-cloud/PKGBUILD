@@ -1,0 +1,27 @@
+pkgname=$(basename $(pwd))
+pkgver=0.1
+pkgrel=1
+pkgdesc="UBOS Network management tools (cloud)"
+arch=('any')
+url="http://ubos.net/"
+developer=$url
+maintainer=$url
+license=('GPL')
+depends=('ubos-networking' 'cloud-init')
+options=('!strip')
+
+package() {
+# Code
+    for d in Networking Networking/NetConfigs; do
+		mkdir -p -m755 ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
+		for f in ${startdir}/vendor_perl/UBOS/$d/*.pm; do
+			if [ -r "$f" ]; then
+				install -m755 $f ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
+			fi
+		done
+	done
+
+# Systemd
+    mkdir -p -m 755 ${pkgdir}/usr/lib/systemd/system/
+    install -m 644 ${startdir}/systemd/ubos-*.service  ${pkgdir}/usr/lib/systemd/system/
+}
