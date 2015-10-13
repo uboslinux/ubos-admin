@@ -514,8 +514,8 @@ sub updateCode {
 
     if( $showPackages ) {
         my @lines     = split /\n/, $out;
-        my @installed = map { my $s = $_; $s =~ s!^.*installing\s+!!; $s =~ m!\.\.\.\s*!!; $s; } grep /^installing /, @lines;
-        my @upgraded  = map { my $s = $_; $s =~ s!^.*upgrading\s+!!; $s =~ m!\.\.\.\s*!!; $s; } grep /^upgrading / , @lines;
+        my @installed = map { my $s = $_; $s =~ s!^.*installing\s+!!; $s =~ s!\.\.\.\s*!!; $s; } grep /^installing /, @lines;
+        my @upgraded  = map { my $s = $_; $s =~ s!^.*upgrading\s+!!;  $s =~ s!\.\.\.\s*!!; $s; } grep /^upgrading / , @lines;
 
         if( @installed ) {
             print 'Packages installed: ' . join( ' ', @installed ) . "\n";
