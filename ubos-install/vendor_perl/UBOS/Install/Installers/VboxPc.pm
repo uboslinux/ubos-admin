@@ -67,6 +67,71 @@ sub new {
 }
 
 ##
+# Create a DiskLayout object that goes with this Installer.
+# $argvp: remaining command-line arguments
+sub createDiskLayout {
+    my $self  = shift;
+    my $argvp = shift;
+
+    # Option 1: a single image file
+    # ubos-install ... image.img
+
+    # Option 2: a disk device
+    # ubos-install ... /dev/somedevice
+
+    my $ret = 1; # set to something, so undef can mean error
+    if( @$argvp ) {
+        if( @$argvp > 1 ) {
+            error( 'Do not specify more than one image file or device.' );
+            $ret = undef;
+        }
+        my $first = $argvp->[0];
+        if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
+            # Option 1
+            $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                    $first,
+                    {   '/' => {
+                            'index' => 1,
+                            'fs'    => 'ext4'
+                        },
+                    } );
+        } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
+            # Option 2
+            $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                    $argvp,
+                    {   '/' => {
+                            'index' => 1,
+                            'fs'    => 'ext4'
+                        },
+                    } );
+
+        } elsif( $ret ) {
+            error( 'Must be file or disk:', $first );
+            $ret = undef;
+        }
+    } else {
+        # Need at least one disk
+        error( 'Must specify at least than one file or image for deviceclass=ec2-instance' );
+        $ret = undef;
+    }
+
+    return $ret;
+}
+
+##
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# $diskLayout: the disk layout
+# return: number of errors
+sub installBootLoader {
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
+
+    return $self->installGrub( $pacmanConfigFile, $diskLayout );
+}
+
+##
 # Returns the device class
 sub deviceClass {
     my $self = shift;
