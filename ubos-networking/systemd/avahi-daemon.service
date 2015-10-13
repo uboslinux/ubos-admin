@@ -6,6 +6,7 @@ After=\
     ubos-networking-client.service \
     ubos-networking-gateway.service \
     ubos-networking-standalone.service
+StopWhenUnneeded=true
 
 [Service]
 Type=dbus

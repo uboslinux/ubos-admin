@@ -70,21 +70,33 @@ sub activateNetConfig {
 
         if( $restartService ) {
             # We need to stop existing units first, otherwise dependent units will not get restarted
-            # parsing systemctl list-units seems brittle, so we go directly to the files
-            my @ubosNetworkingServices = glob '/usr/lib/systemd/system/ubos-networking-*.service';
-            if( @ubosNetworkingServices ) {
-                my $cmd = 'sudo systemctl stop ';
-                $cmd .= join( ' ', map { my $s = $_; $s =~ s!.*/!!; $s } @ubosNetworkingServices );
+            UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', allServices() ));
 
-                UBOS::Utils::myexec( $cmd );
-            }
-            UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$newConfigName");
+            UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$newConfigName.service");
         }
 
     } else {
         fatal( 'Unknown netconfig', $newConfigName );
     }
     return 1;
+}
+
+##
+# Get all services that potentially have to be restarted
+# return: list
+sub allServices {
+    # parsing systemctl list-units seems brittle, so we go directly to the files
+    my @ubosNetworkingServices = glob '/usr/lib/systemd/system/ubos-networking-*.service';
+
+    my @ret = map { my $s = $_; $s =~ s!.*/!!; $s } @ubosNetworkingServices;
+
+    push @ret, qw( avahi-daemon.service
+                   systemd-networkd.service
+                   systemd-resolved.service
+                   systemd-timedated.service
+                   ubos-nftables.service );
+
+    return @ret;
 }
 
 ##
