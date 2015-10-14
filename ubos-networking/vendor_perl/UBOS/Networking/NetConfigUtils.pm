@@ -68,10 +68,13 @@ sub activateNetConfig {
 
         UBOS::Utils::invokeMethod( $newConfig . '::activate' );
 
+        my @allServices = allServices();
+        UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @allServices ));
+        UBOS::Utils::myexec( "sudo systemctl enable ubos-networking-$newConfigName.service");
+
         if( $restartService ) {
             # We need to stop existing units first, otherwise dependent units will not get restarted
-            UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', allServices() ));
-
+            UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @allServices ));
             UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$newConfigName.service");
         }
 
@@ -199,7 +202,7 @@ END
             debug( 'Generating fallback network configuration for', $etherGlobs, $wlanGlobs, $containerVeth );
             UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
 #
-# Fallback configuration. Generated automatically, do not modify. Use
+# DHCP interface fallback configuration. Generated automatically, do not modify. Use
 #     ubos-admin setnetconfig
 # instead.
 #
@@ -234,7 +237,7 @@ END
             debug( 'Generating fallback static IP address configuration for', $etherGlobs, $wlanGlobs, $containerVeth );
             UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
 #
-# Fallback configuration. Generated automatically, do not modify. Use
+# Fallback static interface configuration. Generated automatically, do not modify. Use
 #     ubos-admin setnetconfig
 # instead.
 #
@@ -244,6 +247,8 @@ Name=$etherGlobs $wlanGlobs $containerVeth
 
 [Network]
 Address=0.0.0.0/16
+DHCPServer=yes
+
 END
         }
     }
@@ -254,34 +259,57 @@ END
     if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
         debug( 'Generating nsswitch.conf with mdns_minimal' );
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
-hosts: files mymachines mdns_minimal [NOTFOUND=return] dns myhostname
+hosts: files mymachines mdns_minimal [NOTFOUND=return] resolve myhostname
 END
     } else {
         debug( 'Generating nsswitch.conf without mdns_minimal' );
         UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
-hosts: files mymachines dns myhostname
+hosts: files mymachines resolve myhostname
 END
     }
 
-    # NAT
+    # firewall/nat configuration
     my @openPorts = _determineOpenPorts();
     my $openPortsString = '';
-    foreach my $portSpec ( @openPorts ) {
-        # tcp dport ssh accept
-        if( $portSpec =~ m!(.+)/tcp! ) {
-            $openPortsString .= "    tcp dport $1 accept\n";
-        } elsif( $portSpec =~ m!(.+)/udp! ) {
-            $openPortsString .= "    udp dport $1 accept\n";
-        } else {
-            error( 'Unknown open ports spec:', $portSpec );
+
+    if( !defined( $notLocalNics ) || !$notLocalNics ) {
+        # no filter
+
+        foreach my $portSpec ( @openPorts ) {
+            if( $portSpec =~ m!(.+)/tcp! ) {
+                $openPortsString .= "    tcp dport $1 accept\n";
+            } elsif( $portSpec =~ m!(.+)/udp! ) {
+                $openPortsString .= "    udp dport $1 accept\n";
+            } else {
+                error( 'Unknown open ports spec:', $portSpec );
+            }
         }
+
+    } elsif( ref( $notLocalNics ) eq 'ARRAY' ) {
+        # filter out named nics
+        my $prefix = join( ' ', map { 'iifname != ' . $_ } @$notLocalNics );
+
+        foreach my $portSpec ( @openPorts ) {
+            if( $portSpec =~ m!(.+)/tcp! ) {
+                $openPortsString .= "    $prefix tcp dport $1 accept\n";
+            } elsif( $portSpec =~ m!(.+)/udp! ) {
+                $openPortsString .= "    $prefix udp dport $1 accept\n";
+            } else {
+                error( 'Unknown open ports spec:', $portSpec );
+            }
+        }
+
+    } else {
+        # filter all nics: we simply don't open up any ports!
     }
+
     if( defined( $dhcpClientNicInfo ) && defined( $privateNetworkNicInfo )) {
         # NAT
         debug( 'Generating nftables configuration for NAT with open ports', $openPortsString );
         UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
 #
-# The nftables configuration for UBOS. Generated automatically, do not modify
+# The nftables configuration for UBOS. Generated automatically, do not modify.
+# NAT mode.
 #
 table inet filter {
   chain input {
@@ -322,12 +350,13 @@ table nat {
   }
 }
 END
-    } else {
+    } elsif( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
         # no NAT, just firewall
         debug( 'Generating nftables configuration with open ports', $openPortsString );
         UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
 #
-# The nftables configuration for UBOS. Generated automatically, do not modify
+# The nftables configuration for UBOS. Generated automatically, do not modify.
+# Firewall mode.
 #
 table inet filter {
   chain input {
@@ -357,6 +386,28 @@ $openPortsString
   }
   chain output {
     type filter hook output priority 0;
+  }
+}
+END
+    } else {
+        # networking off
+        UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
+#
+# The nftables configuration for UBOS. Generated automatically, do not modify.
+# Off mode.
+#
+table inet filter {
+  chain input {
+    type filter hook input priority 0;
+    drop
+  }
+  chain forward {
+    type filter hook forward priority 0;
+    drop
+  }
+  chain output {
+    type filter hook output priority 0;
+    drop
   }
 }
 END

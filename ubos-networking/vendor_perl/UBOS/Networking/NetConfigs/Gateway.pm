@@ -3,6 +3,7 @@
 # A network configuration for a device that obtains an IP address via
 # DHCP from one interface, and manages a local network with local IP addresses
 # issued by its DHCP server, with Network Address Translation, on all others.
+# Does not allow any inbound connections from the upstream interface.
 #
 # This file is part of ubos-networking.
 # (C) 2012-2015 Indie Computing Corp.
