@@ -63,7 +63,7 @@ sub new {
         $self->{channel} = 'yellow'; # FIXME once we have 'green';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( ubos-base ubos-networking) ];
+        $self->{basepackages} = [ qw( ubos-base ubos-networking ) ];
     }
     unless( $self->{baseservices} ) {
         $self->{baseservices} = [ qw( ubos-admin sshd ) ];
