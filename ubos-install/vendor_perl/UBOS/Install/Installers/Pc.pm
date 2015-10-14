@@ -56,7 +56,7 @@ sub new {
         $self->{devicepackages} = [ qw( rng-tools mkinitcpio ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ubos-networking-client ) ];
+        $self->{deviceservices} = [ qw( ubos-networking-client ) ];
     }
 
     $self->SUPER::new( @args );
