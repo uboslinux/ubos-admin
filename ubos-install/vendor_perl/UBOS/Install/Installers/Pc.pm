@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( rng-tools mkinitcpio ) ];
+        $self->{devicepackages} = [ qw( rng-tools mkinitcpio ubos-networking-gateway ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( ubos-networking-client ) ];

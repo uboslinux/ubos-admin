@@ -52,7 +52,6 @@ sub activate {
 }
 
 
-
 ##
 # Return help text for this network configuration
 # return: help text
