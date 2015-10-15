@@ -69,8 +69,8 @@ sub activateNetConfig {
         UBOS::Utils::invokeMethod( $newConfig . '::activate' );
 
         my @allServices = allServices();
-        UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @allServices ));
-        UBOS::Utils::myexec( "sudo systemctl enable ubos-networking-$newConfigName.service");
+        UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @allServices ) . ' > /dev/null' );
+        UBOS::Utils::myexec( "sudo systemctl enable ubos-networking-$newConfigName.service > /dev/null" );
 
         if( $restartService ) {
             # We need to stop existing units first, otherwise dependent units will not get restarted
@@ -243,7 +243,7 @@ END
 #
 
 [Match]
-Name=$etherGlobs $wlanGlobs $containerVeth
+Name=$etherGlobs $wlanGlobs
 
 [Network]
 Address=0.0.0.0/16
