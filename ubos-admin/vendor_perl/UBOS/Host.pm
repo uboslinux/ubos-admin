@@ -867,7 +867,8 @@ sub runAfterBootCommandsIfNeeded {
 }
 
 ##
-# Determine the current network interfaces of this host and their properties
+# Determine the current network interfaces of this host and their properties.
+# This does not return the loopback interface
 #
 # $refresh: if 1, throw away cached values and read them again
 # return: hash, e.g. { enp0s1 => { index => 1, type => "ethernet", operational => 'carrier', setup => 'configured' }}}
