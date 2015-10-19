@@ -1,7 +1,7 @@
 pkgname=$(basename $(pwd))
-pkgver=0.3
+pkgver=0.1
 pkgrel=1
-pkgdesc="UBOS Network management tools (gateway)"
+pkgdesc="UBOS Network management tools (standalone)"
 arch=('any')
 url="http://ubos.net/"
 developer=$url

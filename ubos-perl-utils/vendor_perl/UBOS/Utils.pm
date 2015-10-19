@@ -51,9 +51,11 @@ sub now {
 ##
 # Read and parse JSON from a file
 # $from: file to read from
+# $msg: if an error occurs, use this error message
 # return: JSON object
 sub readJsonFromFile {
     my $file = shift;
+    my $msg  = shift || sub { ( 'JSON parsing error in file', $file ) };
 
     my $fileContent = slurpFile( $file );
     unless( $fileContent ) {
@@ -63,7 +65,7 @@ sub readJsonFromFile {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or error( 'JSON parsing error in file', $file, ':', $@ );
+    } or error( $msg, ':', $@ );
 
     return $json;
 }
@@ -71,7 +73,9 @@ sub readJsonFromFile {
 ##
 # Read and parse JSON from STDIN
 # return: JSON object
+# $msg: if an error occurs, use this error message
 sub readJsonFromStdin {
+    my $msg  = shift || 'JSON parsing error from <stdin>';
 
     local $/;
     my $fileContent = <STDIN>;
@@ -79,7 +83,7 @@ sub readJsonFromStdin {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or error( 'JSON parsing error from <stdin>:', $@ );
+    } or error( $msg, ':', $@ );
 
     return $json;
 }
@@ -87,14 +91,16 @@ sub readJsonFromStdin {
 ##
 # Read and parse JSON from String
 # $string: the JSON string
+# $msg: if an error occurs, use this error message
 # return: JSON object
 sub readJsonFromString {
     my $string = shift;
+    my $msg    = shift || 'JSON parsing error';
 
     my $json;
     eval {
         $json = $jsonParser->decode( $string );
-    } or error( 'JSON parsing error:', $@ );
+    } or error( $msg, ':', $@ );
 
     return $json;
 }

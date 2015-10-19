@@ -1,13 +1,13 @@
 pkgname=$(basename $(pwd))
-pkgver=0.3
+pkgver=0.1
 pkgrel=1
-pkgdesc="UBOS Network management tools (gateway)"
+pkgdesc="UBOS Network management tools (client)"
 arch=('any')
 url="http://ubos.net/"
 developer=$url
 maintainer=$url
 license=('GPL')
-depends=('ubos-networking' 'dnsmasq')
+depends=('ubos-networking')
 options=('!strip')
 
 package() {

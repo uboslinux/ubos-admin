@@ -25,6 +25,11 @@ use warnings;
 
 package UBOS::Networking::NetConfigs::Cloud;
 
+use JSON;
+use UBOS::Networking::NetConfigUtils;
+
+my $name = 'cloud';
+
 ##
 # Determine whether this network configuration could currently be activated.
 # This return false, if, for example, this network configuration requires two
@@ -39,8 +44,47 @@ sub isPossible {
 
 ##
 # Activate this network configuration.
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'cloud', 1, undef, 1 );
+    my $initOnly = shift;
+
+    my $allNics = UBOS::Host::nics();
+
+    my $conf    = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
+    my $error   = 0;
+    my $updated = 0;
+
+    unless( $conf ) {
+        $conf  = {};
+        $error = 1;
+    }
+    foreach my $nic ( keys %$allNics ) {
+        unless( exists( $conf->{$nic} )) {
+            $conf->{$nic} = {};
+        }
+        unless( exists( $conf->{$nic}->{dhcp} )) {
+            $conf->{$nic}->{dhcp} = JSON::true;
+            $updated = 1;
+        }
+        unless( exists( $conf->{$nic}->{ports} )) {
+            $conf->{$nic}->{post} = JSON::true;
+            $updated = 1;
+        }
+        unless( exists( $conf->{$nic}->{ssh} )) {
+            $conf->{$nic}->{ssh} = JSON::true;
+            $updated = 1;
+        }
+        unless( exists( $conf->{$nic}->{'cloud-init'} )) {
+            $conf->{$nic}->{'cloud-init'} = JSON::true;
+            $updated = 1;
+        }
+    }
+    my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
+
+    if( $updated && !$error ) {
+        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name );
+    }
+    return $ret;
 }
 
 ##

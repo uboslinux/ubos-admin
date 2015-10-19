@@ -43,11 +43,13 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
+    my $initOnly      = 0;
     my $verbose       = 0;
     my $logConfigFile = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'init-only'     => \$initOnly, # undocumented
             'verbose+'      => \$verbose,
             'logConfig=s'   => \$logConfigFile );
 
@@ -59,7 +61,7 @@ sub run {
 
     my $newConfigName = shift @args;
 
-    return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName, 1 );
+    return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName, $initOnly );
 }
 
 ##

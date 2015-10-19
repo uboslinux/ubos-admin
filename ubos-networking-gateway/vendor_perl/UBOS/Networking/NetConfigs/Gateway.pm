@@ -27,6 +27,20 @@ use warnings;
 
 package UBOS::Networking::NetConfigs::Gateway;
 
+use JSON;
+use UBOS::Networking::NetConfigUtils;
+
+my $name = 'gateway';
+
+# Candidates for gateway devices, in order, if none has been specified.
+# These are regexes
+my @gatewayNicPatterns = (
+    'en.*',
+    '*eth.*',
+    'wifi.*',
+    'wlan.*'
+);
+
 ##
 # Determine whether this network configuration could currently be activated.
 # This return false, if, for example, this network configuration requires two
@@ -36,21 +50,94 @@ package UBOS::Networking::NetConfigs::Gateway;
 sub isPossible {
     my $allNics = UBOS::Host::nics();
     
-    return ( keys %$allNics ) > 1;
+    if( keys %$allNics < 2 ) { # not enough nics
+        return 0;
+    }
+    foreach my $gatewayNicPattern ( @gatewayNicPatterns ) {
+        my @gateways = grep { m!$gatewayNicPattern! } keys %$allNics;
+        if( @gateways ) {
+            return 1;
+        }
+    }
+    return 0; # none of the found nics match the pattern
 }
 
 ##
 # Activate this network configuration.
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 sub activate {
-    my $upstreamNic = UBOS::Networking::NetConfigUtils::determineUpstreamNic();
-    
-    UBOS::Networking::NetConfigUtils::setNetConfig(
-            'gateway',
-            [ $upstreamNic ],
-            1,
-            [ $upstreamNic ] );
-}
+    my $initOnly = shift;
 
+    my $allNics = UBOS::Host::nics();
+
+    my $conf    = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
+    my $error   = 0;
+    my $updated = 0;
+
+    unless( $conf ) {
+        $conf  = {};
+        $error = 1;
+    }
+
+    # have we identified at least one gateway device?
+    my $haveGateway = 0;
+    foreach my $nic ( keys %$allNics ) {
+        if( exists( $conf->{$nic} )) {
+            if( exists( $conf->{$nic}->{masquerade} ) && $conf->{$nic}->{masquerade} ) {
+                $haveGateway = 1;
+                last;
+            }
+        }
+    }
+    unless( $haveGateway ) {
+        my @gateways;
+        foreach my $gatewayNicPattern ( @gatewayNicPatterns ) {
+            @gateways = grep { m!$gatewayNicPattern! } sort UBOS::Networking::NetConfigUtils::compareNics keys %$allNics;
+            if( @gateways ) {
+                last;
+            }
+        }
+        unless( @gateways ) {
+            error( 'Unable to find a suitable gateway interface' );
+            return 0;
+        }
+            
+        my $gateway = shift @gateways;
+        $conf->{$gateway} = { # overwrite what might have been there before
+            'dhcp'       => JSON::true,
+            'dns'        => JSON::true,
+            'masquerade' => JSON::true,
+            'ssh'        => JSON::true
+        };
+        $updated = 1;
+    }
+
+    foreach my $nic ( keys %$allNics ) {
+        unless( exists( $conf->{$nic} )) {
+            my( $ip, $prefixlength ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
+            if( $ip ) {
+                $conf->{$nic}->{address}    = $ip;
+                $conf->{$nic}->{length}     = $prefixlength;
+
+                $conf->{$nic}->{dhcpserver} = JSON::true;
+                $conf->{$nic}->{mdns}       = JSON::true;
+                $conf->{$nic}->{ports}      = JSON::true;
+                $conf->{$nic}->{ssh}        = JSON::true;
+
+                $updated = 1;
+            } else {
+                warning( 'Cannot find unallocated network for interface', $nic );
+            }
+        }
+    }
+
+    my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
+
+    if( $updated && !$error ) {
+        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name );
+    }
+    return $ret;
+}
 
 ##
 # Return help text for this network configuration

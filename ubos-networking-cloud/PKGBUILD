@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.1
+pkgver=0.3
 pkgrel=1
 pkgdesc="UBOS Network management tools (cloud)"
 arch=('any')
@@ -20,8 +20,4 @@ package() {
 			fi
 		done
 	done
-
-# Systemd
-    mkdir -p -m 755 ${pkgdir}/usr/lib/systemd/system/
-    install -m 644 ${startdir}/systemd/ubos-*.service  ${pkgdir}/usr/lib/systemd/system/
 }

@@ -24,7 +24,10 @@ use warnings;
 
 package UBOS::Networking::NetConfigs::Off;
 
+use UBOS::Host;
 use UBOS::Networking::NetConfigUtils;
+
+my $name = 'off';
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -38,8 +41,17 @@ sub isPossible {
 
 ##
 # Activate this network configuration.
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'off', undef, undef, undef );
+    my $initOnly = shift;
+
+    my $allNics = UBOS::Host::nics();
+
+    my $conf = {};
+    foreach my $nic ( keys %$allNics ) {
+        $conf->{$nic}->{state} = 'off';
+    }
+    return UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 }
 
 ##

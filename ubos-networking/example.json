@@ -1,0 +1,58 @@
+{
+    # A NIC that is off
+    "enp0s0" : {
+        "state" : "off"
+    },
+
+    # A NIC that has a static IP address, does not expose any services
+    "enp0s1" : {
+        "address" : "192.168.140.1"
+    },
+
+    # A NIC that has a static IP address, does not expose any services
+    # other than an open ssh port
+    "enp0s2" : {
+        "address" : "192.168.140.1",
+        "ssh"     : true
+    },
+
+    # A NIC that has a static IP address, issues DHCP IP addresses on a
+    # particular address range, announces itself via Avahi, runs DNS and has
+    # ssh and application ports open.
+    # Specifying dhcpserver always implies that we run a local DNS server
+    "enp0s3" : {
+        "address"    : "192.168.140.1",
+        "prefixsize" : "24",
+
+        "dhcpserver" : true,
+        "mdns"       : true,
+        "ports"      : true,
+        "ssh"        : true
+    },
+
+    # NIC that wants to obtain a DHCP address from the network,
+    # announces itself via Avahi, and has application ports open but
+    # not ssh
+    "enp0s3" : {
+        "dhcp"       : true,
+        "mdns"       : true,
+        "ports"      : true
+    },
+
+    # NIC that wants to obtain a DHCP address from the network,
+    # has ssh open, and masquerades traffic
+    "enp0s3" : {
+        "dhcp"       : true,
+        "masquerade" : true,
+        "ssh"        : true
+    },
+
+    # NIC that wants to obtain a DHCP address from the network,
+    # has ssh open, has application ports open and runs cloud-init
+    "enp0s3" : {
+        "cloud-init" : true,
+        "dhcp"       : true,
+        "ports"      : true,
+        "ssh"        : true
+    }
+}

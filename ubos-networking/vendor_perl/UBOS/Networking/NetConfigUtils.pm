@@ -24,24 +24,44 @@ use warnings;
 
 package UBOS::Networking::NetConfigUtils;
 
-use Cwd;
+use Net::IP;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $ipLinks        = undef;
-
 my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
 my $nftablesConfigFile          = '/etc/ubos-nftables.conf';
+my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.conf';
 my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
-my $dotNetworkDefaultFile       = '/etc/systemd/network/99-ubos-default.network';
-my $dotNetworkDhcpFilePattern   = '/etc/systemd/network/50-ubos-dhcp-%s.network';
-my $dotNetworkStaticFilePattern = '/etc/systemd/network/50-ubos-static-%s.network';
+my $dotNetworkFilePattern       = '/etc/systemd/network/50-ubos-%s.network';
 my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
 my $etherGlobs                  = 'en* eth*';
 my $wlanGlobs                   = 'wifi* wlan*';
 my $containerVeth               = 'host0';
+my $networkingDefaultsConfFile  = '/etc/ubos/networking-defaults.json';
+my $_networkingDefaultsConf     = undef; # cached content of $networkingDefaultsConfFile
+my $netconfigConfFilePattern    = '/etc/ubos/netconfig-%s.json';
+my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePattern, keyed by netconfig name
 
+# Regardless of Netconfig, always run these
+my @alwaysServices = qw(
+        systemd-networkd.service
+        systemd-resolved.service
+        systemd-timedated.service
+        ubos-nftables.service
+);
+
+# All services possibly started/stopped. Depending on Netconfig, not all of
+# them may actually be installed.
+my @allServices = (
+    @alwaysServices,
+    qw(
+        avahi-daemon.service
+        cloud-final.service
+        dnsmasq.service
+    )
+);
+                   
 ##
 # Find all NetConfigs
 # return: hash of net config name to package name
@@ -54,10 +74,10 @@ sub findNetConfigs {
 ##
 # Activate a NetConfig by name
 # $newConfigName: name of the NetConfig
-# $restartService: if 1, restart the ubos-networking-xxx service
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 sub activateNetConfig {
-    my $newConfigName  = shift;
-    my $restartService = shift;
+    my $newConfigName = shift;
+    my $initOnly      = shift;
 
     my $netConfigs = findNetConfigs();
 
@@ -66,366 +86,188 @@ sub activateNetConfig {
 
         debug( 'Activating netconfig', $newConfigName );
 
-        UBOS::Utils::invokeMethod( $newConfig . '::activate' );
-
-        my @allServices = allServices();
-        UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @allServices ) . ' > /dev/null' );
-        UBOS::Utils::myexec( "sudo systemctl enable ubos-networking-$newConfigName.service > /dev/null" );
-
-        if( $restartService ) {
-            # We need to stop existing units first, otherwise dependent units will not get restarted
-            UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @allServices ));
-            UBOS::Utils::myexec( "sudo systemctl start ubos-networking-$newConfigName.service");
-        }
+        return UBOS::Utils::invokeMethod( $newConfig . '::activate', $initOnly );
 
     } else {
         fatal( 'Unknown netconfig', $newConfigName );
     }
-    return 1;
 }
 
 ##
-# Get all services that potentially have to be restarted
-# return: list
-sub allServices {
-    # parsing systemctl list-units seems brittle, so we go directly to the files
-    my @ubosNetworkingServices = glob '/usr/lib/systemd/system/ubos-networking-*.service';
-
-    my @ret = map { my $s = $_; $s =~ s!.*/!!; $s } @ubosNetworkingServices;
-
-    push @ret, qw( avahi-daemon.service
-                   systemd-networkd.service
-                   systemd-resolved.service
-                   systemd-timedated.service
-                   ubos-nftables.service );
-
-    return @ret;
-}
-
-##
-# Find all network interfaces
-sub getAllNics {
-	my $all = _ipLinks();
-
-	return $all;
-}
-
-##
-# Set a particular networking configuration. This method has different
-# ways of invoking it, so pay attention.
-# $name: name of the configuration for reporting purposes
-# $dhcpClientNicInfo:
-#      if this is an array, it contains the list of NIC names that shall
-#          receive their IP address via DHCP
-#      if this is 1, it means all NICs not otherwise listed shall receive
-#          their IP address via DHCP
-#      if this is undef, it means no NIC shall receive their IP address
-#          via DHCP
-# $privateNetworkNicInfo:
-#      if this is an array, it contains the list of NIC names that shall
-#          be assigned a locally managed IP address, e.g. in 192.168.0.0/16
-#      if this is 1, it means all NICs not otherwise listed shall be
-#          assigned a locally managed IP address
-#      if this is undef, it means no NIC shall be assigned a locally
-#          managed IP address
-# if both parameters are undef, it means deactivate all interfaces.
-# if both parameters are NOT undef, NAT shall be setup between the two
-#
-# $notLocalNics:
-#      if this is an array, it contains the list of NIC names that go to the
-#          WAN and that should not advertise or let through any sensitive info
-#      if this is 1, it means that all NICs shall not advertise or let through
-#          any sensitive info
-#      if this is 0, it means that all NICs are on a friendly LAN
-#
-# Examples:
-# setNetConfig( 'off',    undef, undef ) -- deactivate all interfaces
-# setNetConfig( 'foo',    [ eth0 ], undef ) -- only activate eth0 as DHCP client
-# setNetConfig( 'client', 1, undef ) -- all interfaces are DHCP clients
-# setNetConfig( 'bar',    undef, [eth0, eth1] ) -- assign static IP addresses to eth0 and eth1
-
-sub setNetConfig {
-    my $name                  = shift;
-    my $dhcpClientNicInfo     = shift;
-    my $privateNetworkNicInfo = shift;
-    my $notLocalNics          = shift;
-
-    my $allNics = UBOS::Host::nics();
-
-    # error checking
-    if(    defined( $dhcpClientNicInfo )     && !ref( $dhcpClientNicInfo )     && $dhcpClientNicInfo == 1
-        && defined( $privateNetworkNicInfo ) && !ref( $privateNetworkNicInfo ) && $privateNetworkNicInfo == 1 )
-    {
-        fatal( 'Must not specify 1 (all) for both dhcpClientNicInfo and privateNetworkNicInfo' );
-    }
-    if( ref( $dhcpClientNicInfo ) eq 'ARRAY' && ref( $privateNetworkNicInfo ) eq 'ARRAY' ) {
-        foreach my $nic1 ( @$dhcpClientNicInfo ) {
-            foreach my $nic2 ( @$privateNetworkNicInfo ) {
-                if( $nic1 eq $nic2 ) {
-                    fatal( 'Network interface', $nic1, 'given in both dhcpClientNicInfo and privateNetworkNicInfo' );
+# Read the networking defaults, if any. Set defaults if needed
+sub networkingDefaults() {
+    unless( $_networkingDefaultsConf ) {
+        my $doWrite     = 0; # info has been updated
+        my $skipWriting = 0; # but it would not be safe to write
+        if( -e $networkingDefaultsConfFile ) {
+            $_networkingDefaultsConf = UBOS::Utils::readJsonFromFile( $networkingDefaultsConfFile );
+            warning( 'Networking defaults file is malformed, falling back to defaults:', $networkingDefaultsConfFile );
+            $skipWriting = 1;
+        }
+        unless( $_networkingDefaultsConf ) {
+            $_networkingDefaultsConf = {};
+            $doWrite = 1;
+        }
+        if( exists( $_networkingDefaultsConf->{networks} )) {
+            foreach my $ip ( sort keys %{$_networkingDefaultsConf->{networks}} ) {
+                unless( exists( $_networkingDefaultsConf->{networks}->{$ip}->{prefixsize} )) {
+                    error( 'prefixsize missing for network', $ip, 'in', $networkingDefaultsConfFile );
+                    $_networkingDefaultsConf->{networks}->{$ip}->{prefixsize} = 32; # that seems a safe default
                 }
             }
-            unless( defined( $allNics->{$nic1} )) {
-                fatal( 'Unknown network interface', $nic1 );
-            }
         }
-        foreach my $nic2 ( @$privateNetworkNicInfo ) {
-            unless( defined( $allNics->{$nic2} )) {
-                fatal( 'Unknown network interface', $nic2 );
-            }
+        unless( exists( $_networkingDefaultsConf->{networks} )) {
+            $_networkingDefaultsConf->{networks} = {
+                "192.168.140.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.141.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.142.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.143.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.144.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.145.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.146.1" : {
+                    "prefixsize" : 24
+                },
+                "192.168.147.1" : {
+                    "prefixsize" : 24
+                }
+            };
+            $doWrite = 1;
+        }
+        if( $doWrite && !$skipWriting ) {
+            UBOS::Utils::writeJsonFile( $networkingDefaultsConfFile, $_networkingDefaultsConf );
         }
     }
+    return $_networkingDefaultsConf;
+}
 
-    # delete the current systemd-networkd settings
-    UBOS::Utils::deleteFile( glob $dotNetworkDeleteGlob );
+##
+# Read the config file for a netconfig with a certain name. If the file doesn't exist,
+# return an empty hash. If the file exists but is malformed, emit error and return undef
+# $name: name of the netconfig
+# return: JSON hash
+sub readNetconfigConfFileFor {
+    my $name = shift;
 
-    # create new systemd-networkd settings
-    if( defined( $dhcpClientNicInfo )) {
-        if( ref( $dhcpClientNicInfo )) {
-            foreach my $nic ( @$dhcpClientNicInfo ) {
-                debug( 'Generating DHCP client configuration for', $nic );
-                UBOS::Utils::saveFile( sprintf( $dotNetworkDhcpFilePattern, $nic ), <<END );
+    my $file = sprintf( netconfigConfFilePattern, $name );
+    unless( -e $file ) {
+        return {};
+    }
+    my $ret = UBOS::Utils::readJsonFromFile( $file, sub { ( 'Error when parsing configuration for netconfig', $name, '(file', $file, ')' ) } );
+    return $ret;
+}
+
+##
+# Write the config file for a netconfig with a certain name.
+# $name: name of the netconfig
+# $json: JSON hash to write
+sub saveNetconfigConfFileFor {
+    my $name = shift;
+    my $json = shift;
+
+    my $file = sprintf( netconfigConfFilePattern, $name );
+    UBOS::Utils::writeJsonToFile( $file, $json );
+}
+
+##
+# Set a particular networking configuration. The various NetConfig objects
+# invoking this pass a hash that tells this method what services to run,
+# which interfaces to config how etc.
+# $name: name of the netconfig for reporting purposes
+# $config: the config JSON object
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
+sub configure {
+    my $name     = shift;
+    my $config   = shift;
+    my $initOnly = shift;
+
+    my %servicesNeeded = (); # Run these services after generating config files
+    map { $servicesNeeded{$_} = 1 } @alwaysServices;
+
+    # systemd.network files
+    foreach my $nic ( keys %$config ) {
+        my $dotNetworkContent = <<END
 #
-# DHCP interface configuration. Generated automatically, do not modify. Use
-#     ubos-admin setnetconfig
-# instead.
+# UBOS networking configuration for $nic
+# Do not edit, your changes will be mercilessly overwritten.
 #
-
 [Match]
 Name=$nic
 
 [Network]
-DHCP=ipv4
 END
-            }
-        } else {
-            debug( 'Generating fallback network configuration for', $etherGlobs, $wlanGlobs, $containerVeth );
-            UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
-#
-# DHCP interface fallback configuration. Generated automatically, do not modify. Use
-#     ubos-admin setnetconfig
-# instead.
-#
-
-[Match]
-Name=$etherGlobs $wlanGlobs $containerVeth
-
-[Network]
-DHCP=ipv4
-END
+        if( exists( $config->{$nic}->{address} )) {
+            $dotNetworkContent .= 'Address=' . $config->{$nic}->{address} . "\n";
         }
-    }
-    if( defined( $privateNetworkNicInfo )) {
-        if( ref( $privateNetworkNicInfo )) {
-            foreach my $nic ( @$privateNetworkNicInfo ) {
-                debug( 'Generating static IP address configuration for', $nic );
-                UBOS::Utils::saveFile( sprintf( $dotNetworkStaticFilePattern, $nic ), <<END );
-#
-# Static interface configuration. Generated automatically, do not modify. Use
-#     ubos-admin setnetconfig
-# instead.
-#
-
-[Match]
-Name=$nic
-
-[Network]
-Address=0.0.0.0/16
-END
-            }
-        } else {
-            debug( 'Generating fallback static IP address configuration for', $etherGlobs, $wlanGlobs, $containerVeth );
-            UBOS::Utils::saveFile( $dotNetworkDefaultFile, <<END );
-#
-# Fallback static interface configuration. Generated automatically, do not modify. Use
-#     ubos-admin setnetconfig
-# instead.
-#
-
-[Match]
-Name=$etherGlobs $wlanGlobs
-
-[Network]
-Address=0.0.0.0/16
-DHCPServer=yes
-
-END
-        }
-    }
-    foreach my $nic ( keys %$allNics ) {
-        UBOS::Utils::myexec( "ip addr flush " . $nic );
-    }
-
-    if( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
-        debug( 'Generating nsswitch.conf with mdns_minimal' );
-        UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
-hosts: files mymachines mdns_minimal [NOTFOUND=return] resolve myhostname
-END
-    } else {
-        debug( 'Generating nsswitch.conf without mdns_minimal' );
-        UBOS::Utils::saveFile( '/etc/nsswitch.conf', <<END );
-hosts: files mymachines resolve myhostname
-END
-    }
-
-    # firewall/nat configuration
-    my @openPorts = _determineOpenPorts();
-    my $openPortsString = '';
-
-    if( !defined( $notLocalNics ) || !$notLocalNics ) {
-        # no filter
-
-        foreach my $portSpec ( @openPorts ) {
-            if( $portSpec =~ m!(.+)/tcp! ) {
-                $openPortsString .= "    tcp dport $1 accept\n";
-            } elsif( $portSpec =~ m!(.+)/udp! ) {
-                $openPortsString .= "    udp dport $1 accept\n";
-            } else {
-                error( 'Unknown open ports spec:', $portSpec );
-            }
+        if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
+            $dotNetworkContent .= "DHCP=yes\n";
         }
 
-    } elsif( ref( $notLocalNics ) eq 'ARRAY' ) {
-        # filter out named nics
-        my $prefix = join( ' ', map { 'iifname != ' . $_ } @$notLocalNics );
-
-        foreach my $portSpec ( @openPorts ) {
-            if( $portSpec =~ m!(.+)/tcp! ) {
-                $openPortsString .= "    $prefix tcp dport $1 accept\n";
-            } elsif( $portSpec =~ m!(.+)/udp! ) {
-                $openPortsString .= "    $prefix udp dport $1 accept\n";
-            } else {
-                error( 'Unknown open ports spec:', $portSpec );
-            }
-        }
-
-    } else {
-        # filter all nics: we simply don't open up any ports!
-    }
-
-    if( defined( $dhcpClientNicInfo ) && defined( $privateNetworkNicInfo )) {
-        # NAT
-        debug( 'Generating nftables configuration for NAT with open ports', $openPortsString );
-        UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
-#
-# The nftables configuration for UBOS. Generated automatically, do not modify.
-# NAT mode.
-#
-table inet filter {
-  chain input {
-    type filter hook input priority 0;
-
-    # allow established/related connections
-    ct state {established, related} accept
-
-    # early drop of invalid connections
-    ct state invalid drop
-
-    # allow from loopback
-    iifname lo accept
-
-    # allow icmp
-    ip protocol icmp accept
-    ip6 nexthdr icmpv6 accept
-
-$openPortsString
-
-    # everything else
-    reject with icmp type port-unreachable
-  }
-  chain forward {
-    type filter hook forward priority 0;
-    drop
-  }
-  chain output {
-    type filter hook output priority 0;
-  }
-}
-table nat {
-  chain prerouting {
-    type nat hook prerouting priority -150;
-  }
-  chain postrouting {
-    type nat hook postrouting priority -150;
-  }
-}
-END
-    } elsif( defined( $dhcpClientNicInfo ) || defined( $privateNetworkNicInfo )) {
-        # no NAT, just firewall
-        debug( 'Generating nftables configuration with open ports', $openPortsString );
-        UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
-#
-# The nftables configuration for UBOS. Generated automatically, do not modify.
-# Firewall mode.
-#
-table inet filter {
-  chain input {
-    type filter hook input priority 0;
-
-    # allow established/related connections
-    ct state {established, related} accept
-
-    # early drop of invalid connections
-    ct state invalid drop
-
-    # allow from loopback
-    iifname lo accept
-
-    # allow icmp
-    ip protocol icmp accept
-    ip6 nexthdr icmpv6 accept
-
-$openPortsString
-
-    # everything else
-    reject with icmp type port-unreachable
-  }
-  chain forward {
-    type filter hook forward priority 0;
-    drop
-  }
-  chain output {
-    type filter hook output priority 0;
-  }
-}
-END
-    } else {
-        # networking off
-        UBOS::Utils::saveFile( $nftablesConfigFile, <<END, 0644 );
-#
-# The nftables configuration for UBOS. Generated automatically, do not modify.
-# Off mode.
-#
-table inet filter {
-  chain input {
-    type filter hook input priority 0;
-    drop
-  }
-  chain forward {
-    type filter hook forward priority 0;
-    drop
-  }
-  chain output {
-    type filter hook output priority 0;
-    drop
-  }
-}
-END
+        UBOS::Utils::saveFile( sprintf( $dotNetworkDhcpFilePattern, $nic ), $dotNetworkContent );
     }
 
     # Avahi
-    if( -e $avahiConfigFile ) {
-        UBOS::Utils::deleteFile( $avahiConfigFile );
+    my $avahiAllowInterfacesString = '';
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
+            $servicesNeeded{'avahi-daemon.service'} = 1;
+            if( $avahiAllowInterfacesString ) {
+                $avahiAllowInterfacesString .= ' ';
+            }
+            $avahiAllowInterfacesString .= $nic;
+        }
     }
-    if( !defined( $notLocalNics ) || !$notLocalNics ) {
-        UBOS::Utils::symlink( '/dev/null', $avahiConfigFile );
 
-    } elsif( ref( $notLocalNics ) eq 'ARRAY' ) {
-        my $denyString = join( ', ', @$notLocalNics );
-        debug( 'Generating avahi configuration denying interfaces', $denyString );
+    my $foundNsswitchHostLine = 0;
+    my @nsswitchContent       = split( /\n/, UBOS::Utils::readFile( '/etc/nsswitch.conf' ));
+    for( my $i=0 ; $i<@nsswitchContent ; ++$i ) {
+        if( $nsswitchContent[$i] =~ m!^(\s*hosts\s*:\s*)(.*)*$! ) {
+            my $prefix = $1;
+            my @args   = split( /\s+/, $2 );
+
+            if( exists( $servicesNeeded{'avahi-daemon.service'} )) {
+                # insert before dns or resolve or myhostname
+                my $insertHere = @args;
+                for( my $j=@args-1 ; $j>=0 ; --$j ) {
+                    if( $args[$j] eq 'myhostname' || $args[$j] eq 'dns' || $args[$j] eq 'resolve' ) {
+                        $insertHere = $j;
+                    }
+                }
+                splice @args, $insertHere, 0, 'mdns_minimal', '[NOTFOUND=return]';
+                
+            } else {
+                @args = grep { $_ !~ !^mdns! && $_ ne '[NOTFOUND=return]' } @args;
+            }
+
+            $nsswitchContentp[$i] = $prefix . join( ' ', @args );
+            $foundNsswitchHostLine = 1;
+        }
+    }
+    unless( $foundNsswitchHostLine ) {
+        if( $exists( $servicesNeeded{'avahi-daemon.service'} ) ) {
+            push @nsswitchContent, "hosts: files mymachines mdns_minimal [NOTFOUND=return] dns myhostname";
+        } else {
+            push @nsswitchContent, "hosts: files mymachines dns myhostname";
+        }
+    }
+    UBOS::Utils::saveFile( '/etc/nsswitch.conf', join( "\n", @nsswitchContent ));
+
+    if( exists( $servicesNeeded{'avahi-daemon.service'} )) {
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
 #
-# The avahi configuration for UBOS. Generated automatically, do not modify
+# The avahi configuration for UBOS.
+# Do not edit, your changes will be mercilessly overwritten.
 #
 
 [server]
@@ -435,7 +277,7 @@ use-ipv4=yes
 use-ipv6=no
 ratelimit-interval-usec=1000000
 ratelimit-burst=1000
-deny-interfaces=$denyString
+allow-interfaces=$avahiAllowInterfacesString
 
 [wide-area]
 enable-wide-area=no
@@ -461,84 +303,195 @@ rlimit-stack=4194304
 rlimit-nproc=3
 END
     } else {
-        # all friendly
-        debug( 'Generating avahi configuration' );
-        UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
+        UBOS::Utils::deleteFile( $avahiConfigFile );
+    }
+
+    # dnsmasq
+    my $dnsmasqConfigContent = '';
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
+            my $address = $config->{$nic}->{address};
+            my $prefixsize = $config->{$nic}->{prefixsize};
+
+            $dnsmasqConfigContent .= <<END
+interface=$nic
+dhcp-range=$address/$prefixsize
+END
+            $servicesNeeded{'dnsmasq.service'} = 1;
+        }
+    }
+    if( exists( $servicesNeeded{'dnsmasq.service'} )) {
+        UBOS::Utils::saveFile( $dnsmasqConfigFile, $dnsmasqConfigContent );
+        
+    } else {
+        UBOS::Utils::deleteFile( $dnsmasqConfigFile );
+    }
+
+
+
+
+
+
+
+
+    # determine the appropriate content to insert into nftables configuration
+    # for those interfaces that have application ports open
+    my @openPorts = _determineOpenPorts();
+    my $openPortsString = '';
+
+    foreach my $portSpec ( @openPorts ) {
+        if( $portSpec =~ m!(.+)/tcp! ) {
+            $openPortsString .= "    tcp dport $1 accept\n";
+        } elsif( $portSpec =~ m!(.+)/udp! ) {
+            $openPortsString .= "    udp dport $1 accept\n";
+        } else {
+            error( 'Unknown open ports spec:', $portSpec );
+        }
+    }
+    
+    # firewall / masquerade / netfilter
+    my $nftablesContent = <<END;
 #
-# The avahi configuration for UBOS. Generated automatically, do not modify
+# UBOS nftables configuration
+# Do not edit, your changes will be mercilessly overwritten.
 #
 
-[server]
-#domain-name=local
-browse-domains=
-use-ipv4=yes
-use-ipv6=no
-ratelimit-interval-usec=1000000
-ratelimit-burst=1000
+# lo
 
-[wide-area]
-enable-wide-area=no
+table inet filter {
+  chain input {
+    type filter hook input priority 0;
+    iifname lo accept
 
-[publish]
-publish-hinfo=no
-publish-workstation=no
-publish-domain=yes
-publish-resolv-conf-dns-servers=no
-publish-aaaa-on-ipv4=no
-publish-a-on-ipv6=no
+  }
+  chain output {
+    type filter hook output priority 0;
+    oifname lo accept
+  }
+}
 
-[reflector]
-enable-reflector=no
-reflect-ipv=no
+END
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            # we are done here, don't configure a rule
+            next;
+        }
+        
+        $nftablesContent .= <<END;
+# $nic
+table inet filter_$nic {
+  chain input {
+    type filter hook input priority 0;
 
-[rlimits]
-rlimit-core=0
-rlimit-data=4194304
-rlimit-fsize=0
-rlimit-nofile=768
-rlimit-stack=4194304
-rlimit-nproc=3
+    !meta iifname $nic drop
+    ct state {established, related} accept
+    ct state invalid drop
+END
+        if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
+            $nftablesContent .= "    udp dport 68 accept\n";
+            $nftablesContent .= "    tcp dport 68 accept\n";
+        }
+        if( exists( $config->{$nic}->{dhcpcserver} ) && $config->{$nic}->{dhcpcserver} ) {
+            $nftablesContent .= "    udp dport 67 accept\n";
+            $nftablesContent .= "    tcp dport 67 accept\n";
+        }
+        if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
+            $nftablesContent .= "    udp dport domain accept\n";
+            $nftablesContent .= "    tcp dport domain accept\n";
+        }
+        if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
+            $nftablesContent .= "    udp dport mdns accept\n";
+            $nftablesContent .= "    tcp dport mdns accept\n";
+        }
+        if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
+            $nftablesContent .= $openPortsString;
+        }
+        if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
+            $nftablesContent .= "    tcp dport ssh accept\n";
+        }
+
+        $nftablesContent .= <<END;
+    ip protocol icmp accept
+    ip6 nexthdr icmpv6 accept
+
+    reject with icmp type port-unreachable
+  }
+  chain forward {
+    type filter hook forward priority 0;
+  }
+  chain output {
+    type filter hook output priority 0;
+  }
+END
+        if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+            $nftablesContent .= <<END;
+  chain postrouting {
+    masquerade
+  }
 END
     }
+        }
+        $nftablesContent .= <<END;
 }
+END
+    }
+    UBOS::Utils::saveFile( $nftablesConfigFile, $nftablesContent );
+    
+
+    # cloud-init
+    foreach my $nic ( keys %$config ) {
+        if( exists( $config->{$nic}->{'cloud-init'} ) && $config->{$nic}->{'cloud-init'} ) {
+            $servicesNeeded{'cloud-final.service'} = 1;
+        }
+    }
+
+    # Start / stop / restart / enable / disable services
+    UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @allServices ));
+    UBOS::Utils::myexec( 'sudo systemctl enable ' . join( ' ', keys %servicesNeeded ));
+
+    unless( $initOnly ) {
+        UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @allServices ));
+        UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', keys %servicesNeeded ));
+    }
+}
+
 
 ##
-# Helper method to determine which nic should be the upstream interface
-#
-# return: name of the nic
-sub determineUpstreamNic {
-    my $allNics = UBOS::Host::nics();
+# Find a network that's not allocated yet
+# $conf: the current configuration object
+# return: ( $ip, $prefixSize ): IP address to be assigned to the NIC, and prefix size for the subnet
+sub findUnusedNetwork {
+    my $conf = shift;
 
-    # take the first wired one, if that fails, the first wifi one
-    my $upstreamNic = undef;
-    my $firstEther = undef;
-    my $firstWlan  = undef;
-    my $bestEtherIndex = 65535;
-    my $bestWlanIndex  = 65535;
+    my $defaults = networkingDefaults();
 
-    foreach my $nic ( keys %$allNics ) {
-        my $data  = $allNics->{$nic};
-        my $index = $data->{index};
-        if( 'ether' eq $data->{type} ) {
-            if( $index < $bestEtherIndex ) {
-                $bestEtherIndex = $index;
-                $firstEther     = $nic;
-            }
-        } elsif( 'wlan' eq $data->{type} ) {
-            if( $index < $bestWlanIndex ) {
-                $bestWlanIndex = $index;
-                $firstWlan     = $nic;
-            }
-        } # ignore others
+    # Determine which networks have been allocated
+    my @allocated = ();
+    foreach my $nic ( sort keys %$conf ) {
+        if( exists( $conf->{$nic}->{address} )) {
+            my $prefixSize = exists( $conf->{$nic}->{prefixsize} ) ? $conf->{$nic}->{prefixsize} : 32; # seems a safe default
+            my $ip = Net::IP->new( $conf->{$nic}->{address} . '/' . $prefixSize );
+            push @allocated, @ip;
+        }
     }
-    if( $firstEther ) {
-        $upstreamNic = $firstEther;
-    } else { # this may be null
-        $upstreamNic = $firstWlan;
+
+    # Return the first network that doesn't overlap with an allocated one
+    foreach my $candidateIp ( sort keys %{$defaults->{networks}} ) {
+        my $ip = Net::IP->new( $candidateIp . '/' . $defaults->{networks}->{$candidateIp}->{prefixsize} );
+
+        my $overlap = 0;
+        foreach my $allocated ( @allocated ) {
+            if( $allocated->overlaps( $ip )) {
+                $overlap = 1;
+                last;
+            }
+        }
+        unless( $overlap ) {
+            return( $ip->ip(), $ip->prefixlen() );
+        }
     }
-    return $upstreamNic;
+    return undef;
 }
-
 
 ##
 # Consistently sort NIC names. Keep numerically ordered within groups.

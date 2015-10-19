@@ -25,6 +25,12 @@ use warnings;
 
 package UBOS::Networking::NetConfigs::Standalone;
 
+use JSON;
+use UBOS::Host;
+use UBOS::Networking::NetConfigUtils;
+
+my $name = 'standalone';
+
 ##
 # Determine whether this network configuration could currently be activated.
 # This return false, if, for example, this network configuration requires two
@@ -37,8 +43,45 @@ sub isPossible {
 
 ##
 # Activate this network configuration.
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 sub activate {
-    UBOS::Networking::NetConfigUtils::setNetConfig( 'standalone', undef, 1, 0 );
+    my $initOnly = shift;
+
+    my $allNics = UBOS::Host::nics();
+
+    my $conf    = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
+    my $error   = 0;
+    my $updated = 0;
+
+    unless( $conf ) {
+        $conf = {};
+        $error = 1;
+    }
+
+    foreach my $nic ( keys %$allNics ) {
+        unless( exists( $conf->{$nic} )) {
+            my( $ip, $prefixlength ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
+            if( $ip ) {
+                $conf->{$nic}->{address}    = $ip;
+                $conf->{$nic}->{length}     = $prefixlength;
+
+                $conf->{$nic}->{dhcpserver} = JSON::true;
+                $conf->{$nic}->{dns}        = JSON::true;
+                $conf->{$nic}->{mdns}       = JSON::true;
+                $conf->{$nic}->{ports}      = JSON::true;
+                $conf->{$nic}->{ssh}        = JSON::true;
+
+                $updated = 1;
+            } else {
+                warning( 'Cannot find unallocated network for interface', $nic );
+            }
+        }
+    }
+    UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
+
+    if( $updated && !$error ) {
+        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name );
+    }
 }
 
 ##
