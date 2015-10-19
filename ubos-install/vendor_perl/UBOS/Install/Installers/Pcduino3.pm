@@ -55,11 +55,11 @@ sub new {
         # The sun7i kernel has problems booting at all
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-standalone uboot-tools archlinuxarm-keyring ) ];
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ubos-networking-client ) ];
+        $self->{deviceservices} = [ qw( rngd ) ];
     }
 
     $self->SUPER::new( @args );
@@ -265,6 +265,21 @@ sub installBootLoader {
     }
 
     return $errors;
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# networking in the default configuration for this deviceclass
+# $chrootScriptP: pointer to script
+sub addConfigureNetworkingToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    debug( "Executing addEnableServicesToScript" );
+
+    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only client';
+
+    return 0;
 }
 
 ##

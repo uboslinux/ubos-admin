@@ -268,4 +268,19 @@ CONTENT
     return 0;
 }
 
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# networking in the default configuration for this deviceclass
+# $chrootScriptP: pointer to script
+sub addConfigureNetworkingToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    debug( "Executing addEnableServicesToScript" );
+
+    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only client';
+
+    return 0;
+}
+
 1;

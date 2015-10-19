@@ -51,10 +51,10 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( mkinitcpio haveged ubos-networking-cloud ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio haveged ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged ubos-networking-cloud ) ];
+        $self->{deviceservices} = [ qw( haveged ) ];
     }
 
     $self->SUPER::new( @args );
@@ -125,6 +125,21 @@ sub installBootLoader {
     my $diskLayout       = shift;
 
     return $self->installGrub( $pacmanConfigFile, $diskLayout );
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# networking in the default configuration for this deviceclass
+# $chrootScriptP: pointer to script
+sub addConfigureNetworkingToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    debug( "Executing addEnableServicesToScript" );
+
+    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only cloud';
+
+    return 0;
 }
 
 ##

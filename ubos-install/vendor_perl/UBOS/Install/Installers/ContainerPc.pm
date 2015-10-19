@@ -53,10 +53,10 @@ sub new {
     }
     $self->{kernelpackage} = undef; # no kernel
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw() ];
+        $self->{devicepackages} = [ qw( ubos-networking-client ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( ubos-networking-client ) ];
+        $self->{deviceservices} = [];
     }
     $self->SUPER::new( @args );
 
@@ -153,6 +153,21 @@ sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
+
+    return 0;
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# networking in the default configuration for this deviceclass
+# $chrootScriptP: pointer to script
+sub addConfigureNetworkingToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    debug( "Executing addEnableServicesToScript" );
+
+    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only client';
 
     return 0;
 }

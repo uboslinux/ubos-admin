@@ -71,10 +71,10 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-am33x';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-client uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ubos-networking-client ) ];
+        $self->{deviceservices} = [ qw( rngd ) ];
     }
 
     $self->SUPER::new( @args );
@@ -339,6 +339,21 @@ sub saveOther {
 # Changed for UBOS 
 RNGD_OPTS="-o /dev/random -r /dev/hwrng"
 CONTENT
+
+    return 0;
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# networking in the default configuration for this deviceclass
+# $chrootScriptP: pointer to script
+sub addConfigureNetworkingToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    debug( "Executing addEnableServicesToScript" );
+
+    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only client';
 
     return 0;
 }

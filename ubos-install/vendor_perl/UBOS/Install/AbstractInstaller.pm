@@ -232,6 +232,7 @@ systemctl set-default multi-user.target
 SCRIPT
         $errors += $self->addGenerateLocaleToScript( \$chrootScript );
         $errors += $self->addEnableServicesToScript( \$chrootScript );
+        $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
 
         debug( "chroot script:\n" . $chrootScript );
         my $out;
@@ -702,6 +703,19 @@ sub addEnableServicesToScript {
     if( @allServices ) {
         $$chrootScriptP .= 'systemctl enable ' . join( ' ', @allServices ) . "\n\n";
     }
+    return 0;
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# networking in the default configuration for this deviceclass
+# $chrootScriptP: pointer to script
+sub addConfigureNetworkingToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    fatal( 'Method addConfigureNetworkingToScript() must be overridden in', ref( $self ));
+
     return 0;
 }
 
