@@ -185,18 +185,6 @@ sub hostnameorwildcard {
 }
 
 ##
-# Obtain the site's host name, or, if it is *, its IP address
-# return: string
-sub hostnameorip {
-    my $self = shift;
-
-    my $ret = $self->hostname();
-    if( $ret eq '*' ) {
-        $ret = UBOS::Host::ip();
-    }
-    return $ret;
-}
-##
 # Obtain the site's host name, or, if it is *, its system hostname
 # return: string
 sub hostnameorsystemhostname {
@@ -224,7 +212,6 @@ sub config {
                     {
                         "site.hostname"                 => $self->hostname(),
                         "site.hostnameorwildcard"       => $self->hostnameorwildcard(),
-                        "site.hostnameorip"             => $self->hostnameorip(),
                         "site.hostnameorsystemhostname" => $self->hostnameorsystemhostname(),
                         "site.siteid"                   => $siteId,
                         "site.protocol"                 => ( $self->hasTls() ? 'https' : 'http' ),

@@ -46,7 +46,6 @@ my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
 my $_osReleaseInfo         = undef; # allocated as needed
-my $_ip                    = undef; # allocated as needed
 my $_nics                  = undef; # allocated as needed
 my $_hwConf                = undef; # allocated as needed
 
@@ -115,21 +114,6 @@ sub kernelPackageName {
 # return: hostname
 sub hostname {
     return config()->get( 'hostname' );
-}
-
-##
-# Determine this host's IP address.
-# return: IP address
-sub ip {
-    unless( $_ip ) {
-        my( $ip ) = inet_ntoa( (gethostbyname(hostname()))[4] );
-        if( $ip ) {
-            $_ip = $ip;
-        } else {
-            $_ip = '127.0.0.1';
-        }
-    }
-    return $_ip;
 }
 
 ##
