@@ -2,11 +2,7 @@
 # to override the default that comes with the package
 [Unit]
 Description=mDNS/DNS-SD for UBOS
-After=\
-    ubos-networking-client.service \
-    ubos-networking-gateway.service \
-    ubos-networking-standalone.service
-StopWhenUnneeded=true
+Requires=avahi-daemon.socket
 
 [Service]
 Type=dbus
@@ -17,6 +13,6 @@ ExecReload=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi.conf -r
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop avahi-daemon
 NotifyAccess=main
 
-[Install]
-WantedBy=multi-user.target
+[Install]WantedBy=multi-user.target
+Also=avahi-daemon.socket
 Alias=dbus-org.freedesktop.Avahi.service

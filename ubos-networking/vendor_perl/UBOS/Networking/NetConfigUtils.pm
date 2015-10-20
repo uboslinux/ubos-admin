@@ -118,29 +118,29 @@ sub networkingDefaults() {
         }
         unless( exists( $_networkingDefaultsConf->{networks} )) {
             $_networkingDefaultsConf->{networks} = {
-                "192.168.140.1" : {
-                    "prefixsize" : 24
+                "192.168.140.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.141.1" : {
-                    "prefixsize" : 24
+                "192.168.141.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.142.1" : {
-                    "prefixsize" : 24
+                "192.168.142.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.143.1" : {
-                    "prefixsize" : 24
+                "192.168.143.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.144.1" : {
-                    "prefixsize" : 24
+                "192.168.144.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.145.1" : {
-                    "prefixsize" : 24
+                "192.168.145.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.146.1" : {
-                    "prefixsize" : 24
+                "192.168.146.1" => {
+                    "prefixsize" => 24
                 },
-                "192.168.147.1" : {
-                    "prefixsize" : 24
+                "192.168.147.1" => {
+                    "prefixsize" => 24
                 }
             };
             $doWrite = 1;
@@ -160,7 +160,7 @@ sub networkingDefaults() {
 sub readNetconfigConfFileFor {
     my $name = shift;
 
-    my $file = sprintf( netconfigConfFilePattern, $name );
+    my $file = sprintf( $netconfigConfFilePattern, $name );
     unless( -e $file ) {
         return {};
     }
@@ -176,7 +176,7 @@ sub saveNetconfigConfFileFor {
     my $name = shift;
     my $json = shift;
 
-    my $file = sprintf( netconfigConfFilePattern, $name );
+    my $file = sprintf( $netconfigConfFilePattern, $name );
     UBOS::Utils::writeJsonToFile( $file, $json );
 }
 
@@ -197,7 +197,7 @@ sub configure {
 
     # systemd.network files
     foreach my $nic ( keys %$config ) {
-        my $dotNetworkContent = <<END
+        my $dotNetworkContent = <<END;
 #
 # UBOS networking configuration for $nic
 # Do not edit, your changes will be mercilessly overwritten.
@@ -214,7 +214,7 @@ END
             $dotNetworkContent .= "DHCP=yes\n";
         }
 
-        UBOS::Utils::saveFile( sprintf( $dotNetworkDhcpFilePattern, $nic ), $dotNetworkContent );
+        UBOS::Utils::saveFile( sprintf( $dotNetworkFilePattern, $nic ), $dotNetworkContent );
     }
 
     # Avahi
@@ -230,7 +230,7 @@ END
     }
 
     my $foundNsswitchHostLine = 0;
-    my @nsswitchContent       = split( /\n/, UBOS::Utils::readFile( '/etc/nsswitch.conf' ));
+    my @nsswitchContent       = split( /\n/, UBOS::Utils::slurpFile( '/etc/nsswitch.conf' ));
     for( my $i=0 ; $i<@nsswitchContent ; ++$i ) {
         if( $nsswitchContent[$i] =~ m!^(\s*hosts\s*:\s*)(.*)*$! ) {
             my $prefix = $1;
@@ -247,15 +247,15 @@ END
                 splice @args, $insertHere, 0, 'mdns_minimal', '[NOTFOUND=return]';
                 
             } else {
-                @args = grep { $_ !~ !^mdns! && $_ ne '[NOTFOUND=return]' } @args;
+                @args = grep { $_ !~ m!^mdns! && $_ ne '[NOTFOUND=return]' } @args;
             }
 
-            $nsswitchContentp[$i] = $prefix . join( ' ', @args );
+            $nsswitchContent[$i] = $prefix . join( ' ', @args );
             $foundNsswitchHostLine = 1;
         }
     }
     unless( $foundNsswitchHostLine ) {
-        if( $exists( $servicesNeeded{'avahi-daemon.service'} ) ) {
+        if( exists( $servicesNeeded{'avahi-daemon.service'} ) ) {
             push @nsswitchContent, "hosts: files mymachines mdns_minimal [NOTFOUND=return] dns myhostname";
         } else {
             push @nsswitchContent, "hosts: files mymachines dns myhostname";
@@ -313,7 +313,7 @@ END
             my $address = $config->{$nic}->{address};
             my $prefixsize = $config->{$nic}->{prefixsize};
 
-            $dnsmasqConfigContent .= <<END
+            $dnsmasqConfigContent .= <<END;
 interface=$nic
 dhcp-range=$address/$prefixsize
 END
@@ -323,16 +323,9 @@ END
     if( exists( $servicesNeeded{'dnsmasq.service'} )) {
         UBOS::Utils::saveFile( $dnsmasqConfigFile, $dnsmasqConfigContent );
         
-    } else {
+    } elsif( -e $dnsmasqConfigFile ) {
         UBOS::Utils::deleteFile( $dnsmasqConfigFile );
     }
-
-
-
-
-
-
-
 
     # determine the appropriate content to insert into nftables configuration
     # for those interfaces that have application ports open
@@ -429,7 +422,6 @@ END
     masquerade
   }
 END
-    }
         }
         $nftablesContent .= <<END;
 }
@@ -446,11 +438,28 @@ END
     }
 
     # Start / stop / restart / enable / disable services
-    UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @allServices ));
-    UBOS::Utils::myexec( 'sudo systemctl enable ' . join( ' ', keys %servicesNeeded ));
 
+    my $out;
+    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a ' . join( ' ', @allServices ), undef, \$out );
+    my @installedServices = map { $s = $_; $s =~ s!\s+.*$!!; $s; } @allServices;
+    my @runningServices   = grep { m!active\s+running! } @installedServices;
+    my @enabledServices   = grep { my $o; UBOS::Utils::myexec( 'systemctl is-enabled ' . $_, undef, \$o ); $o =~ m!enabled!; } @installedServices;
+    my %enabledServices   = ();
+    map { $enabledServices{$_} = 1; } @enabledServices; # hash is easier
+
+    my @toDisable = grep { !exists( $servicesNeeded{$_}  ) } @enabledServices;
+    my @toEnable  = grep { !exists( $enabledServices{$_} ) } keys %servicesNeeded;
+
+    if( @toDisable ) {
+        UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @toDisable ));
+    }
+    if( @toEnable ) {
+        UBOS::Utils::myexec( 'sudo systemctl enable ' . join( ' ', @toEnable ));
+    }
     unless( $initOnly ) {
-        UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @allServices ));
+        if( @runningServices ) {
+            UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @runningServices ));
+        }
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', keys %servicesNeeded ));
     }
 }
@@ -471,7 +480,7 @@ sub findUnusedNetwork {
         if( exists( $conf->{$nic}->{address} )) {
             my $prefixSize = exists( $conf->{$nic}->{prefixsize} ) ? $conf->{$nic}->{prefixsize} : 32; # seems a safe default
             my $ip = Net::IP->new( $conf->{$nic}->{address} . '/' . $prefixSize );
-            push @allocated, @ip;
+            push @allocated, $ip;
         }
     }
 
