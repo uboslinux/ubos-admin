@@ -13,6 +13,7 @@ ExecReload=/usr/bin/avahi-daemon -f /etc/avahi/ubos-avahi.conf -r
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop avahi-daemon
 NotifyAccess=main
 
-[Install]WantedBy=multi-user.target
+[Install]
+WantedBy=multi-user.target
 Also=avahi-daemon.socket
 Alias=dbus-org.freedesktop.Avahi.service

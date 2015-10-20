@@ -44,22 +44,20 @@ my $netconfigConfFilePattern    = '/etc/ubos/netconfig-%s.json';
 my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePattern, keyed by netconfig name
 
 # Regardless of Netconfig, always run these
-my @alwaysServices = qw(
-        systemd-networkd.service
-        systemd-resolved.service
-        systemd-timedated.service
-        ubos-nftables.service
+my %alwaysServices = (
+        'systemd-networkd.service'  => 1,
+        'systemd-resolved.service'  => 1,
+        'systemd-timedated.service' => 1,
+        'ubos-nftables.service'     => 1
 );
 
 # All services possibly started/stopped. Depending on Netconfig, not all of
 # them may actually be installed.
-my @allServices = (
-    @alwaysServices,
-    qw(
-        avahi-daemon.service
-        cloud-final.service
-        dnsmasq.service
-    )
+my %allServices = (
+        %alwaysServices,
+        'avahi-daemon.service' => 1,
+        'cloud-final.service'  => 1,
+        'dnsmasq.service'      => 1
 );
                    
 ##
@@ -192,8 +190,7 @@ sub configure {
     my $config   = shift;
     my $initOnly = shift;
 
-    my %servicesNeeded = (); # Run these services after generating config files
-    map { $servicesNeeded{$_} = 1 } @alwaysServices;
+    my %servicesNeeded = ( %alwaysServices ); # Run these services after generating config files
 
     # systemd.network files
     foreach my $nic ( keys %$config ) {
@@ -302,7 +299,7 @@ rlimit-nofile=768
 rlimit-stack=4194304
 rlimit-nproc=3
 END
-    } else {
+    } elsif( -e $avahiConfigFile ) {
         UBOS::Utils::deleteFile( $avahiConfigFile );
     }
 
@@ -440,12 +437,15 @@ END
     # Start / stop / restart / enable / disable services
 
     my $out;
-    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a ' . join( ' ', @allServices ), undef, \$out );
-    my @installedServices = map { $s = $_; $s =~ s!\s+.*$!!; $s; } @allServices;
+    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
+
+    my @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, @out;
+
     my @runningServices   = grep { m!active\s+running! } @installedServices;
     my @enabledServices   = grep { my $o; UBOS::Utils::myexec( 'systemctl is-enabled ' . $_, undef, \$o ); $o =~ m!enabled!; } @installedServices;
     my %enabledServices   = ();
     map { $enabledServices{$_} = 1; } @enabledServices; # hash is easier
+
 
     my @toDisable = grep { !exists( $servicesNeeded{$_}  ) } @enabledServices;
     my @toEnable  = grep { !exists( $enabledServices{$_} ) } keys %servicesNeeded;
