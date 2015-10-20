@@ -47,7 +47,6 @@ my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePatt
 my %alwaysServices = (
         'systemd-networkd.service'  => 1,
         'systemd-resolved.service'  => 1,
-        'systemd-timedated.service' => 1,
         'ubos-nftables.service'     => 1
 );
 
@@ -437,11 +436,12 @@ END
     # Start / stop / restart / enable / disable services
 
     my $out;
+    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --active', undef, \$out );
+    my @runningServices   = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+
     UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
+    my @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
 
-    my @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, @out;
-
-    my @runningServices   = grep { m!active\s+running! } @installedServices;
     my @enabledServices   = grep { my $o; UBOS::Utils::myexec( 'systemctl is-enabled ' . $_, undef, \$o ); $o =~ m!enabled!; } @installedServices;
     my %enabledServices   = ();
     map { $enabledServices{$_} = 1; } @enabledServices; # hash is easier
@@ -459,6 +459,10 @@ END
     unless( $initOnly ) {
         if( @runningServices ) {
             UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @runningServices ));
+        }
+        my $allNics = UBOS::Host::nics();
+        foreach my $nic ( keys %$allNics ) {
+            UBOS::Utils::myexec( "ip addr flush " . $nic );
         }
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', keys %servicesNeeded ));
     }
