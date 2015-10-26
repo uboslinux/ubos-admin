@@ -6,7 +6,7 @@ Before=network-pre.target
 ConditionPathExists=/etc/ubos-nftables.conf
 # /etc/ubos-nftables.conf should always exist; just a defensive measure
 StopWhenUnneeded=true
-Conflicts=nftables iptables ip6tables
+Conflicts=nftables.service iptables.service ip6tables.service
 
 [Service]
 Type=oneshot

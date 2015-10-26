@@ -46,6 +46,7 @@ my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePatt
 # Regardless of Netconfig, always run these
 my %alwaysServices = (
         'systemd-networkd.service'  => 1,
+        'systemd-networkd.socket'   => 1,
         'systemd-resolved.service'  => 1,
         'ubos-nftables.service'     => 1
 );
@@ -55,6 +56,7 @@ my %alwaysServices = (
 my %allServices = (
         %alwaysServices,
         'avahi-daemon.service' => 1,
+        'avahi-daemon.socket'  => 1,
         'cloud-final.service'  => 1,
         'dnsmasq.service'      => 1
 );
@@ -218,6 +220,7 @@ END
     foreach my $nic ( sort keys %$config ) {
         if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
             $servicesNeeded{'avahi-daemon.service'} = 1;
+            $servicesNeeded{'avahi-daemon.socket'}  = 1;
             if( $avahiAllowInterfacesString ) {
                 $avahiAllowInterfacesString .= ' ';
             }
@@ -228,9 +231,11 @@ END
     my $foundNsswitchHostLine = 0;
     my @nsswitchContent       = split( /\n/, UBOS::Utils::slurpFile( '/etc/nsswitch.conf' ));
     for( my $i=0 ; $i<@nsswitchContent ; ++$i ) {
-        if( $nsswitchContent[$i] =~ m!^(\s*hosts\s*:\s*)(.*)*$! ) {
+        if( $nsswitchContent[$i] =~ m!^(\s*hosts\s*:\s*)(.*)$! ) {
             my $prefix = $1;
             my @args   = split( /\s+/, $2 );
+
+            @args = grep { $_ !~ m!^mdns! && $_ ne '[NOTFOUND=return]' } @args;
 
             if( exists( $servicesNeeded{'avahi-daemon.service'} )) {
                 # insert before dns or resolve or myhostname
@@ -241,9 +246,6 @@ END
                     }
                 }
                 splice @args, $insertHere, 0, 'mdns_minimal', '[NOTFOUND=return]';
-                
-            } else {
-                @args = grep { $_ !~ m!^mdns! && $_ ne '[NOTFOUND=return]' } @args;
             }
 
             $nsswitchContent[$i] = $prefix . join( ' ', @args );
@@ -257,7 +259,7 @@ END
             push @nsswitchContent, "hosts: files mymachines dns myhostname";
         }
     }
-    UBOS::Utils::saveFile( '/etc/nsswitch.conf', join( "\n", @nsswitchContent ));
+    UBOS::Utils::saveFile( '/etc/nsswitch.conf', map { "$_\n" } @nsswitchContent );
 
     if( exists( $servicesNeeded{'avahi-daemon.service'} )) {
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
@@ -346,83 +348,95 @@ END
 #
 
 # lo
-
 table inet filter {
-  chain input {
+  chain input { # This chain serves as a dispatcher
     type filter hook input priority 0;
     iifname lo accept
 
-  }
-  chain output {
-    type filter hook output priority 0;
-    oifname lo accept
-  }
-}
-
 END
     foreach my $nic ( sort keys %$config ) {
-        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
-            # we are done here, don't configure a rule
-            next;
-        }
-        
         $nftablesContent .= <<END;
-# $nic
-table inet filter_$nic {
-  chain input {
-    type filter hook input priority 0;
+    iifname $nic jump input_$nic
+END
+    }
 
-    !meta iifname $nic drop
+    $nftablesContent .= <<END;
+
+    reject with icmp type port-unreachable
+  }
+END
+    foreach my $nic ( sort keys %$config ) {
+        $nftablesContent .= <<END;
+  chain input_$nic {
+END
+        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            $nftablesContent .= <<END;
+    reject with icmp type port-unreachable
+END
+
+        } else {
+            $nftablesContent .= <<END;
     ct state {established, related} accept
     ct state invalid drop
 END
-        if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
-            $nftablesContent .= "    udp dport 68 accept\n";
-            $nftablesContent .= "    tcp dport 68 accept\n";
-        }
-        if( exists( $config->{$nic}->{dhcpcserver} ) && $config->{$nic}->{dhcpcserver} ) {
-            $nftablesContent .= "    udp dport 67 accept\n";
-            $nftablesContent .= "    tcp dport 67 accept\n";
-        }
-        if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
-            $nftablesContent .= "    udp dport domain accept\n";
-            $nftablesContent .= "    tcp dport domain accept\n";
-        }
-        if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
-            $nftablesContent .= "    udp dport mdns accept\n";
-            $nftablesContent .= "    tcp dport mdns accept\n";
-        }
-        if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
-            $nftablesContent .= $openPortsString;
-        }
-        if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
-            $nftablesContent .= "    tcp dport ssh accept\n";
-        }
+            if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
+                $nftablesContent .= "    udp dport 68 accept\n";
+                $nftablesContent .= "    tcp dport 68 accept\n";
+            }
+            if( exists( $config->{$nic}->{dhcpcserver} ) && $config->{$nic}->{dhcpcserver} ) {
+                $nftablesContent .= "    udp dport 67 accept\n";
+                $nftablesContent .= "    tcp dport 67 accept\n";
+            }
+            if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
+                $nftablesContent .= "    udp dport domain accept\n";
+                $nftablesContent .= "    tcp dport domain accept\n";
+            }
+            if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
+                $nftablesContent .= "    udp dport mdns accept\n";
+                $nftablesContent .= "    tcp dport mdns accept\n";
+            }
+            if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
+                $nftablesContent .= $openPortsString;
+            }
+            if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
+                $nftablesContent .= "    tcp dport ssh accept\n";
+            }
 
-        $nftablesContent .= <<END;
+            $nftablesContent .= <<END;
     ip protocol icmp accept
     ip6 nexthdr icmpv6 accept
 
     reject with icmp type port-unreachable
-  }
-  chain forward {
-    type filter hook forward priority 0;
-  }
-  chain output {
-    type filter hook output priority 0;
+END
+        }
+
+        $nftablesContent .= <<END;
   }
 END
         if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
             $nftablesContent .= <<END;
-  chain postrouting {
-    masquerade
-  }
+#  chain postrouting {
+#    masquerade
+#  }
+
 END
         }
-        $nftablesContent .= <<END;
-}
-END
     }
+
+    $nftablesContent .= <<END;
+
+  chain forward {
+    type filter hook forward priority 0;
+  }
+
+  chain output { # for now, we let everything out
+    type filter hook output priority 0;
+    accept
+  }
+}
+
+END
+
     UBOS::Utils::saveFile( $nftablesConfigFile, $nftablesContent );
     
 
@@ -436,8 +450,8 @@ END
     # Start / stop / restart / enable / disable services
 
     my $out;
-    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --active', undef, \$out );
-    my @runningServices   = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --state=active', undef, \$out );
+    my @runningServices   = grep { m!\.service$! } grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
 
     UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
     my @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
