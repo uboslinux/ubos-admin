@@ -99,8 +99,10 @@ sub networkingDefaults() {
         my $skipWriting = 0; # but it would not be safe to write
         if( -e $networkingDefaultsConfFile ) {
             $_networkingDefaultsConf = UBOS::Utils::readJsonFromFile( $networkingDefaultsConfFile );
-            warning( 'Networking defaults file is malformed, falling back to defaults:', $networkingDefaultsConfFile );
-            $skipWriting = 1;
+            unless( $_networkingDefaultsConf ) {
+                warning( 'Networking defaults file is malformed, falling back to built-in defaults:', $networkingDefaultsConfFile );
+                $skipWriting = 1;
+            }
         }
         unless( $_networkingDefaultsConf ) {
             $_networkingDefaultsConf = {};
@@ -145,6 +147,9 @@ sub networkingDefaults() {
                 }
             };
             $doWrite = 1;
+        }
+        unless( exists( $_networkingDefaultsConf->{'dhcp-lease'} )) {
+            $_networkingDefaultsConf->{'dhcp-lease'} = '12h';
         }
         if( $doWrite && !$skipWriting ) {
             UBOS::Utils::writeJsonToFile( $networkingDefaultsConfFile, $_networkingDefaultsConf );
@@ -310,12 +315,11 @@ END
     my $dnsmasqConfigContent = '';
     foreach my $nic ( sort keys %$config ) {
         if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
-            my $address = $config->{$nic}->{address};
-            my $prefixsize = $config->{$nic}->{prefixsize};
+            my $range = _calculateDhcpRange( $config->{$nic} );
 
             $dnsmasqConfigContent .= <<END;
 interface=$nic
-dhcp-range=$address/$prefixsize
+dhcp-range=$range
 END
             $servicesNeeded{'dnsmasq.service'} = 1;
         }
@@ -417,10 +421,14 @@ END
 END
         if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
             $nftablesContent .= <<END;
+#  chain prerouting {
+#      type nat hook prerouting priority 0;
+#  }
+#
 #  chain postrouting {
 #    masquerade
 #  }
-
+#
 END
         }
     }
@@ -467,10 +475,10 @@ END
     my @toEnable  = grep { !exists( $enabledServices{$_} ) } keys %servicesNeeded;
 
     if( @toDisable ) {
-        UBOS::Utils::myexec( 'sudo systemctl disable ' . join( ' ', @toDisable ));
+        UBOS::Utils::myexec( 'sudo systemctl disable -q ' . join( ' ', @toDisable ));
     }
     if( @toEnable ) {
-        UBOS::Utils::myexec( 'sudo systemctl enable ' . join( ' ', @toEnable ));
+        UBOS::Utils::myexec( 'sudo systemctl enable -q ' . join( ' ', @toEnable ));
     }
     unless( $initOnly ) {
         if( @runningServices ) {
@@ -479,6 +487,12 @@ END
         my $allNics = UBOS::Host::nics();
         foreach my $nic ( keys %$allNics ) {
             UBOS::Utils::myexec( "ip addr flush " . $nic );
+
+            if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+                UBOS::Utils::myexec( "ip link set $nic down" );
+            } else {
+                UBOS::Utils::myexec( "ip link set $nic up" );
+            }
         }
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', keys %servicesNeeded ));
     }
@@ -508,8 +522,9 @@ sub findUnusedNetwork {
 
     # Return the first network that doesn't overlap with an allocated one
     foreach my $candidateIp ( sort keys %{$defaults->{networks}} ) {
+        my $prefixsize     = $defaults->{networks}->{$candidateIp}->{prefixsize};
         my $binCandidateIp = _binIpAddress( $candidateIp );
-        my $candidateMask  = _binNetMask( $$defaults->{networks}->{$candidateIp}->{prefixsize} );
+        my $candidateMask  = _binNetMask( $prefixsize );
 
         my $overlap = 0;
         foreach my $allocated ( @allocated ) {
@@ -518,13 +533,13 @@ sub findUnusedNetwork {
 
             my $effectiveMask = $allocated->[1] & $candidateMask;
 
-            if( $allocated->[0] & $effectiveMask == $binCandidateIp & $effectiveMask ) {
+            if(( $allocated->[0] & $effectiveMask ) == ( $binCandidateIp & $effectiveMask )) {
                 $overlap = 1;
                 last;
             }
         }
         unless( $overlap ) {
-            return( $network, $prefixlength );
+            return( $candidateIp, $prefixsize );
         }
     }
     return undef;
@@ -563,6 +578,45 @@ sub _binNetMask {
         }
     }
     return $mask;
+}
+
+##
+# Convert a binary representation of an IP address to string
+# $bin: integer number, e.g. 257
+# return: IP address as string, e.g. 0.0.1.1
+sub _stringIpAddress {
+    my $bin = shift;
+    
+    return join( '.', ( map { 0 + ($bin >> ($_*8)) & 255 } (3,2,1,0) ));
+}
+
+##
+# Calculate a suitable dhcp-range from an interface configuration
+# $nicConfig: configuration for this interface
+# return: string suitable for dnsmasq
+sub _calculateDhcpRange {
+    my $nicConfig = shift;
+
+    my $address    = $nicConfig->{address};
+    my $prefixsize = $nicConfig->{prefixsize};
+    my $lease;
+
+    if( exists( $nicConfig->{'dhcp-lease'} )) {
+        $lease = $nicConfig->{'dhcp-lease'};
+    } else {
+        my $defaults = networkingDefaults();
+        $lease = exists( $defaults->{'dhcp-lease'} ) ? $defaults->{'dhcp-lease'} : '12h';
+    }
+        
+    my $binAddress   = _binIpAddress( $address );
+    my $binFrom      = $binAddress+1;
+    my $from         = _stringIpAddress( $binFrom );
+    my $mask         = _binNetMask( $prefixsize );
+    my $invertedMask = ( ~$mask ) & ( ( 1<<32 ) -1 ); # 32bits not 64
+    my $binTo        = ( $binAddress | $invertedMask ) - 1; # don't use .255 or such
+    my $to           = _stringIpAddress( $binTo );
+
+    return "$from,$to,$lease";
 }
 
 ##

@@ -1,6 +1,6 @@
 pkgname=$(basename $(pwd))
 pkgver=0.21
-pkgrel=7
+pkgrel=8
 pkgdesc="UBOS Network management tools"
 arch=('any')
 url="http://ubos.net/"
