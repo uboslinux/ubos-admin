@@ -1,7 +1,2 @@
-ssh/tcp
 http/tcp
 https/tcp
-mdns/tcp
-mdns/udp
-mdnsresponder/tcp
-mdnsresponder/udp
