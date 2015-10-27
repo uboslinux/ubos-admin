@@ -60,10 +60,10 @@ sub activate {
 
     foreach my $nic ( keys %$allNics ) {
         unless( exists( $conf->{$nic} )) {
-            my( $ip, $prefixlength ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
+            my( $ip, $prefixsize ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
             if( $ip ) {
                 $conf->{$nic}->{address}    = $ip;
-                $conf->{$nic}->{length}     = $prefixlength;
+                $conf->{$nic}->{prefixsize} = $prefixsize;
 
                 $conf->{$nic}->{dhcpserver} = JSON::true;
                 $conf->{$nic}->{dns}        = JSON::true;
