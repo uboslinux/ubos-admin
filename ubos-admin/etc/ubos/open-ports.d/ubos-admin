@@ -1,7 +1,7 @@
-22/tcp
-80/tcp
-443/tcp
-5353/tcp
-5353/udp
-5354/tcp
-5354/udp
+ssh/tcp
+http/tcp
+https/tcp
+mdns/tcp
+mdns/udp
+mdnsresponder/tcp
+mdnsresponder/udp
