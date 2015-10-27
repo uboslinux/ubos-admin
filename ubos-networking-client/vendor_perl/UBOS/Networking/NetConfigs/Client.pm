@@ -72,7 +72,7 @@ sub activate {
             $updated = 1;
         }
         unless( exists( $conf->{$nic}->{ports} )) {
-            $conf->{$nic}->{post} = JSON::true;
+            $conf->{$nic}->{ports} = JSON::true;
             $updated = 1;
         }
         unless( exists( $conf->{$nic}->{ssh} )) {
@@ -83,7 +83,7 @@ sub activate {
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
     if( $updated && !$error ) {
-        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name );
+        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name, $conf );
     }
     return $ret;
 }

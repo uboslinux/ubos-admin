@@ -24,7 +24,6 @@ use warnings;
 
 package UBOS::Networking::NetConfigUtils;
 
-use Net::IP;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -117,6 +116,9 @@ sub networkingDefaults() {
         }
         unless( exists( $_networkingDefaultsConf->{networks} )) {
             $_networkingDefaultsConf->{networks} = {
+                # keys: IP addresses of the interfaces of this device connected to the subnet
+                # prefixsize: /xx of the subnet
+                # e.g. subnet 192.168.140.0/24 with interface IP 192.168.140.1
                 "192.168.140.1" => {
                     "prefixsize" => 24
                 },
@@ -145,7 +147,7 @@ sub networkingDefaults() {
             $doWrite = 1;
         }
         if( $doWrite && !$skipWriting ) {
-            UBOS::Utils::writeJsonFile( $networkingDefaultsConfFile, $_networkingDefaultsConf );
+            UBOS::Utils::writeJsonToFile( $networkingDefaultsConfFile, $_networkingDefaultsConf );
         }
     }
     return $_networkingDefaultsConf;
@@ -380,12 +382,12 @@ END
     ct state invalid drop
 END
             if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
-                $nftablesContent .= "    udp dport 68 accept\n";
-                $nftablesContent .= "    tcp dport 68 accept\n";
+                $nftablesContent .= "    udp dport bootpc accept\n";
+                $nftablesContent .= "    tcp dport bootpc accept\n";
             }
             if( exists( $config->{$nic}->{dhcpcserver} ) && $config->{$nic}->{dhcpcserver} ) {
-                $nftablesContent .= "    udp dport 67 accept\n";
-                $nftablesContent .= "    tcp dport 67 accept\n";
+                $nftablesContent .= "    udp dport bootps accept\n";
+                $nftablesContent .= "    tcp dport bootps accept\n";
             }
             if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
                 $nftablesContent .= "    udp dport domain accept\n";
@@ -482,7 +484,6 @@ END
     }
 }
 
-
 ##
 # Find a network that's not allocated yet
 # $conf: the current configuration object
@@ -493,31 +494,75 @@ sub findUnusedNetwork {
     my $defaults = networkingDefaults();
 
     # Determine which networks have been allocated
-    my @allocated = ();
+    my @allocated = (); # contains array[2], where [0]: binary IP address of interface, [1]: binary netmask
     foreach my $nic ( sort keys %$conf ) {
         if( exists( $conf->{$nic}->{address} )) {
-            my $prefixSize = exists( $conf->{$nic}->{prefixsize} ) ? $conf->{$nic}->{prefixsize} : 32; # seems a safe default
-            my $ip = Net::IP->new( $conf->{$nic}->{address} . '/' . $prefixSize );
-            push @allocated, $ip;
+            my $prefixsize = exists( $conf->{$nic}->{prefixsize} ) ? $conf->{$nic}->{prefixsize} : 32; # seems a safe default
+
+            my $binIp = _binIpAddress( $conf->{$nic}->{address} );
+            my $mask  = _binNetMask( $prefixsize );
+
+            push @allocated, [ $binIp, $mask ];
         }
     }
 
     # Return the first network that doesn't overlap with an allocated one
     foreach my $candidateIp ( sort keys %{$defaults->{networks}} ) {
-        my $ip = Net::IP->new( $candidateIp . '/' . $defaults->{networks}->{$candidateIp}->{prefixsize} );
+        my $binCandidateIp = _binIpAddress( $candidateIp );
+        my $candidateMask  = _binNetMask( $$defaults->{networks}->{$candidateIp}->{prefixsize} );
 
         my $overlap = 0;
         foreach my $allocated ( @allocated ) {
-            if( $allocated->overlaps( $ip )) {
+            # there's overlap if the networks are the same masked by the shorter
+            # netmask (as in counting the number of 1's)
+
+            my $effectiveMask = $allocated->[1] & $candidateMask;
+
+            if( $allocated->[0] & $effectiveMask == $binCandidateIp & $effectiveMask ) {
                 $overlap = 1;
                 last;
             }
         }
         unless( $overlap ) {
-            return( $ip->ip(), $ip->prefixlen() );
+            return( $network, $prefixlength );
         }
     }
     return undef;
+}
+
+##
+# Calculate the binary representation of an IP address
+# $ip: IP address as string, e.g. 1.2.3.4
+# return: integer number
+sub _binIpAddress {
+    my $ip = shift;
+
+    my $bin;
+    if( $ip =~ m!^(\d+)\.(\d+)\.(\d+)\.(\d+)$! ) {
+        $bin = $1;
+        $bin = $bin*256 + $2;
+        $bin = $bin*256 + $3;
+        $bin = $bin*256 + $4;
+    } else {
+        error( 'Not an IP address:', $ip );
+    }
+    return $bin;
+}
+
+##
+# Calculate integer netmask from prefixlength
+# $prefixlength, e.g. 1
+# return: binary netmask, e.g. 1<<31
+sub _binNetMask {
+    my $prefixlength = shift;
+
+    my $mask = 0;
+    for( my $i=0 ; $i<32 ; ++$i ) {
+        if( $i<$prefixlength ) {
+            $mask |= 1<<( 31-$i );
+        }
+    }
+    return $mask;
 }
 
 ##

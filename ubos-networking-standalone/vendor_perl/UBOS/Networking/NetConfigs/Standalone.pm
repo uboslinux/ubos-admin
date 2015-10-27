@@ -80,7 +80,7 @@ sub activate {
     UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
     if( $updated && !$error ) {
-        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name );
+        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name, $conf );
     }
 }
 
