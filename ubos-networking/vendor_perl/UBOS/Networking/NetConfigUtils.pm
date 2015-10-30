@@ -466,20 +466,36 @@ END
     
     # Start / stop / restart / enable / disable services
 
-    my $out;
-    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --state=active', undef, \$out );
-    my @runningServices   = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+    my @runningServices;
+    my @installedServices;
+    my @enabledServices;
+    my %enabledServices;
+    my @toDisable;
+    my @toEnable;
 
-    UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
-    my @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+    if( $initOnly ) {
+        @runningServices   = ();
+        @installedServices = ();
+        @enabledServices   = ();
+        %enabledServices   = ();
+        @toDisable         = ();
+        @toEnable          = keys %servicesNeeded;
+        
+    } else {
+        my $out;
+        UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --state=active', undef, \$out );
+        @runningServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
 
-    my @enabledServices   = grep { my $o; UBOS::Utils::myexec( 'systemctl is-enabled ' . $_, undef, \$o ); $o =~ m!enabled!; } @installedServices;
-    my %enabledServices   = ();
-    map { $enabledServices{$_} = 1; } @enabledServices; # hash is easier
+        UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
+        @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
 
+        @enabledServices   = grep { my $o; UBOS::Utils::myexec( 'systemctl is-enabled ' . $_, undef, \$o ); $o =~ m!enabled!; } @installedServices;
+        %enabledServices   = ();
+        map { $enabledServices{$_} = 1; } @enabledServices; # hash is easier
 
-    my @toDisable = grep { !exists( $servicesNeeded{$_}  ) } @enabledServices;
-    my @toEnable  = grep { !exists( $enabledServices{$_} ) } keys %servicesNeeded;
+        @toDisable = grep { !exists( $servicesNeeded{$_}  ) } @enabledServices;
+        @toEnable  = grep { !exists( $enabledServices{$_} ) } keys %servicesNeeded;
+    }
 
     if( @toDisable ) {
         UBOS::Utils::myexec( 'sudo systemctl disable -q ' . join( ' ', @toDisable ));
