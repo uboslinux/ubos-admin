@@ -199,6 +199,7 @@ sub configure {
     my $initOnly = shift;
 
     my %servicesNeeded = ( %alwaysServices ); # Run these services after generating config files
+    my $isRouter       = 0;
 
     # systemd.network files
     foreach my $nic ( keys %$config ) {
@@ -389,7 +390,7 @@ END
                 $nftablesContent .= "    udp dport bootpc accept\n";
                 $nftablesContent .= "    tcp dport bootpc accept\n";
             }
-            if( exists( $config->{$nic}->{dhcpcserver} ) && $config->{$nic}->{dhcpcserver} ) {
+            if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
                 $nftablesContent .= "    udp dport bootps accept\n";
                 $nftablesContent .= "    tcp dport bootps accept\n";
             }
@@ -420,6 +421,7 @@ END
   }
 END
         if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+            $isRouter = 1;
             $nftablesContent .= <<END;
 #  chain prerouting {
 #      type nat hook prerouting priority 0;
@@ -454,14 +456,19 @@ END
     foreach my $nic ( keys %$config ) {
         if( exists( $config->{$nic}->{'cloud-init'} ) && $config->{$nic}->{'cloud-init'} ) {
             $servicesNeeded{'cloud-final.service'} = 1;
+            last;
         }
     }
 
+    # packet forwarding
+    UBOS::Utils::saveFile( '/etc/sysctl.d/ip_forward.conf', 'net.ipv4.ip_forward=' . ( $isRouter ? 1 : 0 ) . "\n" );
+    UBOS::Utils::myexec( "sudo systemctl restart systemd-sysctl.service" );
+    
     # Start / stop / restart / enable / disable services
 
     my $out;
     UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --state=active', undef, \$out );
-    my @runningServices   = grep { m!\.service$! } grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+    my @runningServices   = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
 
     UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
     my @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
@@ -494,7 +501,8 @@ END
                 UBOS::Utils::myexec( "ip link set $nic up" );
             }
         }
-        UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', keys %servicesNeeded ));
+        UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', grep { m!\.service$! } keys %servicesNeeded ));
+        # .socket don't want to be started
     }
 }
 
