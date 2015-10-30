@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( rng-tools mkinitcpio ubos-networking-client ubos-networking-gateway ) ];
+        $self->{devicepackages} = [ qw( rng-tools mkinitcpio ubos-networking-client ubos-networking-gateway ubos-networking-standalone ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [];
@@ -324,7 +324,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addEnableServicesToScript" );
+    debug( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= 'ubos-admin setnetconfig --init-only client';
 
