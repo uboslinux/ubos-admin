@@ -120,7 +120,6 @@ sub run {
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 
-    info( 'Updating pacman.conf' );
     UBOS::Utils::regeneratePacmanConf();
 
     my $stage2Cmd = 'ubos-admin update-stage2';
