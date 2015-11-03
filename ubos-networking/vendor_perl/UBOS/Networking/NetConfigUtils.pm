@@ -351,17 +351,17 @@ END
 :INPUT DROP [0:0]
 END
     if( $isRouter ) {
-        $iptablesContent .= <<END
+        $iptablesContent .= <<END;
 :FORWARD ACCEPT [0:0]
 END
     } else {
-        $iptablesContent .= <<END
+        $iptablesContent .= <<END;
 :FORWARD DROP [0:0]
 END
     }
 
     # our chains can't have a default policy specified here, so -
-    $iptablesContent .= <<END
+    $iptablesContent .= <<END;
 :OUTPUT - [0:0]
 :OPEN-PORTS - [0:0]
 END
@@ -458,32 +458,23 @@ END
         }
     }
 
+    my @lans = (); # only used if $isRouter
     if( $isRouter ) {
-        $iptables .= <<END;
+        $iptablesContent .= <<END;
 -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 END
 
-        my @lans = ();
         foreach my $nic ( sort keys %$config ) {
             if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
                 # nothing
             } else {
-                push @lans, _networkAddress( $config->{$nic}->{address}, $config->{$nic}->{prefixlength} );
-                $iptables .= <<END;
+                push @lans, _networkAddress( $config->{$nic}->{address}, $config->{$nic}->{prefixsize} );
+                $iptablesContent .= <<END;
 -A FORWARD -i $nic -j ACCEPT
 END
             }
         }
-        foreach my $nic ( sort keys %$config ) {
-            if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
-                foreach my $lan ( sort @lans ) {
-                    $iptables .= <<END;
--t nat -A POSTROUTING -s $lan -o $nic -j MASQUERADE
-END
-                }
-            }
-        }
-        $iptables .= <<END;
+        $iptablesContent .= <<END;
 -A FORWARD -j REJECT --reject-with icmp-host-unreachable
 END
     }
@@ -495,14 +486,38 @@ END
         } else {
             $iptablesContent .= <<END;
 -A NIC-$nic-UDP -j REJECT --reject-with icmp-host-unreachable
--A NIC-$nic-TCP -j REJECT --reject-with tcp-reset
+-A NIC-$nic-TCP -p tcp -j REJECT --reject-with tcp-reset
 END
+            # this -p tcp is redundant, but iptables doesn't know that, and refuses
+            # to accept the line without it
         }
     }
 
     $iptablesContent .= <<END;
 COMMIT
 END
+
+    if( $isRouter ) {
+        $iptablesContent .= <<END;
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+END
+        foreach my $nic ( sort keys %$config ) {
+            if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+                foreach my $lan ( sort @lans ) {
+                    $iptablesContent .= <<END;
+-A POSTROUTING -s $lan -o $nic -j MASQUERADE
+END
+                }
+            }
+        }
+        $iptablesContent .= <<END;
+COMMIT
+END
+    }
 
     UBOS::Utils::saveFile( $iptablesConfigFile, $iptablesContent );
 
@@ -579,7 +594,7 @@ END
 ##
 # Find a network that's not allocated yet
 # $conf: the current configuration object
-# return: ( $ip, $prefixSize ): IP address to be assigned to the NIC, and prefix size for the subnet
+# return: ( $ip, $prefixsize ): IP address to be assigned to the NIC, and prefix size for the subnet
 sub findUnusedNetwork {
     my $conf = shift;
 
@@ -643,15 +658,15 @@ sub _binIpAddress {
 }
 
 ##
-# Calculate integer netmask from prefixlength
-# $prefixlength, e.g. 1
+# Calculate integer netmask from prefixsize
+# $prefixsize, e.g. 1
 # return: binary netmask, e.g. 1<<31
 sub _binNetMask {
-    my $prefixlength = shift;
+    my $prefixsize = shift;
 
     my $mask = 0;
     for( my $i=0 ; $i<32 ; ++$i ) {
-        if( $i<$prefixlength ) {
+        if( $i<$prefixsize ) {
             $mask |= 1<<( 31-$i );
         }
     }
@@ -698,19 +713,19 @@ sub _calculateDhcpRange {
 }
 
 ##
-# Calculate a network address from IP address and prefixlength
+# Calculate a network address from IP address and prefixsize
 # $ip: IP address, e.g. 1.2.3.4
-# $prefixlength, e.g. 8
+# $prefixsize, e.g. 8
 # return: string, e.g. 1.0.0.0/8
 sub _networkAddress {
-    my $ip           = shift;
-    my $prefixlength = shift;
+    my $ip         = shift;
+    my $prefixsize = shift;
 
     my $binIp   = _binIpAddress( $ip );
-    my $binMask = _binNetMask( $prefixlength );
+    my $binMask = _binNetMask( $prefixsize );
     $binIp &= $binMask;
 
-    my $ret = _stringIpAddress( $binIp ) . '/' . $prefixlength;
+    my $ret = _stringIpAddress( $binIp ) . '/' . $prefixsize;
     return $ret;
 }
 
