@@ -29,7 +29,7 @@ use UBOS::Logging;
 use UBOS::Utils;
 
 my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
-my $nftablesConfigFile          = '/etc/ubos-nftables.conf';
+my $iptablesConfigFile          = '/etc/iptables/iptables.rules';
 my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.conf';
 my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
 my $dotNetworkFilePattern       = '/etc/systemd/network/50-ubos-%s.network';
@@ -44,10 +44,10 @@ my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePatt
 
 # Regardless of Netconfig, always run these
 my %alwaysServices = (
-        'systemd-networkd.service'  => 1,
-        'systemd-networkd.socket'   => 1,
-        'systemd-resolved.service'  => 1,
-        'ubos-nftables.service'     => 1
+        'systemd-networkd.service' => 1,
+        'systemd-networkd.socket'  => 1,
+        'systemd-resolved.service' => 1,
+        'iptables.service'         => 1
 );
 
 # All services possibly started/stopped. Depending on Netconfig, not all of
@@ -332,125 +332,179 @@ END
         UBOS::Utils::deleteFile( $dnsmasqConfigFile );
     }
 
-    # determine the appropriate content to insert into nftables configuration
+    # firewall / masquerade / netfilter
+    # inspired by: https://wiki.archlinux.org/index.php/Simple_stateful_firewall
+    # but we create a TCP and a UDP chain for each nic
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+            $isRouter = 1;
+        }
+    }
+
+    my $iptablesContent = <<END;
+#
+# UBOS iptables configuration
+# Do not edit, your changes will be mercilessly overwritten.
+#
+
+*filter
+:INPUT DROP [0:0]
+END
+    if( $isRouter ) {
+        $iptablesContent .= <<END
+:FORWARD ACCEPT [0:0]
+END
+    } else {
+        $iptablesContent .= <<END
+:FORWARD DROP [0:0]
+END
+    }
+
+    # our chains can't have a default policy specified here, so -
+    $iptablesContent .= <<END
+:OUTPUT - [0:0]
+:OPEN-PORTS - [0:0]
+END
+
+    # don't accept anything from nics that are off
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            $iptablesContent .= <<END;
+:NIC-$nic - [0:0]
+END
+        } else {
+            $iptablesContent .= <<END;
+:NIC-$nic-TCP - [0:0]
+:NIC-$nic-UDP - [0:0]
+END
+        }
+    }
+
+    # applies to all nics
+    $iptablesContent .= <<END;
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT -i lo -j ACCEPT
+END
+
+    # dispatch by nic
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            $iptablesContent .= <<END;
+-A INPUT -i $nic -j NIC-$nic
+END
+        }
+    }
+    $iptablesContent .= <<END;
+-A INPUT -p icmp -m icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
+END
+
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            # handled this already
+        } else {
+            $iptablesContent .= <<END;
+-A INPUT -i $nic -p udp -m conntrack --ctstate NEW -j NIC-$nic-UDP
+-A INPUT -i $nic -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-$nic-TCP
+END
+        }
+    }
+    $iptablesContent .= <<END;
+-A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
+-A INPUT -p tcp -j REJECT --reject-with tcp-reset
+-A INPUT -j REJECT --reject-with icmp-proto-unreachable
+END
+
+    foreach my $nic ( sort keys %$config ) {
+        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            # handled this already
+        } else {
+            if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
+                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport bootpc -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport bootpc -j ACCEPT\n";
+            }
+            if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
+                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport bootps -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport bootps -j ACCEPT\n";
+            }
+            if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
+                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport domain -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport domain -j ACCEPT\n";
+            }
+            if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
+                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport mdns -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport mdns -j ACCEPT\n";
+            }
+            if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
+                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport ssh -j ACCEPT\n";
+            }
+            if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
+                $iptablesContent .= "-A NIC-$nic-UDP -p udp -j OPEN-PORTS\n";
+                $iptablesContent .= "-A NIC-$nic-TCP -p tcp -j OPEN-PORTS\n";
+            }
+        }
+    }
+
+    # determine the appropriate content to insert into iptables configuration
     # for those interfaces that have application ports open
     my @openPorts = _determineOpenPorts();
-    my $openPortsString = '';
-
     foreach my $portSpec ( @openPorts ) {
         if( $portSpec =~ m!(.+)/tcp! ) {
-            $openPortsString .= "    tcp dport $1 accept\n";
+            $iptablesContent .= "-A OPEN-PORTS -p tcp --dport $1 -j ACCEPT\n";
         } elsif( $portSpec =~ m!(.+)/udp! ) {
-            $openPortsString .= "    udp dport $1 accept\n";
+            $iptablesContent .= "-A OPEN-PORTS -p udp --dport $1 -j ACCEPT\n";
         } else {
             error( 'Unknown open ports spec:', $portSpec );
         }
     }
-    
-    # firewall / masquerade / netfilter
-    my $nftablesContent = <<END;
-#
-# UBOS nftables configuration
-# Do not edit, your changes will be mercilessly overwritten.
-#
 
-# lo
-table inet filter {
-  chain input { # This chain serves as a dispatcher
-    type filter hook input priority 0;
-    iifname lo accept
-
+    if( $isRouter ) {
+        $iptables .= <<END;
+-A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 END
-    foreach my $nic ( sort keys %$config ) {
-        $nftablesContent .= <<END;
-    iifname $nic jump input_$nic
+
+        my @lans = ();
+        foreach my $nic ( sort keys %$config ) {
+            if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+                # nothing
+            } else {
+                push @lans, _networkAddress( $config->{$nic}->{address}, $config->{$nic}->{prefixlength} );
+                $iptables .= <<END;
+-A FORWARD -i $nic -j ACCEPT
+END
+            }
+        }
+        foreach my $nic ( sort keys %$config ) {
+            if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+                foreach my $lan ( sort @lans ) {
+                    $iptables .= <<END;
+-t nat -A POSTROUTING -s $lan -o $nic -j MASQUERADE
+END
+                }
+            }
+        }
+        $iptables .= <<END;
+-A FORWARD -j REJECT --reject-with icmp-host-unreachable
 END
     }
-
-    $nftablesContent .= <<END;
-
-    reject with icmp type port-unreachable
-  }
-END
     foreach my $nic ( sort keys %$config ) {
-        $nftablesContent .= <<END;
-  chain input_$nic {
-END
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
-            $nftablesContent .= <<END;
-    reject with icmp type port-unreachable
+            $iptablesContent .= <<END;
+-A NIC-$nic -j DROP
 END
-
         } else {
-            $nftablesContent .= <<END;
-    ct state {established, related} accept
-    ct state invalid drop
-END
-            if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
-                $nftablesContent .= "    udp dport bootpc accept\n";
-                $nftablesContent .= "    tcp dport bootpc accept\n";
-            }
-            if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
-                $nftablesContent .= "    udp dport bootps accept\n";
-                $nftablesContent .= "    tcp dport bootps accept\n";
-            }
-            if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
-                $nftablesContent .= "    udp dport domain accept\n";
-                $nftablesContent .= "    tcp dport domain accept\n";
-            }
-            if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
-                $nftablesContent .= "    udp dport mdns accept\n";
-                $nftablesContent .= "    tcp dport mdns accept\n";
-            }
-            if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
-                $nftablesContent .= $openPortsString;
-            }
-            if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
-                $nftablesContent .= "    tcp dport ssh accept\n";
-            }
-
-            $nftablesContent .= <<END;
-    ip protocol icmp accept
-    ip6 nexthdr icmpv6 accept
-
-    reject with icmp type port-unreachable
-END
-        }
-
-        $nftablesContent .= <<END;
-  }
-END
-        if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
-            $isRouter = 1;
-            $nftablesContent .= <<END;
-#  chain prerouting {
-#      type nat hook prerouting priority 0;
-#  }
-#
-#  chain postrouting {
-#    masquerade
-#  }
-#
+            $iptablesContent .= <<END;
+-A NIC-$nic-UDP -j REJECT --reject-with icmp-host-unreachable
+-A NIC-$nic-TCP -j REJECT --reject-with tcp-reset
 END
         }
     }
 
-    $nftablesContent .= <<END;
-
-  chain forward {
-    type filter hook forward priority 0;
-  }
-
-  chain output { # for now, we let everything out
-    type filter hook output priority 0;
-    accept
-  }
-}
-
+    $iptablesContent .= <<END;
+COMMIT
 END
 
-    UBOS::Utils::saveFile( $nftablesConfigFile, $nftablesContent );
-    
+    UBOS::Utils::saveFile( $iptablesConfigFile, $iptablesContent );
 
     # cloud-init
     foreach my $nic ( keys %$config ) {
@@ -641,6 +695,23 @@ sub _calculateDhcpRange {
     my $to           = _stringIpAddress( $binTo );
 
     return "$from,$to,$lease";
+}
+
+##
+# Calculate a network address from IP address and prefixlength
+# $ip: IP address, e.g. 1.2.3.4
+# $prefixlength, e.g. 8
+# return: string, e.g. 1.0.0.0/8
+sub _networkAddress {
+    my $ip           = shift;
+    my $prefixlength = shift;
+
+    my $binIp   = _binIpAddress( $ip );
+    my $binMask = _binNetMask( $prefixlength );
+    $binIp &= $binMask;
+
+    my $ret = _stringIpAddress( $binIp ) . '/' . $prefixlength;
+    return $ret;
 }
 
 ##
