@@ -531,7 +531,6 @@ END
 
     # packet forwarding
     UBOS::Utils::saveFile( '/etc/sysctl.d/ip_forward.conf', 'net.ipv4.ip_forward=' . ( $isRouter ? 1 : 0 ) . "\n" );
-    UBOS::Utils::myexec( "sudo systemctl restart systemd-sysctl.service" );
     
     # Start / stop / restart / enable / disable services
 
@@ -576,14 +575,22 @@ END
         if( @runningServices ) {
             UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @runningServices ));
         }
+        UBOS::Utils::myexec( "sudo systemctl restart systemd-sysctl.service" );
+
         my $allNics = UBOS::Host::nics();
         foreach my $nic ( keys %$allNics ) {
             UBOS::Utils::myexec( "ip addr flush " . $nic );
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
                 UBOS::Utils::myexec( "ip link set $nic down" );
+                UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=0 > /dev/null" );
             } else {
                 UBOS::Utils::myexec( "ip link set $nic up" );
+                if( $isRouter ) {
+                    UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=1 > /dev/null" );
+                } else {
+                    UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=0 > /dev/null" );
+                }
             }
         }
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', grep { m!\.service$! } keys %servicesNeeded ));
