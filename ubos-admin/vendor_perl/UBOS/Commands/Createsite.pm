@@ -158,8 +158,9 @@ sub run {
             my $custPoints = $installable->customizationPoints;
             if( $custPoints ) {
                 my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+                my @sortedCustPointNames         = _sortCustomizationPoints( $custPoints );
 
-                foreach my $custPointName ( keys %$custPoints ) {
+                foreach my $custPointName ( @sortedCustPointNames ) {
                     my $custPointDef = $custPoints->{$custPointName};
 
                     if( !$askAll && !$custPointDef->{required} ) {
@@ -459,6 +460,37 @@ sub ask {
         }
     }
     return $ret;
+}
+
+##
+# Helper method to sort customization points
+# $custPoints: hash of customization point name to info
+# return: array of customization points names
+sub _sortCustomizationPoints {
+    my $custPoints = shift;
+
+    my @ret = sort {
+        my $aData = $custPoints->{$a};
+        my $bData = $custPoints->{$b};
+
+        # compare index fields if they exist. with index field comes first,
+        # otherwise alphabetical
+        if( exists( $aData->{index} )) {
+            if( exists( $bData->{index} )) {
+                return $aData->{index} <=> $bData->{index};
+            } else {
+                return -1;
+            }
+        } else {
+            if( exists( $bData->{index} )) {
+                return 1;
+            } else {
+                return $a cmp $b;
+            }
+        }
+    } keys %$custPoints;
+
+    return @ret;
 }
 
 ##
