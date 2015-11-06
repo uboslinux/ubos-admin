@@ -128,7 +128,7 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    return $self->installGrub( $pacmanConfigFile, $diskLayout );
+    return $self->installGrub( $pacmanConfigFile, $diskLayout, '' );
 }
 
 ##

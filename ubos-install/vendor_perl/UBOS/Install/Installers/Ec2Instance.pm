@@ -21,6 +21,8 @@
 # Device-specific notes:
 # * random number generator: haveged for artificial entropy.
 # * cloud-init for ssh keys
+# * we use linux-ec2 as the name for the kernel, but we do not use
+#   mkinitcpio's linux-ec2.preset but plain linux.preset instead
 
 use strict;
 use warnings;
@@ -49,12 +51,22 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
-    $self->{kernelpackage} = 'linux';
+    $self->{kernelpackage} = 'linux-ec2';
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio haveged ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged ) ];
+    }
+    unless( $self->{additionalkernelparameters} ) {
+        $self->{additionalkernelparameters} = [
+                'ro',
+                'rootwait',
+                'rootfstype=ext4',
+                'nomodeset',
+                'console=hvc0',
+                'earlyprintk=xen,verbose',
+                'loglevel=7' ];
     }
 
     $self->SUPER::new( @args );
@@ -124,7 +136,7 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    return $self->installGrub( $pacmanConfigFile, $diskLayout );
+    return $self->installGrub( $pacmanConfigFile, $diskLayout, '-ec2' );
 }
 
 ##

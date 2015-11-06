@@ -36,11 +36,13 @@ use UBOS::Logging;
 # Install the grub bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
+# $kernelPostfix: allows us to add -ec2 to EC2 kernels
 # return: number of errors
 sub installGrub {
     my $self             = shift;
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
+    my $kernelPostfix    = shift || '';
 
     info( 'Installing grub boot loader' );
 
@@ -60,14 +62,14 @@ sub installGrub {
 # from the device that created the image
 
 ALL_config="/etc/mkinitcpio.conf"
-ALL_kver="/boot/vmlinuz-linux"
+ALL_kver="/boot/vmlinuz-linux$kernelPostfix"
 
 PRESETS=('default')
 BINARIES="/usr/bin/btrfsck"
 MODULES=('btrfs')
 
 #default_config="/etc/mkinitcpio.conf"
-default_image="/boot/initramfs-linux.img"
+default_image="/boot/initramfs-linux$kernelPostfix.img"
 default_options="-S autodetect"
 END
 
