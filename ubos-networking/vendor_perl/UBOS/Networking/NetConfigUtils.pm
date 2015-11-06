@@ -267,7 +267,7 @@ END
             push @nsswitchContent, "hosts: files mymachines dns myhostname";
         }
     }
-    UBOS::Utils::saveFile( '/etc/nsswitch.conf', map { "$_\n" } @nsswitchContent );
+    UBOS::Utils::saveFile( '/etc/nsswitch.conf', join( '', map { "$_\n" } @nsswitchContent ));
 
     if( exists( $servicesNeeded{'avahi-daemon.service'} )) {
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
@@ -583,7 +583,14 @@ END
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
                 UBOS::Utils::myexec( "ip link set $nic down" );
-                UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=0 > /dev/null" );
+
+                # This call may fail in a container as "Read-only file system"
+                my $err;
+                if( UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=0 > /dev/null", undef, undef, \$err )) {
+                    unless( $err =~ m!Read-only file system! ) {
+                        warning( "sysctl net.ipv4.conf.$nic.forwarding=0 produced $err" );
+                    }
+                }
             } else {
                 UBOS::Utils::myexec( "ip link set $nic up" );
                 if( $isRouter ) {
