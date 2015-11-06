@@ -1,13 +1,15 @@
 pkgname=$(basename $(pwd))
 pkgver=0.3
-pkgrel=2
+pkgrel=3
 pkgdesc="UBOS Network management tools (cloud)"
 arch=('any')
 url="http://ubos.net/"
 developer=$url
 maintainer=$url
 license=('GPL')
-depends=('ubos-networking' 'cloud-init')
+depends=('ubos-networking' 'cloud-init' 'python2-requests')
+# python2-requests should be a dependency of cloud-init, but currently isn't in Arch
+# bug filed: https://bugs.archlinux.org/task/46969
 options=('!strip')
 
 package() {
