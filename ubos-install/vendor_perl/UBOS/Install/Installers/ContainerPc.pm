@@ -167,7 +167,7 @@ sub addConfigureNetworkingToScript {
 
     debug( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only client';
+    $$chrootScriptP .= 'ubos-admin setnetconfig --init-only nspawn-container';
 
     return 0;
 }
