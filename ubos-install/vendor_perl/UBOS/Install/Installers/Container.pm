@@ -24,7 +24,7 @@
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::ContainerPc;
+package UBOS::Install::Installers::Container;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
@@ -136,7 +136,7 @@ sub createDiskLayout {
 
         } else {
             # Need at least one disk
-            error( 'Must specify at least than one file or image for deviceclass=container-pc' );
+            error( 'Must specify at least than one file or image for deviceclass=container' );
             $ret = undef;
         }
     }
@@ -177,7 +177,7 @@ sub addConfigureNetworkingToScript {
 sub deviceClass {
     my $self = shift;
 
-    return 'container-pc';
+    return 'container';
 }
 
 1;

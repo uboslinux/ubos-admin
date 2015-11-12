@@ -57,11 +57,11 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-raspberrypi';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( raspberrypi-firmware raspberrypi-firmware-bootloader
+        $self->{devicepackages} = [ qw( ubos-networking-client raspberrypi-firmware raspberrypi-firmware-bootloader
                                         raspberrypi-firmware-bootloader-x archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ubos-networking-client ) ];
+        $self->{deviceservices} = [ qw( rngd ) ];
     }
     unless( $self->{devicemodules} ) {
         $self->{devicemodules} = [ qw( bcm2708-rng snd-bcm2835 ) ];
