@@ -1,5 +1,5 @@
 # 
-# Install UBOS for a Linux container.
+# Abstract superclass for container installers.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -24,9 +24,9 @@
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::Container;
+package UBOS::Install::AbstractContainerInstaller;
 
-use base qw( UBOS::Install::AbstractPcInstaller );
+use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
