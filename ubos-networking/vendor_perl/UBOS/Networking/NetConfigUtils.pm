@@ -577,8 +577,7 @@ END
         }
         UBOS::Utils::myexec( "sudo systemctl restart systemd-sysctl.service" );
 
-        my $allNics = UBOS::Host::nics();
-        foreach my $nic ( keys %$allNics ) {
+        foreach my $nic ( keys %$config ) {
             UBOS::Utils::myexec( "ip addr flush " . $nic );
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
