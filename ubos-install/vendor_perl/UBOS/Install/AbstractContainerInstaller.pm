@@ -177,7 +177,7 @@ sub addConfigureNetworkingToScript {
 sub deviceClass {
     my $self = shift;
 
-    return 'container';
+    return 'container-' . $self->arch;
 }
 
 1;
