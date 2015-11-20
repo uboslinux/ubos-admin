@@ -394,7 +394,14 @@ END
     $iptablesContent .= <<END;
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
+END
+    # always accept loopback
+    $iptablesContent .= <<END;
 -A INPUT -i lo -j ACCEPT
+END
+    # always accept traffic from containers (+ is wildcard)
+    $iptablesContent .= <<END;
+-A INPUT -i ve-+ -j ACCEPT
 END
 
     # dispatch by nic
