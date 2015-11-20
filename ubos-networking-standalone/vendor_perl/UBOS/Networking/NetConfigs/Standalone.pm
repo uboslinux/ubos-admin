@@ -67,6 +67,7 @@ sub activate {
 
                 $conf->{$nic}->{dhcpserver} = JSON::true;
                 $conf->{$nic}->{dns}        = JSON::true;
+                $conf->{$nic}->{forwarding} = JSON::true;
                 $conf->{$nic}->{mdns}       = JSON::true;
                 $conf->{$nic}->{ports}      = JSON::true;
                 $conf->{$nic}->{ssh}        = JSON::true;

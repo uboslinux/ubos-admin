@@ -106,6 +106,7 @@ sub activate {
         $conf->{$gateway} = { # overwrite what might have been there before
             'dhcp'       => JSON::true,
             'dns'        => JSON::true,
+            'forwarding' => JSON::true,
             'masquerade' => JSON::true,
             'ssh'        => JSON::true
         };

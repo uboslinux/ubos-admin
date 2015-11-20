@@ -199,14 +199,16 @@ sub configure {
     my $initOnly = shift;
 
     my %servicesNeeded = ( %alwaysServices ); # Run these services after generating config files
-    my $isRouter       = 0;
+    my $isForwarding   = 0;
+    my $isMasquerading = 0;
 
     # systemd.network files
     foreach my $nic ( keys %$config ) {
         my $dotNetworkContent = <<END;
 #
 # UBOS networking configuration for $nic
-# Do not edit, your changes will be mercilessly overwritten.
+# Do not edit, your changes will be mercilessly overwritten as soon
+# as somebody invokes 'ubos-admin setnetconfig'.
 #
 [Match]
 Name=$nic
@@ -218,6 +220,9 @@ END
         }
         if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
             $dotNetworkContent .= "DHCP=yes\n";
+        }
+        if( exists( $config->{$nic}->{forwarding} ) && $config->{$nic}->{forwarding} ) {
+            $dotNetworkContent .= "IPForward=yes\n";
         }
 
         UBOS::Utils::saveFile( sprintf( $dotNetworkFilePattern, $nic ), $dotNetworkContent );
@@ -273,7 +278,8 @@ END
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
 #
 # The avahi configuration for UBOS.
-# Do not edit, your changes will be mercilessly overwritten.
+# Do not edit, your changes will be mercilessly overwritten as soon
+# as somebody invokes 'ubos-admin setnetconfig'.
 #
 
 [server]
@@ -337,20 +343,24 @@ END
     # but we create a TCP and a UDP chain for each nic
     foreach my $nic ( sort keys %$config ) {
         if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
-            $isRouter = 1;
+            $isMasquerading = 1;
+        }
+        if( exists( $config->{$nic}->{forwarding} ) && $config->{$nic}->{forwarding} ) {
+            $isForwarding = 1;
         }
     }
 
     my $iptablesContent = <<END;
 #
 # UBOS iptables configuration
-# Do not edit, your changes will be mercilessly overwritten.
+# Do not edit, your changes will be mercilessly overwritten as soon
+# as somebody invokes 'ubos-admin setnetconfig'.
 #
 
 *filter
 :INPUT DROP [0:0]
 END
-    if( $isRouter ) {
+    if( $isForwarding ) {
         $iptablesContent .= <<END;
 :FORWARD ACCEPT [0:0]
 END
@@ -458,8 +468,8 @@ END
         }
     }
 
-    my @lans = (); # only used if $isRouter
-    if( $isRouter ) {
+    my @lans = (); # only used if $isForwarding
+    if( $isForwarding ) {
         $iptablesContent .= <<END;
 -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 END
@@ -497,7 +507,7 @@ END
 COMMIT
 END
 
-    if( $isRouter ) {
+    if( $isMasquerading ) {
         $iptablesContent .= <<END;
 *nat
 :PREROUTING ACCEPT [0:0]
@@ -529,9 +539,6 @@ END
         }
     }
 
-    # packet forwarding
-    UBOS::Utils::saveFile( '/etc/sysctl.d/ip_forward.conf', 'net.ipv4.ip_forward=' . ( $isRouter ? 1 : 0 ) . "\n" );
-    
     # Start / stop / restart / enable / disable services
 
     my @runningServices;
@@ -583,20 +590,8 @@ END
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
                 UBOS::Utils::myexec( "ip link set $nic down" );
 
-                # This call may fail in a container as "Read-only file system"
-                my $err;
-                if( UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=0 > /dev/null", undef, undef, \$err )) {
-                    unless( $err =~ m!Read-only file system! ) {
-                        warning( "sysctl net.ipv4.conf.$nic.forwarding=0 produced $err" );
-                    }
-                }
             } else {
                 UBOS::Utils::myexec( "ip link set $nic up" );
-                if( $isRouter ) {
-                    UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=1 > /dev/null" );
-                } else {
-                    UBOS::Utils::myexec( "sysctl net.ipv4.conf.$nic.forwarding=0 > /dev/null" );
-                }
             }
         }
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', grep { m!\.service$! } keys %servicesNeeded ));
