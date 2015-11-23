@@ -187,13 +187,35 @@ sub saveNetconfigConfFileFor {
 }
 
 ##
-# Set a particular networking configuration. The various NetConfig objects
-# invoking this pass a hash that tells this method what services to run,
-# which interfaces to config how etc.
+# Set a particular networking configuration for the currently present
+# network interfaces.
+# The various NetConfig objects invoking this pass a hash that tells this
+# method what services to run, which interfaces to config how etc.
 # $name: name of the netconfig for reporting purposes
 # $config: the config JSON object
 # $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 sub configure {
+    my $name     = shift;
+    my $config   = shift;
+    my $initOnly = shift;
+
+    my $nics = UBOS::Host::nics();
+
+    my $filteredConfig = {};
+    map { $filteredConfig->{$_} = $config->{$_}; } grep { exists( $nics->{$_} ) } keys %$config;
+
+    return configureAll( $name, $filteredConfig, $initOnly );
+}
+
+##
+# Set a particular networking configuration for all specified network interfaces,
+# regardless of whether they currently exist.
+# The various NetConfig objects invoking this pass a hash that tells this
+# method what services to run, which interfaces to config how etc.
+# $name: name of the netconfig for reporting purposes
+# $config: the config JSON object
+# $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
+sub configureAll {
     my $name     = shift;
     my $config   = shift;
     my $initOnly = shift;
@@ -475,16 +497,17 @@ END
         }
     }
 
-    my @lans = (); # only used if $isForwarding
     if( $isForwarding ) {
         $iptablesContent .= <<END;
 -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 END
-
+    }
+    my @lans = (); # only used if $isMasquerading
+    if( $isMasquerading ) {
         foreach my $nic ( sort keys %$config ) {
             if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
                 # nothing
-            } else {
+            } elsif( exists( $config->{$nic}->{address} )) {
                 push @lans, _networkAddress( $config->{$nic}->{address}, $config->{$nic}->{prefixsize} );
                 $iptablesContent .= <<END;
 -A FORWARD -i $nic -j ACCEPT
@@ -604,6 +627,7 @@ END
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', grep { m!\.service$! } keys %servicesNeeded ));
         # .socket don't want to be started
     }
+    return 1;
 }
 
 ##
