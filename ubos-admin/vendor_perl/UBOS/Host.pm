@@ -46,7 +46,8 @@ my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
 my $_osReleaseInfo         = undef; # allocated as needed
-my $_nics                  = undef; # allocated as needed
+my $_allNics               = undef; # allocated as needed
+my $_physicalNics          = undef; # allocated as needed
 my $_hwConf                = undef; # allocated as needed
 
 ##
@@ -852,36 +853,45 @@ sub runAfterBootCommandsIfNeeded {
 
 ##
 # Determine the current network interfaces of this host and their properties.
-# This does not return the loopback interface
+# Unless $all is specified, this does not return loopback and virtual devices
 #
-# $refresh: if 1, throw away cached values and read them again
+# $all: if 1, list all nics including loopback and virtual devices
 # return: hash, e.g. { enp0s1 => { index => 1, type => "ethernet", operational => 'carrier', setup => 'configured' }}}
 sub nics {
-    my $refresh = shift || 0;
+    my $all = shift || 0;
 
-    if( $refresh || !$_nics ) {
+    unless( defined( $_allNics )) {
         my $netctl;
         UBOS::Utils::myexec( "networkctl --no-pager --no-legend", undef, \$netctl );
 
-        $_nics = {};
+        $_allNics = {};
         foreach my $line ( split "\n", $netctl ) {
             if( $line =~ /^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$/ ) {
                 my( $index, $link, $type, $operational, $setup ) = ( $1, $2, $3, $4, $5 );
 
-                if( 'loopback' ne $type ) {
-                    my $n = {};
+                my $n = {};
 
-                    $n->{index}       = $index;
-                    $n->{type}        = $type;
-                    $n->{operational} = $operational;
-                    $n->{setup}       = $setup;
+                $n->{index}       = $index;
+                $n->{type}        = $type;
+                $n->{operational} = $operational;
+                $n->{setup}       = $setup;
 
-                    $_nics->{$link} = $n;
-                }
+                $_allNics->{$link} = $n;
             }
         }
     }
-    return $_nics;
+    if( $all ) {
+        return $_allNics;
+    }
+    unless( defined( $_physicalNics )) {
+        $_physicalNics = {};
+        foreach my $nic ( keys %$_allNics ) {
+            unless( $_allNics->{$nic}->{type} =~ m!^(loopback|ve-)! ) {
+                $_physicalNics->{$nic} = $_allNics->{$nic};
+            }
+        }
+    }
+    return $_physicalNics;
 }
 
 ##
