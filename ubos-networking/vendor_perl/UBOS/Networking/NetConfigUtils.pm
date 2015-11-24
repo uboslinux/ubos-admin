@@ -199,12 +199,17 @@ sub configure {
     my $config   = shift;
     my $initOnly = shift;
 
-    my $nics = UBOS::Host::nics();
+    if( $initOnly ) {
+        return configureAll( $name, $config, $initOnly );
 
-    my $filteredConfig = {};
-    map { $filteredConfig->{$_} = $config->{$_}; } grep { exists( $nics->{$_} ) } keys %$config;
+    } else {
+        my $nics = UBOS::Host::nics();
 
-    return configureAll( $name, $filteredConfig, $initOnly );
+        my $filteredConfig = {};
+        map { $filteredConfig->{$_} = $config->{$_}; } grep { exists( $nics->{$_} ) } keys %$config;
+
+        return configureAll( $name, $filteredConfig, $initOnly );
+    }
 }
 
 ##
