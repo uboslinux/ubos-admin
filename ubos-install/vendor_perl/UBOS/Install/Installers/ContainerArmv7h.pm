@@ -27,6 +27,23 @@ use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
 
 ##
+# Constructor. Add keyring, as on arm (unlike x86), pacman does not depend on it
+sub new {
+    my $self = shift;
+    my @args = @_;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+
+    }
+    $self->SUPER::new( @args );
+
+    push @{$self->{devicepackages}}, 'archlinuxarm-keyring';
+
+    return $self;
+}
+
+##
 # Returns the arch for this device.
 # return: the arch
 sub arch {
