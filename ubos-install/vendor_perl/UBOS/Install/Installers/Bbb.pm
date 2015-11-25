@@ -74,7 +74,7 @@ sub new {
         $self->{devicepackages} = [ qw( ubos-networking-client uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd ) ];
+        $self->{deviceservices} = [ qw( rngd systemd-timesyncd ) ];
     }
 
     $self->SUPER::new( @args );

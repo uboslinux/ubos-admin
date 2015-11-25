@@ -56,7 +56,7 @@ sub new {
         $self->{devicepackages} = [ qw( rng-tools mkinitcpio ubos-networking-client ubos-networking-gateway ubos-networking-standalone ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [];
+        $self->{deviceservices} = [ qw( systemd-timesyncd ) ];
     }
 
     $self->SUPER::new( @args );

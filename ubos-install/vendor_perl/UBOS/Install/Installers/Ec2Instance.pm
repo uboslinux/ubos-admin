@@ -56,7 +56,7 @@ sub new {
         $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio haveged ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged ) ];
+        $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
     }
     unless( $self->{additionalkernelparameters} ) {
         $self->{additionalkernelparameters} = [
