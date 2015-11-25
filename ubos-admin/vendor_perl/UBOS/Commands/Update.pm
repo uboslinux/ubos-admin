@@ -180,6 +180,9 @@ sub run {
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
     } else {
+        # Reload systemd first, as .service files might have been updated
+        UBOS::Utils::myexec( 'systemctl daemon-reload' );
+
         exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
     }
     # Never gets here
