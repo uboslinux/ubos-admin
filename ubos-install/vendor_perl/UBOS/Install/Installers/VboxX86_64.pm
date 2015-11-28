@@ -1,5 +1,5 @@
 # 
-# Install UBOS for a PC emulated in VirtualBox.
+# Install UBOS for a 64-bit PC emulated in VirtualBox.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -26,7 +26,7 @@
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::VboxPc;
+package UBOS::Install::Installers::VboxX86_64;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
@@ -151,7 +151,7 @@ sub addConfigureNetworkingToScript {
 sub deviceClass {
     my $self = shift;
 
-    return 'vbox-pc';
+    return 'vbox-x86_64';
 }
 
 1;
