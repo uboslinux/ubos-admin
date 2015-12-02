@@ -53,7 +53,7 @@ sub activate {
 
     my @allNics;
     if( $initOnly ) {
-        @allNics = ( @etherGlobs, @wifiGlobs );
+        @allNics = ( @etherGlobs, @wlanGlobs );
     } else {
         @allNics = sort keys %{ UBOS::Host::nics() };
     }
