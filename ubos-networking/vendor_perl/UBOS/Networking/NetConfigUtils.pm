@@ -430,9 +430,9 @@ END
 
     # don't accept anything from nics that are off
     foreach my $nic ( sort keys %$config ) {
+        my $noWildNic = $nic;
+        $noWildNic =~ s!\*!!g;
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
-            my $noWildNic = $nic;
-            $noWildNic =~ s!\*!!g;
             $iptablesContent .= <<END;
 :NIC-$noWildNic - [0:0]
 END
