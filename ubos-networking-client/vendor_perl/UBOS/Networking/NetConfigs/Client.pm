@@ -29,7 +29,9 @@ use JSON;
 use UBOS::Host;
 use UBOS::Networking::NetConfigUtils;
 
-my $name = 'client';
+my $name       = 'client';
+my @etherGlobs = qw( en* eth* );
+my @wlanGlobs  = qw( wifi* wl* );
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -49,7 +51,12 @@ sub isPossible {
 sub activate {
     my $initOnly = shift;
 
-    my $allNics = UBOS::Host::nics();
+    my @allNics;
+    if( $initOnly ) {
+        @allNics = ( @etherGlobs, @wifiGlobs );
+    } else {
+        @allNics = sort keys %{ UBOS::Host::nics() };
+    }
 
     my $conf    = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
     my $error   = 0;
@@ -59,7 +66,8 @@ sub activate {
         $conf  = {};
         $error = 1;
     }
-    foreach my $nic ( keys %$allNics ) {
+
+    foreach my $nic ( @allNics ) {
         unless( exists( $conf->{$nic} )) {
             $conf->{$nic} = {};
         }
@@ -82,7 +90,8 @@ sub activate {
     }
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
-    if( $updated && !$error ) {
+    if( $updated && !$error && !$initOnly ) {
+        # if we don't save at initOnly time, we don't have to worry about wildcards
         UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name, $conf );
     }
     return $ret;

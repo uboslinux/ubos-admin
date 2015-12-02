@@ -34,9 +34,6 @@ my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.c
 my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
 my $dotNetworkFilePattern       = '/etc/systemd/network/50-ubos-%s.network';
 my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
-my $etherGlobs                  = 'en* eth*';
-my $wlanGlobs                   = 'wifi* wlan*';
-my $containerVeth               = 'host0';
 my $networkingDefaultsConfFile  = '/etc/ubos/networking-defaults.json';
 my $_networkingDefaultsConf     = undef; # cached content of $networkingDefaultsConfFile
 my $netconfigConfFilePattern    = '/etc/ubos/netconfig-%s.json';
@@ -229,8 +226,24 @@ sub configureAll {
     my $isForwarding   = 0;
     my $isMasquerading = 0;
 
+    # error checking:
+    # no wildcards allowed if not initOnly
+    # and in any case, only trailing *
+    foreach my $nic ( keys %$config ) {
+        if( $initOnly ) {
+            if( $nic =~ m!\*.+! ) {
+                fatal( 'Network interface wildcard * only allowed as last character:', $nic );
+            }
+        } else {
+            if( $nic =~ m!\*! ) {
+                fatal( 'Network interface wildcards are not allowed except in --init-only mode:', $nic );
+            }
+        }
+    }
+
     # systemd.network files
     foreach my $nic ( keys %$config ) {
+        # wildcards allowed here
         my $dotNetworkContent = <<END;
 #
 # UBOS networking configuration for $nic
@@ -257,6 +270,7 @@ END
 
     # Avahi
     my $avahiAllowInterfacesString = '';
+    my $avahiHaveWildcardInterface = 0;
     foreach my $nic ( sort keys %$config ) {
         if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
             $servicesNeeded{'avahi-daemon.service'} = 1;
@@ -265,7 +279,17 @@ END
                 $avahiAllowInterfacesString .= ' ';
             }
             $avahiAllowInterfacesString .= $nic;
+
+            if( $nic =~ m!\*!  ) {
+                $avahiHaveWildcardInterface = 1;
+            }
         }
+    }
+    if( $initOnly && $avahiHaveWildcardInterface ) {
+        $avahiAllowInterfacesString = '';
+        # This is a compromise. This is during installation time, so we don't know what the
+        # interfaces will be. And Avahi doesn't have a wildcard syntax for allow-interfaces.
+        # So we do Avahi on all interfaces if it is set for at least one wildcard.
     }
 
     my $foundNsswitchHostLine = 0;
@@ -355,6 +379,7 @@ END
 interface=$nic
 dhcp-range=$range
 END
+            # dnsmasq allows trailing * for wildcard
             $servicesNeeded{'dnsmasq.service'} = 1;
         }
     }
@@ -406,13 +431,15 @@ END
     # don't accept anything from nics that are off
     foreach my $nic ( sort keys %$config ) {
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            my $noWildNic = $nic;
+            $noWildNic =~ s!\*!!g;
             $iptablesContent .= <<END;
-:NIC-$nic - [0:0]
+:NIC-$noWildNic - [0:0]
 END
         } else {
             $iptablesContent .= <<END;
-:NIC-$nic-TCP - [0:0]
-:NIC-$nic-UDP - [0:0]
+:NIC-$noWildNic-TCP - [0:0]
+:NIC-$noWildNic-UDP - [0:0]
 END
         }
     }
@@ -434,8 +461,13 @@ END
     # dispatch by nic
     foreach my $nic ( sort keys %$config ) {
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+            my $noWildNic = $nic;
+            my $wildNic   = $nic;
+            $noWildNic =~ s!\*!!g;
+            $wildNic   =~ s!\*!+!g; # iptables uses + instead of *
+
             $iptablesContent .= <<END;
--A INPUT -i $nic -j NIC-$nic
+-A INPUT -i $wildNic -j NIC-$noWildNic
 END
         }
     }
@@ -447,9 +479,14 @@ END
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
             # handled this already
         } else {
+            my $noWildNic = $nic;
+            my $wildNic   = $nic;
+            $noWildNic =~ s!\*!!g;
+            $wildNic   =~ s!\*!+!g; # iptables uses + instead of *
+
             $iptablesContent .= <<END;
--A INPUT -i $nic -p udp -m conntrack --ctstate NEW -j NIC-$nic-UDP
--A INPUT -i $nic -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-$nic-TCP
+-A INPUT -i $wildNic -p udp -m conntrack --ctstate NEW -j NIC-$noWildNic-UDP
+-A INPUT -i $wildNic -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-$noWildNic-TCP
 END
         }
     }
@@ -463,28 +500,31 @@ END
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
             # handled this already
         } else {
+            my $noWildNic = $nic;
+            $noWildNic =~ s!\*!!g;
+
             if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
-                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport bootpc -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport bootpc -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport bootpc -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport bootpc -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
-                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport bootps -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport bootps -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport bootps -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport bootps -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
-                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport domain -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport domain -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport domain -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport domain -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
-                $iptablesContent .= "-A NIC-$nic-UDP -p udp --dport mdns -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport mdns -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport mdns -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport mdns -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
-                $iptablesContent .= "-A NIC-$nic-TCP -p tcp --dport ssh -j ACCEPT\n";
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
-                $iptablesContent .= "-A NIC-$nic-UDP -p udp -j OPEN-PORTS\n";
-                $iptablesContent .= "-A NIC-$nic-TCP -p tcp -j OPEN-PORTS\n";
+                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp -j OPEN-PORTS\n";
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp -j OPEN-PORTS\n";
             }
         }
     }
@@ -514,8 +554,12 @@ END
                 # nothing
             } elsif( exists( $config->{$nic}->{address} )) {
                 push @lans, _networkAddress( $config->{$nic}->{address}, $config->{$nic}->{prefixsize} );
+
+                my $wildNic = $nic;
+                $wildNic=~ s!\*!+!g; # iptables uses + instead of *
+
                 $iptablesContent .= <<END;
--A FORWARD -i $nic -j ACCEPT
+-A FORWARD -i $wildNic -j ACCEPT
 END
             }
         }
@@ -524,14 +568,17 @@ END
 END
     }
     foreach my $nic ( sort keys %$config ) {
+        my $noWildNic = $nic;
+        $noWildNic =~ s!\*!!g;
+
         if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
             $iptablesContent .= <<END;
--A NIC-$nic -j DROP
+-A NIC-$noWildNic -j DROP
 END
         } else {
             $iptablesContent .= <<END;
--A NIC-$nic-UDP -j REJECT --reject-with icmp-host-unreachable
--A NIC-$nic-TCP -p tcp -j REJECT --reject-with tcp-reset
+-A NIC-$noWildNic-UDP -j REJECT --reject-with icmp-host-unreachable
+-A NIC-$noWildNic-TCP -p tcp -j REJECT --reject-with tcp-reset
 END
             # this -p tcp is redundant, but iptables doesn't know that, and refuses
             # to accept the line without it
@@ -552,9 +599,12 @@ END
 END
         foreach my $nic ( sort keys %$config ) {
             if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
+                my $wildNic = $nic;
+                $wildNic=~ s!\*!+!g; # iptables uses + instead of *
+
                 foreach my $lan ( sort @lans ) {
                     $iptablesContent .= <<END;
--A POSTROUTING -s $lan -o $nic -j MASQUERADE
+-A POSTROUTING -s $lan -o $wildNic -j MASQUERADE
 END
                 }
             }
