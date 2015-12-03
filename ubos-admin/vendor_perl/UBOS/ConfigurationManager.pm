@@ -237,7 +237,7 @@ sub loadCurrentConfiguration {
             UBOS::Utils::saveFile( "/home/shepherd/.ssh/authorized_keys", $sshKey . "\n", 0644, 'shepherd', 'shepherd' );
 
             UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );
-shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mount *, /usr/bin/umount *, /bin/bash *
+shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mkdir *, /usr/bin/mount *, /usr/bin/umount *, /bin/bash *
 CONTENT
         }
     }
