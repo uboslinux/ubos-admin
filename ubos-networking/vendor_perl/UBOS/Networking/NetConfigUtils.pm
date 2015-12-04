@@ -363,7 +363,10 @@ rlimit-data=4194304
 rlimit-fsize=0
 rlimit-nofile=768
 rlimit-stack=4194304
-rlimit-nproc=3
+# rlimit-nproc=3
+# UBOS: this default limit makes it impossible to run avahi on both host and container on the same machine
+# inhibiting testing, so we increase this slightly
+rlimit-nproc=6
 END
     } elsif( -e $avahiConfigFile ) {
         UBOS::Utils::deleteFile( $avahiConfigFile );
