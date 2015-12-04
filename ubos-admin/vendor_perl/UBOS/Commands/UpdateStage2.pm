@@ -61,8 +61,6 @@ sub run {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
-    UBOS::Utils::myexec( 'sudo systemctl daemon-reload' );
-
     info( 'Redeploying sites and restoring data' );
 
     my $ret = finishUpdate();
