@@ -28,6 +28,7 @@ use warnings;
 package UBOS::Networking::NetConfigs::Gateway;
 
 use JSON;
+use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
 
 my $name = 'gateway';
@@ -36,7 +37,7 @@ my $name = 'gateway';
 # These are regexes
 my @gatewayNicPatterns = (
     'en.*',
-    '*eth.*',
+    'eth.*',
     'wifi.*',
     'wlan.*'
 );
