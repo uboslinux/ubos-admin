@@ -326,6 +326,12 @@ END
     UBOS::Utils::saveFile( '/etc/nsswitch.conf', join( '', map { "$_\n" } @nsswitchContent ));
 
     if( exists( $servicesNeeded{'avahi-daemon.service'} )) {
+        # do not provide empty value of allow-interfaces; apparently means "none"
+        if( $avahiAllowInterfacesString ) {
+            $avahiAllowInterfacesString = "allow-interfaces=$avahiAllowInterfacesString";
+        } else {
+            $avahiAllowInterfacesString = "# allow-interfaces=";
+        }
         UBOS::Utils::saveFile( $avahiConfigFile, <<END, 0644 );
 #
 # The avahi configuration for UBOS.
@@ -340,7 +346,7 @@ use-ipv4=yes
 use-ipv6=no
 ratelimit-interval-usec=1000000
 ratelimit-burst=1000
-allow-interfaces=$avahiAllowInterfacesString
+$avahiAllowInterfacesString
 
 [wide-area]
 enable-wide-area=no
