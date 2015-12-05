@@ -242,6 +242,12 @@ sub configureAll {
     }
 
     # systemd.network files
+
+    my @existingDotNetworkFiles = glob( $dotNetworkDeleteGlob );
+    if( @existingDotNetworkFiles ) {
+        UBOS::Utils::deleteFile( @existingDotNetworkFiles );
+    }
+
     foreach my $nic ( keys %$config ) {
         # wildcards allowed here
         my $dotNetworkContent = <<END;
@@ -265,7 +271,10 @@ END
             $dotNetworkContent .= "IPForward=yes\n";
         }
 
-        UBOS::Utils::saveFile( sprintf( $dotNetworkFilePattern, $nic ), $dotNetworkContent );
+        my $noWildNic = $nic;
+        $noWildNic =~ s!\*!!g;
+
+        UBOS::Utils::saveFile( sprintf( $dotNetworkFilePattern, $noWildNic ), $dotNetworkContent );
     }
 
     # Avahi
