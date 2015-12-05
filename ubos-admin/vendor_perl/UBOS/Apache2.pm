@@ -132,7 +132,7 @@ sub ensureConfigFiles {
     my $gid = UBOS::Utils::getGid( 'http' );
 
     unless( -f $keyFile ) {
-        UBOS::Utils::myexec( "openssl genrsa -out '$keyFile' 4096" );
+        UBOS::Utils::myexec( "openssl genrsa -out '$keyFile' 1024" );
         chmod 0040, $keyFile;
         chown $uid, $gid, $keyFile;
     }

@@ -13,6 +13,8 @@ ExecReload=/usr/share/ubos-admin/bin/ubos-apachectl graceful
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-http
 PrivateTmp=true
 LimitNOFILE=infinity
+TimeoutStartSec=180
+# This may take long on slow hardware (e.g. Raspberry Pi) for the initial boot
 
 [Install]
 WantedBy=multi-user.target
