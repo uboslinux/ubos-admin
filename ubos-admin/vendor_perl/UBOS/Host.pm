@@ -561,7 +561,7 @@ sub ensurePackages {
     my $packages = shift;
     my $quiet    = shift;
 
-    debug( 'ensurePackages', $packages, $quiet );
+    debug( 'ensurePackages', @$packages );
 
     unless( defined( $quiet )) {
         $quiet = 1;
