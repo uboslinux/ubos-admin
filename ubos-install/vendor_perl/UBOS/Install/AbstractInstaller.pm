@@ -733,13 +733,13 @@ sub cleanup {
     }
 
     # Removing content of /var/cache makes image smaller
-    opendir(DIR, '/var/cache' ) or return $ret;
+    opendir(DIR, "$target/var/cache" ) or return $ret;
     my @dirs = ();
     while( my $file = readdir(DIR) ) {
         if( $file eq '.' || $file eq '..' ) {
             next;
         }
-        my $d = "/var/cache/$file";
+        my $d = "$target/var/cache/$file";
         if( -d $d ) {
             push @dirs, $d;
         }
