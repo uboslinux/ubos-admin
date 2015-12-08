@@ -3,7 +3,7 @@
 # A network configuration for a device that obtains an IP address via
 # DHCP from one interface, and manages a local network with local IP addresses
 # issued by its DHCP server, with Network Address Translation, on all others.
-# Does not allow any inbound connections from the upstream interface.
+# Allows inbound connections from the upstream interface.
 #
 # This file is part of ubos-networking.
 # (C) 2012-2015 Indie Computing Corp.
@@ -25,14 +25,14 @@
 use strict;
 use warnings;
 
-package UBOS::Networking::NetConfigs::Gateway;
+package UBOS::Networking::NetConfigs::PublicGateway;
 
 use JSON;
 use UBOS::Logging;
 use UBOS::Networking::GatewayUtils;
 use UBOS::Networking::NetConfigUtils;
 
-my $name = 'gateway';
+my $name = 'public-gateway';
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -57,6 +57,7 @@ sub activate {
                 'dns'        => JSON::false, # do not listen to DNS queries from upstream
                 'forwarding' => JSON::true,
                 'masquerade' => JSON::true,
+                'ports'      => JSON::true,
                 'ssh'        => JSON::true
             },
             {
@@ -73,7 +74,7 @@ sub activate {
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Home router with an upstream connection and a local network. Apps on local network only.';
+    return 'Home router with an upstream connection and a local network. Apps accessible over the internet.';
 }
 
 1;
