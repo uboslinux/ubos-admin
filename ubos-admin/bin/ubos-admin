@@ -23,6 +23,7 @@ use strict;
 use warnings;
 
 use Fcntl ':flock';
+use UBOS::Logging;
 use UBOS::Utils;
 
 my $commands = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Commands' );
@@ -30,6 +31,7 @@ my $commands = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Commands' 
 unless( @ARGV ) {
     synopsisHelpQuit();
 }
+my @orgArgs = @ARGV;
 my $command = shift @ARGV;
 if( '--help' eq $command || '-h' eq $command ) {
     synopsisHelpQuit( 1 );
@@ -49,6 +51,9 @@ if( $commandPackage ) {
             $initOnly = 1;
         }
     }
+
+    info( 'ubos-admin', @orgArgs );
+
     unless( $initOnly ) {
         checkReady();
     }
