@@ -210,36 +210,6 @@ END
         or an empty directory.
         If more than one <device> is given, mirror across at least two disks (RAID1).
         WARNING: THIS WILL FORMAT <device>. ALL YOUR DATA ON IT WILL BE LOST.
-        
-        Optional arguments:
-            --verbose:
-                  Increase amount of status output.
-            --logConfFile <log4perlconf>:
-                  Alternate logging configuration file (not common).
-            --channel <channel>:
-                  The UBOS release channel; defaults to green.
-            --hostname <hostname>:
-                  The hostname to set; defaults to a deviceclass-specific name.
-            --repository <path>:
-                  Use this local UBOS repository instead of http://depot.ubos.net/
-            --target <path>:
-                  The directory to which the new system will be mounted temporarily during assembly.
-                  Defaults to a temp directoy in the current working directory. Make sure there
-                  is enough disk space for the entire system
-            --deviceclass <class>:
-                  The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
-                  is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
-            --addpackage <package>:
-                  Name of an additional package to install beyond the default of the device class
-            --addservice <service>:
-                  Name of an additional systemd service to enable beyond the default of the device class
-            --addmodule <module>:
-                  Name of an additionl kernel module to load beyond the default of the device class
-            --addkernelparameter <parameter>:
-                  Verbatim string to be appended to the kernel boot parameter. This currently only
-                  works on some device classes.
-            --checksignatures <never|optional|required>
-                  Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
 END
     }
         
@@ -250,48 +220,6 @@ END
         If more than one root partition is given, mirror across at least two partitions (RAID1).
         WARNING: THIS WILL OVERWRITE all partitions you specify. ALL YOUR DATA ON THEM WILL BE LOST.
         However, it will not change the partition table, nor will it touch other partitions.
-
-        Optional arguments:
-            --verbose:
-                  Increase amount of status output.
-            --logConfFile <log4perlconf>:
-                  Alternate logging configuration file (not common).
-            --channel <channel>:
-                  The UBOS release channel; defaults to green.
-            --hostname <hostname>:
-                  The hostname to set; defaults to a deviceclass-specific name.
-            --repository <path>:
-                  Use this local UBOS repository instead of http://depot.ubos.net/
-            --target <path>:
-                  The directory to which the new system will be mounted temporarily during assembly.
-                  Defaults to a temp directoy in the current working directory. Make sure there
-                  is enough disk space for the entire system
-            --deviceclass <class>:
-                  The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
-                  is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
-            --bootpartition <part>:
-                  Use this block device as boot partition. If not provided, there will be no
-                  separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
-                  boot from a btrfs filesystem, and thus require that you specify a separate
-                  boot partition that can be formatted as vfat.
-            --bootloaderdevice <dev>:
-                  Install the boot loader on this block device. This is only required for
-                  some systems (e.g. x86_64) where boot loaders are written to a special place
-                  on the hard disk.
-            --varpartition <part>:
-                  Use a separate /var partition. If more than one var partition is given, mirror
-                  across at least two partitions (RAID1).
-            --addpackage <package>:
-                  Name of an additional package to install beyond the default of the device class
-            --addservice <service>:
-                  Name of an additional systemd service to enable beyond the default of the device class
-            --addmodule <module>:
-                  Name of an additional kernel module to load beyond the default of the device class
-            --addkernelparameter <parameter>:
-                  Verbatim string to be appended to the kernel boot parameter. This currently only
-                  works on some device classes.
-            --checksignatures <never|optional|required>
-                  Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
 END
     }
     print "    $0 --help\n";
@@ -301,7 +229,62 @@ END
 
 END
     }
+    if( $long ) {
 
+        print <<END;
+Optional arguments:
+        --verbose:
+              Increase amount of status output.
+        --logConfFile <log4perlconf>:
+              Alternate logging configuration file (not common).
+        --channel <channel>:
+              The UBOS release channel; defaults to green.
+        --hostname <hostname>:
+              The hostname to set; defaults to a deviceclass-specific name.
+        --repository <path>:
+              Use this local UBOS repository instead of http://depot.ubos.net/
+        --target <path>:
+              The directory to which the new system will be mounted temporarily during assembly.
+              Defaults to a temp directoy in the current working directory. Make sure there
+              is enough disk space for the entire system
+        --deviceclass <class>:
+              The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
+              is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
+        --bootpartition <part>:
+              Use this block device as boot partition. If not provided, there will be no
+              separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
+              boot from a btrfs filesystem, and thus require that you specify a separate
+              boot partition that can be formatted as vfat.
+        --bootloaderdevice <dev>:
+              Install the boot loader on this block device. This is only required for
+              some systems (e.g. x86_64) where boot loaders are written to a special place
+              on the hard disk.
+        --varpartition <part>:
+              Use a separate /var partition. If more than one var partition is given, mirror
+              across at least two partitions (RAID1).
+        --addpackage <package>:
+              Name of an additional package to install beyond the default of the device class
+        --addservice <service>:
+              Name of an additional systemd service to enable beyond the default of the device class
+        --addmodule <module>:
+              Name of an additional kernel module to load beyond the default of the device class
+        --addkernelparameter <parameter>:
+              Verbatim string to be appended to the kernel boot parameter. This currently only
+              works on some device classes.
+        --checksignatures <never|optional|required>
+              Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
+END
+    } else {
+        print <<END;
+Optional arguments:
+        [--verbose][--logConfFile <log4perlconf>]
+        [--channel <channel>][--hostname <hostname>][--repository <path>][--target <path>]
+        [--deviceclass <class>][--bootpartition <part>][--bootloaderdevice <dev>]
+        [--varpartition <part>][--addpackage <package>][--addservice <service>]
+        [--addmodule <module>][--addkernelparameter <parameter>]
+        [--checksignatures <never|optional|required>]
+END
+    }
     exit 1;
 }
 
