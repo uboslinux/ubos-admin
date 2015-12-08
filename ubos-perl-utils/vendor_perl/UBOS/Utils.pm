@@ -875,7 +875,7 @@ sub cr2space {
 }
 
 ##
-# Format time consistency
+# Format time consistently
 # return: formatted time
 sub time2string {
     my $time = shift;
