@@ -767,11 +767,13 @@ sub gpgHostKeyFingerprint {
 # Make sure an OS user with the provided userId exists.
 # If not, create the user with the specified group(s).
 # $userId: user id
-# @groupIds: zero or more groups
+# $groupIds: zero or more groups
+# $homeDir: desired location of home directory
 # return: success or fail
 sub ensureOsUser {
     my $userId   = shift;
-    my @groupIds = @_;
+    my $groupIds = shift;
+    my $homeDir  = shift || "/home/$userId";
 
     my $out;
     my $err;
@@ -779,21 +781,21 @@ sub ensureOsUser {
 
         debug( 'Creating user', $userId );
 
-        if( UBOS::Utils::myexec( "sudo useradd -e '' -m -U $userId", undef, undef, \$err )) {
+        if( UBOS::Utils::myexec( "sudo useradd -e '' -m -U $userId -d $homeDir", undef, undef, \$err )) {
             error( 'Failed to create user', $userId, ', error:', $err );
             return 0;
         }
 
-        if( @groupIds ) {
+        if( @$groupIds ) {
             debug( 'Adding user to groups:', $userId, @groupIds );
 
-            if( UBOS::Utils::myexec( "sudo usermod -a -G " . join(',', @groupIds ) . " $userId", undef, undef, \$err )) {
-                error( 'Failed to add user to groups:', $userId, @groupIds, 'error:', $err );
+            if( UBOS::Utils::myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
+                error( 'Failed to add user to groups:', $userId, @$groupIds, 'error:', $err );
                 return 0;
             }
         }
-        if( UBOS::Utils::myexec( "sudo chown -R $userId /home/$userId" )) {
-            error( 'Failed to chown home dir of user', $userId );
+        if( UBOS::Utils::myexec( "sudo chown -R $userId $homeDir" )) {
+            error( 'Failed to chown home dir of user', $userId, $homeDir );
             return 0;
         }
     }

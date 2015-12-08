@@ -229,12 +229,12 @@ sub loadCurrentConfiguration {
         $sshKey =~ s!^\s+!!;
         $sshKey =~ s!\s+$!!;
 
-        if( UBOS::Host::ensureOsUser( 'shepherd' )) {
-            unless( -d '/home/shepherd/.ssh' ) {
-                UBOS::Utils::mkdir( "/home/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
+        if( UBOS::Host::ensureOsUser( 'shepherd', undef, '/var/shepherd' )) {
+            unless( -d '/var/shepherd/.ssh' ) {
+                UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
             }
             # only the current ssh key may be there
-            UBOS::Utils::saveFile( "/home/shepherd/.ssh/authorized_keys", $sshKey . "\n", 0644, 'shepherd', 'shepherd' );
+            UBOS::Utils::saveFile( "/var/shepherd/.ssh/authorized_keys", $sshKey . "\n", 0644, 'shepherd', 'shepherd' );
 
             UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );
 shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mkdir *, /usr/bin/mount *, /usr/bin/umount *, /bin/bash *
