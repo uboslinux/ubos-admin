@@ -106,7 +106,7 @@ sub activate {
         my $gateway = shift @gateways;
         $conf->{$gateway} = { # overwrite what might have been there before
             'dhcp'       => JSON::true,
-            'dns'        => JSON::true,
+            'dns'        => JSON::false, # do not listen to DNS queries from upstream
             'forwarding' => JSON::true,
             'masquerade' => JSON::true,
             'ssh'        => JSON::true
@@ -121,6 +121,7 @@ sub activate {
                 $conf->{$nic}->{address}    = $ip;
                 $conf->{$nic}->{prefixsize} = $prefixsize;
 
+                $conf->{$nic}->{dns}        = JSON::true; # listen to DNS queries from the LAN
                 $conf->{$nic}->{dhcpserver} = JSON::true;
                 $conf->{$nic}->{forwarding} = JSON::true;
                 $conf->{$nic}->{mdns}       = JSON::true;
