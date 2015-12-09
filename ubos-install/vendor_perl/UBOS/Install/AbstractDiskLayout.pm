@@ -259,6 +259,26 @@ FSTAB
     return 0;
 }
 
+##
+# Obtain the btrfs device mount points that snapper should manage.
+# return: list of mount points
+sub snapperBtrfsMountPoints {
+    my $self = shift;
+
+    my @ret;
+    if( defined( $self->{devicetable} )) {
+        foreach my $mountPoint ( keys %{$self->{devicetable}} ) {
+            my $deviceTable = $self->{devicetable}->{$mountPoint};
+            my $fs          = $deviceTable->{fs};
+
+            if( 'btrfs' eq $fs ) {
+                push @ret, $mountPoint;
+            }
+        }
+    }
+    return @ret;
+}
+
 # cache found device types
 my %deviceTypes = ();
 

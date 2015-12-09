@@ -63,7 +63,7 @@ sub new {
         $self->{channel} = 'yellow'; # FIXME once we have 'green';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( ubos-base ubos-networking ) ];
+        $self->{basepackages} = [ qw( ubos-base ubos-networking snapper ) ];
     }
     unless( $self->{baseservices} ) {
         $self->{baseservices} = [ qw( ubos-admin sshd ) ];
@@ -213,6 +213,7 @@ sub install {
         $errors += $self->saveOther();
         $errors += $self->configureOs();
         $errors += $self->configureNetworkd();
+        $errors += $self->configureSnapper( $diskLayout );
         $errors += $self->doUpstreamFixes();
 
         $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
@@ -637,6 +638,75 @@ sub configureNetworkd {
     UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' );
     UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' );
 
+    return 0;
+}
+
+##
+# Configure snapper
+# $diskLayout: the disk layout to use
+# return: number of errors
+sub configureSnapper {
+    my $self       = shift;
+    my $diskLayout = shift;
+
+    my @mountPoints = $self->snapperBtrfsMountPoints();
+    foreach my $mountPoint ( @mountPoints ) {
+        my $name = $mountPoint;
+        if( $name eq '/' ) {
+            $name = 'root';
+        } else {
+            $name =~ s!/!_!g; # always starts with underscore, so it won't collide with root
+        }
+
+        UBOS::Utils::saveFile( "/etc/snapper/configs/$name", <<END, 0640 );
+# Snapper configuration for UBOS. Feel free to modify.
+#
+# subvolume to snapshot
+SUBVOLUME="$mountPoint"
+
+# filesystem type
+FSTYPE="btrfs"
+
+# users and groups allowed to work with config
+ALLOW_USERS=""
+ALLOW_GROUPS=""
+
+# sync users and groups from ALLOW_USERS and ALLOW_GROUPS to .snapshots
+# directory
+SYNC_ACL="no"
+
+# start comparing pre- and post-snapshot in background after creating
+# post-snapshot
+BACKGROUND_COMPARISON="no"
+
+# run daily number cleanup
+NUMBER_CLEANUP="yes"
+
+# limit for number cleanup; unit is seconds
+NUMBER_MIN_AGE="1800"
+NUMBER_LIMIT="50"
+NUMBER_LIMIT_IMPORTANT="10"
+
+# create hourly snapshots
+TIMELINE_CREATE="yes"
+
+# cleanup hourly snapshots after some time
+TIMELINE_CLEANUP="yes"
+
+# limits for timeline cleanup; unit is seconds
+TIMELINE_MIN_AGE="1800"
+TIMELINE_LIMIT_HOURLY="10"
+TIMELINE_LIMIT_DAILY="10"
+TIMELINE_LIMIT_WEEKLY="0"
+TIMELINE_LIMIT_MONTHLY="10"
+TIMELINE_LIMIT_YEARLY="10"
+
+# cleanup empty pre-post-pairs
+EMPTY_PRE_POST_CLEANUP="yes"
+
+# limits for empty pre-post-pair cleanup
+EMPTY_PRE_POST_MIN_AGE="1800"
+END
     return 0;
 }
 
