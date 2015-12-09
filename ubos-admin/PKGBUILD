@@ -3,7 +3,7 @@ url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
 pkgver=0.168
-pkgrel=1
+pkgrel=2
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
 license=('GPL')
@@ -132,5 +132,5 @@ package() {
     install -m644 $startdir/etc/ubos/open-ports.d/* $pkgdir/etc/ubos/open-ports.d/
 
 # A directory to mount a UBOS staff to in a container
-    mkdir -p $pkgdir/UBOS-STAFF
+    mkdir -p -m 755 $pkgdir/UBOS-STAFF
 }
