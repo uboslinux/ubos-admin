@@ -62,13 +62,15 @@ sub isPossible {
 
 ##
 # Activate this network configuration.
+# $name: name of the network configuration
 # $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
 # $upstreamConfig: parameters for the upstream interface
 # $lanConfig: parameters for the local network interfaces
 sub activate {
-    my $initOnly      = shift;
-    my $upstramConfig = shift;
-    my $lanConfig     = shift;
+    my $name           = shift;
+    my $initOnly       = shift;
+    my $upstreamConfig = shift;
+    my $lanConfig      = shift;
 
     my $allNics = UBOS::Host::nics();
 

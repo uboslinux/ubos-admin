@@ -51,6 +51,7 @@ sub activate {
     my $initOnly = shift;
 
     return UBOS::Networking::GatewayUtils::activate(
+            $name,
             $initOnly,
             {
                 'dhcp'       => JSON::true,
