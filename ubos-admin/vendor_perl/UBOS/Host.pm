@@ -561,8 +561,6 @@ sub ensurePackages {
     my $packages = shift;
     my $quiet    = shift;
 
-    debug( 'ensurePackages', @$packages );
-
     unless( defined( $quiet )) {
         $quiet = 1;
     }
@@ -576,6 +574,8 @@ sub ensurePackages {
     } else {
         @packageList = ( $packages );
     }
+
+    debug( 'ensurePackages', @packageList );
 
     # only install what isn't installed yet
     my @filteredPackageList = grep { myexec( "pacman -Q $_ > /dev/null 2>&1" ) } @packageList;
