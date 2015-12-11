@@ -649,7 +649,7 @@ sub configureSnapper {
     my $self       = shift;
     my $diskLayout = shift;
 
-    my @mountPoints = $self->snapperBtrfsMountPoints();
+    my @mountPoints = $diskLayout->snapperBtrfsMountPoints();
     foreach my $mountPoint ( @mountPoints ) {
         my $name = $mountPoint;
         if( $name eq '/' ) {
