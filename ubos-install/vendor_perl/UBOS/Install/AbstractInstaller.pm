@@ -707,6 +707,7 @@ EMPTY_PRE_POST_CLEANUP="yes"
 # limits for empty pre-post-pair cleanup
 EMPTY_PRE_POST_MIN_AGE="1800"
 END
+    }
     return 0;
 }
 
