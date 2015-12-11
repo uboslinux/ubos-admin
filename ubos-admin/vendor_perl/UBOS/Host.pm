@@ -786,7 +786,7 @@ sub ensureOsUser {
             return 0;
         }
 
-        if( @$groupIds ) {
+        if( defined( $groupIds ) && @$groupIds ) {
             debug( 'Adding user to groups:', $userId, @$groupIds );
 
             if( UBOS::Utils::myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
