@@ -822,6 +822,8 @@ sub cleanup {
             $ret = 1;
         }
     }
+    # create /var/cache/pacman/pkg or there will be an unnecessary warning
+    UBOS::Utils::mkdirDashP( "$target/var/cache/pacman/pkg", 0755 );
 
     return $ret;
 }
