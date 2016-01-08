@@ -44,12 +44,14 @@ sub run {
     }
 
     my $initOnly      = 0;
+    my $force         = 0;
     my $verbose       = 0;
     my $logConfigFile = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'init-only'     => \$initOnly, # undocumented
+            'force'         => \$force,
             'verbose+'      => \$verbose,
             'logConfig=s'   => \$logConfigFile );
 
@@ -61,7 +63,7 @@ sub run {
 
     my $newConfigName = shift @args;
 
-    return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName, $initOnly );
+    return UBOS::Networking::NetConfigUtils::activateNetConfig( $newConfigName, $initOnly, $force );
 }
 
 ##
@@ -69,8 +71,11 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        '<name>' => <<HHH
-    Sets the active network configuration.
+        '<name>' => <<HHH,
+    Sets the active network configuration, attempting to restore previously set values (if any).
+HHH
+        '--force <name>' => <<HHH
+    Sets the active network configuration, forgetting previously set values (if any).
 HHH
     };
 }

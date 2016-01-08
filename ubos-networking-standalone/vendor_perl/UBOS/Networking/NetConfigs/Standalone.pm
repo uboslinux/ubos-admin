@@ -44,15 +44,22 @@ sub isPossible {
 ##
 # Activate this network configuration.
 # $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
+# $force: do not read existing configuration, initialize netconfig from scratch
 sub activate {
     my $initOnly = shift;
+    my $force    = shift;
 
     my $allNics = UBOS::Host::nics();
 
-    my $conf    = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
+    my $conf    = undef;
     my $error   = 0;
     my $updated = 0;
 
+    if( $force ) {
+        $updated = 1;
+    } else {
+        $conf = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
+    }
     unless( $conf ) {
         $conf = {};
         $error = 1;

@@ -70,9 +70,11 @@ sub findNetConfigs {
 # Activate a NetConfig by name
 # $newConfigName: name of the NetConfig
 # $initOnly: if true, enable services but do not start them (e.g. during ubos-install)
+# $force: do not read existing configuration, initialize netconfig from scratch
 sub activateNetConfig {
     my $newConfigName = shift;
     my $initOnly      = shift;
+    my $force         = shift;
 
     my $netConfigs = findNetConfigs();
 
@@ -81,7 +83,7 @@ sub activateNetConfig {
 
         debug( 'Activating netconfig', $newConfigName );
 
-        return UBOS::Utils::invokeMethod( $newConfig . '::activate', $initOnly );
+        return UBOS::Utils::invokeMethod( $newConfig . '::activate', $initOnly, $force );
 
     } else {
         fatal( 'Unknown netconfig', $newConfigName );
