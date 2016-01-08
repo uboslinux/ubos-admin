@@ -298,12 +298,14 @@ SQL
 ##
 # Unprovision a local database
 # $dbName: name of the database to unprovision
+# $dbUserLid: identifier of the database user that is also being unprovisioned
 # return: success or fail
 sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
+    my $dbUserLid           = shift;
 
-    debug( 'MySqlDriver::unprovisionLocalDatabase', $dbName );
+    debug( 'MySqlDriver::unprovisionLocalDatabase', $dbName, $dbUserLid );
 
     my $dbh = dbConnectAsRoot( undef );
 
@@ -311,6 +313,13 @@ sub unprovisionLocalDatabase {
 DROP DATABASE `$dbName`;
 SQL
     $sth->finish();
+
+    if( $dbUserLid ) {
+        $sth = sqlPrepareExecute( $dbh, <<SQL );
+DROP USER `$dbUserLid`;
+SQL
+        $sth->finish();
+    }
 
     return 1;
 }

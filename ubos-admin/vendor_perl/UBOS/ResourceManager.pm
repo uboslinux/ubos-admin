@@ -144,9 +144,10 @@ sub unprovisionLocalDatabase {
     }
     my $json = UBOS::Utils::readJsonFromFile( $file );
 
-    my $dbName = $json->{dbName};
-    my $dbHost = $json->{dbHost};
-    my $dbPort = $json->{dbPort};
+    my $dbName    = $json->{dbName};
+    my $dbHost    = $json->{dbHost};
+    my $dbPort    = $json->{dbPort};
+    my $dbUserLid = $json->{dbUserLid};
 
     my $dbDriver = undef;
     if( $dbName ) {
@@ -160,7 +161,7 @@ sub unprovisionLocalDatabase {
     }
     
     if( $dbName && $dbDriver ) {
-        return $dbDriver->unprovisionLocalDatabase( $dbName );
+        return $dbDriver->unprovisionLocalDatabase( $dbName, $dbUserLid );
     }
     return 0;
 }

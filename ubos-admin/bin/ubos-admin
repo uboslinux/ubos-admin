@@ -74,6 +74,17 @@ sub checkReady {
     if( -e $readyFile ) {
         return;
     }
+    my $out;
+    UBOS::Utils::myexec( 'systemctl is-system-running', undef, \$out );
+    if( $out =~ m!starting!i ) {
+        print <<END;
+UBOS is not done initializing yet. Please wait until:
+    systemctl is-system-running
+says "Running" or until this message goes away.
+END
+        exit -1;
+    }
+
     my @services = qw( ubos-admin ubos-httpd );
 
     my $prefix = '';
@@ -81,7 +92,6 @@ sub checkReady {
         $prefix = 'sudo ';
     }
 
-    my $out;
     foreach my $service ( @services ) {
         if( UBOS::Utils::myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
             # if is-failed is true, attempt to restart

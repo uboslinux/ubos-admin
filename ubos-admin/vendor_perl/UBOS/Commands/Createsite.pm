@@ -172,7 +172,7 @@ sub run {
                     my $value = ask(
                             (( $installable == $app ) ? 'App ' : 'Accessory ' )
                             . $installable->packageName
-                            . ( $askAll ? ' suports' : ' requires' )
+                            . ( $askAll ? ' supports' : ' requires' )
                             . " a value for $custPointName: " );
 
                     my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};

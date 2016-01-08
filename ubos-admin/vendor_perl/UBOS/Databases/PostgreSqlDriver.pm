@@ -178,23 +178,27 @@ sub provisionLocalDatabase {
     $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" );
     $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT USAGE ON SEQUENCES TO \"$dbUserLid\"" );
 
-debug( 'PostgreSqlDriver::provisionLocalDatabase returns ', $ret );
     return $ret;
 }
 
 ##
 # Unprovision a local database
 # $dbName: name of the database to unprovision
+# $dbUserLid: identifier of the database user that is also being unprovisioned
 # return: success or fail
 sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
+    my $dbUserLid           = shift;
 
-    debug( 'PostgreSqlDriver::unprovisionLocalDatabase', $dbName );
+    debug( 'PostgreSqlDriver::unprovisionLocalDatabase', $dbName, $dbUserLid );
 
     my $ret = executeCmdAsAdmin( "dropdb \"$dbName\"" );
 
-debug( 'PostgreSqlDriver::unprovisionLocalDatabase returns ', $ret );
+    if( $dbUserLid ) {
+        $ret &= executeCmdAsAdmin( "dropuser \"$dbUserLid\"" );
+    }
+
     return $ret;
 }
 
