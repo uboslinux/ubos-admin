@@ -55,7 +55,9 @@ sub new {
         # The sun7i kernel has problems booting at all
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-standalone uboot-tools archlinuxarm-keyring ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-client
+                ubos-networking-standalone uboot-tools archlinuxarm-keyring
+                smartmontools wpa_supplicant ) ];
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
     unless( $self->{deviceservices} ) {
@@ -296,6 +298,12 @@ sub arch {
 sub deviceClass {
     my $self = shift;
 
+    return 'pcduino3';
+}
+
+##
+# Help text
+sub help {
     return 'pcduino3';
 }
 

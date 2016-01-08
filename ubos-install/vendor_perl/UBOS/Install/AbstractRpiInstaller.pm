@@ -57,8 +57,10 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-raspberrypi';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client raspberrypi-firmware raspberrypi-firmware-bootloader
-                                        raspberrypi-firmware-bootloader-x archlinuxarm-keyring rng-tools ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-client
+                raspberrypi-firmware raspberrypi-firmware-bootloader
+                raspberrypi-firmware-bootloader-x archlinuxarm-keyring
+                rng-tools smartmontools wpa_supplicant ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd systemd-timesyncd ) ];

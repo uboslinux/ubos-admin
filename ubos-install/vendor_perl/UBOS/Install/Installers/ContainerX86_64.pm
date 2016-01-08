@@ -35,4 +35,10 @@ sub arch {
     return 'x86_64';
 }
 
+##
+# Help text
+sub help {
+    return 'Linux container on x86_64';
+}
+
 1;

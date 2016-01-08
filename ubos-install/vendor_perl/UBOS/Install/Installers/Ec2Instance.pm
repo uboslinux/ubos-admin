@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-ec2';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio haveged ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
@@ -160,6 +160,12 @@ sub deviceClass {
     my $self = shift;
 
     return 'ec2-instance';
+}
+
+##
+# Help text
+sub help {
+    return 'Amazon EC2 disk image (needs additional conversion to AMI)';
 }
 
 1;

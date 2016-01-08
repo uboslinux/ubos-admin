@@ -279,4 +279,10 @@ sub deviceClass {
     return 'raspberry-pi2';
 }
 
+##
+# Help text
+sub help {
+    return 'Raspberry Pi 2';
+}
+
 1;

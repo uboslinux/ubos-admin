@@ -154,4 +154,10 @@ sub deviceClass {
     return 'vbox-x86_64';
 }
 
+##
+# Help text
+sub help {
+    return 'VirtualBox';
+}
+
 1;

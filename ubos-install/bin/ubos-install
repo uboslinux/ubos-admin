@@ -40,6 +40,7 @@ use UBOS::Utils;
 
 my $verbose            = 0;
 my $logConfigFile      = undef;
+my $list               = 0;
 my $ret                = 0;
 my $channel            = undef;
 my $hostname           = undef;
@@ -56,6 +57,7 @@ my $help               = 0;
 my $parseOk = GetOptions(
         'verbose+'             => \$verbose,
         'logConfig=s'          => \$logConfigFile,
+        'list'                 => \$list,
         'channel=s'            => \$channel,
         'hostname=s'           => \$hostname,
         'deviceclass=s'        => \$deviceclassname,
@@ -70,12 +72,16 @@ my $parseOk = GetOptions(
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile );
 
-if( $help ) {
-    synopsisHelpQuit( 1 );
-}
 if( !$parseOk ) {
     synopsisHelpQuit( 0 );
 }
+if( $help ) {
+    synopsisHelpQuit( 1 );
+}
+if( $list ) {
+    listInstallersQuit();
+}
+
 $checkSignatures = lc( $checkSignatures );
 if( $checkSignatures ne 'never' && $checkSignatures ne 'optional' && $checkSignatures ne 'required' ) {
     synopsisHelpQuit( 0 );
@@ -177,7 +183,7 @@ exit( $ret );
 sub findInstaller {
     my $className = shift;
 
-    my $installers = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Install::Installers' );
+    my $installers = getInstallers();
     my $installer  = $installers->{$className};
 
     unless( $installer ) {
@@ -186,6 +192,31 @@ sub findInstaller {
 
     my $ret = UBOS::Utils::invokeMethod( $installer . '->new' );
     return $ret;
+}
+
+##
+# Get the available installers
+my $_installers;
+sub getInstallers {
+    unless( $_installers ) {
+        $_installers = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Install::Installers' );
+    }
+    return $_installers;
+}
+
+##
+# List the available installers and quit
+sub listInstallersQuit {
+    my $installers = getInstallers();
+
+    print UBOS::Utils::hashAsColumns(
+            $installers,
+            sub {
+                my $installer = shift;
+                UBOS::Utils::invokeMethod( $installer . '::help' );
+            } );
+
+    return 1;
 }
 
 #####

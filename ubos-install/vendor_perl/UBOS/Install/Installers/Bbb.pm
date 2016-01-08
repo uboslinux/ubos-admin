@@ -71,7 +71,9 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-am33x';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-client
+                uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools
+                smartmontools wpa_supplicant ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd systemd-timesyncd ) ];
@@ -373,6 +375,12 @@ sub deviceClass {
     my $self = shift;
 
     return 'bbb';
+}
+
+##
+# Help text
+sub help {
+    return 'SD Card for a Beagle Bone Black';
 }
 
 1;

@@ -52,4 +52,10 @@ sub arch {
     return 'armv6h';
 }
 
+##
+# Help text
+sub help {
+    return 'Linux container on ARMv6';
+}
+
 1;

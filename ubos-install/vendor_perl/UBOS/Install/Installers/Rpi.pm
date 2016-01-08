@@ -176,4 +176,10 @@ sub deviceClass {
     return 'raspberry-pi';
 }
 
+##
+# Help text
+sub help {
+    return 'Raspberry Pi 1 or Zero';
+}
+
 1;

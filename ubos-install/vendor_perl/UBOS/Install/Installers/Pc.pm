@@ -53,10 +53,12 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( rng-tools mkinitcpio ubos-networking-client ubos-networking-gateway ubos-networking-standalone ) ];
+        $self->{devicepackages} = [ qw( rng-tools mkinitcpio
+                ubos-networking-client ubos-networking-gateway
+                ubos-networking-standalone smartmontools wpa_supplicant ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( systemd-timesyncd ) ];
+        $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
     }
 
     $self->SUPER::new( @args );
@@ -339,4 +341,9 @@ sub deviceClass {
     return 'pc';
 }
 
+##
+# Help text
+sub help {
+    return 'PC (x86_64)';
+}
 1;

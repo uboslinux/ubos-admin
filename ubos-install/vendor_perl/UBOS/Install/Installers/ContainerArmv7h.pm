@@ -52,4 +52,10 @@ sub arch {
     return 'armv7h';
 }
 
+##
+# Help text
+sub help {
+    return 'Linux container on ARMv7';
+}
+
 1;
