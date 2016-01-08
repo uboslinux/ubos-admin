@@ -299,7 +299,7 @@ $serverDeclaration
     <Directory "$siteDocumentRoot">
         AllowOverride All
 
-        <IfModule php5_module>
+        <IfModule php7_module>
             php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/
         </IfModule>
     </Directory>
