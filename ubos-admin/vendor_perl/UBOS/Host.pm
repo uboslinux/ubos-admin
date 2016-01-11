@@ -730,10 +730,11 @@ sub ensurePacmanInit {
     
     UBOS::Utils::myexec( "pacman-key --init" );
 
-    # We trust the Arch people, and ourselves
+    # We trust the Arch people, Arch Linux ARM, Uplink Labs' EC2 packages and ourselves
     my $err;
     UBOS::Utils::myexec( "pacman -Q archlinux-keyring    > /dev/null 2>&1 && pacman-key --populate archlinux",    undef, undef, \$err );
     UBOS::Utils::myexec( "pacman -Q archlinuxarm-keyring > /dev/null 2>&1 && pacman-key --populate archlinuxarm", undef, undef, \$err );
+    UBOS::Utils::myexec( "pacman -Q ec2-keyring          > /dev/null 2>&1 && pacman-key --populate ec2"         , undef, undef, \$err );
     UBOS::Utils::myexec( "pacman-key --populate ubos" );
 }
 

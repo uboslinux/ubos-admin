@@ -55,7 +55,7 @@ sub installGrub {
     debug( "Generating ramdisk" );
 
     # The optimized ramdisk doesn't always boot, so we always skip the optimization step
-    UBOS::Utils::saveFile( "$target/etc/mkinitcpio.d/linux.preset", <<'END', 0644, 'root', 'root' );
+    UBOS::Utils::saveFile( "$target/etc/mkinitcpio.d/linux$kernelPostfix.preset", <<END, 0644, 'root', 'root' );
 # mkinitcpio preset file for the 'linux' package, modified for UBOS
 #
 # Do not autodetect, as the device booting the image is most likely different
@@ -75,7 +75,7 @@ END
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "chroot '$target' mkinitcpio -p linux", undef, \$out, \$err ) ) {
+    if( UBOS::Utils::myexec( "chroot '$target' mkinitcpio -p linux$kernelPostfix", undef, \$out, \$err ) ) {
         error( "Generating ramdisk failed:", $err );
         ++$errors;
     }

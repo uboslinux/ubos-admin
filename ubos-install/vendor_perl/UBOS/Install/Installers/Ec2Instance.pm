@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-ec2';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio ec2-keyring ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
