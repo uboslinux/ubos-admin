@@ -639,7 +639,11 @@ END
     # cloud-init
     foreach my $nic ( keys %$config ) {
         if( exists( $config->{$nic}->{'cloud-init'} ) && $config->{$nic}->{'cloud-init'} ) {
-            $servicesNeeded{'cloud-final.service'} = 1;
+            $servicesNeeded{'cloud-config.service'}     = 1;
+            $servicesNeeded{'cloud-final.service'}      = 1;
+            $servicesNeeded{'cloud-init.service'}       = 1;
+            $servicesNeeded{'cloud-init-local.service'} = 1;
+
             last;
         }
     }
