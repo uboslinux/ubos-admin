@@ -268,6 +268,9 @@ Name=$nic
 END
         if( exists( $config->{$nic}->{address} )) {
             $dotNetworkContent .= 'Address=' . $config->{$nic}->{address} . "\n";
+            if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
+                $dotNetworkContent .= 'DNS=' . $config->{$nic}->{address} . "\n";
+            }
         }
         if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
             $dotNetworkContent .= "DHCP=yes\n";
