@@ -51,10 +51,13 @@ my %alwaysServices = (
 # them may actually be installed.
 my %allServices = (
         %alwaysServices,
-        'avahi-daemon.service' => 1,
-        'avahi-daemon.socket'  => 1,
-        'cloud-final.service'  => 1,
-        'dnsmasq.service'      => 1
+        'avahi-daemon.service'     => 1,
+        'avahi-daemon.socket'      => 1,
+        'cloud-config.service'     => 1,
+        'cloud-final.service'      => 1,
+        'cloud-init.service'       => 1,
+        'cloud-init-local.service' => 1,
+        'dnsmasq.service'          => 1
 );
                    
 ##
