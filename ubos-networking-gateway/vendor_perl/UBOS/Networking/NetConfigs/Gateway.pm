@@ -57,19 +57,21 @@ sub activate {
             $initOnly,
             $force,
             {
-                'dhcp'       => JSON::true,
-                'dns'        => JSON::false, # do not listen to DNS queries from upstream
-                'forwarding' => JSON::true,
-                'masquerade' => JSON::true,
-                'ssh'        => JSON::true
+                'dhcp'         => JSON::true,
+                'dns'          => JSON::false, # do not listen to DNS queries from upstream
+                'forwarding'   => JSON::true,
+                'masquerade'   => JSON::true,
+                'ssh'          => JSON::true,
+                'sshratelimit' => JSON::true
             },
             {
-                'dns'        => JSON::true, # listen to DNS queries from the LAN
-                'dhcpserver' => JSON::true,
-                'forwarding' => JSON::true,
-                'mdns'       => JSON::true,
-                'ports'      => JSON::true,
-                'ssh'        => JSON::true
+                'dns'          => JSON::true, # listen to DNS queries from the LAN
+                'dhcpserver'   => JSON::true,
+                'forwarding'   => JSON::true,
+                'mdns'         => JSON::true,
+                'ports'        => JSON::true,
+                'ssh'          => JSON::true,
+                'sshratelimit' => JSON::true
             } );
 }
 

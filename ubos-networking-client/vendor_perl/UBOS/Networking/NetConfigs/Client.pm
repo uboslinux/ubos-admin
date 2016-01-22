@@ -94,6 +94,12 @@ sub activate {
             $conf->{$nic}->{ssh} = JSON::true;
             $updated = 1;
         }
+        if( $conf->{$nic}->{ssh} ) {
+            unless( exists( $conf->{$nic}->{sshratelimit} )) {
+                $conf->{$nic}->{sshratelimit} = JSON::true;
+                $updated = 1;
+            }
+        }
     }
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
