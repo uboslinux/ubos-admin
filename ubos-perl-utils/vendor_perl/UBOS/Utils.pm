@@ -692,6 +692,34 @@ sub findModulesInDirectory {
 }
 
 ##
+# Invoke callbacks found in a particular directory. Each callback
+# is a file containing one or more lines, each of which is the name
+# of the class on which the method should be invoked, plus optional arguments.
+# that are passed to the method after the @args provided to this method.
+# $dir: the directory in which the callbacks are to be found.
+# This currently does not know how to handle escapes or spaces in arguments.
+# $method: the method to invoke
+# @args: the arguments to pass, if any
+# return: 1 if ok, 0 if fail
+sub invokeCallbacks {
+    my $dir    = shift;
+    my $method = shift;
+    my @args   = @_;
+
+    debug( 'invokeCallbacks(', $dir, $method, @args, ')' );
+
+    my @files            = <$dir/*>;
+    my $content          = join( "\n", map { slurpFile( $_ ) } @files );
+    my @packagesWithArgs = grep { $_ } map { s!#.*$!! ; s!^\s+!! ; s!\s+$!! } split( "\n", $content );
+
+    foreach my $packageWithArgs ( @packagesWithArgs ) {
+        my( $package, @packageArgs ) = split( "\s+", $packageWithArgs );
+        $ret &= UBOS::Utils::invokeMethod( $package . '::' . $method, @args, @packageArgs );
+    }
+    return $ret;
+}
+
+##
 # Get numerical user id, given user name. If already numerical, pass through.
 # $uname: the user name
 # return: numerical user id
