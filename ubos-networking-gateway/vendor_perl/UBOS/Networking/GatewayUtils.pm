@@ -117,6 +117,7 @@ sub activate {
         $conf->{$gateway} = $upstreamConfig; # overwrite what might have been there before
         $updated = 1;
     }
+    $conf->{$gateway}->{appnic} = JSON::true;
 
     foreach my $nic ( keys %$allNics ) {
         unless( exists( $conf->{$nic} )) {

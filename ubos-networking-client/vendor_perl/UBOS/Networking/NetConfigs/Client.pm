@@ -74,7 +74,28 @@ sub activate {
         $error = 1;
     }
 
+    my $appNic = undef;
     foreach my $nic ( @allNics ) {
+        if( exists( $conf->{$nic} ) && exists( $conf->{$nic}->{appnic} ) && $conf->{$nic}->{appnic} ) {
+            $appNic = $nic;
+            last;
+        }
+    }
+    unless( $appNic ) {
+        foreach my $nic ( @allNics ) {
+            if(    exists( $conf->{$nic} )
+                && exists( $conf->{$nic}->{address}
+                && ( !exists( $conf->{$nic}->{appnic} ) || !$conf->{$nic}->{appnic} ))
+            {
+                $appNic = $nic;
+                last;
+            }
+        }
+    }
+    foreach my $nic ( @allNics ) {
+        if( !$appNic && ( !exists( $conf->{$nic}->{appnic} ) || !$conf->{$nic}->{appnic} )) {
+            $appNic = $nic;
+        }
         unless( exists( $conf->{$nic} )) {
             $conf->{$nic} = {};
         }
@@ -101,6 +122,10 @@ sub activate {
             }
         }
     }
+    if( $appNic ) {
+        $conf->{$appNic}->{appnic} = JSON::true;
+    }
+
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
     if( $updated && !$error && !$initOnly ) {

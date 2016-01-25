@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.31
+pkgver=0.33
 pkgrel=1
 pkgdesc="UBOS Network management tools"
 arch=('any')
@@ -19,7 +19,7 @@ package() {
     install -m 644 ${startdir}/avahi/{http,https}.service ${pkgdir}/etc/avahi/services/
 
 # Code
-    for d in Commands Networking Networking/NetConfigs; do
+    for d in Commands HostnameCallbacks Networking Networking/NetConfigs; do
 		mkdir -p -m755 ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
 		for f in ${startdir}/vendor_perl/UBOS/$d/*.pm; do
 			if [ -r "$f" ]; then

@@ -663,6 +663,16 @@ END
         }
     }
 
+    # configure callbacks
+    my @appNics = map { $conf->{$_}->{appnic} } grep { exists( $conf->{$_}->{appnic} ) && $conf->{$_}->{appnic} } sort keys %$config;
+
+    if( @appNics ) {
+        my $callbackContent = 'UBOS::HostnameCallbacks::UpdateEtcHosts ' . join( ' ', @appNics ) . "\n";
+        UBOS::Utils::saveFile( '/etc/ubos/hostname-callbacks/etchosts', $callbackContent );
+    } else {
+        UBOS::Utils::deleteFile( '/etc/ubos/hostname-callbacks/etchosts' );
+    }
+
     # Start / stop / restart / enable / disable services
 
     my @runningServices;
@@ -860,6 +870,35 @@ sub _networkAddress {
 
     my $ret = _stringIpAddress( $binIp ) . '/' . $prefixsize;
     return $ret;
+}
+
+##
+# Determine if a given IP address is on a LAN, or publicly accessible
+# $ip: the IP address
+# return: 1 if it is on a LAN
+sub isOnLan {
+    my $ip = shift;
+
+    my $binIp = _binIpAddress( $ip );
+
+    my $mask8  = _binNetMask( 8 );
+    if( ( $binIp & $mask8 ) == _binIpAddress( '10.0.0.0' )) {
+        # 10.0.0.0        -   10.255.255.255  (10/8 prefix)
+        return 1;
+    }
+        
+    my $mask12 = _binNetMask( 12 );
+    if( ( $binIp & $mask12 ) == _binIpAddress( '172.16.0.0' )) {
+        # 172.16.0.0      -   172.31.255.255  (172.16/12 prefix)
+        return 1;
+    }
+
+    my $mask16 = _binNetMask( 16 );
+    if( ( $binIp & $mask16 ) == _binIpAddress( '192.168.0.0' )) {
+        # 192.168.0.0     -   192.168.255.255 (192.168/16 prefix)
+        return 1;
+    }
+    return 0;
 }
 
 ##

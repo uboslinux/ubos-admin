@@ -77,6 +77,9 @@ sub activate {
         $conf->{$nic}->{sshratelimit} = JSON::false; # not in a container
         $updated = 1;
     }
+    unless( exists( $conf->{host0}->{appnic} )) {
+        $conf->{host0}->{appnic} = JSON::true;
+    }
 
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 

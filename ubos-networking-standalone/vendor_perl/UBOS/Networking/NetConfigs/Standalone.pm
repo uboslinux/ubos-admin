@@ -65,6 +65,25 @@ sub activate {
         $error = 1;
     }
 
+    my $appNic = undef;
+    foreach my $nic ( @allNics ) {
+        if( exists( $conf->{$nic} ) && exists( $conf->{$nic}->{appnic} ) && $conf->{$nic}->{appnic} ) {
+            $appNic = $nic;
+            last;
+        }
+    }
+    unless( $appNic ) {
+        foreach my $nic ( @allNics ) {
+            if(    exists( $conf->{$nic} )
+                && exists( $conf->{$nic}->{address}
+                && ( !exists( $conf->{$nic}->{appnic} ) || !$conf->{$nic}->{appnic} ))
+            {
+                $appNic = $nic;
+                last;
+            }
+        }
+    }
+
     foreach my $nic ( keys %$allNics ) {
         unless( exists( $conf->{$nic} )) {
             my( $ip, $prefixsize ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
@@ -85,6 +104,10 @@ sub activate {
             }
         }
     }
+    if( $appNic ) {
+        $conf->{$appNic}->{appnic} = JSON::true;
+    }
+
     UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
     if( $updated && !$error ) {
