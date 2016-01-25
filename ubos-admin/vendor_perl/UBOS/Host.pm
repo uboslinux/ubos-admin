@@ -36,10 +36,10 @@ use UBOS::Utils qw( readJsonFromFile myexec );
 use Socket;
 use Sys::Hostname qw();
 
-my $SITES_DIR          = '/var/lib/ubos/sites';
-my $HOST_CONF_FILE     = '/etc/ubos/config.json';
-my $HARDWARE_CONF_FILE = '/etc/ubos/hardware.json';
-my $AFTER_BOOT_FILE    = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
+my $SITES_DIR              = '/var/lib/ubos/sites';
+my $HOST_CONF_FILE         = '/etc/ubos/config.json';
+my $AFTER_BOOT_FILE        = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
+my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
 
 my $_hostConf              = undef; # allocated as needed
 my $_rolesOnHostInSequence = undef; # allocated as needed
@@ -48,7 +48,6 @@ my $_sites                 = undef; # allocated as needed
 my $_osReleaseInfo         = undef; # allocated as needed
 my $_allNics               = undef; # allocated as needed
 my $_physicalNics          = undef; # allocated as needed
-my $_hwConf                = undef; # allocated as needed
 
 ##
 # Obtain the host Configuration object.
@@ -306,11 +305,14 @@ sub siteDeployed {
     my $siteId         = $site->siteId;
     my $siteJson       = $site->siteJson;
     my $publicSiteJson = $site->publicSiteJson;
+    my $hostname       = $site->hostname;
 
     debug( 'Host::siteDeployed', $siteId );
 
     UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
     UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
+
+    UBOS::Utils::invokeCallbacks( "$HOSTNAME_CALLBACKS_DIR", 'deployed', $siteId, $hostname );
 
     $_sites = undef;
 }
@@ -321,12 +323,15 @@ sub siteDeployed {
 sub siteUndeployed {
     my $site = shift;
 
-    my $siteId = $site->siteId;
+    my $siteId   = $site->siteId;
+    my $hostname = $site->hostname;
 
     debug( 'Host::siteUndeployed', $siteId );
 
     UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-world.json" );
     UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-full.json" );
+
+    UBOS::Utils::invokeCallbacks( "$HOSTNAME_CALLBACKS_DIR", 'undeployed', $siteId, $hostname );
 
     $_sites = undef;
 }
@@ -898,16 +903,36 @@ sub nics {
 }
 
 ##
-# Obtain hardware configuration information, if it exists.
-sub hwConf {
-    unless( $_hwConf ) {
-        if( -e $HARDWARE_CONF_FILE ) {
-            $_hwConf = UBOS::Utils::readJsonFile( $HARDWARE_CONF_FILE );
+# Determine IP addresses assigned to a network interface.
+#
+# $nic: the network interface
+# return: the zero or more IP addresses assigned to the interface
+sub ipAddressesOnNic {
+    my $nic = shift;
+
+    my @ret = ();
+
+    my $netctl;
+    UBOS::Utils::myexec( "networkctl --no-pager --no-legend $nic", undef, \$netctl );
+
+    foreach my $line ( split "\n", $netctl ) {
+        if( @ret ) {
+            # found one already; "Gateway:" is the next item after "Address:"
+            if( $line =~ m!Gateway:\s*(\S+)\s*$! ) {
+                last;
+            } else {
+                $line =~ m!\s*(\S+)\s*$! ) {
+                    push @ret, $1;
+                }
+            }
         } else {
-            $_hwConf = {};
+            # have not found one already
+            if( $line =~ m!Address:\s*(\S+)\s*$! ) {
+                push @ret, $1;
+            }
         }
     }
-    return $_hwConf;
+    return @ret;
 }
 
 1;
