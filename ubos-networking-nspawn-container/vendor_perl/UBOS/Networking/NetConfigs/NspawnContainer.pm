@@ -74,7 +74,7 @@ sub activate {
     }
     unless( exists( $conf->{host0}->{ssh} )) {
         $conf->{host0}->{ssh} = JSON::true;
-        $conf->{$nic}->{sshratelimit} = JSON::false; # not in a container
+        $conf->{host0}->{sshratelimit} = JSON::false; # not in a container
         $updated = 1;
     }
     unless( exists( $conf->{host0}->{appnic} )) {
