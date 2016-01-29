@@ -664,7 +664,9 @@ END
     }
 
     # configure callbacks
-    my @appNics = map { $conf->{$_}->{appnic} } grep { exists( $conf->{$_}->{appnic} ) && $conf->{$_}->{appnic} } sort keys %$config;
+    my @appNics = map  { $config->{$_}->{appnic} }
+                  grep { exists( $config->{$_}->{appnic} ) && $config->{$_}->{appnic} }
+                  sort keys %$config;
 
     if( @appNics ) {
         my $callbackContent = 'UBOS::HostnameCallbacks::UpdateEtcHosts ' . join( ' ', @appNics ) . "\n";
