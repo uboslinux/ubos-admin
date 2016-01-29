@@ -921,7 +921,7 @@ sub ipAddressesOnNic {
             if( $line =~ m!Gateway:\s*(\S+)\s*$! ) {
                 last;
             } else {
-                $line =~ m!\s*(\S+)\s*$! ) {
+                if( $line =~ m!\s*(\S+)\s*$! ) {
                     push @ret, $1;
                 }
             }

@@ -98,7 +98,7 @@ sub run {
         fatal( <<MSG );
 Cannot create a temporary backup; the backup directory is not empty.
 Did a previous ubos-admin update fail? If so, please log a bug at
-https://github.com/uboslinux/ubos-admin/issues/new
+    https://github.com/uboslinux/ubos-admin/issues/new
 To restore your data, run:
     ubos-admin update-stage2
 MSG
