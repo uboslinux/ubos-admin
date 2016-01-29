@@ -75,7 +75,7 @@ sub activate {
     unless( $appNic ) {
         foreach my $nic ( @allNics ) {
             if(    exists( $conf->{$nic} )
-                && exists( $conf->{$nic}->{address}
+                && exists( $conf->{$nic}->{address} )
                 && ( !exists( $conf->{$nic}->{appnic} ) || !$conf->{$nic}->{appnic} ))
             {
                 $appNic = $nic;
