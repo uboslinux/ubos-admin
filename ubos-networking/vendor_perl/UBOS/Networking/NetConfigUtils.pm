@@ -553,7 +553,7 @@ END
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update"
                                         . " --seconds "  . ( exists( $config->{$nic}->{sshratelimitseconds} ) ? $config->{$nic}->{sshratelimitseconds} : 60 )
                                         . " --hitcount " . ( exists( $config->{$nic}->{sshratelimitcount}   ) ? $config->{$nic}->{sshratelimitcount}   : 4 )
-                                        . " -j DROP";
+                                        . " -j DROP\n";
                 }
 
             }
