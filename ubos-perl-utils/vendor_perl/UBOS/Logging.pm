@@ -178,7 +178,7 @@ sub fatal {
 
 	if( @msg ) {
 		if( $log->is_error()) {
-			$log->error( 'FATAL: ' . _constructMsg( @msg ));
+			$log->error( _constructMsg( @msg ));
 		}
     }
 

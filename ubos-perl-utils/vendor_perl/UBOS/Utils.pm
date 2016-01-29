@@ -712,8 +712,9 @@ sub invokeCallbacks {
     my $content          = join( "\n", map { slurpFile( $_ ) } @files );
     my @packagesWithArgs = grep { $_ } map { s!#.*$!! ; s!^\s+!! ; s!\s+$!! } split( "\n", $content );
 
+    my $ret = 1;
     foreach my $packageWithArgs ( @packagesWithArgs ) {
-        my( $package, @packageArgs ) = split( "\s+", $packageWithArgs );
+        my( $package, @packageArgs ) = split /\s+/, $packageWithArgs;
         $ret &= UBOS::Utils::invokeMethod( $package . '::' . $method, @args, @packageArgs );
     }
     return $ret;
