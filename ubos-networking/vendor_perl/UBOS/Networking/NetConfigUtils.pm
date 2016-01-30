@@ -791,7 +791,7 @@ sub _binIpAddress {
 
     my $bin;
     if( $ip =~ m!^(\d+)\.(\d+)\.(\d+)\.(\d+)$! ) {
-        $IPv4
+        # IPv4
         $bin = $1;
         $bin = $bin*256 + $2;
         $bin = $bin*256 + $3;
