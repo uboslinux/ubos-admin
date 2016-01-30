@@ -796,7 +796,7 @@ sub _binIpAddress {
         $bin = $bin*256 + $2;
         $bin = $bin*256 + $3;
         $bin = $bin*256 + $4;
-    } elsif( $ip =~ m![0-9a-f:]+^$! ) {
+    } elsif( $ip =~ m!^[0-9a-f:]+$! ) {
         # IPv6
     } else {
         error( 'Not an IP address:', $ip );
