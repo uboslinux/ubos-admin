@@ -881,6 +881,9 @@ sub isOnLan {
     my $ip = shift;
 
     my $binIp = _binIpAddress( $ip );
+    unless( $binIp ) {
+        return 0;
+    }
 
     my $mask8  = _binNetMask( 8 );
     if( ( $binIp & $mask8 ) == _binIpAddress( '10.0.0.0' )) {

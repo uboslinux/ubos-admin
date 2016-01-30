@@ -24,6 +24,7 @@ use warnings;
 
 package UBOS::HostnameCallbacks::UpdateEtcHosts;
 
+use UBOS::Networking::NetConfigUtils;
 use UBOS::Utils;
 
 my $HOSTS_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
