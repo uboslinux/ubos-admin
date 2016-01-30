@@ -791,10 +791,13 @@ sub _binIpAddress {
 
     my $bin;
     if( $ip =~ m!^(\d+)\.(\d+)\.(\d+)\.(\d+)$! ) {
+        $IPv4
         $bin = $1;
         $bin = $bin*256 + $2;
         $bin = $bin*256 + $3;
         $bin = $bin*256 + $4;
+    } elsif( $ip =~ m![0-9a-f:]+^$! ) {
+        # IPv6
     } else {
         error( 'Not an IP address:', $ip );
     }
