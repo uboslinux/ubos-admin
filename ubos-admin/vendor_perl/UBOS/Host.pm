@@ -918,7 +918,7 @@ sub ipAddressesOnNic {
     foreach my $line ( split "\n", $netctl ) {
         if( @ret ) {
             # found one already; "Gateway:" is the next item after "Address:"
-            if( $line =~ m!Gateway:\s*(\S+)\s*$! ) {
+            if( $line =~ m!^\s*Gateway:\s*(\S+)\s*$! ) {
                 last;
             } else {
                 if( $line =~ m!\s*(\S+)\s*$! ) {
@@ -927,7 +927,7 @@ sub ipAddressesOnNic {
             }
         } else {
             # have not found one already
-            if( $line =~ m!Address:\s*(\S+)\s*$! ) {
+            if( $line =~ m!^\s*Address:\s*(\S+)\s*$! ) {
                 push @ret, $1;
             }
         }
