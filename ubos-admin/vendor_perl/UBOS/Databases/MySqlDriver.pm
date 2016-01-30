@@ -316,7 +316,7 @@ SQL
 
     if( $dbUserLid ) {
         $sth = sqlPrepareExecute( $dbh, <<SQL );
-DROP USER `$dbUserLid`;
+DROP USER '$dbUserLid'\@'localhost';
 SQL
         $sth->finish();
     }
