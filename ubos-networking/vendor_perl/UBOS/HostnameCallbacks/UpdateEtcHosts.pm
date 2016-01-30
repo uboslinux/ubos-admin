@@ -51,7 +51,7 @@ sub deployed {
 
         my( $before, $after ) = _parseEtcHosts();
 
-        $after .= "$ip $hostname # $siteid\n";
+        $after .= "$ip $hostname # $siteId\n";
 
         _writeEtcHosts( $before, $after );
     }
@@ -64,6 +64,7 @@ sub deployed {
 # $siteId: the id of the site
 # $hostname: the hostname of the site
 # @nics: the network interfaces on which the site can be reached
+# @nics: the network interfaces on which the site can be reached
 sub undeployed {
     my $siteId   = shift;
     my $hostname = shift;
@@ -71,7 +72,7 @@ sub undeployed {
 
     my( $before, $after ) = _parseEtcHosts();
 
-    $after =~ s!^.*#s+$siteid\s*$!!m;
+    $after =~ s!^.*#s+$siteId\s*$!!m;
 
     _writeEtcHosts( $before, $after );
 
@@ -82,10 +83,10 @@ sub undeployed {
 # Parse the /etc/hosts file
 # return: ( $before, $after )
 sub _parseEtcHosts {
-    my $hosts = UBOS::Utils::slurp( '/etc/hosts' );
+    my $hosts = UBOS::Utils::slurpFile( '/etc/hosts' );
 
     my $before;
-    my $after    
+    my $after;
     if( $hosts =~ m!^(.*?)$HOSTS_SEP(.*?)$!m ) {
         $before = $1;
         $after  = $2;

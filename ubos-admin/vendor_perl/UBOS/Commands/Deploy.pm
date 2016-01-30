@@ -191,9 +191,7 @@ sub run {
 	UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    unless( UBOS::UpdateBackup::checkReady() ) {
-        fatal( 'Cannot backup; backup directory not empty' );
-    }
+    UBOS::UpdateBackup::checkReadyOrQuit();
 
     info( 'Installing prerequisites' );
     # This is a two-step process: first we need to install the applications that haven't been

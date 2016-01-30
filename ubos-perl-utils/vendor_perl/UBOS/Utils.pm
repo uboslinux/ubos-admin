@@ -710,7 +710,9 @@ sub invokeCallbacks {
 
     my @files            = <$dir/*>;
     my $content          = join( "\n", map { slurpFile( $_ ) } @files );
-    my @packagesWithArgs = grep { $_ } map { s!#.*$!! ; s!^\s+!! ; s!\s+$!! } split( "\n", $content );
+    my @packagesWithArgs = grep { $_ }
+                           map { my $s = $_; $s =~ s!#.*$!! ; $s =~ s!^\s+!! ; $s =~ s!\s+$!! ; $s }
+                           split /\n/, $content;
 
     my $ret = 1;
     foreach my $packageWithArgs ( @packagesWithArgs ) {

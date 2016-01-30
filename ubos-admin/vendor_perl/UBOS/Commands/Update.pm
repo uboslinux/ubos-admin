@@ -94,15 +94,7 @@ sub run {
 	UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    unless( UBOS::UpdateBackup::checkReady() ) {
-        fatal( <<MSG );
-Cannot create a temporary backup; the backup directory is not empty.
-Did a previous ubos-admin update fail? If so, please log a bug at
-    https://github.com/uboslinux/ubos-admin/issues/new
-To restore your data, run:
-    ubos-admin update-stage2
-MSG
-    }
+    UBOS::UpdateBackup::checkReadyOrQuit();
 
     info( 'Suspending sites' );
 

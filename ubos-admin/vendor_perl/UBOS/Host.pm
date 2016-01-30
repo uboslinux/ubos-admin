@@ -913,7 +913,7 @@ sub ipAddressesOnNic {
     my @ret = ();
 
     my $netctl;
-    UBOS::Utils::myexec( "networkctl --no-pager --no-legend $nic", undef, \$netctl );
+    UBOS::Utils::myexec( "networkctl --no-pager --no-legend status $nic", undef, \$netctl );
 
     foreach my $line ( split "\n", $netctl ) {
         if( @ret ) {

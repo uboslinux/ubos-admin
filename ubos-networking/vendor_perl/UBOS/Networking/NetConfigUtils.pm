@@ -664,8 +664,7 @@ END
     }
 
     # configure callbacks
-    my @appNics = map  { $config->{$_}->{appnic} }
-                  grep { exists( $config->{$_}->{appnic} ) && $config->{$_}->{appnic} }
+    my @appNics = grep { exists( $config->{$_}->{appnic} ) && $config->{$_}->{appnic} }
                   sort keys %$config;
 
     if( @appNics ) {

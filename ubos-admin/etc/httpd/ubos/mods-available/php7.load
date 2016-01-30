@@ -4,7 +4,7 @@ php_value post_max_size 10M
 php_value upload_max_filesize 10M
 php_value date.timezone UTC
 
-# AddType x-httpd-php .php .php5
+# AddType x-httpd-php .php .php7
 # AddHandler application/x-httpd-php .php
 
 <IfModule dir_module>
@@ -14,7 +14,7 @@ php_value date.timezone UTC
 <FilesMatch "\.php$">
 	SetHandler application/x-httpd-php
 </FilesMatch>
-<FilesMatch "\.php5$">
+<FilesMatch "\.php7$">
 	SetHandler application/x-httpd-php
 </FilesMatch>
 <FilesMatch "\.phps$">

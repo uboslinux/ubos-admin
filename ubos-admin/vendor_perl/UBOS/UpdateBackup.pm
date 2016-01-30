@@ -28,6 +28,7 @@ use base qw( UBOS::AbstractBackup );
 use fields;
 
 use UBOS::Configuration;
+use UBOS::Logging;
 use UBOS::UpdateBackupContext;
 use UBOS::Utils;
 
@@ -40,11 +41,19 @@ use UBOS::Utils;
 our $updateBackupDir = '/var/lib/ubos/backups/update';
 
 ##
-# Check that there is no old backup
-# return: 1 if okay
-sub checkReady {
+# Check that there is no old backup. If there is, emit error message and quit.
+sub checkReadyOrQuit {
     my @found = <$updateBackupDir/*>;
-    return @found == 0;
+
+    if( @found ) {
+        fatal( <<MSG );
+Cannot create a temporary backup; the backup directory is not empty.
+Did a previous ubos-admin operation fail? If so, please log a bug at
+    https://github.com/uboslinux/ubos-admin/issues/new
+To restore your data, run:
+    ubos-admin update-stage2
+MSG
+    }
 }
 
 ##
