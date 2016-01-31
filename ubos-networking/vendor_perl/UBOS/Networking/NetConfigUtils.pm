@@ -546,16 +546,14 @@ END
                 $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport mdns -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT\n";
-
                 if( exists( $config->{$nic}->{sshratelimit} ) || exists( $config->{$nic}->{sshratelimitseconds} ) || exists( $config->{$nic}->{sshratelimitcount} ) ) {
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --set\n";
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update"
                                         . " --seconds "  . ( exists( $config->{$nic}->{sshratelimitseconds} ) ? $config->{$nic}->{sshratelimitseconds} : 60 )
-                                        . " --hitcount " . ( exists( $config->{$nic}->{sshratelimitcount}   ) ? $config->{$nic}->{sshratelimitcount}   : 4 )
+                                        . " --hitcount " . ( exists( $config->{$nic}->{sshratelimitcount}   ) ? $config->{$nic}->{sshratelimitcount}   :  4 )
                                         . " -j DROP\n";
                 }
-
+                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
                 $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp -j OPEN-PORTS\n";
