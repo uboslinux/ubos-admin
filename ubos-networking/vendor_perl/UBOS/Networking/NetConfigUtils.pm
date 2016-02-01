@@ -546,7 +546,7 @@ END
                 $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport mdns -j ACCEPT\n";
             }
             if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
-                if( exists( $config->{$nic}->{sshratelimit} ) || exists( $config->{$nic}->{sshratelimitseconds} ) || exists( $config->{$nic}->{sshratelimitcount} ) ) {
+                if( exists( $config->{$nic}->{sshratelimit} ) && $config->{$nic}->{sshratelimit} ) {
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --set\n";
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update"
                                         . " --seconds "  . ( exists( $config->{$nic}->{sshratelimitseconds} ) ? $config->{$nic}->{sshratelimitseconds} : 60 )
