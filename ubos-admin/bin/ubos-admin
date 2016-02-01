@@ -80,7 +80,7 @@ sub checkReady {
         print <<END;
 UBOS is not done initializing yet. Please wait until:
     systemctl is-system-running
-says "Running" or until this message goes away.
+says "running" or until this message goes away.
 END
         exit -1;
     }
