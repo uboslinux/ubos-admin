@@ -56,6 +56,7 @@ sub activate {
     my $updated = 0;
 
     if( $force ) {
+        $conf    = {};
         $updated = 1;
     } else {
         $conf = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
