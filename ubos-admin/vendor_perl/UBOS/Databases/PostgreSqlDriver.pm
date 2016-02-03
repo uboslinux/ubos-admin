@@ -248,7 +248,6 @@ sub importLocalDatabase {
 
     my $ret = executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef );
 
-debug( 'PostgreSqlDriver::importLocalDatabase returns ', $ret );
     return $ret;
 }
 
@@ -282,7 +281,6 @@ sub runBulkSql {
     $cmd .= " '$dbName'";
 
     my $ret = executeCmdAsAdmin( $cmd, $sql );
-debug( 'PostgreSqlDriver::runBulkSql returns ', $ret );
     return $ret;
 }
 
@@ -310,7 +308,6 @@ sub runBulkSqlAsAdmin {
     $cmd .= " '$dbName'";
 
     my $ret = executeCmdAsAdmin( $cmd, $sql );
-debug( 'PostgreSqlDriver::runBulkSqlAsAdmin returns ', $ret );
     return $ret;
 }
 

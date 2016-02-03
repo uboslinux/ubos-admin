@@ -281,11 +281,11 @@ sub provisionLocalDatabase {
 
     if( $collate ) {
         $sth = sqlPrepareExecute( $dbh, <<SQL );
-CREATE DATABASE `$dbName` CHARACTER SET = '$charset';
+CREATE DATABASE `$dbName` CHARACTER SET = '$charset' COLLATE '$collate';
 SQL
     } else {
         $sth = sqlPrepareExecute( $dbh, <<SQL );
-CREATE DATABASE `$dbName` CHARACTER SET = '$charset' COLLATE '$collate';
+CREATE DATABASE `$dbName` CHARACTER SET = '$charset';
 SQL
     }
     $sth->finish();
