@@ -78,7 +78,9 @@ sub deployOrCheck {
                     $self->{installable}->packageName,
                     $name );
     unless( $dbName ) {
-        my $privs  = $self->{json}->{privileges};
+        my $privileges = $self->{json}->{privileges};
+        my $charset    = $self->{json}->{charset};
+        my $collate    = $self->{json}->{collate};
 
         if( $doIt ) {
             ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
@@ -87,7 +89,9 @@ sub deployOrCheck {
                             $self->{appConfig}->appConfigId,
                             $self->{installable}->packageName,
                             $name,
-                            $privs );
+                            $privileges,
+                            $charset,
+                            $collate );
         } else {
             # put it some placeholder values, so the variables resolve
             ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )

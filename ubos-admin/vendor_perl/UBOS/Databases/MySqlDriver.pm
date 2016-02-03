@@ -260,6 +260,8 @@ sub defaultPort {
 # $dbUserLidCredential: credential for the database user
 # $dbUserLidCredType: credential type
 # $privileges: string containing required database privileges, like "create, insert"
+# $charset: default database character set name
+# $collate: default database collation name
 # return: success or fail
 sub provisionLocalDatabase {
     my $self                = shift;
@@ -268,14 +270,24 @@ sub provisionLocalDatabase {
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
+    my $charset             = shift || 'utf8';
+    my $collate             = shift;
 
-    debug( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges );
+    debug( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
     my $dbh = dbConnectAsRoot( undef );
 
-    my $sth = sqlPrepareExecute( $dbh, <<SQL );
-CREATE DATABASE `$dbName` CHARACTER SET = 'utf8';
+    my $sth;
+
+    if( $collate ) {
+        $sth = sqlPrepareExecute( $dbh, <<SQL );
+CREATE DATABASE `$dbName` CHARACTER SET = '$charset';
 SQL
+    } else {
+        $sth = sqlPrepareExecute( $dbh, <<SQL );
+CREATE DATABASE `$dbName` CHARACTER SET = '$charset' COLLATE '$collate';
+SQL
+    }
     $sth->finish();
 
     $sth = sqlPrepareExecute( $dbh, <<SQL );

@@ -159,6 +159,8 @@ sub defaultPort {
 # $dbUserLidCredential: credential for the database user
 # $dbUserLidCredType: credential type
 # $privileges: string containing required database privileges, like "readWrite, dbAdmin"
+# $charset: default database character set name
+# $collate: default database collation name
 # return: success or fail
 sub provisionLocalDatabase {
     my $self                = shift;
@@ -167,11 +169,17 @@ sub provisionLocalDatabase {
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
+    my $charset             = shift || 'UNICODE';
+    my $collate             = shift;
 
-    debug( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges );
+    debug( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
     my $ret = 1;
-    $ret &= executeCmdAsAdmin( "createdb -E UNICODE \"$dbName\"" );
+    if( $collate ) {
+        $ret &= executeCmdAsAdmin( "createdb -E $charset --lc-collate=$collate \"$dbName\"" );
+    } else {
+        $ret &= executeCmdAsAdmin( "createdb -E $charset \"$dbName\"" );
+    }
     $ret &= executeCmdAsAdmin( "createuser \"$dbUserLid\"" );
 
     # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql

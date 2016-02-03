@@ -83,6 +83,8 @@ sub findProvisionedDatabaseFor {
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $privileges: string containing required database privileges, like "create, insert"
+# $charset: default database character set name
+# $collate: default database collation name
 # return: hash of dbName, dbHost, dbUser, dbPassword, or undef
 sub provisionLocalDatabase {
     my $dbType        = shift;
@@ -90,8 +92,10 @@ sub provisionLocalDatabase {
     my $installableId = shift;
     my $itemName      = shift;
     my $privileges    = shift;
+    my $charset       = shift;
+    my $collate       = shift;
 
-    debug( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges );
+    debug( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges, $charset, $collate );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, 'localhost' );
     unless( $dbDriver ) {
@@ -116,7 +120,7 @@ sub provisionLocalDatabase {
     };
     my $file = $RESOURCES_DIR . '/' . $appConfigId . '_' . $installableId . '_' . $dbType . '_' . $itemName . '.json';
 
-    $dbDriver->provisionLocalDatabase( $dbName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType, $privileges );
+    $dbDriver->provisionLocalDatabase( $dbName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType, $privileges, $charset, $collate );
 
     UBOS::Utils::writeJsonToFile( $file, $json, 0600 );
 
