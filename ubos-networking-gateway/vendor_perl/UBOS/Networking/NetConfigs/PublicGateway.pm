@@ -59,7 +59,7 @@ sub activate {
             {
                 'dhcp'         => JSON::true,
                 'dns'          => JSON::false, # do not listen to DNS queries from upstream
-                'forwarding'   => JSON::true,
+                'forward'      => JSON::true,
                 'masquerade'   => JSON::true,
                 'ports'        => JSON::true,
                 'ssh'          => JSON::true,
@@ -68,7 +68,7 @@ sub activate {
             {
                 'dns'          => JSON::true, # listen to DNS queries from the LAN
                 'dhcpserver'   => JSON::true,
-                'forwarding'   => JSON::true,
+                'forward'      => JSON::true,
                 'mdns'         => JSON::true,
                 'ports'        => JSON::true,
                 'ssh'          => JSON::true,

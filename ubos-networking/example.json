@@ -43,7 +43,7 @@
     # has ssh open, forwards packets, and masquerades traffic
     "enp0s3" : {
         "dhcp"       : true,
-        "forwarding" : true,
+        "forward"    : true,
         "masquerade" : true,
         "ssh"        : true
     },

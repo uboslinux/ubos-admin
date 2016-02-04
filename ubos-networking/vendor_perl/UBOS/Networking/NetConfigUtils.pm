@@ -244,6 +244,9 @@ sub configureAll {
                 fatal( 'Network interface wildcards are not allowed except in --init-only mode:', $nic );
             }
         }
+        if( exists( $config->{$nic}->{forwarding} )) {
+            fatal( "The setting is called 'forward', not 'forwardingf. Please correct your netconfig $name." );
+        }
     }
 
     # systemd.network files
@@ -275,7 +278,7 @@ END
         if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
             $dotNetworkContent .= "DHCP=yes\n";
         }
-        if( exists( $config->{$nic}->{forwarding} ) && $config->{$nic}->{forwarding} ) {
+        if( exists( $config->{$nic}->{forward} ) && $config->{$nic}->{forward} ) {
             $dotNetworkContent .= "IPForward=yes\n";
         }
 
@@ -423,7 +426,7 @@ END
         if( exists( $config->{$nic}->{masquerade} ) && $config->{$nic}->{masquerade} ) {
             $isMasquerading = 1;
         }
-        if( exists( $config->{$nic}->{forwarding} ) && $config->{$nic}->{forwarding} ) {
+        if( exists( $config->{$nic}->{forward} ) && $config->{$nic}->{forward} ) {
             $isForwarding = 1;
         }
     }
