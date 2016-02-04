@@ -92,16 +92,16 @@ sub activate {
     }
 
     # have we identified at least one gateway device?
-    my $haveGateway = 0;
+    my $gateway = undef;
     foreach my $nic ( keys %$allNics ) {
         if( exists( $conf->{$nic} )) {
             if( exists( $conf->{$nic}->{masquerade} ) && $conf->{$nic}->{masquerade} ) {
-                $haveGateway = 1;
+                $gateway = $nic;
                 last;
             }
         }
     }
-    unless( $haveGateway ) {
+    unless( $gateway ) {
         my @gateways;
         foreach my $gatewayNicPattern ( @gatewayNicPatterns ) {
             @gateways = grep { m!$gatewayNicPattern! } sort UBOS::Networking::NetConfigUtils::compareNics keys %$allNics;
@@ -114,7 +114,7 @@ sub activate {
             return 0;
         }
             
-        my $gateway = shift @gateways;
+        $gateway = shift @gateways;
         $conf->{$gateway} = $upstreamConfig; # overwrite what might have been there before
         $updated = 1;
     }
