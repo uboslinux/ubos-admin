@@ -155,7 +155,7 @@ SSS
     This is equivalent to undeploying the site ids, but may be more convenient.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>]--file <site.json>
+    [--verbose | --logConfig <file>] --file <site.json>
 SSS
     Undeploy one or more previously deployed site(s) whose site JSON
     file is given. This is equivalent to undeploying the site ids of the
