@@ -984,6 +984,47 @@ sub regeneratePacmanConf {
 }
 
 ##
+# Check the provided directories for dangling symlinks, and if any exist, remove them.
+# @dirs: the directories to check
+# return: the number of removed symlinks
+sub removeDanglingSymlinks {
+    my @dirs = @_;
+
+    my @remove = ();
+    foreach my $dir ( @dirs ) {
+print "Looking at dir $dir\n";
+        if( opendir( DIR, $dir )) {
+            while( my $entry = readdir DIR ) {
+print "  Looking at file $entry\n";
+                if( $entry eq '.' || $entry eq '..' ) {
+                    next;
+                }
+                my $fullEntry = "$dir/$entry";
+                unless( -l $fullEntry ) {
+print "  not a symlink\n";
+                    next;
+                }
+                unless( -e "$fullEntry" ) {
+print "  not a file\n";
+                    push @remove, "$fullEntry";
+                }
+            }
+            closedir DIR;
+        } else {
+            error( 'Cannot read directory', $dir );
+        }
+    }
+    if( @remove ) {
+        deleteFile( @remove );
+    }
+
+    return 0 + ( @remove );
+}
+
+
+
+
+##
 # Invoke the method with the name held in a variable.
 # $methodName: name of the method
 # @_: arguments to the method

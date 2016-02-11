@@ -120,6 +120,8 @@ sub run {
 
     UBOS::Utils::regeneratePacmanConf();
 
+    UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
+
     my $stage2Cmd = 'ubos-admin update-stage2';
     for( my $i=0 ; $i<$verbose ; ++$i ) {
         $stage2Cmd .= ' -v';
