@@ -55,6 +55,7 @@ sub run {
     my $newSiteId     = undef;
     my $showIds       = 0;
     my $noTls         = undef;
+    my $quiet         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -70,7 +71,8 @@ sub run {
             'createnew'     => \$createNew,
             'newsiteid=s'   => \$newSiteId,
             'showids'       => \$showIds,
-            'notls'         => \$noTls );
+            'notls'         => \$noTls,
+            'quiet'         => \$quiet );
 
     UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
 
@@ -97,9 +99,9 @@ sub run {
 
     my $ret;
     if( @appConfigIds ) {
-        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $showIds, $backup );
+        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $showIds, $backup, $quiet );
     } else {
-        $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $noTls, $backup );
+        $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $noTls, $backup, $quiet );
     }
     return $ret;
 }
@@ -114,8 +116,10 @@ sub restoreAppConfigs {
     my $context      = shift;
     my $showIds      = shift;
     my $backup       = shift;
+    my $quiet        = shift;
 
     my $appConfigsInBackup = $backup->appConfigs();
+    my %requiredPackages   = ();
 
     # tosite must exist on the host
     my $toSite;
@@ -143,6 +147,9 @@ sub restoreAppConfigs {
             fatal( 'Appconfigid specified more than once:', $appConfig->appConfigId );
         }
         $appConfigsToRestore{$appConfig->appConfigId} = $appConfig;
+
+        # determine which packages we might need
+        map { $requiredPackages{$_->packageName} = 1; } $appConfig->installables;
     }
 
     # $context cannot exist on same host
@@ -166,6 +173,7 @@ sub restoreAppConfigs {
             }
         }
     }
+    UBOS::Host::ensurePackages( \( keys %requiredPackages ), $quiet );
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
@@ -248,6 +256,7 @@ sub restoreSites {
     my $showIds   = shift;
     my $noTls     = shift;
     my $backup    = shift;
+    my $quiet     = shift;
 
     my $sitesInBackup      = $backup->sites();
     my $appConfigsInBackup = $backup->appConfigs();
@@ -316,6 +325,16 @@ sub restoreSites {
             }
         }
     }
+
+    # determine which packages we might need
+    my %requiredPackages = ();
+    foreach my $siteInBackup ( values %$sitesInBackup ) {
+        foreach my $appConfigInBackup( @{$siteInBackup->appConfigs} ) {
+            map { $requiredPackages{$_->packageName} = 1; } $appConfigInBackup->installables;
+        }
+    }
+
+    UBOS::Host::ensurePackages( \( keys %requiredPackages ), $quiet );
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
