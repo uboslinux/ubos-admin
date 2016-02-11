@@ -992,20 +992,16 @@ sub removeDanglingSymlinks {
 
     my @remove = ();
     foreach my $dir ( @dirs ) {
-print "Looking at dir $dir\n";
         if( opendir( DIR, $dir )) {
             while( my $entry = readdir DIR ) {
-print "  Looking at file $entry\n";
                 if( $entry eq '.' || $entry eq '..' ) {
                     next;
                 }
                 my $fullEntry = "$dir/$entry";
                 unless( -l $fullEntry ) {
-print "  not a symlink\n";
                     next;
                 }
                 unless( -e "$fullEntry" ) {
-print "  not a file\n";
                     push @remove, "$fullEntry";
                 }
             }
