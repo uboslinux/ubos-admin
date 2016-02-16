@@ -216,16 +216,17 @@ sub run {
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             # check contexts
             my $context = $newAppConfig->context();
-            
-            if( exists( $contexts{$context} )) {
-                fatal(   'Site ' . $newSite->siteId . ': more than one appconfig with context ' . $context );
-            }
-            if( keys %contexts ) {
-                if( $context eq '' || defined( $contexts{''} ) ) {
-                    fatal(   'Site ' . $newSite->siteId . ': cannot deploy app at root context if other apps are deployed at other contexts' );
+            if( defined( $context )) { # amazonses may not
+                if( exists( $contexts{$context} )) {
+                    fatal(   'Site ' . $newSite->siteId . ': more than one appconfig with context ' . $context );
                 }
+                if( keys %contexts ) {
+                    if( $context eq '' || defined( $contexts{''} ) ) {
+                        fatal(   'Site ' . $newSite->siteId . ': cannot deploy app at root context if other apps are deployed at other contexts' );
+                    }
+                }
+                $contexts{$context} = $newAppConfig;
             }
-            $contexts{$context} = $newAppConfig;
 
             # check customizationpoints
             my $appConfigCustPoints = $newAppConfig->customizationPoints();
