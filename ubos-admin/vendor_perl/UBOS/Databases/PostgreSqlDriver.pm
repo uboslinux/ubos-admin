@@ -39,12 +39,12 @@ my $running = 0;
 ##
 # Ensure that postgresql is configured correctly and running
 sub ensureRunning {
+
+    debug( 'PostgreSqlDriver::ensureRunning', $running );
     if( $running ) {
         return 1;
     }
 
-    debug( 'Installing postgresql' );
-    
     UBOS::Host::ensurePackages( 'postgresql' );
     
     my $dataDir = '/var/lib/postgres/data';

@@ -245,8 +245,8 @@ sub tlsKey {
     if( defined( $json->{tls} )) {
         return $json->{tls}->{key};
     } else {
-		return undef;
-	}
+        return undef;
+    }
 }
 
 ##
@@ -259,8 +259,8 @@ sub tlsCert {
     if( defined( $json->{tls} )) {
         return $json->{tls}->{crt};
     } else {
-		return undef;
-	}
+        return undef;
+    }
 }
 
 ##
@@ -273,8 +273,8 @@ sub tlsCertChain {
     if( defined( $json->{tls} )) {
         return $json->{tls}->{crtchain};
     } else {
-		return undef;
-	}
+        return undef;
+    }
 }
 
 ##
@@ -286,8 +286,8 @@ sub tlsCaCert {
     if( defined( $json->{tls} )) {
         return $json->{tls}->{cacrt};
     } else {
-		return undef;
-	}
+        return undef;
+    }
 }
 
 ##
@@ -351,8 +351,8 @@ sub sitemapXml {
     if( exists( $json->{wellknown} ) && exists( $json->{wellknown}->{sitemapxml} )) {
         return $self->{json}->{wellknown}->{sitemapxml};
     } else {
-		return undef;
-	}
+        return undef;
+    }
 }
 
 ##
@@ -596,6 +596,8 @@ sub _deployOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
+    debug( 'Site::_deployOrCheck', $doIt, $self->siteId );
+
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
@@ -630,8 +632,6 @@ sub undeploy {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site', $self->siteId, '->undeploy' );
-
     return $self->_undeployOrCheck( 1, $triggers );
 }
 
@@ -647,6 +647,8 @@ sub _undeployOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
+    debug( 'Site::_undeployOrCheck', $doIt, $self->siteId );
+
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $ret &= $appConfig->_undeployOrCheck( $doIt, $triggers );
@@ -655,6 +657,9 @@ sub _undeployOrCheck {
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
+            if( $doIt ) {
+                debug( '_undeployOrCheck', $self->siteId, $role->name );
+            }
             $ret &= $role->removeSite( $self, $doIt, $triggers );
         }
     }
@@ -674,6 +679,8 @@ sub setupPlaceholder {
     my $self     = shift;
     my $triggers = shift;
 
+    debug( 'Site::setupPlaceholder', $self->siteId );
+
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
@@ -691,6 +698,8 @@ sub setupPlaceholder {
 sub suspend {
     my $self     = shift;
     my $triggers = shift;
+
+    debug( 'Site::suspend', $self->siteId );
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
@@ -710,6 +719,8 @@ sub resume {
     my $self     = shift;
     my $triggers = shift;
 
+    debug( 'Site::resume', $self->siteId );
+
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
@@ -726,6 +737,8 @@ sub resume {
 sub disable {
     my $self     = shift;
     my $triggers = shift;
+
+    debug( 'Site::disable', $self->siteId );
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();

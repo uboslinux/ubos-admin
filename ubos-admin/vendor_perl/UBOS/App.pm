@@ -52,7 +52,11 @@ sub new {
 sub fixedContext {
     my $self = shift;
 
-    return $self->{json}->{roles}->{apache2}->{fixedcontext};
+    if( exists( $self->{json}->{roles}->{apache2} ) && exists( $self->{json}->{roles}->{apache2}->{fixedcontext} )) {
+        return $self->{json}->{roles}->{apache2}->{fixedcontext};
+    } else {
+        return undef;
+    }
 }
 
 ##
@@ -61,7 +65,11 @@ sub fixedContext {
 sub defaultContext {
     my $self = shift;
 
-    return $self->{json}->{roles}->{apache2}->{defaultcontext};
+    if( exists( $self->{json}->{roles}->{apache2} ) && exists( $self->{json}->{roles}->{apache2}->{defaultcontext} )) {
+        return $self->{json}->{roles}->{apache2}->{defaultcontext};
+    } else {
+        return undef;
+    }
 }
 
 ##

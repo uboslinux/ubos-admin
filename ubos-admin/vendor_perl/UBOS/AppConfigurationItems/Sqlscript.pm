@@ -69,6 +69,8 @@ sub deployOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
+    debug( 'Sqlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
+
     return $self->_runIt( $doIt, $defaultFromDir, $defaultToDir, $config );
 }
 
@@ -87,6 +89,8 @@ sub undeployOrCheck {
     my $config         = shift;
 
     # do nothing
+
+    debug( 'Sqlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
 
     return 1;
 }

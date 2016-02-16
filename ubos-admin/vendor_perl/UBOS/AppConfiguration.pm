@@ -346,26 +346,16 @@ sub _deployOrCheck {
     my $self = shift;
     my $doIt = shift;
 
+    debug( 'AppConfiguration::_deployOrCheck', $doIt, $self->appConfigId );
+
     $self->_initialize();
 
     unless( $self->{site} ) {
         fatal( 'Cannot deploy AppConfiguration without site' );
     }
-    my $ret             = 1;
-    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir', undef, 1 );
+    my $ret = 1;
 
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
-    if( $doIt && $siteDocumentDir ) {
-        foreach my $role ( @rolesOnHost ) {
-            if( $self->needsRole( $role )) {
-                my $roleName = $role->name();
-                my $dir      = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-                if( $dir && $dir ne $siteDocumentDir ) {
-                    UBOS::Utils::mkdir( $dir, 0755 );
-                }
-            }
-        }
-    }
 
     my $appConfigId = $self->appConfigId;
     if( $doIt ) {
@@ -418,6 +408,8 @@ sub _undeployOrCheck {
     my $self = shift;
     my $doIt = shift;
 
+    debug( 'AppConfiguration::_undeployOrCheck', $doIt, $self->appConfigId );
+
     $self->_initialize();
 
     unless( $self->{site} ) {
@@ -453,19 +445,6 @@ sub _undeployOrCheck {
         }
     }
 
-    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir', undef, 1 );
-    if( $doIt && $siteDocumentDir ) {
-        foreach my $role ( @reverseRolesOnHost ) {
-            if( $self->needsRole( $role )) {
-                my $roleName = $role->name;
-                my $dir      = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-
-                if( $dir && $dir ne $siteDocumentDir ) {
-                    UBOS::Utils::rmdir( $dir );
-                }
-            }
-        }
-    }
     return $ret;
 }
 

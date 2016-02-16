@@ -76,6 +76,8 @@ sub setupSiteOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
+    debug( 'tomcat8::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
+
     my $siteDocumentDir = $site->config->getResolve( 'site.tomcat8.sitedocumentdir' );
 
     if( $doIt ) {
@@ -95,6 +97,8 @@ sub setupSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;
+
+    debug( 'tomcat8::setupSite', $self->name(), $site->siteId );
 
     UBOS::Host::ensurePackages( 'tomcat8' );
 
@@ -131,6 +135,8 @@ sub resumeSite {
     my $site     = shift;
     my $triggers = shift;
 
+    debug( 'tomcat8::resumeSite', $self->name(), $site->siteId );
+
     $self->sitesUpdated();
 
     $triggers->{'tomcat8-reload'} = 1;
@@ -148,6 +154,8 @@ sub removeSite {
     my $site     = shift;
     my $doIt     = shift;
     my $triggers = shift;
+
+    debug( 'tomcat8::removeSite', $self->name(), $doIt, $site->siteId );
 
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostnameorwildcard;

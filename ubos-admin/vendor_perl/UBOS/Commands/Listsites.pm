@@ -106,8 +106,8 @@ sub run {
         UBOS::Utils::writeJsonToStdout( $sitesJson );
 
     } else {
-        foreach my $site ( sort keys %$sites ) {
-            $site->print( $brief ? 1 : 2 );
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->print( $brief ? 1 : 2 );
         }
     }
     

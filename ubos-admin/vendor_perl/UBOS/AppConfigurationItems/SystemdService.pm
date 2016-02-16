@@ -67,7 +67,11 @@ sub deployOrCheck {
     my $config         = shift;
 
     my $ret  = 1;
-    my $name = $config->replaceVariables( $self->{json}->{name} );
+    my $name = $self->{json}->{name};
+
+    debug( 'SystemdService::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $name );
+
+    $name = $config->replaceVariables( $name );
 
     if( $doIt ) {
         my $out;
@@ -101,7 +105,11 @@ sub undeployOrCheck {
     my $config         = shift;
 
     my $ret  = 1;
-    my $name = $config->replaceVariables( $self->{json}->{name} );
+    my $name = $self->{json}->{name};
+
+    debug( 'SystemdService::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $name );
+
+    $name = $config->replaceVariables( $name );
 
     if( $doIt ) {
         my $out;

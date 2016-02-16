@@ -162,8 +162,8 @@ sub packageName {
 # $locale: the locale
 # return: user-friendly name
 sub name {
-	my $self   = shift;
-	my $locale = shift;
+    my $self   = shift;
+    my $locale = shift;
 
     return $self->_l10nInfo( 'name', $locale, $self->packageName );
 }
@@ -173,9 +173,9 @@ sub name {
 # locale: the locale
 # return: user-friendly tagline, or undef
 sub tagline {
-	my $self   = shift;
-	my $locale = shift;
-	
+    my $self   = shift;
+    my $locale = shift;
+
     return $self->_l10nInfo( 'tagline', $locale );
 }
 
@@ -257,22 +257,22 @@ sub needsRole {
 # $default: the default to return, if otherwise not found
 # return: value of the attribute
 sub _l10nInfo {
-	my $self    = shift;
-	my $att     = shift;
-	my $locale  = shift;
-	my $default = shift;
-	
-	if( defined( $self->{json}->{info} )) {
-		my $info = $self->{json}->{info};
+    my $self    = shift;
+    my $att     = shift;
+    my $locale  = shift;
+    my $default = shift;
+
+    if( defined( $self->{json}->{info} )) {
+        my $info = $self->{json}->{info};
         my @keys = _localeToKeys( $locale );
 
-		foreach my $key ( @keys ) {
-			if( defined( $info->{$key}->{$att} )) {
-				return $info->{$key}->{$att};
-			}
-		}
-	}
-	return $default;
+        foreach my $key ( @keys ) {
+            if( defined( $info->{$key}->{$att} )) {
+                return $info->{$key}->{$att};
+            }
+        }
+    }
+    return $default;
 }
 
 ##
@@ -301,8 +301,8 @@ sub _localeToKeys {
 # $type: the required value of the type field
 # return: 1 or exits with myFatal error
 sub checkManifest {
-	my $self = shift;
-	my $type = shift;
+    my $self = shift;
+    my $type = shift;
 
     debug( 'Checking manifest for', $self->packageName );
 
@@ -340,7 +340,7 @@ sub checkManifestStructure {
 # Check validity of the manifest JSON's roles section.
 # return: 1 or exits with fatal error
 sub checkManifestRolesSection {
-	my $self = shift;
+    my $self = shift;
 
     my $json   = $self->{json};
     my $config = $self->{config};

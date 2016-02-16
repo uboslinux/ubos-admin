@@ -76,6 +76,8 @@ sub create {
     my $self  = shift;
     my $sites = shift;
 
+    debug( 'UpdateBackup::create', map { $_->siteId } @$sites );
+
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{sites}      = $sites;
 
@@ -147,6 +149,8 @@ sub create {
 sub read {
     my $self = shift;
 
+    debug( 'UpdateBackup::read' );
+
     $self->{sites} = {};
 
     foreach my $siteJsonFile ( <$updateBackupDir/*.json> ) {
@@ -172,8 +176,10 @@ sub restoreAppConfiguration {
 
     my $ret                 = 1;
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
-    my $rolesOnHost         = UBOS::Host::rolesOnHost();
 
+    debug( 'UpdateBackup::restoreAppConfiguration', $appConfigIdInBackup );
+
+    my $rolesOnHost = UBOS::Host::rolesOnHost();
     foreach my $installable ( $appConfigInBackup->installables ) {
         my $packageName = $installable->packageName;
 
@@ -220,6 +226,8 @@ sub restoreAppConfiguration {
 # Delete the backup from the file system
 sub delete {
     my $self = shift;
+
+    debug( 'UpdateBackup::delete' );
 
     UBOS::Utils::deleteRecursively( <$updateBackupDir/*> );
 }

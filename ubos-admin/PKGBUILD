@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.174
+pkgver=0.175
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -16,6 +16,7 @@ depends=(
     'perl-cgi'
     'perl-dbi'
     'perl-archive-zip'
+    'php-apache'
     'apache'
     'mod_wsgi2' )
 backup=(

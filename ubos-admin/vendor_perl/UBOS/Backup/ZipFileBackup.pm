@@ -75,6 +75,8 @@ sub create {
 
     my $ret = 1;
 
+    debug( 'ZipFileBackup::create', $outFile );
+
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{zip}        = Archive::Zip->new();
     $self->{sites}      = $sites;
@@ -188,6 +190,8 @@ sub readArchive {
     my $self    = shift;
     my $archive = shift;
 
+    debug( 'ZipFileBackup::readArchive', $archive );
+
     $self->{sites}      = {};
     $self->{appConfigs} = {};
     $self->{file}       = $archive;
@@ -268,7 +272,10 @@ sub restoreAppConfiguration {
     my $ret                 = 1;
     my $zip                 = $self->{zip};
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
-    my $rolesOnHost         = UBOS::Host::rolesOnHost();
+
+    debug( 'ZipFileBackup::restoreAppConfiguration', $appConfigIdInBackup );
+
+    my $rolesOnHost = UBOS::Host::rolesOnHost();
 
     foreach my $installable ( $appConfigInBackup->installables ) {
         my $packageName = $installable->packageName;

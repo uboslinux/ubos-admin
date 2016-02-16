@@ -71,6 +71,8 @@ sub deployOrCheck {
     my $name   = $self->{json}->{name};
     my $dbType = $self->{role}->name();
 
+    debug( 'Database::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $dbType, $name );
+
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = UBOS::ResourceManager::findProvisionedDatabaseFor(
                     $dbType,
@@ -125,6 +127,8 @@ sub undeployOrCheck {
     my $name   = $self->{json}->{name};
     my $dbType = $self->{role}->name();
 
+    debug( 'Database::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $dbType, $name );
+
     if( $doIt ) {
         return UBOS::ResourceManager::unprovisionLocalDatabase(
                 $dbType,
@@ -149,9 +153,11 @@ sub backup {
     my $backupContext = shift;
     my $filesToDelete = shift;
 
-    my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
+    my $name   = $self->{json}->{name};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
+
+    debug( 'Database::backup', $bucket, $name );
 
     my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
 
@@ -181,9 +187,11 @@ sub restore {
     my $config        = shift;
     my $backupContext = shift;
 
-    my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
+    my $name   = $self->{json}->{name};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
+
+    debug( 'Database::restore', $bucket, $name );
 
     my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
     unless( $backupContext->restore( $bucket, $tmp->filename )) {

@@ -77,6 +77,8 @@ sub deployOrCheck {
         $sourceOrTemplate = $self->{json}->{source};
     }
 
+    debug( 'File::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $sourceOrTemplate, @$names );
+
     my $templateLang = $self->{json}->{templatelang};
     my $permissions  = $config->replaceVariables( $self->{json}->{permissions} );
     my $uname        = $config->replaceVariables( $self->{json}->{uname} );
@@ -142,6 +144,8 @@ sub undeployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
+    debug( 'File::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+
     foreach my $name ( reverse @$names ) {
         my $toName = $name;
         $toName = $config->replaceVariables( $toName );
@@ -170,7 +174,8 @@ sub backup {
     my $backupContext = shift;
     my $filesToDelete = shift;
 
-    my $names = $self->{json}->{names};
+    my $bucket = $self->{json}->{retentionbucket};
+    my $names  = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
@@ -178,6 +183,7 @@ sub backup {
         error( 'Cannot backup item with more than one name:', @$names );
         return 0;
     }
+    debug( 'File::backup', $bucket, @$names );
 
     my $toName = $names->[0];
     $toName = $config->replaceVariables( $toName );
@@ -185,7 +191,6 @@ sub backup {
         $toName = "$dir/$toName";
     }
 
-    my $bucket = $self->{json}->{retentionbucket};
 
     return $backupContext->addFile( $toName, $bucket );
 }
@@ -202,10 +207,13 @@ sub restore {
     my $config        = shift;
     my $backupContext = shift;
 
-    my $names = $self->{json}->{names};
+    my $bucket = $self->{json}->{retentionbucket};
+    my $names  = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
+    debug( 'File::restore', $bucket, $names );
+
     if( @$names != 1 ) {
         error( 'Cannot restore item with more than one name:', @$names );
         return 0;
@@ -217,7 +225,6 @@ sub restore {
         $toName = "$dir/$toName";
     }
 
-    my $bucket      = $self->{json}->{retentionbucket};
     my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
     my $uname       = $config->replaceVariables( $self->{json}->{uname} );
     my $gname       = $config->replaceVariables( $self->{json}->{gname} );

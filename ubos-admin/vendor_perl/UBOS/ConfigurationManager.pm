@@ -42,6 +42,8 @@ my $LABEL = 'UBOS-STAFF';
 ##
 # Initialize the configuration if there's a configuration device attached
 sub initializeIfNeeded {
+    debug( 'ConfigurationManager::initializeIfNeeded' );
+
     unless( UBOS::Host::config()->get( 'ubos.readstaffonboot', 1 )) {
         debug( 'Not looking for staff, ubos.readstaffonboot is false' );
         return;
@@ -99,6 +101,8 @@ sub initializeIfNeeded {
 sub checkConfigurationDevice {
     my $device = shift;
 
+    debug( 'ConfigurationManager::checkConfigurationDevice', $device );
+
     unless( -b $device ) {
         $@ = 'Not a valid UBOS staff device: ' . $device;
         return undef;
@@ -141,6 +145,8 @@ sub checkConfigurationDevice {
 # return: device, or undef
 sub guessConfigurationDevice {
 
+    debug( 'ConfigurationManager::guessConfigurationDevice' );
+
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "lsblk --pairs --output NAME,TYPE,FSTYPE,LABEL", undef, \$out, \$err )) {
@@ -181,6 +187,8 @@ sub guessConfigurationDevice {
 sub saveCurrentConfiguration {
     my $target = shift;
 
+    debug( 'ConfigurationManager::saveCurrentConfiguration', $target );
+
     my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
     my $sshDir         = "flock/$keyFingerprint/ssh";
 
@@ -200,6 +208,8 @@ sub saveCurrentConfiguration {
 # return: number of errors
 sub initializeConfigurationIfNeeded {
     my $target = shift;
+
+    debug( 'ConfigurationManager::initializeConfigurationIfNeeded', $target );
 
     my $errors = 0;
     unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
@@ -223,6 +233,8 @@ sub initializeConfigurationIfNeeded {
 # return: number of errors
 sub loadCurrentConfiguration {
     my $target = shift;
+
+    debug( 'ConfigurationManager::loadCurrentConfiguration', $target );
 
     if( -e "$target/shepherd/ssh/id_rsa.pub" ) {
         my $sshKey = UBOS::Utils::slurpFile( "$target/shepherd/ssh/id_rsa.pub" );

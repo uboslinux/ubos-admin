@@ -68,6 +68,8 @@ sub deployOrCheck {
 
     my $source = $self->{json}->{source};
 
+    debug( 'Perlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
+
     my $script = $source;
     unless( $script =~ m#^/# ) {
         $script = "$defaultFromDir/$script";
@@ -106,9 +108,9 @@ sub undeployOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $name = $self->{json}->{name};
-
     my $source = $self->{json}->{source};
+
+    debug( 'Perlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
 
     my $script = $source;
     $script = $config->replaceVariables( $script );

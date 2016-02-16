@@ -477,6 +477,8 @@ sub updateCode {
     my $syncFirst    = shift;
     my $showPackages = shift;
 
+    debug( 'Host::UpdateCode', $syncFirst, $showPackages );
+
     my $ret = 0;
     my $cmd;
     if( -x '/usr/bin/pacman-db-upgrade' ) {
@@ -836,6 +838,9 @@ sub addAfterBootCommands {
 # If there are commands in the after-boot file, execute them, and then remove
 # the file
 sub runAfterBootCommandsIfNeeded {
+
+    debug( 'Host::runAfterBootCommandsIfNeeded' );
+
     if( -e $AFTER_BOOT_FILE ) {
         my $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
 

@@ -41,6 +41,8 @@ my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 ##
 # Ensure that the mysql installation on this host is present and has a root password.
 sub ensureRunning {
+
+    debug( 'MySqlDriver::ensureRunning', $running );
     if( $running ) {
         return 1;
     }
@@ -160,7 +162,7 @@ sub sqlExecute {
     my $sth  = shift;
     my @args = @_;
 
-    debug( 'Executing SQL with arguments: ', @args );
+    debug( 'MySqlDriver::sqlExecute ', @args );
 
     $sth->execute( @args );
     return $sth;

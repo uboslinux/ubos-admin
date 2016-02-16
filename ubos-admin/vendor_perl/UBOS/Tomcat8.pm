@@ -34,6 +34,9 @@ my $running = 0;
 ##
 # Ensure that Tomcat8 is running.
 sub ensureRunning {
+
+    debug( 'Tomcat8::ensureRunning' );
+
     if( $running ) {
         return 1;
     }

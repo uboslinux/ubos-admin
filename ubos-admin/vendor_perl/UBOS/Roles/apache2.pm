@@ -79,7 +79,10 @@ sub deployOrCheck {
     my $installable = shift;
     my $config      = shift;
 
-    my $roleName            = $self->name();
+    my $roleName = $self->name();
+
+    debug( 'apache2::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
         my $apache2modules = $installableRoleJson->{apache2modules};
@@ -113,6 +116,8 @@ sub setupSiteOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
+    debug( 'apache2::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
+
     my $siteDocumentDir = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
 
     if( $doIt ) {
@@ -134,6 +139,8 @@ sub setupPlaceholderSite {
     my $site            = shift;
     my $placeholderName = shift;
     my $triggers        = shift;
+
+    debug( 'apache2::setupPlaceholderSite', $self->name(), $site->siteId );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -183,6 +190,8 @@ sub setupSite {
     my $site     = shift;
     my $triggers = shift;
 
+    debug( 'apache2::setupSite', $self->name(), $site->siteId );
+
     my $siteId            = $site->siteId;
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
@@ -208,6 +217,8 @@ sub resumeSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;
+
+    debug( 'apache2::resumeSite', $self->name(), $site->siteId );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -401,6 +412,8 @@ sub removeSite {
     my $site     = shift;
     my $doIt     = shift;
     my $triggers = shift;
+
+    debug( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;

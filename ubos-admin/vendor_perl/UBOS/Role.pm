@@ -35,6 +35,7 @@ use UBOS::AppConfigurationItems::SystemdService;
 use UBOS::AppConfigurationItems::SystemdTimer;
 use UBOS::Host;
 use UBOS::Installable;
+use UBOS::Logging;
 
 use fields;
 
@@ -77,20 +78,35 @@ sub deployOrCheck {
     my $config      = shift;
 
     # skip dependencies: done already
-    my $ret                 = 1;
-    my $roleName            = $self->name();
+    my $ret      = 1;
+    my $roleName = $self->name();
+
+    debug( 'Role::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+
+    my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
+    if( $doIt && $siteDocumentDir ) {
+        my $dir      = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        if( $dir && $dir ne $siteDocumentDir ) {
+            UBOS::Utils::mkdir( $dir, 0755 );
+        }
+    }
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
         my $appConfigItems = $installableRoleJson->{appconfigitems};
         if( $appConfigItems ) {
-            my $codeDir = $config->getResolve( 'package.codedir' );
-            my $dir     = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir   = $config->getResolve( 'package.codedir' );
+            my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $itemIndex = 0;
             foreach my $appConfigItem ( @$appConfigItems ) {
+                if( $doIt ) {
+                    debug( 'Role::deployOrCheck', $appConfig->appConfigId, $itemIndex );
+                }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
                     $ret &= $item->deployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
+                ++$itemIndex;
             }
         }
     }
@@ -113,8 +129,11 @@ sub undeployOrCheck {
     my $installable = shift;
     my $config      = shift;
 
-    my $ret                 = 1;
-    my $roleName            = $self->name();
+    my $ret      = 1;
+    my $roleName = $self->name();
+
+    debug( 'Role::undeployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
 
     if( $installableRoleJson ) {
@@ -123,15 +142,29 @@ sub undeployOrCheck {
             my $codeDir = $config->getResolve( 'package.codedir' );
             my $dir     = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
+            my $itemIndex = @$appConfigItems-1;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
+                if( $doIt ) {
+                    debug( 'Role::undeployOrCheck', $appConfig->appConfigId, $itemIndex );
+                }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
-
                 if( $item ) {
                     $ret &= $item->undeployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
+                --$itemIndex;
             }
         }
     }
+
+    if( $doIt ) {
+        my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
+        my $dir             = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+
+        if( $dir && $dir ne $siteDocumentDir ) {
+            UBOS::Utils::rmdir( $dir );
+        }
+    }
+
     return $ret;
 }
 

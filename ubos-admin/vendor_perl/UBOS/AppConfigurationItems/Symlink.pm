@@ -70,8 +70,9 @@ sub deployOrCheck {
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
-
     my $source = $self->{json}->{source};
+
+    debug( 'Symlink::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source, @$names );
 
     my $uname        = $self->{json}->{uname};
     my $gname        = $self->{json}->{gname};
@@ -136,8 +137,9 @@ sub undeployOrCheck {
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
-
     my $source = $self->{json}->{source};
+
+    debug( 'Symlink::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source, @$names );
 
     foreach my $name ( @$names ) {
         my $toName = $name;

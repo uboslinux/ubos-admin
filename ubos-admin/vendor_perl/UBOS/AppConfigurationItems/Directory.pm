@@ -71,6 +71,8 @@ sub deployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
+    debug( 'Directory::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+
     my $dirpermissions = $config->replaceVariables( $self->{json}->{dirpermissions} || $self->{json}->{permissions} ); # upward compatible
     my $uname          = $config->replaceVariables( $self->{json}->{uname} );
     my $gname          = $config->replaceVariables( $self->{json}->{gname} );
@@ -121,6 +123,8 @@ sub undeployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
+    debug( 'Directory::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+
     foreach my $name ( reverse @$names ) {
         my $fullName = $name;
 
@@ -152,10 +156,14 @@ sub backup {
     my $backupContext = shift;
     my $filesToDelete = shift;
 
-    my $names = $self->{json}->{names};
+    my $bucket = $self->{json}->{retentionbucket};
+    my $names  = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
+
+    debug( 'Directory::backup', $bucket, @$names );
+
     if( @$names != 1 ) {
         error( 'Cannot backup item with more than one name:', @$names );
         return 0;
@@ -165,8 +173,6 @@ sub backup {
     unless( $fullName =~ m#^/# ) {
         $fullName = "$dir/$fullName";
     }
-
-    my $bucket = $self->{json}->{retentionbucket};
 
     return $backupContext->addDirectoryHierarchy( $fullName, $bucket );
 }
@@ -183,10 +189,14 @@ sub restore {
     my $config        = shift;
     my $backupContext = shift;
 
-    my $names = $self->{json}->{names};
+    my $bucket = $self->{json}->{retentionbucket};
+    my $names  = $self->{json}->{names};
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
+
+    debug( 'Directory::restore', $bucket, $names );
+
     if( @$names != 1 ) {
         error( 'Cannot restore item with more than one name:', @$names );
         return 0;
@@ -196,8 +206,6 @@ sub restore {
     unless( $fullName =~ m#^/# ) {
         $fullName = "$dir/$fullName";
     }
-
-    my $bucket = $self->{json}->{retentionbucket};
 
     my $filepermissions = $config->replaceVariables( $self->{json}->{filepermissions} );
     my $dirpermissions  = $config->replaceVariables( $self->{json}->{dirpermissions} || $self->{json}->{permissions} ); # upward compatible
