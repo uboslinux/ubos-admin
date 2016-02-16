@@ -448,8 +448,10 @@ sub print {
                         }
                         if( $context ) {
                             print $context;
-                        } else {
+                        } elsif( defined( $context )) {
                             print '<root>';
+                        } else {
+                            print '<none>';
                         }
                         print ' ('. $appConfig->appConfigId . ')';
                         if( $detail < 3 ) {
