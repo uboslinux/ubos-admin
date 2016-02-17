@@ -76,7 +76,7 @@ sub create {
     my $self  = shift;
     my $sites = shift;
 
-    debug( 'UpdateBackup::create', map { $_->siteId } @$sites );
+    debug( 'UpdateBackup::create', keys %$sites );
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{sites}      = $sites;
