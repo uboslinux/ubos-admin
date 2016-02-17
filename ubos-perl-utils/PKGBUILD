@@ -1,6 +1,6 @@
 pkgname=$(basename $(pwd))
 pkgver=0.28
-pkgrel=3
+pkgrel=4
 pkgdesc="UBOS Perl utilities"
 arch=('any')
 url="http://ubos.net/"
