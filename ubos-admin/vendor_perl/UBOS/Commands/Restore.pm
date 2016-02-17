@@ -3,7 +3,7 @@
 # Command that restores data from a backup.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2015 Indie Computing Corp.
+# (C) 2012-2016 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -173,7 +173,8 @@ sub restoreAppConfigs {
             }
         }
     }
-    UBOS::Host::ensurePackages( \( keys %requiredPackages ), $quiet );
+    my @requiredPackageNames = keys %requiredPackages;
+    UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
@@ -334,7 +335,8 @@ sub restoreSites {
         }
     }
 
-    UBOS::Host::ensurePackages( \( keys %requiredPackages ), $quiet );
+    my @requiredPackageNames = keys %requiredPackages;
+    UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
 
     # May not be interrupted, bad things may happen if it is
 	UBOS::Host::preventInterruptions();
