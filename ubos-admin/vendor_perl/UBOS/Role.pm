@@ -169,6 +169,80 @@ sub undeployOrCheck {
 }
 
 ##
+# Suspend an installable in an AppConfiguration in this Role.
+# $appConfig: the AppConfiguration to suspend
+# $installable: the Installable
+# $config: the Configuration to use
+sub suspend {
+    my $self        = shift;
+    my $appConfig   = shift;
+    my $installable = shift;
+    my $config      = shift;
+
+    my $ret      = 1;
+    my $roleName = $self->name();
+
+    debug( 'Role::suspend', $roleName, $appConfig->appConfigId, $installable->packageName );
+
+    my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
+    if( $installableRoleJson ) {
+        my $appConfigItems = $installableRoleJson->{appconfigitems};
+        if( $appConfigItems ) {
+            my $codeDir   = $config->getResolve( 'package.codedir' );
+            my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $itemIndex = 0;
+            foreach my $appConfigItem ( reverse @$appConfigItems ) {
+                debug( 'Role::suspend', $appConfig->appConfigId, $itemIndex );
+
+                my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
+                if( $item ) {
+                    $ret &= $item->suspend( $codeDir, $dir, $config );
+                }
+                ++$itemIndex;
+            }
+        }
+    }
+    return $ret;
+}
+
+##
+# Resume an installable in an AppConfiguration in this Role.
+# $appConfig: the AppConfiguration to resume
+# $installable: the Installable
+# $config: the Configuration to use
+sub resume {
+    my $self        = shift;
+    my $appConfig   = shift;
+    my $installable = shift;
+    my $config      = shift;
+
+    my $ret      = 1;
+    my $roleName = $self->name();
+
+    debug( 'Role::resume', $roleName, $appConfig->appConfigId, $installable->packageName );
+
+    my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
+    if( $installableRoleJson ) {
+        my $appConfigItems = $installableRoleJson->{appconfigitems};
+        if( $appConfigItems ) {
+            my $codeDir   = $config->getResolve( 'package.codedir' );
+            my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $itemIndex = 0;
+            foreach my $appConfigItem ( @$appConfigItems ) {
+                debug( 'Role::resume', $appConfig->appConfigId, $itemIndex );
+
+                my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
+                if( $item ) {
+                    $ret &= $item->resume( $codeDir, $dir, $config );
+                }
+                ++$itemIndex;
+            }
+        }
+    }
+    return $ret;
+}
+
+##
 # Make sure the site/virtual host is set up, or set it up
 # $site: the Site to check or set up
 # $doIt: if 1, setup; if 0, only check
@@ -201,11 +275,11 @@ sub setupPlaceholderSite {
 }
 
 ##
-# Do what is necessary to set up a Site, without activating/resuming it.
+# Do what is necessary to suspend an already set-up Site
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
-sub setupSite {
+sub suspendSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;

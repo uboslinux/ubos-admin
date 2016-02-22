@@ -82,7 +82,7 @@ sub setupSiteOrCheck {
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
-        return $self->setupSite( $site, $triggers );
+        return $self->_setupSite( $site, $triggers );
     } else {
         return 1;
     }
@@ -93,12 +93,12 @@ sub setupSiteOrCheck {
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
-sub setupSite {
+sub _setupSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;
 
-    debug( 'tomcat8::setupSite', $self->name(), $site->siteId );
+    debug( 'tomcat8::_setupSite', $self->name(), $site->siteId );
 
     UBOS::Host::ensurePackages( 'tomcat8' );
 

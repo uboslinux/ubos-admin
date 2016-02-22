@@ -608,7 +608,7 @@ sub _deployOrCheck {
         }
     }
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $ret &= $appConfig->_deployOrCheck( $doIt, $triggers );
+        $ret &= $appConfig->deployOrCheck( $doIt, $triggers );
     }
     if( $doIt ) {
         UBOS::Host::siteDeployed( $self );
@@ -653,7 +653,7 @@ sub _undeployOrCheck {
 
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $ret &= $appConfig->_undeployOrCheck( $doIt, $triggers );
+        $ret &= $appConfig->undeployOrCheck( $doIt, $triggers );
     }
 
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
@@ -704,10 +704,14 @@ sub suspend {
     debug( 'Site::suspend', $self->siteId );
 
     my $ret = 1;
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $ret &= $appConfig->suspend( $triggers );
+    }
+
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
-            $ret &= $role->setupPlaceholderSite( $self, 'maintenance', $triggers );
+            $ret &= $role->suspendSite( $self, $triggers );
         }
     }
     return $ret;
@@ -724,6 +728,10 @@ sub resume {
     debug( 'Site::resume', $self->siteId );
 
     my $ret = 1;
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $ret &= $appConfig->resume( $triggers );
+    }
+
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {

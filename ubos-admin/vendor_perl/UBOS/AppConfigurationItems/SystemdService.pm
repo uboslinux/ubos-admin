@@ -53,15 +53,13 @@ sub new {
 }
 
 ##
-# Install this item, or check that it is installable.
-# $doIt: if 1, install; if 0, only check
+# Suspend this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
 # return: success or fail
-sub deployOrCheck {
+sub suspend {
     my $self           = shift;
-    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -69,37 +67,33 @@ sub deployOrCheck {
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
-    debug( 'SystemdService::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $name );
+    debug( 'SystemdService::suspend', $defaultFromDir, $defaultToDir, $name );
 
     $name = $config->replaceVariables( $name );
 
-    if( $doIt ) {
-        my $out;
-        my $err;
-        if( UBOS::Utils::myexec( "systemctl start '$name.service'", undef, \$out, \$err )) {
-            error( 'Failed to start systemd service', "$name.service:", $out, $err );
-            $ret = 0;
-
-        # only enable if start succeeded
-        } elsif( UBOS::Utils::myexec( "systemctl enable '$name.service'", undef, \$out, \$err )) {
-            error( 'Failed to enable systemd service', "$name.service:", $out, $err );
-            $ret = 0;
-        }
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "systemctl disable '$name.service'", undef, \$out, \$err )) {
+        error( 'Failed to disable systemd service', "$name.service:", $out, $err );
+        $ret = 0;
+    }
+    # stop even if disable failed
+    if( UBOS::Utils::myexec( "systemctl stop '$name.service'", undef, \$out, \$err )) {
+        error( 'Failed to stop systemd service', "$name.service:", $out, $err );
+        $ret = 0;
     }
 
     return $ret;
 }
 
 ##
-# Uninstall this item, or check that it is uninstallable.
-# $doIt: if 1, uninstall; if 0, only check
+# Resume this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
 # return: success or fail
-sub undeployOrCheck {
+sub resume {
     my $self           = shift;
-    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -107,22 +101,20 @@ sub undeployOrCheck {
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
-    debug( 'SystemdService::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $name );
+    debug( 'SystemdService::resume', $defaultFromDir, $defaultToDir, $name );
 
     $name = $config->replaceVariables( $name );
 
-    if( $doIt ) {
-        my $out;
-        my $err;
-        if( UBOS::Utils::myexec( "systemctl disable '$name.service'", undef, \$out, \$err )) {
-            error( 'Failed to disable systemd service', "$name.service:", $out, $err );
-            $ret = 0;
-        }
-        # stop even if disable failed
-        if( UBOS::Utils::myexec( "systemctl stop '$name.service'", undef, \$out, \$err )) {
-            error( 'Failed to stop systemd service', "$name.service:", $out, $err );
-            $ret = 0;
-        }
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "systemctl start '$name.service'", undef, \$out, \$err )) {
+        error( 'Failed to start systemd service', "$name.service:", $out, $err );
+        $ret = 0;
+
+    # only enable if start succeeded
+    } elsif( UBOS::Utils::myexec( "systemctl enable '$name.service'", undef, \$out, \$err )) {
+        error( 'Failed to enable systemd service', "$name.service:", $out, $err );
+        $ret = 0;
     }
 
     return $ret;

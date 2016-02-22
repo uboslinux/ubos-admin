@@ -122,11 +122,25 @@ sub setupSiteOrCheck {
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
-        return $self->setupSite( $site, $triggers );
+        return $self->_setupSite( $site, $triggers );
     } else {
         return 1;
     }
 }
+
+##
+# Do what is necessary to susoend an already set-up Site
+# $site: the Site
+# $triggers: triggers to be executed may be added to this hash
+# return: success or fail
+sub suspendSite {
+    my $self     = shift;
+    my $site     = shift;
+    my $triggers = shift;
+
+    return $self->setupPlaceholderSite( $site, 'maintenance', $triggers );
+}
+
 
 ##
 # Do what is necessary to set up a named placeholder Site.
@@ -185,12 +199,12 @@ CONTENT
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
-sub setupSite {
+sub _setupSite {
     my $self     = shift;
     my $site     = shift;
     my $triggers = shift;
 
-    debug( 'apache2::setupSite', $self->name(), $site->siteId );
+    debug( 'apache2::_setupSite', $self->name(), $site->siteId );
 
     my $siteId            = $site->siteId;
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
@@ -246,7 +260,7 @@ sub resumeSite {
 #
 # Apache config fragment for site $siteId at host $hostname
 #
-# (C) 2013-2015 Indie Computing Corp.
+# (C) 2013-2016 Indie Computing Corp.
 # Generated automatically, do not modify.
 #
 CONTENT

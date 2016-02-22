@@ -341,21 +341,18 @@ sub deploy {
 # share the same code, so the checks get updated at the same time as the
 # actual deployment.
 # $doIt: if 1, deploy; if 0, only check
+# $triggers: triggers to be executed may be added to this hash
 # return: success or fail
-sub _deployOrCheck {
-    my $self = shift;
-    my $doIt = shift;
+sub deployOrCheck {
+    my $self     = shift;
+    my $doIt     = shift;
+    my $triggers = shift;
 
-    debug( 'AppConfiguration::_deployOrCheck', $doIt, $self->appConfigId );
+    debug( 'AppConfiguration::deployOrCheck', $doIt, $self->appConfigId );
 
     $self->_initialize();
 
-    unless( $self->{site} ) {
-        fatal( 'Cannot deploy AppConfiguration without site' );
-    }
     my $ret = 1;
-
-    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
 
     my $appConfigId = $self->appConfigId;
     if( $doIt ) {
@@ -373,6 +370,7 @@ sub _deployOrCheck {
         $ret = 0;
     }
 
+    my @rolesOnHost  = UBOS::Host::rolesOnHostInSequence();
     my @installables = $self->installables();
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
@@ -404,20 +402,17 @@ sub _deployOrCheck {
 # share the same code, so the checks get updated at the same time as the
 # actual deployment.
 # $doIt: if 1, undeploy; if 0, only check
-sub _undeployOrCheck {
-    my $self = shift;
-    my $doIt = shift;
+# $triggers: triggers to be executed may be added to this hash
+sub undeployOrCheck {
+    my $self     = shift;
+    my $doIt     = shift;
+    my $triggers = shift;
 
-    debug( 'AppConfiguration::_undeployOrCheck', $doIt, $self->appConfigId );
+    debug( 'AppConfiguration::undeployOrCheck', $doIt, $self->appConfigId );
 
     $self->_initialize();
 
-    unless( $self->{site} ) {
-        fatal( 'Cannot undeploy AppConfiguration without site' );
-    }
-
-    my $ret                = 1;
-    my @reverseRolesOnHost = reverse UBOS::Host::rolesOnHostInSequence();
+    my $ret = 1;
 
     my $appConfigId = $self->appConfigId;
 
@@ -426,9 +421,9 @@ sub _undeployOrCheck {
         UBOS::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
     }
 
-    my @installables = $self->installables();
-
-    foreach my $installable ( reverse @installables ) {
+    my @reverseRolesOnHost  = reverse UBOS::Host::rolesOnHostInSequence();
+    my @reverseInstallables = reverse $self->installables();
+    foreach my $installable ( @reverseInstallables ) {
         my $packageName = $installable->packageName;
 
         my $config = $self->obtainSubconfig(
@@ -441,6 +436,80 @@ sub _undeployOrCheck {
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
                 $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $config );
+            }
+        }
+    }
+
+    return $ret;
+}
+
+##
+# Suspend this AppConfiguration.
+# $triggers: triggers to be executed may be added to this hash
+sub suspend {
+    my $self     = shift;
+    my $triggers = shift;
+
+    debug( 'AppConfiguration::suspend', $self->appConfigId );
+
+    $self->_initialize();
+
+    my $ret = 1;
+
+    my $appConfigId = $self->appConfigId;
+
+    my @reverseRolesOnHost  = reverse UBOS::Host::rolesOnHostInSequence();
+    my @reverseInstallables = reverse $self->installables();
+    foreach my $installable ( @reverseInstallables ) {
+        my $packageName = $installable->packageName;
+
+        my $config = $self->obtainSubconfig(
+                "Installable=$packageName",
+                $installable->config );
+
+        $self->_addCustomizationPointValuesToConfig( $config, $installable );
+
+        # Now for all the roles
+        foreach my $role ( @reverseRolesOnHost ) {
+            if( $installable->needsRole( $role )) {
+                $ret &= $role->suspend( $self, $installable, $config );
+            }
+        }
+    }
+
+    return $ret;
+}
+
+##
+# Resume this AppConfiguration.
+# $triggers: triggers to be executed may be added to this hash
+sub resume {
+    my $self     = shift;
+    my $triggers = shift;
+
+    debug( 'AppConfiguration::resume', $self->appConfigId );
+
+    $self->_initialize();
+
+    my $ret = 1;
+
+    my $appConfigId = $self->appConfigId;
+
+    my @rolesOnHost  = UBOS::Host::rolesOnHostInSequence();
+    my @installables = $self->installables();
+    foreach my $installable ( @installables ) {
+        my $packageName = $installable->packageName;
+
+        my $config = $self->obtainSubconfig(
+                "Installable=$packageName",
+                $installable->config );
+
+        $self->_addCustomizationPointValuesToConfig( $config, $installable );
+
+        # Now for all the roles
+        foreach my $role ( @rolesOnHost ) {
+            if( $installable->needsRole( $role )) {
+                $ret &= $role->resume( $self, $installable, $config );
             }
         }
     }

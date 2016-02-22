@@ -119,7 +119,6 @@ sub run {
     foreach my $site ( values %$sitesToSuspendResume ) {
         $ret &= $site->suspend( $suspendTriggers );
     }
-
     UBOS::Host::executeTriggers( $suspendTriggers );
 
     info( 'Creating and exporting backup' );

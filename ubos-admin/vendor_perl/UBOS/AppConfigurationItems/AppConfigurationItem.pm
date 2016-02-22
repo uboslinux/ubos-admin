@@ -137,6 +137,71 @@ sub runUpgradeScript {
     return 0;
 }
 
+
+##
+# Install this item, or check that it is installable.
+# $doIt: if 1, install; if 0, only check
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
+sub deployOrCheck {
+    my $self           = shift;
+    my $doIt           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    return 1; # nothing on this level
+}
+
+##
+# Uninstall this item, or check that it is uninstallable.
+# $doIt: if 1, uninstall; if 0, only check
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
+sub undeployOrCheck {
+    my $self           = shift;
+    my $doIt           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    return 1; # nothing on this level
+}
+
+##
+# Default implementation to suspend this item.
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
+sub suspend {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    return 1; # nothing on this level
+}
+
+##
+# Default implementation to resume this item.
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+# return: success or fail
+sub resume {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    return 1; # nothing on this level
+}
+
 ##
 # Default implementation to back this item up.
 # $dir: the directory in which the app was installed
