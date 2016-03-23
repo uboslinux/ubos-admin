@@ -73,9 +73,14 @@ sub undeployed {
 
     my( $before, $after ) = _parseEtcHosts();
 
-    $after =~ s!^.*#s+$siteId\s*$!!m;
-
-    _writeEtcHosts( $before, $after );
+    my $newAfter;
+    foreach my $line ( split "\n", $after ) {
+        if( $line !~ m!#\s*$siteId\s*$! ) {
+            $newAfter .= $line;
+            $newAfter .= "\n";
+        }
+    }
+    _writeEtcHosts( $before, $newAfter );
 
     return 1;
 }
@@ -86,14 +91,19 @@ sub undeployed {
 sub _parseEtcHosts {
     my $hosts = UBOS::Utils::slurpFile( '/etc/hosts' );
 
-    my $before;
-    my $after;
-    if( $hosts =~ m!^(.*?)$HOSTS_SEP(.*?)$!m ) {
-        $before = $1;
-        $after  = $2;
-    } else {
-        $before = $hosts;
-        $after  = '';
+    my $before = undef;
+    my $after  = undef;
+
+    foreach my $line ( split "\n", $hosts ) {
+        if( defined( $after )) {
+            $after .= $line;
+            $after .= "\n";
+        } elsif( $line =~ m!^$HOSTS_SEP$! ) {
+            $after  = '';
+        } else {
+            $before .= $line;
+            $before .= "\n";
+        }
     }
 
     return( $before, $after );
@@ -104,8 +114,8 @@ sub _parseEtcHosts {
 # $before: the content before the separator
 # $after: the content after the separator
 sub _writeEtcHosts {
-    my $before = shift;
-    my $after  = shift;
+    my $before = shift || '';
+    my $after  = shift || '';
 
     my $content = "$before$HOSTS_SEP\n$after";
     UBOS::Utils::saveFile( '/etc/hosts', $content );
