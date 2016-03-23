@@ -379,11 +379,15 @@ sub run {
         $newSite->addDependenciesToPrerequisites( $prerequisites );
         UBOS::Host::ensurePackages( $prerequisites, $quiet );
 
-        unless( $quiet ) {
-            print "Deploying...\n";
+        foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
+            $newAppConfig->checkCustomizationPointValues();
         }
 
         $newSite->checkDeployable();
+
+        unless( $quiet ) {
+            print "Deploying...\n";
+        }
 
         # May not be interrupted, bad things may happen if it is
         UBOS::Host::preventInterruptions();

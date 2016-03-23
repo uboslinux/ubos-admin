@@ -228,52 +228,7 @@ sub run {
                 $contexts{$context} = $newAppConfig;
             }
 
-            # check customizationpoints
-            my $appConfigCustPoints = $newAppConfig->customizationPoints();
-            foreach my $installable ( $newAppConfig->installables ) {
-                my $packageName           = $installable->packageName;
-                my $installableCustPoints = $installable->customizationPoints;
-                if( $installableCustPoints ) {
-                    foreach my $custPointName ( keys %$installableCustPoints ) {
-                        my $custPointDef = $installableCustPoints->{$custPointName};
-
-                        # check data type
-                        my $value = undef;
-                        if(    exists( $appConfigCustPoints->{$packageName} )
-                            && exists( $appConfigCustPoints->{$packageName}->{$custPointName} )
-                            && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
-                        {
-                            $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
-                            if( defined( $value )) {
-                                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
-                                my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                                # checked earlier that this is non-null
-                                unless( $custPointValidation->{valuecheck}->( $value )) {
-                                    fatal(   'Site ' . $newSite->siteId
-                                           . ', AppConfiguration ' . $newAppConfig->appConfigId
-                                           . ', package ' . $packageName
-                                           . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
-                                           . ', is ' . ( ref( $value ) || $value ));
-                                }
-                            }
-                        }
-                        
-                        # now check that required values are indeed provided
-                        unless( $custPointDef->{required} ) {
-                            next;
-                        }
-                        if( !defined( $custPointDef->{default} ) || !defined( $custPointDef->{default}->{value} )) {
-                            # make sure the Site JSON file provided one
-                            unless( defined( $value )) {
-                                fatal(   'Site ' . $newSite->siteId
-                                       . ', AppConfiguration ' . $newAppConfig->appConfigId
-                                       . ', package ' . $packageName
-                                       . ', required value not provided for customizationpoint: ' .  $custPointName );
-                            }
-                        }
-                    }
-                }
-            }
+            $newAppConfig->checkCustomizationPointValues();
         }
     }
 

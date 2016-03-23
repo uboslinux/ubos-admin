@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.176
+pkgver=0.177
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -55,7 +55,7 @@ package() {
 
 # Site files and AppConfiguration parameter files
     mkdir -p -m755 $pkgdir/var/lib/ubos/sites
-    mkdir -p -m700 $pkgdir/var/lib/ubos/appconfigpars
+    mkdir -p -m755 $pkgdir/var/lib/ubos/appconfigpars
 
 # Manifest files
     mkdir -p $pkgdir/var/lib/ubos/manifests

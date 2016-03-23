@@ -813,13 +813,13 @@ sub _checkJson {
         fatal( 'Site JSON: missing siteid' );
     }
     unless( UBOS::Host::isValidSiteId( $json->{siteid} )) {
-        fatal( 'Site JSON: invalid siteid, must be s followed by 40 hex chars' );
+        fatal( 'Site JSON: invalid siteid, must be s followed by 40 hex chars, is', $json->{siteid} );
     }
     unless( $json->{hostname} ) {
         fatal( 'Site JSON: missing hostname' );
     }
     unless( UBOS::Host::isValidHostname( $json->{hostname} )) {
-        fatal( 'Site JSON: invalid hostname' );
+        fatal( 'Site JSON: invalid hostname, is', $json->{hostname} );
     }
 
     unless( $json->{admin} ) {
@@ -832,7 +832,7 @@ sub _checkJson {
         fatal( 'Site JSON: admin section: missing userid' );
     }
     if( ref( $json->{admin}->{userid} ) || $json->{admin}->{userid} !~ m!^[a-z0-9]+$! ) {
-        fatal( 'Site JSON: admin section: invalid userid, must be string without white space' );
+        fatal( 'Site JSON: admin section: invalid userid, must be string without white space, is', $json->{admin}->{userid} );
     }
     unless( $json->{admin}->{username} ) {
         fatal( 'Site JSON: admin section: missing username' );
@@ -850,7 +850,7 @@ sub _checkJson {
         fatal( 'Site JSON: admin section: missing email' );
     }
     if( ref( $json->{admin}->{email} ) || $json->{admin}->{email} !~ m/^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i ) {
-        fatal( 'Site JSON: admin section: invalid email' );
+        fatal( 'Site JSON: admin section: invalid email, is', $json->{admin}->{email} );
     }
 
     if( exists( $json->{tls} )) {
@@ -910,18 +910,18 @@ sub _checkJson {
                 fatal( "Site JSON: appconfig $i: missing appconfigid" );
             }
             unless( UBOS::Host::isValidAppConfigId( $appConfigJson->{appconfigid} )) {
-                fatal( "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars" );
+                fatal( "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars, is", $appConfigJson->{appconfigid} );
             }
             if(    $appConfigJson->{context}
                 && ( ref( $appConfigJson->{context} ) || !UBOS::AppConfiguration::isValidContext( $appConfigJson->{context} )))
             {
-                fatal( "Site JSON: appconfig $i: invalid context, must be valid context URL without trailing slash" );
+                fatal( "Site JSON: appconfig $i: invalid context, must be valid context URL without trailing slash, is", $appConfigJson->{context} );
             }
             if( defined( $appConfigJson->{isdefault} ) && !JSON::is_bool( $appConfigJson->{isdefault} )) {
                 fatal( "Site JSON: appconfig $i: invalid isdefault, must be true or false" );
             }
             unless( UBOS::Installable::isValidPackageName( $appConfigJson->{appid} )) {
-                fatal( "Site JSON: appconfig $i: invalid appid" );
+                fatal( "Site JSON: appconfig $i: invalid appid, is", $appConfigJson->{appid} );
             }
             my %installables = ();
             $installables{$appConfigJson->{appid}} = 1;
@@ -932,7 +932,7 @@ sub _checkJson {
                 }
                 foreach my $accessoryId ( @{$appConfigJson->{accessoryids}} ) {
                     unless( UBOS::Installable::isValidPackageName( $accessoryId )) {
-                        fatal( "Site JSON: appconfig $i: invalid accessoryid" );
+                        fatal( "Site JSON: appconfig $i: invalid accessoryid, is", $accessoryId );
                     }
                     $installables{$accessoryId} = 1;
                 }
@@ -951,7 +951,7 @@ sub _checkJson {
                     }
                     foreach my $pointName ( keys %$custPointsForPackage ) {
                         unless( $pointName =~ m!^[a-z][a-z0-9_]*$! ) {
-                            fatal( 'Site JSON: invalid name for customizationpoint: ' . $pointName );
+                            fatal( 'Site JSON: invalid name for customizationpoint, is', $pointName );
                         }
                         my $pointValue = $custPointsForPackage->{$pointName};
                         if( !$pointValue || ref( $pointValue ) ne 'HASH' ) {

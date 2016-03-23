@@ -27,7 +27,7 @@ package UBOS::Commands::Restore;
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use Storable qw( dclone );
-use UBOS::Backup::ZipFileBackup;
+use UBOS::AnyBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -94,8 +94,10 @@ sub run {
     unless( -r $in ) {
         fatal( 'Cannot read file', $in );
     }
-    my $backup = UBOS::Backup::ZipFileBackup->new();
-    $backup->readArchive( $in );
+    my $backup = UBOS::AnyBackup->readArchive( $in );
+    unless( $backup ) {
+        fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $in ));
+    }
 
     my $ret;
     if( @appConfigIds ) {
@@ -173,6 +175,7 @@ sub restoreAppConfigs {
             }
         }
     }
+    
     my @requiredPackageNames = keys %requiredPackages;
     UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
 
@@ -221,6 +224,8 @@ sub restoreAppConfigs {
         my $appConfigInBackup = $appConfigsToRestore{$appConfigIdInBackup};
         my $appConfigOnHost   = $toSiteNew->appConfig( $appConfigIdOnHost );
         $ret &= $backup->restoreAppConfiguration(
+                undef, # may not exist here
+                $toSiteId,
                 $appConfigInBackup,
                 $appConfigOnHost );
     }
@@ -331,7 +336,7 @@ sub restoreSites {
     my %requiredPackages = ();
     foreach my $siteInBackup ( values %$sitesInBackup ) {
         foreach my $appConfigInBackup( @{$siteInBackup->appConfigs} ) {
-            map { $requiredPackages{$_->packageName} = 1; } $appConfigInBackup->installables;
+            map { $requiredPackages{$_} = 1; } $appConfigInBackup->installablesPackages;
         }
     }
 
@@ -345,8 +350,9 @@ sub restoreSites {
     info( 'Constructing new version of sites' );
 
     my %appConfigIdTranslation = (); # maps old appconfigid -> new appconfigid
+    my %sitesNew               = (); # maps old SiteId -> new Site
+    my %oldAppConfigIdToSiteId = (); # maps old appconfig -> old SiteId
 
-    my %sitesNew = (); # maps old SiteId -> new Site
     foreach my $site ( values %sitesToRestore ) {
         my $siteJsonNew = dclone( $site->siteJson() );
         if( $createNew ) {
@@ -362,13 +368,16 @@ sub restoreSites {
                 my $newAppConfigId = UBOS::Host::createNewAppConfigId;
                 
                 $appConfigIdTranslation{$appConfigJsonNew->{appconfigid}} = $newAppConfigId;
+                $oldAppConfigIdToSiteId{$appConfigJsonNew->{appconfigid}} = $siteJsonNew->{siteid};
                 $appConfigJsonNew->{appconfigid}                          = $newAppConfigId;
             }
         } else {
             foreach my $appConfigJson ( @{$siteJsonNew->{appconfigs}} ) {
                 $appConfigIdTranslation{$appConfigJson->{appconfigid}} = $appConfigJson->{appconfigid};
+                $oldAppConfigIdToSiteId{$appConfigJson->{appconfigid}} = $siteJsonNew->{siteid};
             }
         }
+
         my $newSite = UBOS::Site->new( $siteJsonNew );
         if( $noTls ) {
             $newSite->deleteTlsInfo();
@@ -400,6 +409,8 @@ sub restoreSites {
         my $appConfigOnHost   = UBOS::Host::findAppConfigurationById( $appConfigIdOnHost );
 
         $ret &= $backup->restoreAppConfiguration(
+                $oldAppConfigIdToSiteId{$appConfigIdInBackup},
+                $sitesNew{$oldAppConfigIdToSiteId{$appConfigIdInBackup}}->siteId,
                 $appConfigInBackup,
                 $appConfigOnHost );
     }

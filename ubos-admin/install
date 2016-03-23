@@ -40,3 +40,8 @@ MSG
 post_upgrade() {
     systemctl daemon-reload
 }
+
+pre_upgrade() {
+    # Fix directory permissions to avoid warning from pacman
+    [ -d /var/lib/ubos/appconfigpars ] && chmod 755 /var/lib/ubos/appconfigpars
+}

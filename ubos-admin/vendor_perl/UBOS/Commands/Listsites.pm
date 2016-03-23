@@ -26,7 +26,7 @@ package UBOS::Commands::Listsites;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Backup::ZipFileBackup;
+use UBOS::AnyBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -65,9 +65,9 @@ sub run {
             fatal( 'Cannot read backup file', $backupFile );
         }
 
-        my $backup = UBOS::Backup::ZipFileBackup->new();
-        unless( $backup->readArchive( $backupFile )) {
-            fatal( 'Parsing backup file failed:', $backupFile );
+        my $backup = UBOS::AnyBackup->readArchive( $backupFile );
+        unless( $backup ) {
+            fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $backupFile ));
         }
         my $sitesInBackup = $backup->sites();
         if( @siteIds ) {
@@ -100,8 +100,8 @@ sub run {
 
     if( $json ) {
         my $sitesJson = {};
-        foreach my $site ( keys %$sites ) {
-            $sitesJson->{$site->siteId} = $site->siteJson;
+        foreach my $siteId ( keys %$sites ) {
+            $sitesJson->{$siteId} = $sites->{$siteId}->siteJson;
         }
         UBOS::Utils::writeJsonToStdout( $sitesJson );
 

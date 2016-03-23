@@ -57,6 +57,29 @@ sub new {
 }
 
 ##
+# Type of backup this class understands.
+# return: the type of backup
+sub backupType {
+    return 'ubos-backup';
+}
+
+##
+# Determine the form of compression used by this backup type.
+# return: the form of compression
+sub compression {
+    return 'zip';
+}
+
+##
+# Obtain the file that holds this Backup, if any
+# return: file name
+sub fileName {
+    my $self = shift;
+
+    return $self->{file};
+}
+
+##
 # Save the specified Sites and AppConfigurations to a file, and return the
 # corresponding Backup object. If a Site has N AppConfigurations, all of those
 # AppConfigurations must be listed in the $appConfigs
@@ -183,40 +206,37 @@ sub create {
 }
 
 ##
-# Instantiate a Backup object from an archive file
+# Read the backup.
 # $archive: the archive file name
-# return: the Backup object
-sub readArchive {
-    my $self    = shift;
+# $zip: the Archive::Zip object
+# return: true if successful
+sub read {
     my $archive = shift;
+    my $zip     = shift;
 
-    debug( 'ZipFileBackup::readArchive', $archive );
+    debug( 'ZipFileBackup::read', $archive, $zip );
 
-    $self->{sites}      = {};
-    $self->{appConfigs} = {};
-    $self->{file}       = $archive;
-
-    $self->{zip} = Archive::Zip->new();
-    unless( $self->{zip}->read( $archive ) == AZ_OK ) {
-        error( 'Failed reading file', $archive );
-        return 0;
-    }
-
-    my $foundFileType = $self->{zip}->contents( $zipFileTypeEntry );
+    my $foundFileType = $zip->contents( $zipFileTypeEntry );
     if( $foundFileType ) {
         $foundFileType =~ s!^\s+!!;
         $foundFileType =~ s!\s+$!!;
 
         unless( $foundFileType eq $fileType ) {
-            error( 'Invalid file type:', $foundFileType, "(expecting $fileType)" );
-            return 0;
+            return undef;
         }
     } else {
-        error( 'No file type entry found. Is this a ubos backup file?' );
-        return 0;
+        return undef;
     }
 
-    my $ret = 1;
+    my $self = UBOS::Backup::ZipFileBackup->new();
+
+    $self->{sites}      = {};
+    $self->{appConfigs} = {};
+    $self->{startTime}  = $zip->contents( $zipFileStartTimeEntry );
+    $self->{file}       = $archive;
+    $self->{zip}        = $zip;
+
+    my $ret = $self;
     
     foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
@@ -228,7 +248,7 @@ sub readArchive {
 
         } else {
             error( 'Cannot read ZIP file entry', $siteJsonFile );
-            $ret = 0;
+            $ret = undef;
         }
     }
     foreach my $appConfigJsonFile ( $self->{zip}->membersMatching( "$zipFileAppConfigsEntry/.*\.json" )) {
@@ -241,31 +261,24 @@ sub readArchive {
 
         } else {
             error( 'Cannot read ZIP file entry', $appConfigJsonFile );
-            $ret = 0;
+            $ret = undef;
         }
     }
-
-    $self->{startTime} = $self->{zip}->contents( $zipFileStartTimeEntry );
 
     return $ret;
 }
 
 ##
-# Obtain the file that holds this Backup, if any
-# return: file name
-sub fileName {
-    my $self = shift;
-
-    return $self->{file};
-}
-    
-##
-# Restore a single AppConfiguration from Backup
+# Restore a single AppConfiguration from Backup.
+# $siteIdInBackup: the site id of the AppConfiguration to restore, as it is stored in the Backup
+# $siteIdOnHost: the site id of the AppConfiguration to restore, on the host
 # $appConfigInBackup: the AppConfiguration to restore, as it is stored in the Backup
 # $appConfigOnHost: the AppConfiguration to restore to, on the host
 # return: success or fail
 sub restoreAppConfiguration {
     my $self              = shift;
+    my $siteIdInBackup    = shift;
+    my $siteIdOnHost      = shift;
     my $appConfigInBackup = shift;
     my $appConfigOnHost   = shift;
 

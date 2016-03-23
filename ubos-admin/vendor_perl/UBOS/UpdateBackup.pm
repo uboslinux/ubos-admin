@@ -165,12 +165,16 @@ sub read {
 }
 
 ##
-# Restore a single AppConfiguration from Backup
+# Restore a single AppConfiguration from Backup.
+# $siteIdInBackup: the site id of the AppConfiguration to restore, as it is stored in the Backup
+# $siteIdOnHost: the site id of the AppConfiguration to restore, on the host
 # $appConfigInBackup: the AppConfiguration to restore, as it is stored in the Backup
 # $appConfigOnHost: the AppConfiguration to restore to, on the host
 # return: success or fail
 sub restoreAppConfiguration {
     my $self              = shift;
+    my $siteIdInBackup    = shift;
+    my $siteIdOnHost      = shift;
     my $appConfigInBackup = shift;
     my $appConfigOnHost   = shift;
 

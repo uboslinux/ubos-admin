@@ -182,6 +182,23 @@ sub installables {
 }
 
 ##
+# Obtain the package names of the installables at this AppConfiguration.
+# return: list of package names
+sub installablesPackages {
+    my $self = shift;
+
+    # avoid going through instantiating App and Accessory, so we can
+    # determine the answer without having the packages installed
+
+    my @ret = ( $self->{json}->{appid} );
+
+    if( $self->{json}->{accessoryids} ) {
+        push @ret, @{$self->{json}->{accessoryids}};
+    }
+    return @ret;
+}
+
+##
 # Obtain the instantiated customization points for this AppConfiguration
 # return: customization points hierarchy as given in the site JSON
 sub customizationPoints {
@@ -670,6 +687,58 @@ sub isValidContext {
     } else {
         return 0;
     }
+}
+
+##
+# Check that all required customization point values have been specified.
+# If not, fatal out.
+sub checkCustomizationPointValues {
+    my $self = shift;
+
+    my $appConfigCustPoints = $self->customizationPoints();
+    foreach my $installable ( $self->installables ) {
+        my $packageName           = $installable->packageName;
+        my $installableCustPoints = $installable->customizationPoints;
+        if( $installableCustPoints ) {
+            foreach my $custPointName ( keys %$installableCustPoints ) {
+                my $custPointDef = $installableCustPoints->{$custPointName};
+
+                # check data type
+                my $value = undef;
+                if(    exists( $appConfigCustPoints->{$packageName} )
+                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName} )
+                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
+                {
+                    $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
+                    if( defined( $value )) {
+                        my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+                        my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                        # checked earlier that this is non-null
+                        unless( $custPointValidation->{valuecheck}->( $value )) {
+                            fatal(  ', AppConfiguration ' . $self->appConfigId
+                                   . ', package ' . $packageName
+                                   . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
+                                   . ', is ' . ( ref( $value ) || $value ));
+                        }
+                    }
+                }
+
+                # now check that required values are indeed provided
+                unless( $custPointDef->{required} ) {
+                    next;
+                }
+                if( !defined( $custPointDef->{default} ) || !defined( $custPointDef->{default}->{value} )) {
+                    # make sure the Site JSON file provided one
+                    unless( defined( $value )) {
+                        fatal(   ', AppConfiguration ' . $self->appConfigId
+                               . ', package ' . $packageName
+                               . ', required value not provided for customizationpoint: ' .  $custPointName );
+                    }
+                }
+            }
+        }
+    }
+    1;
 }
 
 ##
