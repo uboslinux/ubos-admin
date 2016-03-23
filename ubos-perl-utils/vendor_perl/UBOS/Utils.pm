@@ -603,10 +603,12 @@ sub readFilesInDirectory {
 ##
 # Obtain all Perl module files in a particular parent package.
 # $parentPackage: name of the parent package
+# $regex: a regex for the module files to be read, not counting the .pm extension, of any if not given
 # $inc: the path to search, or @INC if not given
 # return: hash of file name to package name
 sub findPerlModuleNamesInPackage {
     my $parentPackage = shift;
+    my $regex         = shift || '.+';
     my $inc           = shift || \@INC;
 
     my $parentDir = $parentPackage;
@@ -621,7 +623,7 @@ sub findPerlModuleNamesInPackage {
             opendir( DIR, $parentDir2 ) || error( $! );
 
             while( my $file = readdir( DIR )) {
-               if( $file =~ m/^(.*)\.pm$/ ) {
+               if( $file =~ m!^($regex)\.pm$! ) {
                    my $fileName    = "$parentDir2/$file";
                    my $packageName = "$parentPackage::$1";
 
@@ -638,10 +640,12 @@ sub findPerlModuleNamesInPackage {
 ##
 # Find the short, lowercase names of all Perl module files in a particular package.
 # $parentPackage: name of the parent package
+# $regex: a regex for the module files to be read, not counting the .pm extension, of any if not given
 # $inc: the path to search, or @INC if not given
 # return: hash of short package name to full package name
 sub findPerlShortModuleNamesInPackage {
     my $parentPackage = shift;
+    my $regex         = shift;
     my $inc           = shift;
 
     my $full = findPerlModuleNamesInPackage( $parentPackage, $inc );
