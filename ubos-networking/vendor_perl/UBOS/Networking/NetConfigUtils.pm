@@ -552,8 +552,8 @@ END
                 if( exists( $config->{$nic}->{sshratelimit} ) && $config->{$nic}->{sshratelimit} ) {
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --set\n";
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update"
-                                        . " --seconds "  . ( exists( $config->{$nic}->{sshratelimitseconds} ) ? $config->{$nic}->{sshratelimitseconds} : 60 )
-                                        . " --hitcount " . ( exists( $config->{$nic}->{sshratelimitcount}   ) ? $config->{$nic}->{sshratelimitcount}   :  4 )
+                                        . " --seconds "  . ( exists( $config->{$nic}->{sshratelimitseconds} ) ? $config->{$nic}->{sshratelimitseconds} : 120 )
+                                        . " --hitcount " . ( exists( $config->{$nic}->{sshratelimitcount}   ) ? $config->{$nic}->{sshratelimitcount}   :   7 )
                                         . " -j DROP\n";
                 }
                 $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT\n";
