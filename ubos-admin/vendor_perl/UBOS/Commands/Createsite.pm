@@ -431,6 +431,7 @@ sub run {
 ##
 # Ask the user a question
 # $q: the question text
+# $regex: regular expression that defines valid input
 # $dontTrim: if false, trim whitespace
 # $blank: if true, blank terminal echo
 sub ask {
