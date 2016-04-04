@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that backs up data on this device.
+# Command that backs up data on this device to a local file.
 #
 # This file is part of ubos-admin.
 # (C) 2012-2015 Indie Computing Corp.
@@ -26,6 +26,7 @@ package UBOS::Commands::Backup;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::BackupUtils;
 use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
@@ -64,79 +65,11 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
-    my $ret = 1;
-
-    # first make sure there is no overlap between them
-    my $sites      = {};
-    my $appConfigs = {};
-
-    foreach my $appConfigId ( @appConfigIds ) {
-        my $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
-        unless( $appConfig ) {
-            fatal( $@ );
-        }
-        if( exists( $appConfigs->{$appConfig->appConfigId} )) {
-            fatal( 'App config id specified more than once:', $appConfig->appConfigId );
-        }
-        $appConfigs->{$appConfig->appConfigId} = $appConfig;
-    }
-    foreach my $siteId ( @siteIds ) {
-        my $site = UBOS::Host::findSiteByPartialId( $siteId );
-        unless( $site ) {
-            fatal( $@ );
-        }
-        if( exists( $sites->{$site->siteId} )) {
-            fatal( 'Site id specified more than once:', $site->siteId );
-        }
-        $sites->{$site->siteId} = $site;
-    }
-    if( !@appConfigIds && !@siteIds ) {
-        $sites = UBOS::Host::sites();
-    }
-    foreach my $site ( values %$sites ) {
-        my $appConfigsAtSite = $site->appConfigs;
-        
-        foreach my $appConfig ( @$appConfigsAtSite ) {
-            if( exists( $appConfigs->{$appConfig->appConfigId} )) {
-                fatal( 'App config id', $appConfig->appConfigId . 'is also part of site:', $site->siteId );
-            }
-            $appConfigs->{$appConfig->appConfigId} = $appConfig;
-        }
-    }
-
-    my $sitesToSuspendResume = {};
-
-    # We have all AppConfigs of all Sites, so doing this is sufficient
-    foreach my $appConfig ( values %$appConfigs ) {
-        my $site = $appConfig->site;
-        $sitesToSuspendResume->{$site->siteId} = $site; # may be set more than once
-    }
-
-    info( 'Suspending sites' );
-
-    my $suspendTriggers = {};
-    foreach my $site ( values %$sitesToSuspendResume ) {
-        $ret &= $site->suspend( $suspendTriggers );
-    }
-    UBOS::Host::executeTriggers( $suspendTriggers );
-
-    info( 'Creating and exporting backup' );
+    UBOS::Host::preventInterruptions();
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
-    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $out );
+    my $ret = UBOS::BackupUtils::performBackup( $backup, $out, \@siteIds, \@appConfigIds, $noTls );
 
-    info( 'Resuming sites' );
-
-    my $resumeTriggers = {};
-    foreach my $site ( values %$sitesToSuspendResume ) {
-        $ret &= $site->resume( $resumeTriggers );
-    }
-    UBOS::Host::executeTriggers( $resumeTriggers );
-
-    unless( $ret ) {
-        error( "Backup failed." );
-    }
     return $ret;
 }
 
