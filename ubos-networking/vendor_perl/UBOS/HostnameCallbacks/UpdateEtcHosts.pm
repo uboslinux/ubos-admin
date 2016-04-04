@@ -105,7 +105,9 @@ sub _parseEtcHosts {
             $before .= "\n";
         }
     }
-
+    unless( defined( $after )) {
+        $after = ''; # If inexplicably the separator wasn't found
+    }
     return( $before, $after );
 }
 
