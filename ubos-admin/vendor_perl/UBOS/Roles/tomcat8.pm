@@ -126,6 +126,21 @@ sub _setupSite {
 }
 
 ##
+# Do what is necessary to suspend an already set-up Site
+# $site: the Site
+# $triggers: triggers to be executed may be added to this hash
+# return: success or fail
+sub suspendSite {
+    my $self     = shift;
+    my $site     = shift;
+    my $triggers = shift;
+
+    $triggers->{'tomcat8-reload'} = 1;
+
+    return 1;
+}
+
+##
 # Do what is necessary to activate/resume an already set-up Site
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash

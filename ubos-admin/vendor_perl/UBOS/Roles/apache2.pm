@@ -129,7 +129,7 @@ sub setupSiteOrCheck {
 }
 
 ##
-# Do what is necessary to susoend an already set-up Site
+# Do what is necessary to suspend an already set-up Site
 # $site: the Site
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
