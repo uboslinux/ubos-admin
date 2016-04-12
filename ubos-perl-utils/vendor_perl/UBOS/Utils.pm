@@ -168,7 +168,7 @@ sub insertSlurpedFiles {
     } elsif( ref( $json ) ) {
         $ret = $json;
         
-    } else {
+    } elsif( defined( $json )) {
         # string
         if( $json =~ m!^\@(/.*)$! ) {
             $ret = slurpFile( $1 );
@@ -177,6 +177,8 @@ sub insertSlurpedFiles {
         } else {
             $ret = $json;
         }
+    } else {
+        $ret = undef;
     }
     return $ret;    
 }
