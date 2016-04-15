@@ -38,6 +38,10 @@ MSG
 ## arg 1: the new package version
 ## arg 2: the old package version
 post_upgrade() {
+    # set btrfs nocow attributes for databases
+    [ -d /var/lib/mysql ]      && chattr +C /var/lib/mysql
+    [ -d /var/lib/postgresql ] && chattr +C /var/lib/postgresql
+
     systemctl daemon-reload
 }
 
