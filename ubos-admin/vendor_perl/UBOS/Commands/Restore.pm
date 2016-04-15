@@ -25,6 +25,7 @@ use warnings;
 package UBOS::Commands::Restore;
 
 use Cwd;
+use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
 use Storable qw( dclone );
 use UBOS::AnyBackup;
@@ -45,6 +46,7 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $in            = undef;
+    my $url           = undef;
     my @siteIds       = ();
     my @appConfigIds  = ();
     my $toSiteId      = undef;
@@ -62,6 +64,7 @@ sub run {
             'verbose+'      => \$verbose,
             'logConfig=s'   => \$logConfigFile,
             'in=s'          => \$in,
+            'url=s'         => \$url,
             'siteid=s'      => \@siteIds,
             'appconfigid=s' => \@appConfigIds,
             'tositeid=s'    => \$toSiteId,
@@ -78,7 +81,8 @@ sub run {
 
     if(    !$parseOk
         || @args
-        || !$in
+        || ( !$in && !$url )
+        || ( $in && $url )
         || ( $verbose && $logConfigFile )
         || ( @siteIds && ( @appConfigIds || $toSiteId || $toHostname || $context ))
         || ( !@siteIds && !@appConfigIds && ( $toSiteId || $toHostname || $createNew || $newSiteId ))
@@ -91,12 +95,36 @@ sub run {
         fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
     }
 
-    unless( -r $in ) {
-        fatal( 'Cannot read file', $in );
+    my $file;
+    my $tmpFile;
+    if( $in ) {
+        unless( -r $in ) {
+            fatal( 'Cannot read file', $in );
+        }
+        $file = $in;
+    } else {
+        $tmpFile = File::Temp->new( UNLINK => 1 );
+        close $tmpFile;
+        $file = $tmpFile->filename();
+
+        my $stdout;
+        my $stderr;
+        if( UBOS::Utils::myexec( "curl -L -v -o '$file' '$url'", undef, \$stdout, \$stderr )) {
+            fatal( 'Failed to download', $url );
+        }
+        if( $stderr =~ m!HTTP/1\.[01] (\d+)! ) {
+            my $status = $1;
+            unless( $status eq '200' ) {
+                fatal( 'Failed to access', $url, 'with status', $status );
+            }
+        } else {
+            fatal( 'Cannot determine HTTP status code when accessing', $url );
+        }
     }
-    my $backup = UBOS::AnyBackup->readArchive( $in );
+
+    my $backup = UBOS::AnyBackup->readArchive( $file );
     unless( $backup ) {
-        fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $in ));
+        fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $in || $url ));
     }
 
     my $ret;
@@ -105,6 +133,7 @@ sub run {
     } else {
         $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $noTls, $backup, $quiet );
     }
+
     return $ret;
 }
 
@@ -180,7 +209,7 @@ sub restoreAppConfigs {
     UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
+    UBOS::Host::preventInterruptions();
     my $ret = 1;
 
     info( 'Suspending site' );
@@ -344,7 +373,7 @@ sub restoreSites {
     UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
+    UBOS::Host::preventInterruptions();
     my $ret = 1;
 
     info( 'Constructing new version of sites' );
@@ -461,7 +490,7 @@ sub _findAppConfigurationByPartialId {
             $ret = $candidates[0];
 
         } elsif( @candidates ) {
-	        $@ = "There is more than one AppConfiguration in the backup whose app config id starts with $partial: "
+            $@ = "There is more than one AppConfiguration in the backup whose app config id starts with $partial: "
                  . join( " vs ", map { $_->appConfigId } @candidates ) . '.';
             return undef;
 
@@ -469,7 +498,7 @@ sub _findAppConfigurationByPartialId {
             $@ = "No AppConfiguration found in backup whose app config id starts with $partial.";
             return undef;
         }
-	
+
     } else {
         foreach my $appConfigId ( keys %$appConfigsInBackup ) {
             my $appConfig = $appConfigsInBackup->{$appConfigId};
@@ -496,47 +525,57 @@ sub _findAppConfigurationByPartialId {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore all sites contained in backupfile. This includes all
     applications and their data. None of the sites in the backup file
     must currently exist on the host: siteids, appconfigids, and hostnames
     must all be different.
+    Alternatively, a URL may be specified from where to retrieve the
+    backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <siteid> [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <siteid> [--hostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore the site with siteid contained in backupfile. This includes
     all applications at that site and their data. This site currently
     must not exist on the host: siteid, appconfigids, and hostname must
     all be different. Optionally use a different hostname.
+    Alternatively, a URL may be specified from where to retrieve the
+    backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --newsiteid <newsiteid> [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --newsiteid <newsiteid> [--hostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore the site with siteid contained in backupfile, but instead of using
     the siteids and appconfigids given in the backup, use newsiteid for the
     siteid, and allocate new appconfigids. Optionally also use a different hostname.
+    Alternatively, a URL may be specified from where to retrieve the
+    backupfile.
 
     This exists mainly to facilitate testing.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --createnew [--hostname <hostname>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --createnew [--hostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore the site with siteid contained in backupfile, but instead of using
     the siteids and appconfigids given in the backup, allocate new ones.
     Optionally also use a different hostname.
+    Alternatively, a URL may be specified from where to retrieve the
+    backupfile.
 
     This allows the user to run the restored backup of a site in parallel
     with the current site, albeit at a different hostname.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--context <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--context <context>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid. No AppConfiguration with appconfigid
     must currently exist on the host. Optionally use a different context path
     for the AppConfiguration. 
+    Alternatively, a URL may be specified from where to retrieve the
+    backupfile.
 HHH
         <<SSS => <<HHH
     [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--context <context>] --in <backupfile>
@@ -545,6 +584,8 @@ SSS
     to a currently deployed Site with tositeid, but instead of using the
     appconfigid given in the backup, allocate a new one. Optionally use a
     different context path for the AppConfiguration. 
+    Alternatively, a URL may be specified from where to retrieve the
+    backupfile.
 HHH
     };
 }
