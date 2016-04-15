@@ -46,6 +46,7 @@ sub run {
     my $logConfigFile = undef;
     my $out           = undef;
     my @siteIds       = ();
+    my @hosts         = ();
     my @appConfigIds  = ();
     my $noTls         = undef;
 
@@ -55,6 +56,7 @@ sub run {
             'logConfig=s'   => \$logConfigFile,
             'out=s',        => \$out,
             'siteid=s'      => \@siteIds,
+            'host=s'        => \@hosts,
             'appconfigid=s' => \@appConfigIds,
             'notls'         => \$noTls );
 
@@ -62,6 +64,11 @@ sub run {
 
     if( !$parseOk || @args || !$out || ( $verbose && $logConfigFile ) ) {
         fatal( 'Invalid invocation: backup', @_, '(add --help for help)' );
+    }
+
+    foreach my $host ( @hosts ) {
+        my $site = UBOS::Host::findSiteByHostname( $host );
+        push @siteIds, $site->siteId;
     }
 
     # May not be interrupted, bad things may happen if it is
@@ -83,6 +90,13 @@ sub synopsisHelp {
 SSS
     Back up all data from all apps and accessories installed at a currently
     deployed site with siteid to backupfile. More than one siteid may be
+    specified.
+HHH
+        <<SSS => <<HHH,
+    [--verbose | --logConfig <file>] [--notls] --host <hostname> --out <backupfile>
+SSS
+    Back up all data from all apps and accessories installed at a currently
+    deployed site with the given hostname to backupfile. More than one hostname may be
     specified.
 HHH
         <<SSS => <<HHH,
