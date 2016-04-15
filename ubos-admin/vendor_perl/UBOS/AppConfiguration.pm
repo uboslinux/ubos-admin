@@ -715,7 +715,7 @@ sub checkCustomizationPointValues {
                         my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                         # checked earlier that this is non-null
                         unless( $custPointValidation->{valuecheck}->( $value )) {
-                            fatal(  ', AppConfiguration ' . $self->appConfigId
+                            fatal(   'AppConfiguration ' . $self->appConfigId
                                    . ', package ' . $packageName
                                    . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
                                    . ', is ' . ( ref( $value ) || $value ));
