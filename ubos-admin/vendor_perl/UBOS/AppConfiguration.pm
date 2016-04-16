@@ -33,7 +33,7 @@ use UBOS::Subconfiguration;
 use JSON;
 use MIME::Base64;
 
-use fields qw{json site app accessories config subconfigs};
+use fields qw{json manifestFileReader site app accessories config subconfigs};
 
 my $APPCONFIGPARSDIR = '/var/lib/ubos/appconfigpars';
 
@@ -41,19 +41,22 @@ my $APPCONFIGPARSDIR = '/var/lib/ubos/appconfigpars';
 # Constructor.
 # $json: JSON object containing one appconfig section of a Site JSON
 # $site: Site object representing the site that this AppConfiguration belongs to
+# $manifestFileReader: pointer to a method that knows how to read manifest files
 # return: AppConfiguration object
 sub new {
-    my $self = shift;
-    my $json = shift;
-    my $site = shift; # this may be undef when restoring from backup
+    my $self               = shift;
+    my $json               = shift;
+    my $site               = shift; # this may be undef when restoring from backup
+    my $manifestFileReader = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
     $self->{json}       = $json;
-    $self->{site}       = $site;
-    $self->{config}     = undef; # initialized when needed
-    $self->{subconfigs} = {};
+    $self->{manifestFileReader} = $manifestFileReader;
+    $self->{site}               = $site;
+    $self->{config}             = undef; # initialized when needed
+    $self->{subconfigs}         = {};
 
     # No checking required, UBOS::Site::new has done that already
     return $self;
@@ -617,10 +620,10 @@ sub _initialize {
         return 1;
     }
 
-    $self->{app} = UBOS::App->new( $self->{json}->{appid} );
+    $self->{app} = UBOS::App->new( $self->{json}->{appid}, $self->{manifestFileReader} );
 
     if( $self->{json}->{accessoryids} ) {
-        my @acc = map { UBOS::Accessory->new( $_ ) } @{$self->{json}->{accessoryids}};
+        my @acc = map { UBOS::Accessory->new( $_, $self->{manifestFileReader} ) } @{$self->{json}->{accessoryids}};
         $self->{accessories} = \@acc;
         
     } else {

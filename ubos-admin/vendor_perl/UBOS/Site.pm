@@ -31,17 +31,19 @@ use UBOS::Utils;
 use JSON;
 use MIME::Base64;
 
-use fields qw{json appConfigs config};
+use fields qw( json manifestFileReader appConfigs config);
 
 my $WILDCARDHOSTNAME = "__wildcard";
 
 ##
 # Constructor.
 # $json: JSON object containing Site JSON
+# $manifestFileReader: pointer to a method that knows how to read manifest files
 # return: Site object
 sub new {
-    my $self = shift;
-    my $json = shift;
+    my $self               = shift;
+    my $json               = shift;
+    my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -51,7 +53,8 @@ sub new {
         $json->{tls} = $json->{ssl};
         delete $json->{ssl};
     }
-    $self->{json} = $json;
+    $self->{json}               = $json;
+    $self->{manifestFileReader} = $manifestFileReader;
 
     if ( $< == 0 ) { # Nobody else can create new files
         $self->_checkJson();
@@ -378,7 +381,7 @@ sub appConfigs {
         my $jsonAppConfigs = $self->{json}->{appconfigs};
         $self->{appConfigs} = [];
         foreach my $current ( @$jsonAppConfigs ) {
-            push @{$self->{appConfigs}}, UBOS::AppConfiguration->new( $current, $self );
+            push @{$self->{appConfigs}}, UBOS::AppConfiguration->new( $current, $self, $self->{manifestFileReader} );
         }
     }
     return $self->{appConfigs};

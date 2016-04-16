@@ -3,7 +3,7 @@
 # Command that lists the currently deployed sites.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2015 Indie Computing Corp.
+# (C) 2012-2016 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,7 +42,6 @@ sub run {
     my $json          = 0;
     my $brief         = 0;
     my @siteIds       = ();
-    my $backupFile    = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -50,8 +49,7 @@ sub run {
             'logConfig=s'  => \$logConfigFile,
             'json'         => \$json,
             'brief'        => \$brief,
-            'siteid=s'     => \@siteIds,
-            'backupfile=s' => \$backupFile );
+            'siteid=s'     => \@siteIds );
 
     UBOS::Logging::initialize( 'ubos-admin', 'listsites', $verbose, $logConfigFile );
 
@@ -60,42 +58,17 @@ sub run {
     }
 
     my $sites;
-    if( $backupFile ) {
-        unless( -r $backupFile ) {
-            fatal( 'Cannot read backup file', $backupFile );
-        }
-
-        my $backup = UBOS::AnyBackup->readArchive( $backupFile );
-        unless( $backup ) {
-            fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $backupFile ));
-        }
-        my $sitesInBackup = $backup->sites();
-        if( @siteIds ) {
-            foreach my $siteId ( sort @siteIds ) {
-                my $site = $sitesInBackup->{ $siteId };
-                if( $site ) {
-                    $sites->{$site->siteId} = $site;
-                } else {
-                    fatal( 'Cannot find Site with siteid', $siteId, 'in backup' );
-                }
+    if( @siteIds ) {
+        foreach my $siteId ( sort @siteIds ) {
+            my $site = UBOS::Host::findSiteByPartialId( $siteId );
+            if( $site ) {
+                $sites->{$site->siteId} = $site;
+            } else {
+                fatal( $@ );
             }
-        } else {
-            $sites = $sitesInBackup;
         }
-
     } else {
-        if( @siteIds ) {
-            foreach my $siteId ( sort @siteIds ) {
-                my $site = UBOS::Host::findSiteByPartialId( $siteId );
-                if( $site ) {
-                    $sites->{$site->siteId} = $site;
-                } else {
-                    fatal( $@ );
-                }
-            }
-        } else {
-            $sites = UBOS::Host::sites();
-        }
+        $sites = UBOS::Host::sites();
     }
 
     if( $json ) {
@@ -119,22 +92,13 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
+        <<SSS => <<HHH
     [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]...
 SSS
     Show the sites with siteid, or if not given, show all sites currently
     deployed to this device. If invoked as root, more information is available.
     --json: show them in JSON format
     --brief: only show the site ids.
-HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]... --backupfile <file>
-SSS
-    Show the sites with siteid, or if not given, show all sites contained
-    in the specified backup file. If invoked as root, more information is available.
-    --json: show them in JSON format
-    --brief: only show the site ids.
-    --backupfile: name of the backup file
 HHH
     };
 }

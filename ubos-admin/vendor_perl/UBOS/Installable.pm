@@ -119,15 +119,18 @@ our $knownCustomizationPointTypes = {
 ##
 # Constructor.
 # $packageName: unique identifier of the package
+# $manifestFileReader: pointer to a method that knows how to read the manifest file
 sub new {
-    my $self        = shift;
-    my $packageName = shift;
+    my $self               = shift;
+    my $packageName        = shift;
+    my $manifestFileReader = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
 
-    my $json        = readJsonFromFile( manifestFileFor( $packageName ));
+    my $json = $manifestFileReader->( $packageName );
+
     $self->{config} = UBOS::Configuration->new(
             "Installable=$packageName",
             { "package.name" => $packageName },
@@ -226,16 +229,6 @@ sub appConfigItemsInRole {
 
     my $ret = $self->{json}->{roles}->{$roleName}->{appconfigitems};
     return $ret;
-}
-
-##
-# Obtain the filename of the manifest file for a package with a given identifier
-# $identifier: the package identifier
-# return: the filename
-sub manifestFileFor {
-    my $identifier = shift;
-
-    return UBOS::Host::config()->get( 'package.manifestdir' ) . "/$identifier.json";
 }
 
 ##

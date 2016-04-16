@@ -236,13 +236,16 @@ sub read {
     $self->{file}       = $archive;
     $self->{zip}        = $zip;
 
+    $self->{startTime} =~ s!^\s+!!;
+    $self->{startTime} =~ s!\s+$!!;
+
     my $ret = $self;
     
     foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
             my $siteJson = readJsonFromString( $siteJsonContent );
-            my $site     = UBOS::Site->new( $siteJson );
+            my $site     = UBOS::Site->new( $siteJson, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             $self->{sites}->{$site->siteId()} = $site;
 
@@ -255,7 +258,7 @@ sub read {
         my $appConfigJsonContent = $self->{zip}->contents( $appConfigJsonFile );
         if( $appConfigJsonContent ) {
             my $appConfigJson = readJsonFromString( $appConfigJsonContent );
-            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson );
+            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
 
@@ -329,6 +332,24 @@ sub restoreAppConfiguration {
         }
     }
     return $ret;
+}
+
+##
+# Knows how to read a manifest from a zip file instead of
+# the default location in the file system. This is needed because
+# the package in question may not be installed.
+# $zip: the zip file to read from
+# $packageIdentifier: the package identifier
+# return: JSON
+sub readManifestFromZip {
+    my $zip               = shift;
+    my $packageIdentifier = shift;
+
+    my $foundManifest = $zip->contents( "installables/$packageIdentifier.json" );
+    unless( $foundManifest ) {
+        fatal( 'Manifest for package', $packageIdentifier, 'not found in backup file.' );
+    }
+    return UBOS::Utils::readJsonFromString( $foundManifest );
 }
 
 1;

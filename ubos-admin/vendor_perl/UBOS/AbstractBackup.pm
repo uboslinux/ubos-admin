@@ -70,11 +70,27 @@ sub newFromArchive {
 }
 
 ##
+# Determine the type of backup
+sub backupType {
+    my $self = shift;
+
+    return ref( $self );
+}
+
+##
 # Determine the start time in UNIX time format
 sub startTime {
     my $self = shift;
 
     return UBOS::Utils::string2time( $self->{startTime} );
+}
+
+##
+# Determine the start time in printable time format
+sub startTimeString {
+    my $self = shift;
+
+    return $self->{startTime};
 }
 
 ##

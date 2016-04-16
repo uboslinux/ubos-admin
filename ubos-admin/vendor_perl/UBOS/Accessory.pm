@@ -30,17 +30,19 @@ use fields;
 ##
 # Constructor.
 # $packageName: unique identifier of the package
+# $manifestFileReader: pointer to a method that knows how to read the manifest file
 sub new {
-    my $self        = shift;
-    my $packageName = shift;
+    my $self               = shift;
+    my $packageName        = shift;
+    my $manifestFileReader = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $packageName );
+    $self->SUPER::new( $packageName, $manifestFileReader );
 
     if( $self->{config}->get( 'ubos.checkmanifest', 1 )) {
-		$self->checkManifest( 'accessory' );
+        $self->checkManifest( 'accessory' );
         $self->checkManifestAccessoryInfo();
     }
 

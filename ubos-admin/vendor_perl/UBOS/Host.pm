@@ -944,4 +944,16 @@ sub ipAddressesOnNic {
     return @ret;
 }
 
+##
+# Obtain a function that knows how to read manifest files from the default
+# location.
+# $packageIdentifier: the package identifier
+# return: JSON
+sub defaultManifestFileReader {
+    my $packageIdentifier = shift;
+
+    my $file = UBOS::Host::config()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
+    return readJsonFromFile( $file );
+}
+
 1;

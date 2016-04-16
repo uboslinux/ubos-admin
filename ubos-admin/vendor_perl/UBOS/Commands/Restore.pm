@@ -117,9 +117,7 @@ sub run {
             unless( $status eq '200' ) {
                 fatal( 'Failed to access', $url, 'with status', $status );
             }
-        } else {
-            fatal( 'Cannot determine HTTP status code when accessing', $url );
-        }
+        } # else it might have been a protocol other than http
     }
 
     my $backup = UBOS::AnyBackup->readArchive( $file );
