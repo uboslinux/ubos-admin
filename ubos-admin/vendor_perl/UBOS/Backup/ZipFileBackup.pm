@@ -258,7 +258,7 @@ sub read {
         my $appConfigJsonContent = $self->{zip}->contents( $appConfigJsonFile );
         if( $appConfigJsonContent ) {
             my $appConfigJson = readJsonFromString( $appConfigJsonContent );
-            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, sub { return readManifestFromZip( $self->{zip}, shift ); } );
+            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, undef, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
 
