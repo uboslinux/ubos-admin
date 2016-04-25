@@ -45,6 +45,7 @@ sub run {
     my $logConfigFile = undef;
     my @siteIds       = ();
     my @hosts         = ();
+    my $all           = 0;
     my $file          = undef;
 
     my $parseOk = GetOptionsFromArray(
@@ -53,14 +54,16 @@ sub run {
             'logConfig=s' => \$logConfigFile,
             'siteid=s'    => \@siteIds,
             'host=s'      => \@hosts,
+            'all'         => \$all,
             'file=s'      => \$file );
 
     UBOS::Logging::initialize( 'ubos-admin', 'undeploy', $verbose, $logConfigFile );
 
-    if( !$parseOk || @args || ( !@siteIds && !@hosts && !$file )
+    if( !$parseOk || @args || ( !@siteIds && !@hosts && !$all && !$file )
                            || ( @siteIds && @hosts )
                            || ( @siteIds && $file )
                            || ( @hosts && $file )
+                           || ( $all && ( @siteIds || @hosts || $file ))
                            || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation: undeploy', @_, '(add --help for help)' );
@@ -78,6 +81,9 @@ sub run {
                 fatal( "Cannot find site with hostname $host. Not undeploying any site." );
             }
         }
+
+    } elsif( $all ) {
+        $oldSites = UBOS::Host::sites();
 
     } else {
         if( $file ) {
@@ -108,12 +114,17 @@ sub run {
             } else {
                 fatal( "$@ Not undeploying any site." );
             }
-            $site->checkUndeployable;
+        }
+    }
+
+    foreach my $site ( values %$oldSites ) {
+        unless( $site->checkUndeployable ) {
+            fatal( 'Cannot undeploy site', $site->siteId );
         }
     }
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
+    UBOS::Host::preventInterruptions();
     my $ret = 1;
 
     debug( 'Disabling site(s)' );
@@ -154,12 +165,17 @@ SSS
     Undeploy one or more previously deployed site(s) by specifying their hostname.
     This is equivalent to undeploying the site ids, but may be more convenient.
 HHH
-        <<SSS => <<HHH
+        <<SSS => <<HHH,
     [--verbose | --logConfig <file>] --file <site.json>
 SSS
     Undeploy one or more previously deployed site(s) whose site JSON
     file is given. This is equivalent to undeploying the site ids of the
     site(s) contained in the file.
+HHH
+        <<SSS => <<HHH
+    [--verbose | --logConfig <file>] --all
+SSS
+    Undeploy all currently deployed site(s).
 HHH
     };
 }
