@@ -56,7 +56,7 @@ sub run {
             'logConfig=s'   => \$logConfigFile,
             'out=s',        => \$out,
             'siteid=s'      => \@siteIds,
-            'host=s'        => \@hosts,
+            'hostname=s'    => \@hosts,
             'appconfigid=s' => \@appConfigIds,
             'notls'         => \$noTls );
 
@@ -93,7 +93,7 @@ SSS
     specified.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--notls] --host <hostname> --out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] --hostname <hostname> --out <backupfile>
 SSS
     Back up all data from all apps and accessories installed at a currently
     deployed site with the given hostname to backupfile. More than one hostname may be
