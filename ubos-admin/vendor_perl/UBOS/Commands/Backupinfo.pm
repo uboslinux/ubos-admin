@@ -113,8 +113,13 @@ sub run {
         map { $seenAppConfigIds->{ $_->appConfigId } = 1; } @{ $sites->{$siteId}->appConfigs };
     }
 
-    foreach my $appConfigId ( sort grep { !$seenAppConfigIds->{$_} } keys %$appConfigs ) {
-        $appConfigs->{$appConfigId}->print( $brief ? 1 : 2 );
+    my @unattachedAppConfigIds = sort grep { !$seenAppConfigIds->{$_} } keys %$appConfigs;
+    if( @unattachedAppConfigIds ) {
+        print "=== Unattached AppConfigurations ===\n";
+
+        foreach my $appConfigId ( @unattachedAppConfigIds ) {
+            $appConfigs->{$appConfigId}->print( $brief ? 1 : 2 );
+        }
     }
     
     return 1;
