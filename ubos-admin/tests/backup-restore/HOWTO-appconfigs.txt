@@ -1,0 +1,27 @@
+This tests restore of entire sites.
+
+How to test:
+
+0. Preparation:
+
+    Add site1 and site2 to /etc/host pointing to the test host
+
+1. Restore one AppConfig to an existing site
+
+    Do:
+        ubos-admin deploy -f empty.ubos-backup
+        ubos-admin restore --appconfigid a1111... --tositeid s00.. --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        http://site1/guestbook with siteid s000...
+
+2. Add another AppConfig to the site with the same data at a different context
+
+    Do:
+        ubos-admin restore --appconfigid a1111... --tositeid s00.. --createnew --newcontext /foo --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        http://site1/guestbook
+        http://site1/foo
+    Cleanup:
+        ubos-admin undeploy --all

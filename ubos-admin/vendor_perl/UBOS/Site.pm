@@ -768,6 +768,28 @@ sub disable {
 }
 
 ##
+# Incrementally deploy a single AppConfiguration to this Site.
+# $appConfig: the AppConfiguration to add
+# $triggers: triggers to be executed may be added to this hash
+# return: success or fail
+sub addDeployAppConfiguration {
+    my $self      = shift;
+    my $appConfig = shift;
+    my $triggers  = shift;
+
+    debug( 'Site::addDeployAppConfiguration', $appConfig->appConfigId, $self->siteId );
+
+    push @{$self->appConfigs},           $appConfig;
+    push @{$self->{json}->{appconfigs}}, $appConfig->appConfigurationJson;
+
+    my $ret = $appConfig->deployOrCheck( 1, $triggers );
+
+    UBOS::Host::siteDeployed( $self );
+
+    return $ret;
+}
+
+##
 # Clear cached information.
 sub clearCaches {
     my $self = shift;

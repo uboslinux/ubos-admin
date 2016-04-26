@@ -96,7 +96,7 @@ sub deployOrCheck {
     if( $installableRoleJson ) {
         my $apache2modules = $installableRoleJson->{apache2modules};
         my $numberActivated = 0;
-        if( $appConfig->site->hasTls ) {
+        if( $appConfig->site && $appConfig->site->hasTls ) {
             push @$apache2modules, 'ssl';
         }
         if( $doIt && $apache2modules ) {

@@ -223,7 +223,7 @@ sub findSiteByHostname {
 
 ##
 # Find a particular AppConfiguration in the provided hash of sites, or currently installed on this host,
-# by ac omplete app config id match.
+# by a complete app config id match.
 sub findAppConfigurationById {
     my $appConfigId = shift;
     my $sites       = shift || sites();
@@ -248,7 +248,7 @@ sub findAppConfigurationById {
 # $sites: hash of siteid to Site (defaults to sites installed on host)
 # return: the Site, or undef
 sub findAppConfigurationByPartialId {
-	my $id    = shift;
+    my $id    = shift;
     my $sites = shift || sites();
 
     my $ret;
@@ -270,7 +270,7 @@ sub findAppConfigurationByPartialId {
             $ret = $candidates[0][0];
 
         } elsif( @candidates ) {
-	        $@ = "There is more than one AppConfiguration whose app config id starts with $partial: "
+            $@ = "There is more than one AppConfiguration whose app config id starts with $partial: "
                  . join( " vs ", map { "$_[0] (site $_[1] )" } @candidates ) . '.';
             return undef;
 
@@ -278,7 +278,7 @@ sub findAppConfigurationByPartialId {
             $@ = "No AppConfiguration found whose app config id starts with $partial.";
             return undef;
         }
-	
+
     } else {
         foreach my $siteId ( keys %$sites ) {
             my $site = $sites->{$siteId};

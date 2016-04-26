@@ -2,6 +2,12 @@
 #
 # Command that restores data from a backup.
 #
+# The help text suggests that only one named site or appconfig can be
+# restored at one time. However, that's not true. More than once may be
+# restored at the same time, as long as all required other flags (e.g.
+# --context) are provided once for each. They are matched by being
+# processed in sequence.
+#
 # This file is part of ubos-admin.
 # (C) 2012-2016 Indie Computing Corp.
 #
@@ -43,54 +49,93 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $in            = undef;
-    my $url           = undef;
-    my @siteIds       = ();
-    my @appConfigIds  = ();
-    my $toSiteId      = undef;
-    my $toHostname    = undef;
-    my $hostname      = undef;
-    my $context       = undef;
-    my $createNew     = 0;
-    my $newSiteId     = undef;
-    my $showIds       = 0;
-    my $noTls         = undef;
-    my $quiet         = 0;
+    my $verbose         = 0;
+    my $logConfigFile   = undef;
+    my $showIds         = 0;
+    my $noTls           = 0;
+    my $in              = undef;
+    my $url             = undef;
+    my @siteIds         = ();
+    my @hostnames       = ();
+    my $createNew       = 0;
+    my @newSiteIds      = ();
+    my @newHostnames    = ();
+    my @appConfigIds    = ();
+    my @toSiteIds       = ();
+    my @toHostnames     = ();
+    my @newAppConfigIds = ();
+    my @newContexts     = ();
+    my $quiet           = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'      => \$verbose,
-            'logConfig=s'   => \$logConfigFile,
-            'in=s'          => \$in,
-            'url=s'         => \$url,
-            'siteid=s'      => \@siteIds,
-            'appconfigid=s' => \@appConfigIds,
-            'tositeid=s'    => \$toSiteId,
-            'tohostname=s'  => \$toHostname,
-            'hostname=s'    => \$hostname,
-            'context=s'     => \$context,
-            'createnew'     => \$createNew,
-            'newsiteid=s'   => \$newSiteId,
-            'showids'       => \$showIds,
-            'notls'         => \$noTls,
-            'quiet'         => \$quiet );
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'showids'          => \$showIds,
+            'notls'            => \$noTls,
+            'in=s'             => \$in,
+            'url=s'            => \$url,
+            'siteid=s'         => \@siteIds,
+            'hostname=s'       => \@hostnames,
+            'createnew'        => \$createNew,
+            'newsiteid=s'      => \@newSiteIds,
+            'newhostname=s'    => \@newHostnames,
+            'appconfigid=s'    => \@appConfigIds,
+            'tositeid=s'       => \@toSiteIds,
+            'tohostname=s'     => \@toHostnames,
+            'newappconfigid=s' => \@newAppConfigIds,
+            'newcontext=s'     => \@newContexts,
+            'quiet'            => \$quiet );
 
     UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
 
+    my $nSites   = scalar( @siteIds )   + scalar( @hostnames );
+    my $nToSites = scalar( @toSiteIds ) + scalar( @toHostnames );
+
     if(    !$parseOk
         || @args
+        || ( $verbose && $logConfigFile )
         || ( !$in && !$url )
         || ( $in && $url )
-        || ( $verbose && $logConfigFile )
-        || ( @siteIds && ( @appConfigIds || $toSiteId || $toHostname || $context ))
-        || ( !@siteIds && !@appConfigIds && ( $toSiteId || $toHostname || $createNew || $newSiteId ))
-        || ( $noTls && ( !@siteIds || $toHostname ))
-        || ( $context && @appConfigIds > 1 )
-        || ( $newSiteId && ( @siteIds > 1 || @appConfigIds ))
-        || ( @appConfigIds && !$toSiteId && !$toHostname )
-        || ( $hostname && ( @appConfigIds || @siteIds > 1 )))
+        || ( !@appConfigIds && !$createNew && (
+                   ( @siteIds && @hostnames )
+                || @newSiteIds
+                || ( @newHostnames && @newHostnames != $nSites )
+                || @toSiteIds
+                || @toHostnames
+                || @newAppConfigIds
+                || @newContexts
+           ))
+        || ( !@appConfigIds && $createNew && (
+                   ( @siteIds && @hostnames )
+                || ( @newSiteIds   && @newSiteIds != $nSites )
+                || ( @newHostnames && @newHostnames != $nSites )
+                || @toSiteIds
+                || @toHostnames
+                || @newAppConfigIds
+                || @newContexts
+           ))
+        || ( @appConfigIds && !$createNew && (
+                   $nSites
+                || ( @toSiteIds && @toHostnames )
+                || @newSiteIds
+                || @newHostnames
+                || ( $nToSites != 1 && $nToSites != @appConfigIds )
+                || @newAppConfigIds
+                || ( @newContexts && ( @newContexts != @appConfigIds ))
+                || $noTls
+           ))
+        || ( @appConfigIds && $createNew && (
+                   $nSites
+                || ( @toSiteIds && @toHostnames )
+                || @newSiteIds
+                || @newHostnames
+                || ( $nToSites != @appConfigIds )
+                || ( $nToSites != 1 && $nSites != @appConfigIds )
+                || ( @newAppConfigIds && @newAppConfigIds != @appConfigIds )
+                || ( @newContexts && ( @newContexts != @appConfigIds ))
+                || $noTls
+           )) )
     {
         fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
     }
@@ -127,9 +172,9 @@ sub run {
 
     my $ret;
     if( @appConfigIds ) {
-        $ret = restoreAppConfigs( \@appConfigIds, $toSiteId, $toHostname, $createNew, $context, $showIds, $backup, $quiet );
+        $ret = restoreAppConfigs( \@appConfigIds, \@toSiteIds, \@toHostnames, $createNew, \@newAppConfigIds, \@newContexts, $showIds, $backup, $quiet );
     } else {
-        $ret = restoreSites( \@siteIds, $createNew, $newSiteId, $hostname, $showIds, $noTls, $backup, $quiet );
+        $ret = restoreSites( \@siteIds, \@hostnames, $createNew, \@newSiteIds, \@newHostnames, $noTls, $showIds, $backup, $quiet );
     }
 
     return $ret;
@@ -138,71 +183,99 @@ sub run {
 ##
 # Call if we restore appconfigurations, not sites        
 sub restoreAppConfigs {
-    my @appConfigIds = @{shift()};
-    my $toSiteId     = shift;
-    my $toHostname   = shift;
-    my $createNew    = shift;
-    my $context      = shift;
-    my $showIds      = shift;
-    my $backup       = shift;
-    my $quiet        = shift;
+    my @appConfigIds    = @{shift()};
+    my @toSiteIds       = @{shift()};
+    my @toHostnames     = @{shift()};
+    my $createNew       = shift;
+    my @newAppConfigIds = @{shift()};
+    my @newContexts     = @{shift()};
+    my $showIds         = shift;
+    my $backup          = shift;
+    my $quiet           = shift;
 
     my $appConfigsInBackup = $backup->appConfigs();
-    my %requiredPackages   = ();
+    my $sites              = UBOS::Host::sites();
 
-    # tosite must exist on the host
-    my $toSite;
-    if( $toSiteId ) {
-        $toSite = UBOS::Host::findSiteByPartialId( $toSiteId );
-    } else {
-        $toSite = UBOS::Host::findSiteByHostname( $toHostname );
+    # 1. Establish appConfigId translation table
+    # 2. Establish context translation table
+    # 3. Check there will be no overlap in appConfigIds or contexts
+    # 4. Establish list of new AppConfigIds to restore
+    my %appConfigIdTranslation = (); # new appConfigId -> old appConfigId, contains existing sites
+    my %contextToAppConfigId   = (); # siteid -> context -> new appconfigid, contains existing sites
+    my %appConfigIdToContext   = (); # new appconfigid -> new context
+    my @appConfigIdsToRestore  = (); # new appconfigids only
+    my %siteIdsToAppConfigIds  = (); # to-be-updated site id -> array of new appconfigid
+
+    # tosites and tohostnames must exist on the host
+    # also assemble toSites
+    my @toSites = ();
+    foreach my $toSiteId ( @toSiteIds ) {
+        my $toSite = UBOS::Host::findSiteByPartialId( $toSiteId );
+        unless( $toSite ) {
+            fatal( $@ );
+        }
+        push @toSites, $toSite;
     }
-    unless( $toSite ) {
-        fatal( $@ );
+    foreach my $toHostname ( @toHostnames ) {
+        unless( UBOS::Host::isValidHostname( $toHostname )) {
+            fatal( 'Not a valid hostname:', $toHostname );
+        }
+        my $toSite = UBOS::Host::findSiteByHostname( $toHostname );
+        unless( $toSite ) {
+            fatal( $@ );
+        }
+        push @toSites, $toSite;
     }
 
-    my %appConfigsToRestore = (); # appconfigid -> AppConfiguration in backup
+    # fill the translation tables with currently deployed sites
+    foreach my $site ( values %$sites ) {
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            $appConfigIdTranslation{$appConfig->appConfigId} = $appConfig->appConfigId;
+            $contextToAppConfigId{$site->siteId}->{$appConfig->context} = $appConfig->appConfigId;
+            $appConfigIdToContext{$appConfig->appConfigId} = $appConfig->context;
+        }
+    }
 
-    # appconfigids cannot overlap within the backup, or on the host
-    foreach my $appConfigId ( @appConfigIds ) {
-        my $appConfig = _findAppConfigurationByPartialId( $appConfigId, $appConfigsInBackup );
+    my %requiredPackages = ();
+    for( my $i=0 ; $i<@appConfigIds ; ++$i ) {
+        my $oldAppConfigId = $appConfigIds[$i];
+        my $appConfig = $backup->findAppConfigurationByPartialId( $oldAppConfigId );
         unless( $appConfig ) {
             fatal( $@ );
         }
-        if( !$createNew && UBOS::Host::findAppConfigurationById( $appConfig->appConfigId )) {
-            fatal( 'There is already a currently deployed app configuration with appconfigid', $appConfig->appConfigId );
+
+        my $toSite = $toSites[$i];
+
+        my $newAppConfigId;
+        my $newContext;
+        if( @newAppConfigIds ) {
+            $newAppConfigId = $newAppConfigIds[$i];
+        } elsif( $createNew ) {
+            $newAppConfigId = UBOS::Host::createNewAppConfigId();
+        } else {
+            $newAppConfigId = $appConfig->appConfigId;
         }
-        if( exists( $appConfigsToRestore{$appConfig->appConfigId} )) {
-            fatal( 'Appconfigid specified more than once:', $appConfig->appConfigId );
+        if( @newContexts ) {
+            $newContext = $newContexts[$i];
+        } else {
+            $newContext = $appConfig->context;
         }
-        $appConfigsToRestore{$appConfig->appConfigId} = $appConfig;
+        if( exists( $appConfigIdTranslation{$newAppConfigId} )) {
+            fatal( 'AppConfiguration with this appconfigid already exists:', $newAppConfigId );
+        }
+        if( exists( $contextToAppConfigId{$toSite->siteId}->{$newContext} )) {
+            fatal( 'AppConfiguration with this context already exists on site:', $toSite->siteId, $newContext ? $newContext : '<root>' );
+        }
+
+        $contextToAppConfigId{$toSite->siteId}->{$newContext} = $newAppConfigId;
+        $appConfigIdToContext{$newAppConfigId} = $newContext;
+        push @appConfigIdsToRestore, $newAppConfigId;
+        push @{$siteIdsToAppConfigIds{$toSite->siteId}}, $newAppConfigId;
 
         # determine which packages we might need
         map { $requiredPackages{$_->packageName} = 1; } $appConfig->installables;
     }
 
-    # $context cannot exist on same host
-    if( defined( $context )) {
-        unless( UBOS::AppConfiguration::isValidContext( $context )) {
-            fatal( 'Context must be a slash followed by one or more characters, or be entirely empty' );
-        }
-        foreach my $appConfigOnHost ( @{$toSite->appConfigs} ) {
-            if( $context eq $appConfigOnHost->context() ) {
-                fatal( 'Already an AppConfiguration at context', $context ? $context : "<root>" );
-            }
-        }
-    } else {
-        foreach my $appConfigOnHost ( @{$toSite->appConfigs} ) {
-            my $appConfigOnHostContext = $appConfigOnHost->context;
-            foreach my $appConfigToRestore ( values %appConfigsToRestore ) {
-                my $appConfigToRestoreContext = $appConfigToRestore->context();
-                if( $appConfigOnHostContext eq $appConfigToRestoreContext ) {
-                    fatal( 'Cannot restore AppConfiguration to context that is already taken:', $appConfigOnHostContext ? $appConfigOnHostContext : "<root>" );
-                }
-            }
-        }
-    }
-    
     my @requiredPackageNames = keys %requiredPackages;
     UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
 
@@ -210,161 +283,213 @@ sub restoreAppConfigs {
     UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    info( 'Suspending site' );
+    info( 'Suspending site(s)' );
 
     my $suspendTriggers = {};
-    $ret &= $toSite->suspend( $suspendTriggers ); # replace with "in progress page"
+    foreach my $toSite ( @toSites ) {
+        $ret &= $toSite->suspend( $suspendTriggers ); # replace with "in progress page"
+    }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Constructing new version of site' );
-
-    my %appConfigIdTranslation = (); # maps old appconfigid -> new appconfigid
-    my $siteJsonNew = dclone( $toSite->siteJson()); # create new Site JSON
-    foreach my $appConfig ( values %appConfigsToRestore ) {
-        my $appConfigJsonNew = dclone( $appConfig->appConfigurationJson() );
-        if( $createNew ) {
-            $appConfigJsonNew->{appconfigid} = UBOS::Host::createNewAppConfigId;
-        }
-        if( $context ) {
-            $appConfigJsonNew->{context} = $context;
-        }
-        unless( $siteJsonNew->{appconfigs} ) { # site could be empty
-            $siteJsonNew->{appconfigs} = [];
-        }
-        push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
-        $appConfigIdTranslation{$appConfig->appConfigId} = $appConfigJsonNew->{appconfigid};
-    }
-    my $toSiteNew = UBOS::Site->new( $siteJsonNew );
-
-    info( 'Deploying new version of site' );
+    info( 'Updating site(s)' );
 
     my $deployUndeployTriggers = {};
-    $ret &= $toSite->undeploy( $deployUndeployTriggers );
-    $ret &= $toSiteNew->deploy( $deployUndeployTriggers );
+    my %newAppConfigs          = (); # new appconfig id => new app config
+    foreach my $siteId ( keys %siteIdsToAppConfigIds ) {
+        my $site = $sites->{$siteId};
+
+        foreach my $newAppConfigId ( @{$siteIdsToAppConfigIds{$siteId}} ) {
+            my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
+            my $oldAppConfig   = $backup->findAppConfigurationById( $oldAppConfigId );
+
+            my $appConfigJsonNew = dclone( $oldAppConfig->appConfigurationJson() );
+            $appConfigJsonNew->{appconfigid} = $newAppConfigId;
+            $appConfigJsonNew->{context}     = $appConfigIdToContext{$newAppConfigId};
+
+            my $newAppConfig = UBOS::AppConfiguration->new( $appConfigJsonNew, $site );
+
+            $site->addDeployAppConfiguration( $newAppConfig, $deployUndeployTriggers );
+
+            $newAppConfigs{$newAppConfigId} = $newAppConfig;
+        }
+    }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
     info( 'Restoring data' );
 
-    foreach my $appConfigIdInBackup ( keys %appConfigIdTranslation ) {
-        my $appConfigIdOnHost = $appConfigIdTranslation{$appConfigIdInBackup};
+    for( my $i=0 ; $i<@appConfigIdsToRestore ; ++$i ) {
+        my $newAppConfigId = $appConfigIdsToRestore[$i];
+        my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
+        my $siteId         = $toSites[$i];
 
-        my $appConfigInBackup = $appConfigsToRestore{$appConfigIdInBackup};
-        my $appConfigOnHost   = $toSiteNew->appConfig( $appConfigIdOnHost );
         $ret &= $backup->restoreAppConfiguration(
-                undef, # may not exist here
-                $toSiteId,
-                $appConfigInBackup,
-                $appConfigOnHost );
+                $siteId,
+                $siteId,
+                $backup->findAppConfigurationById( $oldAppConfigId ),
+                $newAppConfigs{$newAppConfigId} );
     }
 
-    info( 'Resuming site' );
+    info( 'Resuming site(s)' );
 
     my $resumeTriggers = {};
-    $ret &= $toSiteNew->resume( $resumeTriggers );
+    foreach my $toSite ( @toSites ) {
+        $ret &= $toSite->resume( $resumeTriggers );
+    }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     info( 'Running upgraders' );
 
-    foreach my $appConfigIdOnHost ( values %appConfigIdTranslation ) {
-        my $appConfigOnHost = $toSiteNew->appConfig( $appConfigIdOnHost );
-        $ret &= $appConfigOnHost->runUpgrader();
+    foreach my $newAppConfigId ( @appConfigIdsToRestore ) {
+        my $appConfig = $newAppConfigs{$newAppConfigId};
+
+        $ret &= $appConfig->runUpgrader();
     }
 
     if( $showIds ) {
-        foreach my $appConfigIdOnHost ( values %appConfigIdTranslation ) {
-            print $appConfigIdOnHost->appConfigId . "\n";
+        foreach my $newAppConfigId ( @appConfigIdsToRestore ) {
+            print $newAppConfigId . "\n";
         }
     }
 
     return $ret;    
 }
-    
+
 ##
 # Called if we restore entire sites
 sub restoreSites {
-    my @siteIds   = @{shift()};
-    my $createNew = shift;
-    my $newSiteId = shift;
-    my $hostname  = shift;
-    my $showIds   = shift;
-    my $noTls     = shift;
-    my $backup    = shift;
-    my $quiet     = shift;
+    my @siteIds      = @{shift()};
+    my @hostnames    = @{shift()};
+    my $createNew    = shift;
+    my @newSiteIds   = @{shift()};
+    my @newHostnames = @{shift()};
+    my $noTls        = shift;
+    my $showIds      = shift;
+    my $backup       = shift;
+    my $quiet        = shift;
 
     my $sitesInBackup      = $backup->sites();
     my $appConfigsInBackup = $backup->appConfigs();
     my $sites              = UBOS::Host::sites();
 
-    if( $newSiteId ) {
-        if( !UBOS::Host::isValidSiteId( $newSiteId )) {
-            fatal( 'Note a valid siteid:', $newSiteId );
-        }
-        if( UBOS::Host::findSiteById( $newSiteId )) {
-            fatal( 'There is already a currently deployed site with siteid', $newSiteId );
+    # 1. Establish siteId translation table
+    # 2. Establish appConfigId translation table
+    # 3. Establish hostname translation table
+    # 4. Check there will be no overlap in siteIds or hostnames
+    # 5. Establish list of new SiteIds to restore
+    my %siteIdTranslation      = (); # Calculated from (partial) @siteIds and @hostnames, new siteId -> old siteId, contains existing sites
+    my %appConfigIdTranslation = (); # new appConfigId -> old appConfigId, contains existing sites
+    my %hostnameToSiteId       = (); # hostname -> new siteId, contains existing sites
+    my %siteIdToHostname       = (); # new siteId -> new hostname
+    my @siteIdsToRestore       = (); # new siteIds only
+    my %siteIdsToAppConfigIds  = (); # to-be-updated site id -> array of new appconfigid
+
+    # fill the translation tables with currently deployed sites
+    foreach my $site ( values %$sites ) {
+        $siteIdTranslation{$site->siteId}  = $site->siteId;
+        $hostnameToSiteId{$site->hostname} = $site->siteId;
+
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            $appConfigIdTranslation{$appConfig->appConfigId} = $appConfig->appConfigId;
         }
     }
-        
-    if( !@siteIds ) {
-        @siteIds = keys %$sitesInBackup;
+
+    my @oldSiteIds = _findSitesInBackupFromSiteIds(    $backup, \@siteIds );
+    push @oldSiteIds, _findSitesInBackupFromHostnames( $backup, \@hostnames );
+
+    unless( @oldSiteIds ) {
+        # no --siteid or --hostname was specified: take all
+        @oldSiteIds = keys %$sitesInBackup;
     }
 
-    my %sitesToRestore      = ();
-    my %appConfigsToRestore = ();
+    debug( 'Backup siteids to restore:', @oldSiteIds );
 
-    # siteids and appconfigids cannot overlap within the backup, or on the host
-    foreach my $siteId ( @siteIds ) {
-        my $site = UBOS::Host::findSiteByPartialId( $siteId, $sitesInBackup );
-        unless( $site ) {
-            fatal( $@ );
-        }
-        if( !$createNew && UBOS::Host::findSiteById( $site->siteId )) {
-            fatal( 'There is already a currently deployed site with siteid', $site->siteId );
-        }
-        if( exists( $sitesToRestore{$site->siteId} )) {
-            fatal( 'Siteid specified more than once:', $site->siteId );
-        }
-        $sitesToRestore{$site->siteId} = $site;
+    for( my $i=0 ; $i<@oldSiteIds ; ++$i ) {
+        my $oldSiteId = $oldSiteIds[$i];
+        my $site = $backup->findSiteById( $oldSiteId );
 
-        if( !$createNew ) {
-            # check internal consistency
-            foreach my $appConfig ( @{$site->appConfigs} ) {
-                if( !$createNew && UBOS::Host::findAppConfigurationById( $appConfig->appConfigId )) {
-                    fatal( 'There is already a currently deployed app configuration with appconfigid', $appConfig->appConfigId );
-                }
-                
-                if( exists( $appConfigsToRestore{$appConfig->appConfigId} )) {
-                    fatal( 'Appconfigid found more than once:', $appConfig->appConfigId );
-                }
-                $appConfigsToRestore{$appConfig->appConfigId} = $appConfig;
+        my $newSiteId;
+        my $newHostname;
+        if( @newSiteIds ) {
+            $newSiteId = $newSiteIds[$i];
+        } elsif( $createNew ) {
+            $newSiteId = UBOS::Host::createNewSiteId();
+        } else {
+            $newSiteId = $site->siteId;
+        }
+        if( @newHostnames ) {
+            $newHostname = $newHostnames[$i];
+        } else {
+            $newHostname = $site->hostname;
+        }
+        if( exists( $siteIdTranslation{$newSiteId} )) {
+            fatal( 'Site with this siteid exists already:', $newSiteId );
+        }
+        if( exists( $hostnameToSiteId{$newHostname} )) {
+            fatal( 'Site with this hostname exists already:', $newHostname );
+        }
+
+        $siteIdTranslation{$newSiteId}  = $site->siteId;
+        $hostnameToSiteId{$newHostname} = $newSiteId;
+        $siteIdToHostname{$newSiteId}   = $newHostname;
+
+        push @siteIdsToRestore, $newSiteId;
+
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            my $newAppConfigId;
+            if( $createNew ) {
+                $newAppConfigId = UBOS::Host::createNewAppConfigId();
+            } else {
+                $newAppConfigId = $appConfig->appConfigId;
             }
-        }
-    }
+            if( exists( $appConfigIdTranslation{$newAppConfigId} )) {
+                fatal( 'AppConfig with this appConfigId exists already:', $newAppConfigId );
+            }
+            $appConfigIdTranslation{$newAppConfigId} = $appConfig->appConfigId;
 
-    # $hostname cannot exist on same host
-    if( $hostname ) {
-        foreach my $site ( values %$sites ) {
-            if( $hostname eq $site->hostname ) {
-                fatal( 'This host already runs a site at hostname', $hostname );
-            }
-        }
-    } else {
-        foreach my $siteOnHost ( values %$sites ) {
-            my $hostnameOnHost = $siteOnHost->hostname;
-            foreach my $siteToRestore ( values %sitesToRestore ) {
-                my $hostnameToRestore = $siteToRestore->hostname();
-                if( $hostnameOnHost eq $hostnameToRestore ) {
-                    fatal( 'Cannot restore Site to hostname that is already taken:', $hostnameToRestore );
-                }
-            }
+            push @{$siteIdsToAppConfigIds{$newSiteId}}, $newAppConfigId;
         }
     }
+    debug( 'Host siteids to restore to:', @siteIdsToRestore );
 
     # determine which packages we might need
     my %requiredPackages = ();
-    foreach my $siteInBackup ( values %$sitesInBackup ) {
-        foreach my $appConfigInBackup( @{$siteInBackup->appConfigs} ) {
-            map { $requiredPackages{$_} = 1; } $appConfigInBackup->installablesPackages;
+    foreach my $oldSiteId ( @oldSiteIds ) {
+        my $site = $backup->findSiteById( $oldSiteId );
+
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            map { $requiredPackages{$_} = 1; } $appConfig->installablesPackages;
         }
+    }
+
+    info( 'Constructing new version of sites' );
+
+    my @sitesNew = ();
+
+    foreach my $newSiteId ( @siteIdsToRestore ) {
+        my $oldSiteId = $siteIdTranslation{$newSiteId};
+        my $oldSite   = $backup->findSiteById( $oldSiteId );
+
+        my $siteJsonNew = dclone( $oldSite->siteJson() );
+        $siteJsonNew->{siteid}     = $newSiteId;
+        $siteJsonNew->{hostname}   = $siteIdToHostname{$newSiteId};
+        $siteJsonNew->{appconfigs} = []; # rebuild
+
+        foreach my $newAppConfigId ( keys %appConfigIdTranslation ) {
+            my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
+            my $oldAppConfig   = $oldSite->appConfig( $oldAppConfigId ); # may be undef; wrong site
+
+            if( $oldAppConfig ) {
+                my $appConfigJsonNew = dclone( $oldAppConfig->appConfigurationJson() );
+                $appConfigJsonNew->{appconfigid} = $newAppConfigId;
+
+                push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
+            }
+        }
+        my $newSite = UBOS::Site->new( $siteJsonNew );
+        if( $noTls ) {
+            $newSite->deleteTlsInfo();
+        }
+        push @sitesNew, $newSite;
     }
 
     my @requiredPackageNames = keys %requiredPackages;
@@ -374,48 +499,10 @@ sub restoreSites {
     UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    info( 'Constructing new version of sites' );
-
-    my %appConfigIdTranslation = (); # maps old appconfigid -> new appconfigid
-    my %sitesNew               = (); # maps old SiteId -> new Site
-    my %oldAppConfigIdToSiteId = (); # maps old appconfig -> old SiteId
-
-    foreach my $site ( values %sitesToRestore ) {
-        my $siteJsonNew = dclone( $site->siteJson() );
-        if( $createNew ) {
-            $siteJsonNew->{siteid} = UBOS::Host::createNewSiteId;
-        } elsif( $newSiteId ) {
-            $siteJsonNew->{siteid} = $newSiteId;
-        }
-        if( $hostname ) {
-            $siteJsonNew->{hostname} = $hostname;
-        }
-        if( $createNew ) {
-            foreach my $appConfigJsonNew ( @{$siteJsonNew->{appconfigs}} ) {
-                my $newAppConfigId = UBOS::Host::createNewAppConfigId;
-                
-                $appConfigIdTranslation{$appConfigJsonNew->{appconfigid}} = $newAppConfigId;
-                $oldAppConfigIdToSiteId{$appConfigJsonNew->{appconfigid}} = $siteJsonNew->{siteid};
-                $appConfigJsonNew->{appconfigid}                          = $newAppConfigId;
-            }
-        } else {
-            foreach my $appConfigJson ( @{$siteJsonNew->{appconfigs}} ) {
-                $appConfigIdTranslation{$appConfigJson->{appconfigid}} = $appConfigJson->{appconfigid};
-                $oldAppConfigIdToSiteId{$appConfigJson->{appconfigid}} = $siteJsonNew->{siteid};
-            }
-        }
-
-        my $newSite = UBOS::Site->new( $siteJsonNew );
-        if( $noTls ) {
-            $newSite->deleteTlsInfo();
-        }
-        $sitesNew{$site->siteId} = $newSite;
-    }
-
     info( 'Setting up placeholders for restored sites' );
 
     my $suspendTriggers = {};
-    foreach my $siteNew ( values %sitesNew ) {
+    foreach my $siteNew ( @sitesNew ) {
         $ret &= $siteNew->setupPlaceholder( $suspendTriggers ); # show "coming soon"
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
@@ -423,98 +510,95 @@ sub restoreSites {
     info( 'Deploying new version of sites' );
 
     my $deployUndeployTriggers = {};
-    foreach my $siteNew ( values %sitesNew ) {
+    foreach my $siteNew ( @sitesNew ) {
         $ret &= $siteNew->deploy( $deployUndeployTriggers );
     }
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
     info( 'Restoring data' );
 
-    foreach my $appConfigIdInBackup ( keys %appConfigIdTranslation ) {
-        my $appConfigIdOnHost = $appConfigIdTranslation{$appConfigIdInBackup};
-        my $appConfigInBackup = $appConfigsInBackup->{$appConfigIdInBackup};
-        my $appConfigOnHost   = UBOS::Host::findAppConfigurationById( $appConfigIdOnHost );
+    foreach my $newSiteId ( keys %siteIdsToAppConfigIds ) {
+        foreach my $newAppConfigId ( @{$siteIdsToAppConfigIds{$newSiteId}} ) {
+            my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
+            my $oldAppConfig   = $appConfigsInBackup->{$oldAppConfigId};
 
-        $ret &= $backup->restoreAppConfiguration(
-                $oldAppConfigIdToSiteId{$appConfigIdInBackup},
-                $sitesNew{$oldAppConfigIdToSiteId{$appConfigIdInBackup}}->siteId,
-                $appConfigInBackup,
-                $appConfigOnHost );
+            $ret &= $backup->restoreAppConfiguration(
+                    $siteIdTranslation{$newSiteId},
+                    $newSiteId,
+                    $oldAppConfig,
+                    UBOS::Host::findAppConfigurationById( $newAppConfigId ));
+        }
     }
 
     info( 'Resuming site' );
 
     my $resumeTriggers = {};
-    foreach my $siteNew ( values %sitesNew ) {
+    foreach my $siteNew ( @sitesNew ) {
         $ret &= $siteNew->resume( $resumeTriggers );
     }
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     info( 'Running upgraders' );
 
-    foreach my $appConfigIdOnHost ( values %appConfigIdTranslation ) {
-        my $appConfigOnHost = UBOS::Host::findAppConfigurationById( $appConfigIdOnHost );
-        $ret &= $appConfigOnHost->runUpgrader();
+    foreach my $newAppConfigId ( sort keys %appConfigIdTranslation ) {
+        my $newAppConfig = UBOS::Host::findAppConfigurationById( $newAppConfigId );
+        $ret &= $newAppConfig->runUpgrader();
     }
 
     if( $showIds ) {
-        foreach my $siteNew ( values %sitesNew ) {
+        foreach my $siteNew ( @sitesNew ) {
             print $siteNew->siteId . "\n";
+            foreach my $appConfigNew ( @{$siteNew->appConfigs} ) {
+                print '    ' . $appConfigNew->appConfigId . "\n";
+            }
         }
     }
     return $ret;
 }
 
+
 ##
-# Helper method to find an AppConfiguration from a partial id among the
-# AppConfigurations in the backup.
-sub _findAppConfigurationByPartialId {
-    my $id                 = shift;
-    my $appConfigsInBackup = shift;
+# Given partial siteIds, find the corresponding sites in the backup
+# $backup: the backup
+# $siteIds: array of partial siteIds
+# return: siteIds found
+sub _findSitesInBackupFromSiteIds {
+    my $backup  = shift;
+    my $siteIds = shift;
 
-    my $ret;
-    if( $id =~ m!^(.*)\.\.\.$! ) {
-        my $partial    = $1;
-        my @candidates = ();
-
-        foreach my $appConfigId ( keys %$appConfigsInBackup ) {
-            my $appConfig = $appConfigsInBackup->{$appConfigId};
-
-            if( $appConfig->appConfigId =~ m!^$partial! ) {
-                push @candidates, $appConfig;
-            }
-        }
-        if( @candidates == 1 ) {
-            $ret = $candidates[0];
-
-        } elsif( @candidates ) {
-            $@ = "There is more than one AppConfiguration in the backup whose app config id starts with $partial: "
-                 . join( " vs ", map { $_->appConfigId } @candidates ) . '.';
-            return undef;
-
-        } else {
-            $@ = "No AppConfiguration found in backup whose app config id starts with $partial.";
-            return undef;
+    my @ret = ();
+    foreach my $siteId ( @$siteIds ) {
+        my $site = $backup->findSiteByPartialId( $siteId );
+        unless( $site ) {
+            fatal( $@ );
         }
 
-    } else {
-        foreach my $appConfigId ( keys %$appConfigsInBackup ) {
-            my $appConfig = $appConfigsInBackup->{$appConfigId};
-
-            if( $appConfig->appConfigId eq $id ) {
-                $ret = $appConfig;
-            }
-        }
-        unless( $ret ) {
-            $@ = "No AppConfiguration found in backup with app config id $id.";
-            return undef;
-        }
+        push @ret, $site->siteId;
     }
+    return @ret;
+}
 
-    unless( $ret ) {
-        error( "Restore failed." );
+##
+# Given hostnames, find the corresponding sites in the backup
+# $backup: the backup
+# $hostnames: array of hostnames
+# return: siteIds found
+sub _findSitesInBackupFromHostnames {
+    my $backup    = shift;
+    my $hostnames = shift;
+
+    my @ret = ();
+    foreach my $hostname ( @$hostnames ) {
+        unless( UBOS::Host::isValidHostname( $hostname )) {
+            fatal( 'Not a valid hostname:', $hostname );
+        }
+        my $site = $backup->findSiteByHostname( $hostname );
+        unless( $site ) {
+            fatal( 'No site with this hostname in backup:', $hostname );
+        }
+        push @ret, $site->siteId;
     }
-    return $ret;
+    return @ret;
 }
 
 ##
@@ -526,62 +610,55 @@ sub synopsisHelp {
     [--verbose | --logConfig <file>] [--showids] [--notls] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore all sites contained in backupfile. This includes all
-    applications and their data. None of the sites in the backup file
-    must currently exist on the host: siteids, appconfigids, and hostnames
-    must all be different.
+    applications at that site and their data. None of the sites in the backup
+    file must currently exist on the host: siteids, appconfigids, and
+    hostnames must all be different.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <siteid> [--hostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] ( --siteid <siteid> | --hostname <hostname> ) [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
-    Restore the site with siteid contained in backupfile. This includes
-    all applications at that site and their data. This site currently
+    Restore the site with siteid or hostname contained in backupfile. This
+    includes all applications at that site and their data. This site currently
     must not exist on the host: siteid, appconfigids, and hostname must
-    all be different. Optionally use a different hostname.
+    all be different.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --newsiteid <newsiteid> [--hostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] ( --siteid <siteid> | --hostname <hostname> ) --createnew [--newsiteid <newid>] [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
-    Restore the site with siteid contained in backupfile, but instead of using
-    the siteids and appconfigids given in the backup, use newsiteid for the
-    siteid, and allocate new appconfigids. Optionally also use a different hostname.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
-
-    This exists mainly to facilitate testing.
-HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] --siteid <fromsiteid> --createnew [--hostname <hostname>] ( --in <backupfile> | --url <backupurl> )
-SSS
-    Restore the site with siteid contained in backupfile, but instead of using
-    the siteids and appconfigids given in the backup, allocate new ones.
-    Optionally also use a different hostname.
+    Restore the site with siteid or hostname contained in backupfile, but
+    instead of using the siteids and appconfigids given in the backup,
+    allocate new ones. Optionally specify the new siteid to use with --newsiteid.
+    Optionally recreate the site on the host with a new hostname with --newhostname.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 
     This allows the user to run the restored backup of a site in parallel
-    with the current site, albeit at a different hostname.
+    with the current site, as long as they use a different hostname.
+
+    This exists mainly to facilitate testing.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--context <context>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--newcontext <context>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid. No AppConfiguration with appconfigid
     must currently exist on the host. Optionally use a different context path
-    for the AppConfiguration. 
+    for the AppConfiguration using --newcontext.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--context <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--newappconfigid <newid>] [--newcontext <context>] --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid, but instead of using the
-    appconfigid given in the backup, allocate a new one. Optionally use a
-    different context path for the AppConfiguration. 
+    appconfigid given in the backup, allocate a new one. Optional specify the
+    new appconfigid to use with --newappconfigid. Optionally use a
+    different context path for the AppConfiguration using --newcontext.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH

@@ -47,7 +47,7 @@ sub new {
     my $self               = shift;
     my $json               = shift;
     my $site               = shift; # this may be undef when restoring from backup
-    my $manifestFileReader = shift;
+    my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -285,6 +285,7 @@ sub config {
     unless( $self->{config} ) {
         my $site        = $self->site();
         my $appConfigId = $self->appConfigId();
+
         $self->{config} = UBOS::Configuration->new(
                     "AppConfiguration=$appConfigId",
                     {
@@ -293,9 +294,8 @@ sub config {
                         "appconfig.contextorslash"       => $self->contextOrSlash(),
                         "appconfig.contextnoslashorroot" => $self->contextNoSlashOrRoot()
                     },
-                    defined( $site ) ? $site->config : undef );
+                    $site->config );
     }
-
     return $self->{config};
 }
 

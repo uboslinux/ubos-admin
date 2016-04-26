@@ -1,0 +1,110 @@
+This tests restore of entire sites.
+
+How to test:
+
+0. Preparation:
+
+    Add site1 and site2 to /etc/host pointing to the test host
+
+1. Restore all sites from backup, and backup to new file
+
+    Do:
+        ubos-admin restore --in test.ubos-backup
+    Expect:
+        http://site1/guestbook has text saying "site1/guestbook"
+        http://site1/blog      has text saying "site1/blog"
+        http://site2/hello     has text saying "site2/hello"
+
+    Do:
+        ubos-admin backup --out test-all.ubos-backup
+        ubos-admin backupinfo --in test-all.ubos-backup
+    Expect:
+        site1 (s1111...)
+            /guestbook - gladiwashere
+            /blog      - wordpress
+        site2 (s2222...)
+            /hello     - gladiwashere
+
+    Cleanup:
+        ubos-admin undeploy --all
+
+2. Restore one site from backup by hostname
+
+    Do:
+        ubos-admin restore --host site1 --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        site1/guestbook deployed
+        site1/blog      deployed
+        site2           not deployed
+
+    Do:
+        ubos-admin restore --host site2 --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        site1/guestbook deployed
+        site1/blog      deployed
+        site2/hello     deployed
+
+    Cleanup:
+        ubos-admin undeploy --all
+
+3. Restore one site from backup by siteid
+
+    Do:
+        ubos-admin restore --siteid s11... --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        site1/guestbook deployed
+        site1/blog      deployed
+        site2           not deployed
+
+    Do:
+        ubos-admin restore --siteid s22... --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        site1/guestbook deployed
+        site1/blog      deployed
+        site2/hello     deployed
+
+    Cleanup:
+        ubos-admin undeploy --all
+
+4. Change hostname during restore
+
+    Do:
+        ubos-admin restore --siteid s1... --newhostname newsite1 --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        newsite1/guestbook deployed
+        newsite1/blog      deployed
+        site1              not deployed
+        site2              not deployed
+
+    Do:
+        ubos-admin restore --siteid s22... --newhostname site1 --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        newsite1/guestbook deployed
+        newsite1/blog      deployed
+        site1/hello        deployed
+        site2              not deployed
+
+    Cleanup:
+        ubos-admin undeploy --all
+
+5. Assign new site ids during restore
+
+    Do:
+        ubos-admin restore --siteid s11... --in test.ubos-backup
+        ubos-admin restore --siteid s11... --createnew --newhostname newsite1 --in test.ubos-backup
+        ubos-admin listsites
+    Expect:
+        site1/guestbook    deployed
+        site1/blog         deployed
+        newsite1/guestbook deployed
+        newsite1/blog      deployed
+        site2              not deployed
+
+    Cleanup:
+        ubos-admin undeploy --all

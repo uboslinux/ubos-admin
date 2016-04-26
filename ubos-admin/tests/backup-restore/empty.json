@@ -1,0 +1,11 @@
+{
+   "siteid" : "s0000dd08dc25cdffa1ea0f5be6648cae53a1a400",
+   "hostname" : "site1",
+
+   "admin" : {
+      "userid" : "admin",
+      "username" : "admin",
+      "email" : "ignore@ubos.net",
+      "credential" : "xxxxxxxx"
+   },
+}

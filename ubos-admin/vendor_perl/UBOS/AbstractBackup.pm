@@ -103,12 +103,109 @@ sub sites {
 }
 
 ##
+# Find one site with a given siteId contained in this Backup
+# return: Site
+sub findSiteById {
+    my $self   = shift;
+    my $siteId = shift;
+
+    return UBOS::Host::findSiteById( $siteId, $self->{sites} );
+}
+
+##
+# Find one site with a partial siteId contained in this Backup
+# return: Site
+sub findSiteByPartialId {
+    my $self   = shift;
+    my $siteId = shift;
+
+    return UBOS::Host::findSiteByPartialId( $siteId, $self->{sites} );
+}
+
+##
+# Find one site with a given hostname contained in this Backup
+# return: Site
+sub findSiteByHostname {
+    my $self     = shift;
+    my $hostname = shift;
+
+    return UBOS::Host::findSiteByHostname( $hostname, $self->{sites} );
+}
+
+##
 # Determine the AppConfigurations contained in this Backup.
 # return: hash of appconfigid to AppConfiguration
 sub appConfigs {
     my $self = shift;
 
     return $self->{appConfigs};
+}
+
+##
+# Find one AppConfiguration with a given appConfigId contained in this Backup
+# return: AppConfiguration
+sub findAppConfigurationById {
+    my $self        = shift;
+    my $appConfigId = shift;
+
+    foreach my $appConfigId ( keys %{$self->{appConfigs}} ) {
+        my $appConfig = $self->{appConfigs}->{$appConfigId};
+
+        if( $appConfig->appConfigId eq $appConfigId ) {
+            return $appConfig;
+        }
+    }
+    return undef;
+}
+
+##
+# Find one AppConfiguration from a given appConfigId contained in this Backup
+# return: AppConfiguration
+sub findAppConfigurationByPartialId {
+    my $self               = shift;
+    my $appConfigId        = shift;
+    my $appConfigsInBackup = shift;
+
+    my $ret;
+    if( $appConfigId =~ m!^(.*)\.\.\.$! ) {
+        my $partial    = $1;
+        my @candidates = ();
+
+        foreach my $appConfigId ( keys %{$self->{appConfigs}} ) {
+            my $appConfig = $self->{appConfigs}->{$appConfigId};
+
+            if( $appConfig->appConfigId =~ m!^$partial! ) {
+                push @candidates, $appConfig;
+            }
+        }
+        if( @candidates == 1 ) {
+            $ret = $candidates[0];
+
+        } elsif( @candidates ) {
+            $@ = "There is more than one AppConfiguration in the backup whose app config id starts with $partial: "
+                 . join( " vs ", map { $_->appConfigId } @candidates ) . '.';
+            return undef;
+
+        } else {
+            $@ = "No AppConfiguration found in backup whose app config id starts with $partial.";
+            return undef;
+        }
+
+    } else {
+        foreach my $appConfigId ( keys %{$self->appconfigs} ) {
+            my $appConfig = $self->{appconfigs}->{$appConfigId};
+
+            if( $appConfig->appConfigId eq $appConfigId ) {
+                $ret = $appConfig;
+            }
+        }
+        unless( $ret ) {
+            $@ = "No AppConfiguration found in backup with app config id $appConfigId.";
+            return undef;
+        }
+    }
+
+    return $ret;
 }
 
 ##

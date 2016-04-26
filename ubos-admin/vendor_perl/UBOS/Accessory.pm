@@ -34,7 +34,7 @@ use fields;
 sub new {
     my $self               = shift;
     my $packageName        = shift;
-    my $manifestFileReader = shift;
+    my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
         $self = fields::new( $self );

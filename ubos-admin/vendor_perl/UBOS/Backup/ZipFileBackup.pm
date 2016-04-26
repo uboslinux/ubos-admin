@@ -289,7 +289,7 @@ sub restoreAppConfiguration {
     my $zip                 = $self->{zip};
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
 
-    debug( 'ZipFileBackup::restoreAppConfiguration', $appConfigIdInBackup );
+    debug( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigOnHost->appConfigId );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
