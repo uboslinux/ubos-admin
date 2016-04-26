@@ -53,7 +53,7 @@ sub run {
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'siteid=s'    => \@siteIds,
-            'host=s'      => \@hosts,
+            'hostname=s'  => \@hosts,
             'all'         => \$all,
             'file=s'      => \$file );
 
@@ -160,7 +160,7 @@ SSS
     Undeploy one or more previously deployed site(s) by specifying their site id.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --host <hostname> [--host <hostname>]...
+    [--verbose | --logConfig <file>] --hostname <hostname> [--hostname <hostname>]...
 SSS
     Undeploy one or more previously deployed site(s) by specifying their hostname.
     This is equivalent to undeploying the site ids, but may be more convenient.

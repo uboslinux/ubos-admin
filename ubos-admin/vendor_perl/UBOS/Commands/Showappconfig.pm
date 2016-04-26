@@ -52,7 +52,7 @@ sub run {
             'json'          => \$json,
             'brief'         => \$brief,
             'siteid=s'      => \$siteId,
-            'host=s'        => \$host,
+            'hostname=s'    => \$host,
             'appconfigid=s' => \$appConfigId,
             'context=s'     => \$context );
 
@@ -130,7 +130,7 @@ SSS
     --brief: only show the appconfig id
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json | --brief] --host <host> --context <context>
+    [--verbose | --logConfig <file>] [--json | --brief] --hostname <hostname> --context <context>
 SSS
     Show the appconfiguration at the provided hostname with the provided context path.
     If invoked as root, more information is available.

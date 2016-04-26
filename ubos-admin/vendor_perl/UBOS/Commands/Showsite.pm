@@ -50,7 +50,7 @@ sub run {
             'json'        => \$json,
             'brief'       => \$brief,
             'siteid=s'    => \$siteId,
-            'host=s'      => \$host );
+            'hostname=s'  => \$host );
 
     UBOS::Logging::initialize( 'ubos-admin', 'showsite', $verbose, $logConfigFile );
 
@@ -70,7 +70,7 @@ sub run {
             fatal( $@ );
         }
     }
-		
+
     if( $json ) {
         UBOS::Utils::writeJsonToStdout( $site->siteJson );
 
@@ -95,7 +95,7 @@ SSS
     --brief: only show the site id
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json | --brief] --host <host>
+    [--verbose | --logConfig <file>] [--json | --brief] --hostname <hostname>
 SSS
     Show the site with the provided hostname.
     If invoked as root, more information is available.
