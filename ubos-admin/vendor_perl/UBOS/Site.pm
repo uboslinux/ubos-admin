@@ -439,7 +439,7 @@ sub print {
         print " (" . $self->siteId . ")\n";
         if( $detail >= 2 ) {
             foreach my $isDefault ( 1, 0 ) {
-                foreach my $appConfig ( @{$self->appConfigs} ) {
+                foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
                     if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
                         print '    Context: ';
 
@@ -552,6 +552,10 @@ sub addDependenciesToPrerequisites {
 sub needsRole {
     my $self = shift;
     my $role = shift;
+
+    if( $role->isAlwaysNeeded() ) {
+        return 1;
+    }
 
     my $appConfigs = $self->appConfigs();
     foreach my $appConfig ( @$appConfigs ) {

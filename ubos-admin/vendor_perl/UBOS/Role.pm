@@ -62,6 +62,15 @@ sub name {
 }
 
 ##
+# Is this Role always needed, regardless of what the AppConfigurations say?
+# return: true or false
+sub isAlwaysNeeded {
+    my $self = shift;
+
+    return 0;
+}
+
+##
 # Deploy an installable in an AppConfiguration in this Role, or just check whether
 # it is deployable. Both functions share the same code, so the checks get updated
 # at the same time as the actual deployment.
