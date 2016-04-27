@@ -67,14 +67,14 @@ sub activate {
     }
 
     my $appNic = undef;
-    foreach my $nic ( @allNics ) {
+    foreach my $nic ( keys %$allNics ) {
         if( exists( $conf->{$nic} ) && exists( $conf->{$nic}->{appnic} ) && $conf->{$nic}->{appnic} ) {
             $appNic = $nic;
             last;
         }
     }
     unless( $appNic ) {
-        foreach my $nic ( @allNics ) {
+        foreach my $nic ( keys %$allNics ) {
             if(    exists( $conf->{$nic} )
                 && exists( $conf->{$nic}->{address} )
                 && ( !exists( $conf->{$nic}->{appnic} ) || !$conf->{$nic}->{appnic} ))
@@ -94,7 +94,7 @@ sub activate {
 
                 $conf->{$nic}->{dhcpserver} = JSON::true;
                 $conf->{$nic}->{dns}        = JSON::true;
-                $conf->{$nic}->{forwarding} = JSON::true;
+                $conf->{$nic}->{forward}    = JSON::true;
                 $conf->{$nic}->{mdns}       = JSON::true;
                 $conf->{$nic}->{ports}      = JSON::true;
                 $conf->{$nic}->{ssh}        = JSON::true;
