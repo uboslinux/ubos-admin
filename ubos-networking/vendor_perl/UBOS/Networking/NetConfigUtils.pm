@@ -245,7 +245,7 @@ sub configureAll {
             }
         }
         if( exists( $config->{$nic}->{forwarding} )) {
-            fatal( "The setting is called 'forward', not 'forwardingf. Please correct your netconfig $name." );
+            fatal( "The setting is called 'forward', not 'forwarding'. Please correct your netconfig $name." );
         }
     }
 
