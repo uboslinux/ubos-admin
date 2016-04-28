@@ -171,8 +171,6 @@ sub setupPlaceholderSite {
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
     my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
-    debug( 'apache2::setupPlaceholderSite', $siteId );
-
     unless( -d $siteDocumentRoot ) {
         error( 'Placeholder site', $placeholderName, 'does not exist at', $siteDocumentRoot );
     }

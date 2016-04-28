@@ -79,13 +79,13 @@ sub run {
 
     my $newSitesHash = {};
     if( ref( $json ) eq 'HASH' && %$json ) {
-		if( defined( $json->{siteid} )) {
+        if( defined( $json->{siteid} )) {
             $json = [ $json ];
         } else {
-			my @newJson = ();
+            my @newJson = ();
             map { push @newJson, $_ } values %$json;
             $json = \@newJson;
-		}
+        }
     }
 
     if( ref( $json ) eq 'ARRAY' ) {
@@ -188,7 +188,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
+    UBOS::Host::preventInterruptions();
     my $ret = 1;
 
     UBOS::UpdateBackup::checkReadyOrQuit();

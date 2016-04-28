@@ -135,7 +135,7 @@ sub run {
                 if( UBOS::AppConfiguration::isValidContext( $context )) {
                     last;
                 } else {
-                    print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces\n";
+                    print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes\n";
                 }
             }
         }
