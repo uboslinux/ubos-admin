@@ -436,7 +436,7 @@ sub checkManifestForRoleGenericDepends {
     my $jsonFragment = shift;
     my $config       = shift;
 
-    if( $jsonFragment->{depends} ) {
+    if( exists( $jsonFragment->{depends} )) {
         unless( ref( $jsonFragment->{depends} ) eq 'ARRAY' ) {
             $installable->myFatal( "roles section: role $roleName: depends is not an array" );
         }
@@ -470,7 +470,7 @@ sub checkManifestForRoleGenericAppConfigItems {
     my $retentionBuckets = shift;
     my $config           = shift;
 
-    if( $jsonFragment->{appconfigitems} ) {
+    if( exists( $jsonFragment->{appconfigitems} )) {
         unless( ref( $jsonFragment->{appconfigitems} ) eq 'ARRAY' ) {
             $installable->myFatal( "roles section: role $roleName: not an array" );
         }
@@ -746,7 +746,7 @@ sub checkManifestForRoleGenericTriggersActivate {
     my $allowedTypes = shift;
     my $config       = shift;
 
-    if( $jsonFragment->{triggersactivate} ) {
+    if( exists( $jsonFragment->{triggersactivate} )) {
         unless( ref( $jsonFragment->{triggersactivate} ) eq 'ARRAY' ) {
             $installable->myFatal( "roles section: role $roleName: triggersactivate: not an array" );
         }
@@ -861,14 +861,14 @@ sub _checkRetention {
     my $appConfigIndex   = shift;
     my $retentionBuckets = shift;
 
-    if( $appConfigItem->{retentionpolicy} ) {
+    if( exists( $appConfigItem->{retentionpolicy} )) {
         if( ref( $appConfigItem->{retentionpolicy} )) {
             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionpolicy' must be string" );
         }
         if( $appConfigItem->{retentionpolicy} ne 'keep' ) {
             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown value for field 'retentionpolicy': " . $appConfigItem->{retentionpolicy} );
         }
-        unless( $appConfigItem->{retentionbucket} ) {
+        unless( exists( $appConfigItem->{retentionbucket} )) {
             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionpolicy', also specify 'retentionbucket'" );
         }
         if( ref( $appConfigItem->{retentionbucket} )) {
@@ -879,7 +879,7 @@ sub _checkRetention {
         }
         $retentionBuckets->{$appConfigItem->{retentionbucket}} = 1;
         
-    } elsif( $appConfigItem->{retentionbucket} ) {
+    } elsif( exists( $appConfigItem->{retentionbucket} )) {
         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
     }
 }
