@@ -271,13 +271,23 @@ sub restoreAppConfigs {
         $appConfigIdToContext{$newAppConfigId} = $newContext;
         push @appConfigIdsToRestore, $newAppConfigId;
         push @{$siteIdsToAppConfigIds{$toSite->siteId}}, $newAppConfigId;
-
-        # determine which packages we might need
-        map { $requiredPackages{$_->packageName} = 1; } $appConfig->installables;
     }
 
-    my @requiredPackageNames = keys %requiredPackages;
-    UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
+    info( 'Installing prerequisites' );
+    # This is a two-step process: first we need to install the applications that haven't been
+    # installed yet, and then we need to install their dependencies
+
+    my $prerequisites = {};
+    foreach my $toSite ( @toSites ) {
+        $toSite->addInstallablesToPrerequisites( $prerequisites );
+    }
+    UBOS::Host::ensurePackages( $prerequisites );
+
+    $prerequisites = {};
+    foreach my $toSite ( @toSites ) {
+        $toSite->addDependenciesToPrerequisites( $prerequisites );
+    }
+    UBOS::Host::ensurePackages( $prerequisites, $quiet );
 
     # May not be interrupted, bad things may happen if it is
     UBOS::Host::preventInterruptions();
@@ -451,20 +461,9 @@ sub restoreSites {
     }
     debug( 'Host siteids to restore to:', @siteIdsToRestore );
 
-    # determine which packages we might need
-    my %requiredPackages = ();
-    foreach my $oldSiteId ( @oldSiteIds ) {
-        my $site = $backup->findSiteById( $oldSiteId );
-
-        foreach my $appConfig ( @{$site->appConfigs} ) {
-            map { $requiredPackages{$_} = 1; } $appConfig->installablesPackages;
-        }
-    }
-
     info( 'Constructing new version of sites' );
 
     my @sitesNew = ();
-
     foreach my $newSiteId ( @siteIdsToRestore ) {
         my $oldSiteId = $siteIdTranslation{$newSiteId};
         my $oldSite   = $backup->findSiteById( $oldSiteId );
@@ -485,6 +484,7 @@ sub restoreSites {
                 push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
             }
         }
+
         my $newSite = UBOS::Site->new( $siteJsonNew );
         if( $noTls ) {
             $newSite->deleteTlsInfo();
@@ -492,8 +492,21 @@ sub restoreSites {
         push @sitesNew, $newSite;
     }
 
-    my @requiredPackageNames = keys %requiredPackages;
-    UBOS::Host::ensurePackages( \@requiredPackageNames, $quiet );
+    info( 'Installing prerequisites' );
+    # This is a two-step process: first we need to install the applications that haven't been
+    # installed yet, and then we need to install their dependencies
+
+    my $prerequisites = {};
+    foreach my $newSite ( @sitesNew ) {
+        $newSite->addInstallablesToPrerequisites( $prerequisites );
+    }
+    UBOS::Host::ensurePackages( $prerequisites );
+
+    $prerequisites = {};
+    foreach my $newSite ( @sitesNew ) {
+        $newSite->addDependenciesToPrerequisites( $prerequisites );
+    }
+    UBOS::Host::ensurePackages( $prerequisites, $quiet );
 
     # May not be interrupted, bad things may happen if it is
     UBOS::Host::preventInterruptions();
