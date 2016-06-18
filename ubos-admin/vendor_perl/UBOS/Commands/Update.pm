@@ -91,35 +91,38 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
+    UBOS::Host::preventInterruptions();
     my $ret = 1;
 
     UBOS::UpdateBackup::checkReadyOrQuit();
 
-    info( 'Suspending sites' );
+    if( keys %$oldSites ) {
+        info( 'Suspending sites' );
 
-    my $suspendTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        $ret &= $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+        my $suspendTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            $ret &= $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+        }
+        UBOS::Host::executeTriggers( $suspendTriggers );
+
+        info( 'Backing up' );
+
+        my $backup = UBOS::UpdateBackup->new();
+        $ret &= $backup->create( $oldSites );
+
+        info( 'Undeploying' );
+
+        my $adminBackups = {};
+        my $undeployTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            $ret &= $site->undeploy( $undeployTriggers );
+        }
+        UBOS::Host::executeTriggers( $undeployTriggers );
+    } else {
+        info( 'No need to suspend sites, none deployed' );
     }
-    UBOS::Host::executeTriggers( $suspendTriggers );
-
-    info( 'Backing up' );
-
-    my $backup = UBOS::UpdateBackup->new();
-    $ret &= $backup->create( $oldSites );
-
-    info( 'Undeploying' );
-
-    my $adminBackups = {};
-    my $undeployTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        $ret &= $site->undeploy( $undeployTriggers );
-    }
-    UBOS::Host::executeTriggers( $undeployTriggers );
 
     UBOS::Utils::regeneratePacmanConf();
-
     UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
 
     my $stage2Cmd = 'ubos-admin update-stage2';

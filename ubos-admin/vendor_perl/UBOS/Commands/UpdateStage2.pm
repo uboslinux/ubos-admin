@@ -43,7 +43,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-	UBOS::Host::preventInterruptions();
+    UBOS::Host::preventInterruptions();
 
     my $verbose       = 0;
     my $logConfigFile = undef;
@@ -60,8 +60,6 @@ sub run {
     if( !$parseOk || @args || ( $verbose && $logConfigFile ) ) {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
-
-    info( 'Redeploying sites and restoring data' );
 
     my $ret = finishUpdate();
 
@@ -84,29 +82,33 @@ sub finishUpdate {
 
     my $oldSites = $backup->sites();
 
-    my $deployTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        $ret &= $site->deploy( $deployTriggers );
+    if( keys %$oldSites ) {
+        info( 'Redeploying sites and restoring data' );
 
-        $ret &= $backup->restoreSite( $site );
+        my $deployTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            $ret &= $site->deploy( $deployTriggers );
 
-        UBOS::Host::siteDeployed( $site );
-    }
-    UBOS::Host::executeTriggers( $deployTriggers );
+            $ret &= $backup->restoreSite( $site );
 
-    info( 'Resuming sites' );
+            UBOS::Host::siteDeployed( $site );
+        }
+        UBOS::Host::executeTriggers( $deployTriggers );
 
-    my $resumeTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-    }
-    UBOS::Host::executeTriggers( $resumeTriggers );
+        info( 'Resuming sites' );
 
-    info( 'Running upgraders' );
+        my $resumeTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        UBOS::Host::executeTriggers( $resumeTriggers );
 
-    foreach my $site ( values %$oldSites ) {
-        foreach my $appConfig ( @{$site->appConfigs} ) {
-            $ret &= $appConfig->runUpgrader();
+        info( 'Running upgraders' );
+
+        foreach my $site ( values %$oldSites ) {
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                $ret &= $appConfig->runUpgrader();
+            }
         }
     }
 
