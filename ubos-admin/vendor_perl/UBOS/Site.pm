@@ -867,12 +867,13 @@ sub mayContextBeAdded {
 sub obtainLetEncryptCertificate {
     my $self = shift;
 
+    my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
         $ret &= $role->obtainLetEncryptCertificateIfNeeded( $self );
     }
 
-    return $ret == 0;
+    return $ret;
 }
 
 ##

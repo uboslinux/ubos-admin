@@ -508,13 +508,13 @@ sub obtainLetEncryptCertificateIfNeeded {
     my $siteWellKnownDir = "$sitesWellknownDir/$siteId";
     my $hostname         = $site->hostname;
 
-    my ret = UBOS::Utils::myexec(
+    my $ret = UBOS::Utils::myexec(
             'certbot certonly'
             . " --email '" . $adminHash->{email} . "'"
             . " --webroot -w '" . $siteWellKnownDir . "'"
             . " -d '" . $hostname . "'" );
 
-    return 1;
+    return $ret == 0;
 }
 
 # === Manifest checking routines from here ===
