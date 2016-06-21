@@ -341,6 +341,22 @@ CONTENT
         $siteFileContent .= <<CONTENT;
 
     SSLEngine on
+CONTENT
+
+        if( $site->hasLetsencryptTls ) {
+            my $letsEncryptLiveDir = $site->config->getResolve( 'apache2.letsencrypt.livedir' );
+
+            $siteFileContent .= <<CONTENT;
+
+    # Letsencrypt key
+    SSLCertificateKeyFile $letsEncryptLiveDir/$siteId.key
+
+    # Letsencrypt cert
+    SSLCertificateFile $letsEncryptLiveDir/$siteId.crt
+CONTENT
+
+        } else {
+            $siteFileContent .= <<CONTENT;
 
     # our own key
     SSLCertificateKeyFile $sslDir/$siteId.key
@@ -348,19 +364,20 @@ CONTENT
     # our own cert
     SSLCertificateFile $sslDir/$siteId.crt
 CONTENT
-        if( $sslCertChain ) {
-            $siteFileContent .= <<CONTENT;
+            if( $sslCertChain ) {
+                $siteFileContent .= <<CONTENT;
  
     # the CA certs explaining where we got our own cert from
     SSLCertificateChainFile $sslDir/$siteId.crtchain
 CONTENT
-        }
-        if( $sslCaCert ) {
-            $siteFileContent .= <<CONTENT;
+            }
+            if( $sslCaCert ) {
+                $siteFileContent .= <<CONTENT;
 
     # the CA certs explaining where our clients got their certs from
     SSLCACertificateFile $sslDir/$siteId.cacrt
 CONTENT
+            }
         }
     }
 
@@ -392,6 +409,10 @@ CONTENT
 CONTENT
     }
     $siteFileContent .= "\n";
+
+    $siteFileContent .= <<CONTENT;
+    AliasMatch ^/\.well-known/  $siteWellKnownDir/.well-known/
+CONTENT
 
     if( $robotsTxt ) {
         $siteFileContent .= <<CONTENT;
@@ -471,6 +492,27 @@ sub removeSite {
 
         $triggers->{'httpd-reload'} = 1;
     }
+
+    return 1;
+}
+
+##
+# If this role needs a letsencrypt certificate, obtain it.
+# $site: the site that needs the certificate
+sub obtainLetEncryptCertificateIfNeeded {
+    my $self = shift;
+    my $site = shift;
+
+    my $adminHash        = $site->obtainSiteAdminHash;
+    my $siteId           = $site->siteId;
+    my $siteWellKnownDir = "$sitesWellknownDir/$siteId";
+    my $hostname         = $site->hostname;
+
+    my ret = UBOS::Utils::myexec(
+            'certbot certonly'
+            . " --email '" . $adminHash->{email} . "'"
+            . " --webroot -w '" . $siteWellKnownDir . "'"
+            . " -d '" . $hostname . "'" );
 
     return 1;
 }

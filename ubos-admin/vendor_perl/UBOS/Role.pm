@@ -367,6 +367,18 @@ sub instantiateAppConfigurationItem {
     return $ret;
 }
 
+##
+# If this role needs a letsencrypt certificate, obtain it.
+# $site: the site that needs the certificate
+sub obtainLetEncryptCertificateIfNeeded {
+    my $self = shift;
+    my $site = shift;
+
+    # on this level: nothing
+
+    return 1;
+}
+
 # === Manifest checking routines from here ===
 
 ##

@@ -45,6 +45,7 @@ sub run {
     my $askAll        = 0;
     my $tls           = 0;
     my $selfSigned    = 0;
+    my $letsEncrypt   = 0;
     my $out           = undef;
     my $verbose       = 0;
     my $quiet         = 0;
@@ -57,6 +58,7 @@ sub run {
             'askForAllCustomizationPoints' => \$askAll,
             'tls'                          => \$tls,
             'selfsigned'                   => \$selfSigned,
+            'letsencrypt'                  => \$letsEncrypt,
             'out=s',                       => \$out,
             'verbose+'                     => \$verbose,
             'quiet',                       => \$quiet,
@@ -65,7 +67,13 @@ sub run {
 
     UBOS::Logging::initialize( 'ubos-admin', 'createsite', $verbose, $logConfigFile );
 
-    if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( $selfSigned && !$tls )) {
+    if(    !$parseOk
+        || @args
+        || ( $verbose && $logConfigFile )
+        || ( $selfSigned && !$tls )
+        || ( $letsEncrypt && !$tls )
+        || ( $selfSigned && $letsEncrypt ))
+    {
         fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
     }
 
@@ -221,7 +229,10 @@ sub run {
 
     my $newSiteJson = {};
     if( $tls ) {
-        if( $selfSigned ) {
+        if( $letsEncrypt ) {
+            # nothing here
+
+        } elsif( $selfSigned ) {
 
             unless( $quiet ) {
                 print "Generating TLS keys...\n";
@@ -327,6 +338,9 @@ sub run {
     $newSiteJson->{admin}->{email}      = $adminEmail;
 
     if( $tls ) {
+        if( $letsEncrypt ) {
+            $newSiteJson->{tls}->{letsencrypt} = JSON::true;
+        }
         if( $tlsKey ) {
             $newSiteJson->{tls}->{key} = $tlsKey;
         }
@@ -504,23 +518,31 @@ sub _sortCustomizationPoints {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>]
+    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>]
 SSS
     Interactively define and install a new site. Unless --noapp is
-    provided, the site will run one app. If --tls is provided, the
-    site will be secured with SSL. If --out is provided, also save
-    the created Site JSON to a file. Adding --quiet will skip progress
-    messages.
+    provided, the site will run one app.
+    If --tls is provided, the site will be secured with SSL. If additionally
+    --selfsigned is provided, a self-signed certificate is automatically set
+    up. If additionally --letsencrypt is provided, letsencrypt.org will be
+    used to automatically setup a certificate; otherwise, keys and certificates
+    need to be entered.
+    If --out is provided, also save the created Site JSON to a file. Adding
+    --quiet will skip progress messages.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned]] [--out <file>] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed
-    using 'ubos-admin deploy'.  If --tls is provided, the site will
-    be secured with SSL. If --out is provided, save the created Site
-    JSON to a file instead of writing it to stdout. Adding --quiet will
-    skip progress messages.
+    using 'ubos-admin deploy'.
+    If --tls is provided, the site will be secured with SSL. If additionally
+    --selfsigned is provided, a self-signed certificate is automatically set
+    up. If additionally --letsencrypt is provided, letsencrypt.org will be
+    used to automatically setup a certificate; otherwise, keys and certificates
+    need to be entered.
+    If --out is provided, the created Site JSON will be saved to a file instead
+    of writing it to stdout. Adding --quiet will skip progress messages.
 HHH
     };
 }

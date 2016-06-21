@@ -21,7 +21,10 @@
         "sitefragmentdir"      : "/etc/httpd/ubos/sites",
         "appconfigfragmentdir" : "/etc/httpd/ubos/appconfigs",
         "sitesdir"             : "/srv/http/sites",
-        "ssldir"               : "/etc/httpd/ubos/ssl"
+        "ssldir"               : "/etc/httpd/ubos/ssl",
+        "letsencrypt" : {
+            "livedir" : "/etc/letsencrypt/live"
+        }
     },
 
     "tomcat8" : {

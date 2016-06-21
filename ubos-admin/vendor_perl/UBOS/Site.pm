@@ -229,13 +229,35 @@ sub config {
 }
 
 ##
-# Determine whether SSL data has been given.
+# Determine whether this site is protected by SSL/TLS
 # return: 0 or 1
 sub hasTls {
     my $self = shift;
 
     my $json = $self->{json};
-    return ( defined( $json->{tls} ) && defined( $json->{tls}->{key} ) ? 1 : 0 );
+    if( !defined( $json->{tls} )) {
+        return 0;
+    }
+    if( defined( $json->{tls}->{key} )) {
+        return 1;
+    }
+    if( defined( $json->{tls}->{letsencrypt} ) && $json->{tls}->{letsencrypt} ) {
+        return 1;
+    }
+    return 0;
+}
+
+##
+# Determine whether to use letsencrypt for this site
+# return: 0 or 1
+sub hasLetsencryptTls {
+    my $self = shift;
+
+    my $json = $self->{json};
+    if( !defined( $json->{tls} )) {
+        return 0;
+    }
+    return defined( $json->{tls}->{letsencrypt} ) ? 1 : 0;
 }
 
 ##
@@ -369,6 +391,15 @@ sub faviconIco {
         return decode_base64( $self->{json}->{wellknown}->{faviconicobase64} );
     }
     return undef;
+}
+
+##
+# Obtain information about the site administrator.
+# return: hash from the Site JSON
+sub obtainSiteAdminHash {
+    my $self = shift;
+
+    return $self->{json}->{admin};
 }
 
 ##
@@ -541,6 +572,10 @@ sub addDependenciesToPrerequisites {
             }
         }
     }
+    if( $self>hasLetsencryptTls ) {
+        $packages->{'certbot-apache'} = 'certbot-apache';
+    }
+
     1;
 }
 
@@ -827,6 +862,20 @@ sub mayContextBeAdded {
 }
 
 ##
+# Obtain and install the letsencrypt certificate for this site
+# return: 1 for success
+sub obtainLetEncryptCertificate {
+    my $self = shift;
+
+    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
+    foreach my $role ( @rolesOnHost ) {
+        $ret &= $role->obtainLetEncryptCertificateIfNeeded( $self );
+    }
+
+    return $ret == 0;
+}
+
+##
 # Check validity of the Site JSON
 # return: 1 or exits with fatal error
 sub _checkJson {
@@ -886,17 +935,35 @@ sub _checkJson {
         unless( ref( $json->{tls} ) eq 'HASH' ) {
             fatal( 'Site JSON: tls section: not a JSON object' );
         }
-        unless( $json->{tls}->{key} || !ref( $json->{tls}->{key} )) {
-            fatal( 'Site JSON: tls section: missing or invalid key' );
-        }
-        unless( $json->{tls}->{crt} || !ref( $json->{tls}->{crt} )) {
-            fatal( 'Site JSON: tls section: missing or invalid crt' );
-        }
-        unless( $json->{tls}->{crtchain} || !ref( $json->{tls}->{crtchain} )) {
-            fatal( 'Site JSON: tls section: missing or invalid crtchain' );
-        }
-        if( $json->{tls}->{cacrt} && ref( $json->{tls}->{cacrt} )) {
-            fatal( 'Site JSON: tls section: invalid cacrt' );
+        if( exists( $json->{tls}->{letsencrypt} )) {
+            unless( $json->{tls}->{letsencrypt} == JSON::true ) {
+                fatal( 'Site JSON: tls section: letsencrypt, if given, must be true' );
+            }
+            if( exists( $json->{tls}->{key} )) {
+                fatal( 'Site JSON: tls section: key must not be given if letsencrypt is set' );
+            }
+            if( exists( $json->{tls}->{crt} )) {
+                fatal( 'Site JSON: tls section: crt must not be given if letsencrypt is set' );
+            }
+            if( exists( $json->{tls}->{crtchain} )) {
+                fatal( 'Site JSON: tls section: crtchain must not be given if letsencrypt is set' );
+            }
+            if( exists( $json->{tls}->{cacrt} )) {
+                fatal( 'Site JSON: tls section: cacrt must not be given if letsencrypt is set' );
+            }
+        } else {
+            unless( $json->{tls}->{key} || !ref( $json->{tls}->{key} )) {
+                fatal( 'Site JSON: tls section: missing or invalid key' );
+            }
+            unless( $json->{tls}->{crt} || !ref( $json->{tls}->{crt} )) {
+                fatal( 'Site JSON: tls section: missing or invalid crt' );
+            }
+            unless( $json->{tls}->{crtchain} || !ref( $json->{tls}->{crtchain} )) {
+                fatal( 'Site JSON: tls section: missing or invalid crtchain' );
+            }
+            if( $json->{tls}->{cacrt} && ref( $json->{tls}->{cacrt} )) {
+                fatal( 'Site JSON: tls section: invalid cacrt' );
+            }
         }
     }
 

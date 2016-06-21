@@ -252,6 +252,17 @@ sub run {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
+    foreach my $site ( @newSites ) {
+        $site->obtainLetsEncryptCertificateIfNeeded();
+    }
+    my @letsEncryptCertsNeededSites = grep { $_->hasLetsencryptTls() && !$_->hasLetsencryptCerts() } @newSites;
+    if( @letsEncryptCertsNeededSites ) {
+        info( 'Obtaining letsencrypt certificates' );
+        foreach my $site ( @letsEncryptCertsNeededSites ) {
+            $ret &= $site->obtainLetEncryptCertificate();
+        }
+    }
+
     info( 'Backing up, undeploying and redeploying' );
 
     my $deployUndeployTriggers = {};
