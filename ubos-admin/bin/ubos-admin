@@ -87,32 +87,41 @@ END
 
     my @services = qw( ubos-admin ubos-httpd );
 
-    my $prefix = '';
-    if( $< != 0 ) {
-        $prefix = 'sudo ';
-    }
-
     foreach my $service ( @services ) {
         if( UBOS::Utils::myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
             # if is-failed is true, attempt to restart
-            UBOS::Utils::myexec( $prefix . 'systemctl restart ' . $service );
-            print <<END;
+            if( $< != 0 ) {
+                print <<END;
+Required service $service has failed. Try invoking your command again using 'sudo'.
+END
+            } else {
+                print <<END;
 Required service $service has failed. Attempting to restart. Try invoking your command again in a little while.
 END
+                UBOS::Utils::myexec( 'systemctl restart ' . $service );
+            }
             exit -1;
         }
     }
     foreach my $service ( @services ) {
         if( UBOS::Utils::myexec( 'systemctl is-active ' . $service, undef, \$out )) {
-            UBOS::Utils::myexec( $prefix . 'systemctl start ' . $service );
-            print <<END;
+            if( $< != 0 ) {
+                print <<END;
+Required service $service is not active. Try invoking your command again using 'sudo'.
+END
+            } else {
+                print <<END;
 Required service $service is not active. Attempting to start. Try invoking your command again in a little while.
 END
+                UBOS::Utils::myexec( 'systemctl start ' . $service );
+            }
             exit -1;
         }
     }
     
-    UBOS::Utils::saveFile( $readyFile, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
+    if( $< == 0 ) {
+        UBOS::Utils::saveFile( $readyFile, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
+    }
     1;
 }
 
