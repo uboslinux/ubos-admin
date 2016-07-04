@@ -259,7 +259,7 @@ sub run {
     if( @letsEncryptCertsNeededSites ) {
         info( 'Obtaining letsencrypt certificates' );
         foreach my $site ( @letsEncryptCertsNeededSites ) {
-            $ret &= $site->obtainLetEncryptCertificate();
+            $ret &= $site->obtainLetsEncryptCertificateIfNeeded();
         }
     }
 

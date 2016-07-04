@@ -864,13 +864,13 @@ sub mayContextBeAdded {
 ##
 # Obtain and install the letsencrypt certificate for this site
 # return: 1 for success
-sub obtainLetEncryptCertificate {
+sub obtainLetsEncryptCertificateIfNeeded {
     my $self = shift;
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
-        $ret &= $role->obtainLetEncryptCertificateIfNeeded( $self );
+        $ret &= $role->obtainLetsEncryptCertificateIfNeeded( $self );
     }
 
     return $ret;

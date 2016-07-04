@@ -499,7 +499,7 @@ sub removeSite {
 ##
 # If this role needs a letsencrypt certificate, obtain it.
 # $site: the site that needs the certificate
-sub obtainLetEncryptCertificateIfNeeded {
+sub obtainLetsEncryptCertificateIfNeeded {
     my $self = shift;
     my $site = shift;
 
