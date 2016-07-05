@@ -412,6 +412,17 @@ sub run {
         $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
         UBOS::Host::executeTriggers( $suspendTriggers );
 
+        if( $newSite->hasLetsEncryptTls() && !$newSite->hasLetsEncryptCerts()) {
+            info( 'Obtaining letsencrypt certificate' );
+
+            my $success = $newSite->obtainLetsEncryptCertificate();
+            unless( $success ) {
+                warning( 'Failed to obtain letsencrypt certificate for site', $newSite->hostname, '(', $newSite->siteId, '). Deploying site without TLS.' );
+                $newSite->unsetLetsEncryptTls;
+            }
+            $ret &= $success;
+        }
+
         my $deployUndeployTriggers = {};
         $ret &= $newSite->deploy( $deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );

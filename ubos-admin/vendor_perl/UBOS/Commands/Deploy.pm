@@ -252,14 +252,20 @@ sub run {
     }
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    foreach my $site ( @newSites ) {
-        $site->obtainLetsEncryptCertificateIfNeeded();
-    }
-    my @letsEncryptCertsNeededSites = grep { $_->hasLetsencryptTls() && !$_->hasLetsencryptCerts() } @newSites;
+    my @letsEncryptCertsNeededSites = grep { $_->hasLetsEncryptTls() && !$_->hasLetsEncryptCerts() } @newSites;
     if( @letsEncryptCertsNeededSites ) {
-        info( 'Obtaining letsencrypt certificates' );
+        if( @letsEncryptCertsNeededSites > 1 ) {
+            info( 'Obtaining letsencrypt certificates' );
+        } else {
+            info( 'Obtaining letsencrypt certificate' );
+        }
         foreach my $site ( @letsEncryptCertsNeededSites ) {
-            $ret &= $site->obtainLetsEncryptCertificateIfNeeded();
+            my $success = $site->obtainLetsEncryptCertificate();
+            unless( $success ) {
+                warning( 'Failed to obtain letsencrypt certificate for site', $site->hostname, '(', $site->siteId, '). Deploying site without TLS.' );
+                $site->unsetLetsEncryptTls;
+            }
+            $ret &= $success;
         }
     }
 

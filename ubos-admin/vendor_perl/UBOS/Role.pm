@@ -368,9 +368,20 @@ sub instantiateAppConfigurationItem {
 }
 
 ##
+# Determine whether we already have letsencrypt certificates for this role for the given site
+# $site: the Site
+# return: 0 or 1
+sub hasLetsEncryptCerts {
+    my $self = shift;
+    my $site = shift;
+
+    return 0;
+}
+
+##
 # If this role needs a letsencrypt certificate, obtain it.
 # $site: the site that needs the certificate
-sub obtainLetsEncryptCertificateIfNeeded {
+sub obtainLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 

@@ -3,7 +3,7 @@
 # apache2 role. The interface to Apache2 is in Apache2.pm
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2016 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -170,6 +170,7 @@ sub setupPlaceholderSite {
     my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
     my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
+    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
 
     unless( -d $siteDocumentRoot ) {
         error( 'Placeholder site', $placeholderName, 'does not exist at', $siteDocumentRoot );
@@ -179,7 +180,7 @@ sub setupPlaceholderSite {
 #
 # Apache config fragment for placeholder site $siteId (placeholder $placeholderName) at host $hostname
 #
-# (C) 2013-2014 Indie Computing Corp.
+# (C) 2013-2016 Indie Computing Corp.
 # Generated automatically, do not modify.
 #
 
@@ -191,6 +192,8 @@ $serverDeclaration
 
     AliasMatch ^/_common/css/([-a-z0-9]*\.css)\$ /srv/http/_common/css/\$1
     AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
+
+    Alias /\.well-known/ $siteWellKnownDir/.well-known/
 </VirtualHost>
 CONTENT
 
@@ -343,17 +346,21 @@ CONTENT
     SSLEngine on
 CONTENT
 
-        if( $site->hasLetsencryptTls ) {
+        if( $site->hasLetsEncryptTls ) {
             my $letsEncryptLiveDir = $site->config->getResolve( 'apache2.letsencrypt.livedir' );
 
             $siteFileContent .= <<CONTENT;
 
     # Letsencrypt key
-    SSLCertificateKeyFile $letsEncryptLiveDir/$siteId.key
+    SSLCertificateKeyFile $letsEncryptLiveDir/$hostname/privkey.pem
 
     # Letsencrypt cert
-    SSLCertificateFile $letsEncryptLiveDir/$siteId.crt
+    SSLCertificateFile $letsEncryptLiveDir/$hostname/cert.pem
+
+    # Letsencrypt certificate chain
+    SSLCertificateChainFile $letsEncryptLiveDir/$hostname/chain.pem
 CONTENT
+            # see https://github.com/certbot/certbot/issues/608
 
         } else {
             $siteFileContent .= <<CONTENT;
@@ -411,12 +418,12 @@ CONTENT
     $siteFileContent .= "\n";
 
     $siteFileContent .= <<CONTENT;
-    AliasMatch ^/\.well-known/  $siteWellKnownDir/.well-known/
+    Alias /\.well-known/ $siteWellKnownDir/.well-known/
 CONTENT
 
     if( $robotsTxt ) {
         $siteFileContent .= <<CONTENT;
-    AliasMatch ^/robots\.txt\$  $siteWellKnownDir/robots.txt
+    AliasMatch ^/robots\.txt\$ $siteWellKnownDir/robots.txt
 CONTENT
     }
     if( $sitemapXml ) {
@@ -497,9 +504,25 @@ sub removeSite {
 }
 
 ##
+# Determine whether we already have letsencrypt certificates for this role for the given site
+# $site: the Site
+# return: 0 or 1
+sub hasLetsEncryptCerts {
+    my $self = shift;
+    my $site = shift;
+
+    my $hostname           = $site->hostname;
+    my $letsEncryptLiveDir = $site->config->getResolve( 'apache2.letsencrypt.livedir' );
+
+    return    ( -e "$letsEncryptLiveDir/$hostname/privkey.pem" )
+           && ( -e "$letsEncryptLiveDir/$hostname/cert.pem" )
+           && ( -e "$letsEncryptLiveDir/$hostname/chain.pem" );
+}
+
+##
 # If this role needs a letsencrypt certificate, obtain it.
 # $site: the site that needs the certificate
-sub obtainLetsEncryptCertificateIfNeeded {
+sub obtainLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 
@@ -508,10 +531,16 @@ sub obtainLetsEncryptCertificateIfNeeded {
     my $siteWellKnownDir = "$sitesWellknownDir/$siteId";
     my $hostname         = $site->hostname;
 
+    unless( -d $siteWellKnownDir ) {
+        UBOS::Utils::mkdir( $siteWellKnownDir );
+    }
+
     my $ret = UBOS::Utils::myexec(
             'certbot certonly'
+            . ' --webroot'
             . " --email '" . $adminHash->{email} . "'"
-            . " --webroot -w '" . $siteWellKnownDir . "'"
+            . ' --agree-tos'
+            . " --webroot-path '" . $siteWellKnownDir . "'"
             . " -d '" . $hostname . "'" );
 
     return $ret == 0;

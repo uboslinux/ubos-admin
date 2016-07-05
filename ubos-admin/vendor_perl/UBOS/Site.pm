@@ -250,7 +250,7 @@ sub hasTls {
 ##
 # Determine whether to use letsencrypt for this site
 # return: 0 or 1
-sub hasLetsencryptTls {
+sub hasLetsEncryptTls {
     my $self = shift;
 
     my $json = $self->{json};
@@ -258,6 +258,34 @@ sub hasLetsencryptTls {
         return 0;
     }
     return defined( $json->{tls}->{letsencrypt} ) ? 1 : 0;
+}
+
+##
+# Determine whether we already have letsencrypt certificates for this site
+# return: 0 or 1
+sub hasLetsEncryptCerts {
+    my $self = shift;
+
+    my $ret = 0;
+    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
+    foreach my $role ( @rolesOnHost ) {
+        if( $role->hasLetsEncryptCerts( $self )) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+##
+# Reset the letsencrypt flag, in case obtaining the certificate failed.
+sub unsetLetsEncryptTls {
+    my $self = shift;
+
+    delete $self->{json}->{tls}->{letsencrypt};
+    unless( %{$self->{json}->{tls}} ) {
+        delete $self->{json}->{tls};
+    }
 }
 
 ##
@@ -572,7 +600,7 @@ sub addDependenciesToPrerequisites {
             }
         }
     }
-    if( $self>hasLetsencryptTls ) {
+    if( $self->hasLetsEncryptTls ) {
         $packages->{'certbot-apache'} = 'certbot-apache';
     }
 
@@ -864,13 +892,13 @@ sub mayContextBeAdded {
 ##
 # Obtain and install the letsencrypt certificate for this site
 # return: 1 for success
-sub obtainLetsEncryptCertificateIfNeeded {
+sub obtainLetsEncryptCertificate {
     my $self = shift;
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
-        $ret &= $role->obtainLetsEncryptCertificateIfNeeded( $self );
+        $ret &= $role->obtainLetsEncryptCertificate( $self );
     }
 
     return $ret;
