@@ -877,7 +877,11 @@ sub nics {
 
     unless( defined( $_allNics )) {
         my $netctl;
-        UBOS::Utils::myexec( "networkctl --no-pager --no-legend", undef, \$netctl );
+        my $err; # swallow error messages
+        UBOS::Utils::myexec( "networkctl --no-pager --no-legend", undef, \$netctl, \$err );
+        if( $err ) {
+            debug( 'Host::nics: networkctl said:', $err );
+        }
 
         $_allNics = {};
         foreach my $line ( split "\n", $netctl ) {
@@ -922,7 +926,11 @@ sub ipAddressesOnNic {
     my @ret = ();
 
     my $netctl;
-    UBOS::Utils::myexec( "networkctl --no-pager --no-legend status $nic", undef, \$netctl );
+    my $err; # swallow error messages
+    UBOS::Utils::myexec( "networkctl --no-pager --no-legend status $nic", undef, \$netctl, \$err );
+    if( $err ) {
+        debug( 'Host::nics: networkctl said:', $err );
+    }
 
     foreach my $line ( split "\n", $netctl ) {
         if( @ret ) {
