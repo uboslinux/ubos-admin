@@ -66,7 +66,7 @@ sub new {
         $self->{deviceservices} = [ qw( rngd systemd-timesyncd ) ];
     }
     unless( $self->{devicemodules} ) {
-        $self->{devicemodules} = [ qw( bcm2708-rng snd-bcm2835 ) ];
+        $self->{devicemodules} = [ qw( snd-bcm2835 ) ];
     }
 
     $self->SUPER::new( @args );
