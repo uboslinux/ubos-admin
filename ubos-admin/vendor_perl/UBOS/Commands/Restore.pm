@@ -152,6 +152,8 @@ sub run {
         close $tmpFile;
         $file = $tmpFile->filename();
 
+        info( 'Downloading...' );
+
         my $stdout;
         my $stderr;
         if( UBOS::Utils::myexec( "curl -L -v -o '$file' '$url'", undef, \$stdout, \$stderr )) {
