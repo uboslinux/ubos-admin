@@ -709,19 +709,19 @@ END
     }
 
     if( @toDisable ) {
-        UBOS::Utils::myexec( 'sudo systemctl disable -q ' . join( ' ', @toDisable ));
+        UBOS::Utils::myexec( 'sudo systemctl disable -q ' . join( ' ', @toDisable ) . ( UBOS::Logging::isDebugActive() ? '' : ' 2> /dev/null' ));
     }
     if( @toEnable ) {
-        UBOS::Utils::myexec( 'sudo systemctl enable -q ' . join( ' ', @toEnable ));
+        UBOS::Utils::myexec( 'sudo systemctl enable -q ' . join( ' ', @toEnable ) . ( UBOS::Logging::isDebugActive() ? '' : ' 2> /dev/null' ));
     }
     unless( $initOnly ) {
         if( @runningServices ) {
             UBOS::Utils::myexec( 'sudo systemctl stop ' . join( ' ', @runningServices ));
         }
-        UBOS::Utils::myexec( "sudo systemctl restart systemd-sysctl.service" );
+        UBOS::Utils::myexec( 'sudo systemctl restart systemd-sysctl.service' );
 
         foreach my $nic ( keys %$config ) {
-            UBOS::Utils::myexec( "ip addr flush " . $nic );
+            UBOS::Utils::myexec( "ip addr flush $nic" );
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
                 UBOS::Utils::myexec( "ip link set $nic down" );
