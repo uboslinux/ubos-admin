@@ -41,6 +41,7 @@ post_upgrade() {
     # set btrfs nocow attributes for databases
     [ -d /var/lib/mysql ]      && chattr +C /var/lib/mysql
     [ -d /var/lib/postgresql ] && chattr +C /var/lib/postgresql
+    [ -d /var/log/journal ]    && chattr +C /var/log/journal
 
     systemctl daemon-reload
 }
