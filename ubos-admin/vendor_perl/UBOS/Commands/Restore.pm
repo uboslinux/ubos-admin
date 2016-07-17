@@ -65,6 +65,8 @@ sub run {
     my @toHostnames     = ();
     my @newAppConfigIds = ();
     my @newContexts     = ();
+    my @migrateFrom     = ();
+    my @migrateTo       = ();
     my $quiet           = 0;
 
     my $parseOk = GetOptionsFromArray(
@@ -85,6 +87,8 @@ sub run {
             'tohostname=s'     => \@toHostnames,
             'newappconfigid=s' => \@newAppConfigIds,
             'newcontext=s'     => \@newContexts,
+            'migratefrom=s'    => \@migrateFrom,
+            'migrateto=s'      => \@migrateTo,
             'quiet'            => \$quiet );
 
     UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
@@ -135,7 +139,9 @@ sub run {
                 || ( @newAppConfigIds && @newAppConfigIds != @appConfigIds )
                 || ( @newContexts && ( @newContexts != @appConfigIds ))
                 || $noTls
-           )) )
+           ))
+        || ( @migrateFrom != @migrateTo )
+        || ( @migrateFrom != _uniq( @migrateFrom )) )
     {
         fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
     }
@@ -172,11 +178,16 @@ sub run {
         fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $in || $url ));
     }
 
+    my %migratePackages = ();
+    for( my $i=0 ; $i<@migrateFrom ; ++$i ) {
+        $migratePackages{$migrateFrom[$i]} = $migrateTo[$i];
+    }
+
     my $ret;
     if( @appConfigIds ) {
-        $ret = restoreAppConfigs( \@appConfigIds, \@toSiteIds, \@toHostnames, $createNew, \@newAppConfigIds, \@newContexts, $showIds, $backup, $quiet );
+        $ret = restoreAppConfigs( \@appConfigIds, \@toSiteIds, \@toHostnames, $createNew, \@newAppConfigIds, \@newContexts, $showIds, \%migratePackages, $backup, $quiet );
     } else {
-        $ret = restoreSites( \@siteIds, \@hostnames, $createNew, \@newSiteIds, \@newHostnames, $noTls, $showIds, $backup, $quiet );
+        $ret = restoreSites( \@siteIds, \@hostnames, $createNew, \@newSiteIds, \@newHostnames, $noTls, $showIds, \%migratePackages, $backup, $quiet );
     }
 
     return $ret;
@@ -192,6 +203,7 @@ sub restoreAppConfigs {
     my @newAppConfigIds = @{shift()};
     my @newContexts     = @{shift()};
     my $showIds         = shift;
+    my $migratePackages = shift;
     my $backup          = shift;
     my $quiet           = shift;
 
@@ -283,13 +295,13 @@ sub restoreAppConfigs {
     foreach my $toSite ( @toSites ) {
         $toSite->addInstallablesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( $prerequisites );
+    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
 
     $prerequisites = {};
     foreach my $toSite ( @toSites ) {
         $toSite->addDependenciesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( $prerequisites, $quiet );
+    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
 
     # May not be interrupted, bad things may happen if it is
     UBOS::Host::preventInterruptions();
@@ -315,9 +327,13 @@ sub restoreAppConfigs {
             my $oldAppConfig   = $backup->findAppConfigurationById( $oldAppConfigId );
 
             my $appConfigJsonNew = dclone( $oldAppConfig->appConfigurationJson() );
-            $appConfigJsonNew->{appconfigid} = $newAppConfigId;
-            $appConfigJsonNew->{context}     = $appConfigIdToContext{$newAppConfigId};
-
+            $appConfigJsonNew->{appconfigid}  = $newAppConfigId;
+            $appConfigJsonNew->{context}      = $appConfigIdToContext{$newAppConfigId};
+            $appConfigJsonNew->{appid}        = _migratePackages( $appConfigJsonNew->{appid}, $migratePackages );
+            $appConfigJsonNew->{accessoryids} = _migratePackages( $appConfigJsonNew->{accessoryids}, $migratePackages );
+            unless( $appConfigJsonNew->{accessoryids} ) {
+                delete $appConfigJsonNew->{accessoryids};
+            }
             my $newAppConfig = UBOS::AppConfiguration->new( $appConfigJsonNew, $site );
 
             $site->addDeployAppConfiguration( $newAppConfig, $deployUndeployTriggers );
@@ -338,7 +354,8 @@ sub restoreAppConfigs {
                 $siteId,
                 $siteId,
                 $backup->findAppConfigurationById( $oldAppConfigId ),
-                $newAppConfigs{$newAppConfigId} );
+                $newAppConfigs{$newAppConfigId},
+                $migratePackages );
     }
 
     info( 'Resuming site(s)' );
@@ -376,6 +393,7 @@ sub restoreSites {
     my @newHostnames = @{shift()};
     my $noTls        = shift;
     my $showIds      = shift;
+    my $migratePackages = shift;
     my $backup       = shift;
     my $quiet        = shift;
 
@@ -481,7 +499,12 @@ sub restoreSites {
 
             if( $oldAppConfig ) {
                 my $appConfigJsonNew = dclone( $oldAppConfig->appConfigurationJson() );
-                $appConfigJsonNew->{appconfigid} = $newAppConfigId;
+                $appConfigJsonNew->{appconfigid}  = $newAppConfigId;
+                $appConfigJsonNew->{appid}        = _migratePackages( $appConfigJsonNew->{appid}, $migratePackages );
+                $appConfigJsonNew->{accessoryids} = _migratePackages( $appConfigJsonNew->{accessoryids}, $migratePackages );
+                unless( $appConfigJsonNew->{accessoryids} ) {
+                    delete $appConfigJsonNew->{accessoryids};
+                }
 
                 push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
             }
@@ -502,13 +525,13 @@ sub restoreSites {
     foreach my $newSite ( @sitesNew ) {
         $newSite->addInstallablesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( $prerequisites );
+    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
 
     $prerequisites = {};
     foreach my $newSite ( @sitesNew ) {
         $newSite->addDependenciesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( $prerequisites, $quiet );
+    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
 
     # May not be interrupted, bad things may happen if it is
     UBOS::Host::preventInterruptions();
@@ -541,7 +564,8 @@ sub restoreSites {
                     $siteIdTranslation{$newSiteId},
                     $newSiteId,
                     $oldAppConfig,
-                    UBOS::Host::findAppConfigurationById( $newAppConfigId ));
+                    UBOS::Host::findAppConfigurationById( $newAppConfigId ),
+                    $migratePackages );
         }
     }
 
@@ -617,37 +641,82 @@ sub _findSitesInBackupFromHostnames {
 }
 
 ##
+# Translate a hash or array of package names into migrated packages names.
+# $oldPackages: hash or array of package names to be translated
+# $translation: hash of old package name to new package name; if no entry, keep old name
+# return: list of new package names
+sub _migratePackages {
+    my $oldPackages = shift;
+    my $translation = shift;
+
+    if( !defined( $oldPackages )) {
+        return undef;
+    }
+    if( ref( $oldPackages ) eq '' ) {
+        return exists( $translation->{$oldPackages} ) ? $translation->{$oldPackages} : $oldPackages;
+    }
+    if( ref( $oldPackages ) eq 'HASH' ) {
+        $oldPackages = [ sort keys %$oldPackages ];
+    }
+
+    my @ret = map { my $p = $_; exists( $translation->{$p} ) ? $translation->{$p} : $p; } @$oldPackages;
+    return \@ret;
+}
+
+##
+# Return a subset of the provided list that only contains unique members.
+# @list: the list
+# return: list or subset of list
+sub _uniq {
+    my @list = @_;
+
+    my %have = ();
+    my @ret  = ();
+    map {
+        my $l = $_;
+        unless( exists( $have{$l} )) {
+            push @ret, $l;
+        }
+        $have{$l} = $l;
+    } @list;
+    return @ret;
+}
+
+##
 # Return help text for this command.
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] [--migratefrom <package-a> --migrateto <package-b>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore all sites contained in backupfile. This includes all
     applications at that site and their data. None of the sites in the backup
     file must currently exist on the host: siteids, appconfigids, and
     hostnames must all be different.
+    Instead of restoring app or accessory package-a, restore to package-b.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] ( --siteid <siteid> | --hostname <hostname> ) [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] [--migratefrom <package-a> --migrateto <package-b>] ( --siteid <siteid> | --hostname <hostname> ) [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore the site with siteid or hostname contained in backupfile. This
     includes all applications at that site and their data. This site currently
     must not exist on the host: siteid, appconfigids, and hostname must
     all be different.
+    Instead of restoring app or accessory package-a, restore to package-b.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] ( --siteid <siteid> | --hostname <hostname> ) --createnew [--newsiteid <newid>] [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] [--migratefrom <package-a> --migrateto <package-b>] ( --siteid <siteid> | --hostname <hostname> ) --createnew [--newsiteid <newid>] [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore the site with siteid or hostname contained in backupfile, but
     instead of using the siteids and appconfigids given in the backup,
     allocate new ones. Optionally specify the new siteid to use with --newsiteid.
     Optionally recreate the site on the host with a new hostname with --newhostname.
+    Instead of restoring app or accessory package-a, restore to package-b.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 
@@ -657,23 +726,25 @@ SSS
     This exists mainly to facilitate testing.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--newcontext <context>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--migratefrom <package-a> --migrateto <package-b>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--newcontext <context>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid. No AppConfiguration with appconfigid
     must currently exist on the host. Optionally use a different context path
     for the AppConfiguration using --newcontext.
+    Instead of restoring app or accessory package-a, restore to package-b.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--showids] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--newappconfigid <newid>] [--newcontext <context>] --in <backupfile>
+    [--verbose | --logConfig <file>] [--showids] [--migratefrom <package-a> --migrateto <package-b>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--newappconfigid <newid>] [--newcontext <context>] --in <backupfile>
 SSS
     Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
     to a currently deployed Site with tositeid, but instead of using the
     appconfigid given in the backup, allocate a new one. Optional specify the
     new appconfigid to use with --newappconfigid. Optionally use a
     different context path for the AppConfiguration using --newcontext.
+    Instead of restoring app or accessory package-a, restore to package-b.
     Alternatively, a URL may be specified from where to retrieve the
     backupfile.
 HHH

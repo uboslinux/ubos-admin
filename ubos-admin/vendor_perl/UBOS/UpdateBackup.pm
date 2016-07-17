@@ -170,6 +170,7 @@ sub read {
 # $siteIdOnHost: the site id of the AppConfiguration to restore, on the host
 # $appConfigInBackup: the AppConfiguration to restore, as it is stored in the Backup
 # $appConfigOnHost: the AppConfiguration to restore to, on the host
+# $migrationTable: hash of old package names to new packages names, for migrations
 # return: success or fail
 sub restoreAppConfiguration {
     my $self              = shift;
@@ -177,6 +178,7 @@ sub restoreAppConfiguration {
     my $siteIdOnHost      = shift;
     my $appConfigInBackup = shift;
     my $appConfigOnHost   = shift;
+    my $migrationTable    = shift; # can be ignored here; migrations never occur during upgrades today
 
     my $ret                 = 1;
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;

@@ -185,6 +185,23 @@ sub installables {
 }
 
 ##
+# Obtain the installable at this AppCOnfiguration with the provided name
+# $package: name of the package
+# return: installable, or undef
+sub installable {
+    my $self    = shift;
+    my $package = shift;
+
+    my @installables = $self->installables();
+    for my $installable ( @installables ) {
+        if( $installable->packageName() eq $package ) {
+            return $installable;
+        }
+    }
+    return undef;
+}
+
+##
 # Obtain the package names of the installables at this AppConfiguration.
 # return: list of package names
 sub installablesPackages {

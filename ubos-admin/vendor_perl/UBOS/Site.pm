@@ -1053,7 +1053,7 @@ sub _checkJson {
             
             if( exists( $appConfigJson->{accessoryids} )) {
                 unless( ref( $appConfigJson->{accessoryids} ) eq 'ARRAY' ) {
-                    fatal( "Site JSON: appconfig $i, accessoryids: not a JSON array" );
+                    fatal( "Site JSON: appconfig $i, accessoryids: not a JSON array, is", $appConfigJson->{accessryids} );
                 }
                 foreach my $accessoryId ( @{$appConfigJson->{accessoryids}} ) {
                     unless( UBOS::Installable::isValidPackageName( $accessoryId )) {

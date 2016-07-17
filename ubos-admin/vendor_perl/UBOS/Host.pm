@@ -580,8 +580,10 @@ sub ensurePackages {
         @packageList = @$packages;
     } elsif( ref( $packages )) {
         fatal( 'Unexpected type:', $packages );
-    } else {
+    } elsif( defined( $packages )) {
         @packageList = ( $packages );
+    } else {
+        @packageList = ();
     }
 
     debug( 'ensurePackages', @packageList );

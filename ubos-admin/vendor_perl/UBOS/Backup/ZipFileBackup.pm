@@ -277,6 +277,7 @@ sub read {
 # $siteIdOnHost: the site id of the AppConfiguration to restore, on the host
 # $appConfigInBackup: the AppConfiguration to restore, as it is stored in the Backup
 # $appConfigOnHost: the AppConfiguration to restore to, on the host
+# $migrationTable: hash of old package names to new packages names, for migrations
 # return: success or fail
 sub restoreAppConfiguration {
     my $self              = shift;
@@ -284,6 +285,7 @@ sub restoreAppConfiguration {
     my $siteIdOnHost      = shift;
     my $appConfigInBackup = shift;
     my $appConfigOnHost   = shift;
+    my $migrationTable    = shift;
 
     my $ret                 = 1;
     my $zip                 = $self->{zip};
@@ -293,25 +295,33 @@ sub restoreAppConfiguration {
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
-    foreach my $installable ( $appConfigInBackup->installables ) {
-        my $packageName = $installable->packageName;
-        unless( $zip->memberNamed( "$zipFileAppConfigsEntry/$appConfigIdInBackup/$packageName/" )) {
+    foreach my $installableInBackup ( $appConfigInBackup->installables ) {
+        my $packageNameInBackup = $installableInBackup->packageName;
+        unless( $zip->memberNamed( "$zipFileAppConfigsEntry/$appConfigIdInBackup/$packageNameInBackup/" )) {
             next;
         }
+        my $packageNameOnHost = exists( $migrationTable->{$packageNameInBackup} ) ? $migrationTable->{$packageNameInBackup} : $packageNameInBackup;
+        my $installableOnHost = $appConfigOnHost->installable( $packageNameOnHost );
+        unless( $installableOnHost ) {
+            error( 'Cannot find installable on host:', $installableInBackup, '->', $installableOnHost );
+            next;
+        }
+print "packageNameInBackup $packageNameInBackup -> packageNameOnHost $packageNameOnHost\n";
+print "installableInBackup $installableInBackup -> installableOnHost $installableOnHost\n";
 
         my $config = $appConfigOnHost->obtainSubconfig(
-                "Installable=$packageName",
-                $installable->config );
+                "Installable=$packageNameInBackup" . ( $packageNameOnHost ne $packageNameInBackup ? "->$packageNameOnHost" : '' ),
+                $installableOnHost->config );
 
-        foreach my $roleName ( @{$installable->roleNames} ) {
+        foreach my $roleName ( @{$installableOnHost->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
             if( $role ) { # don't attempt to restore anything not installed on this host
-                my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigIdInBackup/$packageName/$roleName";
+                my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigIdInBackup/$packageNameInBackup/$roleName";
                 unless( $zip->memberNamed( "$appConfigPathInZip/" )) {
                     next;
                 }
 
-                my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
+                my $appConfigItems = $installableOnHost->appConfigItemsInRole( $roleName );
                 if( $appConfigItems ) {
                     my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
@@ -322,7 +332,7 @@ sub restoreAppConfiguration {
                             # for now, we don't care what value this field has as long as it is non-empty
                             next;
                         }
-                        my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installable );
+                        my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installableOnHost );
                         if( $item ) {
                             $ret &= $item->restore( $dir, $config, $backupContext );
                         }
