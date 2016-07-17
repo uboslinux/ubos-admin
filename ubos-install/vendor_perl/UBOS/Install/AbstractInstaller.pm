@@ -649,6 +649,8 @@ sub configureSnapper {
     my $self       = shift;
     my $diskLayout = shift;
 
+    my $target = $self->{target};
+
     my @mountPoints = $diskLayout->snapperBtrfsMountPoints();
     foreach my $mountPoint ( @mountPoints ) {
         my $name = $mountPoint;
@@ -658,7 +660,7 @@ sub configureSnapper {
             $name =~ s!/!_!g; # always starts with underscore, so it won't collide with root
         }
 
-        UBOS::Utils::saveFile( "/etc/snapper/configs/$name", <<END, 0640 );
+        UBOS::Utils::saveFile( "$target/etc/snapper/configs/$name", <<END, 0640 );
 # Snapper configuration for UBOS. Feel free to modify.
 #
 # subvolume to snapshot
