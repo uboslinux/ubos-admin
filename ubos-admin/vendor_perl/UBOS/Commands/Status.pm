@@ -34,6 +34,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -60,10 +61,11 @@ sub run {
             'memory'       => \$showMemory,
             'uptime'       => \$showUptime );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'status', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || ( $showAll && ($showPacnew || $showDisks || $showMemory || $showUptime )) || @args || ( $verbose && $logConfigFile )) {
-        fatal( 'Invalid invocation: status', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
     if( $showAll ) {
         $showPacnew = 1;

@@ -35,6 +35,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -57,7 +58,8 @@ sub run {
             'all'         => \$all,
             'file=s'      => \$file );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'undeploy', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || ( !@siteIds && !@hosts && !$all && !$file )
                            || ( @siteIds && @hosts )
@@ -66,7 +68,7 @@ sub run {
                            || ( $all && ( @siteIds || @hosts || $file ))
                            || ( $verbose && $logConfigFile ))
     {
-        fatal( 'Invalid invocation: undeploy', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
     
     debug( 'Looking for site(s)' );

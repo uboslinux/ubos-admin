@@ -39,6 +39,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     my $noapp         = 0;
@@ -65,7 +66,8 @@ sub run {
             'logConfig=s'                  => \$logConfigFile,
             'dry-run|n'                    => \$dryRun );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'createsite', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
         || @args
@@ -74,7 +76,7 @@ sub run {
         || ( $letsEncrypt && !$tls )
         || ( $selfSigned && $letsEncrypt ))
     {
-        fatal( 'Invalid invocation: createsite', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     if( !$dryRun && $< != 0 ) {

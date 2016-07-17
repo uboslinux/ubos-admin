@@ -37,6 +37,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -52,10 +53,11 @@ sub run {
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'write-configuration-to-staff', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args > 1 || ( $verbose && $logConfigFile )) {
-        fatal( 'Invalid invocation: write-configuration-to-staff', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     if( @args ) {

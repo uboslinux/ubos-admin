@@ -34,6 +34,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     my $verbose       = 0;
@@ -56,7 +57,8 @@ sub run {
             'appconfigid=s' => \$appConfigId,
             'context=s'     => \$context );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'showappconfig', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
         || ( $json && $brief )
@@ -65,7 +67,7 @@ sub run {
         || @args
         || ( $verbose && $logConfigFile ))
     {
-        fatal( 'Invalid invocation: showappconfig', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     my $appConfig;

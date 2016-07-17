@@ -36,6 +36,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -60,10 +61,11 @@ sub run {
             'appconfigid=s' => \@appConfigIds,
             'notls'         => \$noTls );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'backup', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || !$out || ( $verbose && $logConfigFile ) ) {
-        fatal( 'Invalid invocation: backup', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     foreach my $host ( @hosts ) {

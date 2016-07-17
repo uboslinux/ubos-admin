@@ -36,6 +36,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -54,10 +55,11 @@ sub run {
             'file=s'      => \$file,
             'stdin'       => \$stdin );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'deploy', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || ( $file && $stdin ) || ( !$file && !$stdin ) || ( $verbose && $logConfigFile )) {
-        fatal( 'Invalid invocation: deploy', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     debug( 'Parsing site JSON and checking' );

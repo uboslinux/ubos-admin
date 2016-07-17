@@ -37,6 +37,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -57,7 +58,8 @@ sub run {
             'url=s'         => \$url,
             'brief'         => \$brief );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'backupinfo', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
         || @args
@@ -65,7 +67,7 @@ sub run {
         || ( $in && $url )
         || ( $verbose && $logConfigFile ))
     {
-        fatal( 'Invalid invocation: backupinfo', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     my $file;

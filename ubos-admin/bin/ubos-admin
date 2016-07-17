@@ -31,8 +31,7 @@ my $commands = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Commands' 
 unless( @ARGV ) {
     synopsisHelpQuit();
 }
-my @orgArgs = @ARGV;
-my $command = shift @ARGV;
+my $command = $ARGV[0];
 if( '--help' eq $command || '-h' eq $command ) {
     synopsisHelpQuit( 1 );
 }
@@ -51,8 +50,6 @@ if( $commandPackage ) {
             $initOnly = 1;
         }
     }
-
-    info( 'ubos-admin', @orgArgs );
 
     unless( $initOnly ) {
         checkReady();

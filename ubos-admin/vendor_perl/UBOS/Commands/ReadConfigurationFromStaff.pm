@@ -37,6 +37,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -49,13 +50,14 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'     => \$verbose,
-            'logConfig=s'  => \$logConfigFile );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'read-configuration-from-staff', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args > 1 || ( $verbose && $logConfigFile )) {
-        fatal( 'Invalid invocation: read-configuration-from-staff', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     if( @args ) {

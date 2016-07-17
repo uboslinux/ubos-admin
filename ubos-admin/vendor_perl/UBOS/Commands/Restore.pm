@@ -43,6 +43,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -91,7 +92,8 @@ sub run {
             'migrateto=s'      => \@migrateTo,
             'quiet'            => \$quiet );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'restore', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     my $nSites   = scalar( @siteIds )   + scalar( @hostnames );
     my $nToSites = scalar( @toSiteIds ) + scalar( @toHostnames );
@@ -143,7 +145,7 @@ sub run {
         || ( @migrateFrom != @migrateTo )
         || ( @migrateFrom != _uniq( @migrateFrom )) )
     {
-        fatal( 'Invalid invocation: restore', @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     my $file;

@@ -36,6 +36,7 @@ use UBOS::Utils;
 # Execute this command.
 # return: desired exit code
 sub run {
+    my $cmd  = shift;
     my @args = @_;
 
     if ( $< != 0 ) {
@@ -55,7 +56,8 @@ sub run {
             'logConfig=s'  => \$logConfigFile,
             'stage1exit=s' => \$stage1exit );
 
-    UBOS::Logging::initialize( 'ubos-admin', 'update-stage-2', $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || ( $verbose && $logConfigFile ) ) {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
