@@ -543,7 +543,10 @@ sub obtainLetsEncryptCertificate {
             . " --webroot-path '" . $siteWellKnownDir . "'"
             . " -d '" . $hostname . "'" );
 
-    return $ret == 0;
+    if( $ret ) {
+        warning( "certbot failed; proceeding without certificate or TLS/SSL" );
+    }
+    return 1;
 }
 
 # === Manifest checking routines from here ===
