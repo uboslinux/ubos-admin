@@ -26,7 +26,7 @@
 
 use strict;
 use warnings;
-                                                  
+
 package UBOS::Install::Installers::Ec2Instance;
 
 use base qw( UBOS::Install::AbstractPcInstaller );

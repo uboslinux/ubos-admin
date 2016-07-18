@@ -32,7 +32,6 @@ use UBOS::Logging;
 ##
 # Constructor
 # $disksp: array of disk block devices
-# $image: the disk image file to be partitioned
 # $devicetable: device data
 sub new {
     my $self        = shift;

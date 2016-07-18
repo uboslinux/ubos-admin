@@ -77,7 +77,7 @@ sub createDiskLayout {
     # ubos-install ... image.img
 
     # Option 2: one or more disk devices (raid mode)
-    # Will create /boot and / partitions (both btrfs)
+    # Will create /boot (ext4) and / (btrfs) partitions
     # Will install boot loader on first disk
     # ubos-install ... /dev/sda
     # ubos-install ... /dev/sda /dev/sdb /dev/sdc
