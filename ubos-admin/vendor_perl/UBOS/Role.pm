@@ -92,11 +92,13 @@ sub deployOrCheck {
 
     debug( 'Role::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
 
-    my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
-    if( $doIt && $siteDocumentDir ) {
-        my $dir      = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-        if( $dir && $dir ne $siteDocumentDir ) {
-            UBOS::Utils::mkdir( $dir, 0755 );
+    if( ref( $installable ) =~ m!App! ) {
+        my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
+        if( $doIt && $siteDocumentDir ) {
+            my $dir      = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            if( $dir && $dir ne $siteDocumentDir ) {
+                UBOS::Utils::mkdir( $dir, 0755 );
+            }
         }
     }
 
@@ -165,7 +167,7 @@ sub undeployOrCheck {
         }
     }
 
-    if( $doIt ) {
+    if( $doIt && ref( $installable ) =~ m!App! ) {
         my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
         my $dir             = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
