@@ -42,7 +42,6 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
-    my $noapp         = 0;
     my $askAll        = 0;
     my $tls           = 0;
     my $selfSigned    = 0;
@@ -55,7 +54,6 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'noapp'                        => \$noapp,
             'askForAllCustomizationPoints' => \$askAll,
             'tls'                          => \$tls,
             'selfsigned'                   => \$selfSigned,
@@ -84,23 +82,16 @@ sub run {
     }
 
     my $oldSites = UBOS::Host::sites();
-    my $appId;
-    my $app;
 
+    unless( $quiet ) {
+        print "** First a few questions about the website that you are about to create:\n";
+    }
     if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostname ) {
         if( $dryRun ) {
             print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
         } else {
             fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
         }
-    }
-
-    unless( $noapp ) {
-        $appId = ask( "App to run: ", '^[-._a-z0-9]+$' );
-
-        UBOS::Host::ensurePackages( $appId, $quiet );
-
-        $app = UBOS::App->new( $appId );
     }
 
     my $hostname = undef;
@@ -131,72 +122,7 @@ sub run {
         last;
     }
 
-    my $context         = undef;
-    my @accs            = ();
-    my $custPointValues = {};
-
-    unless( $noapp ) {
-        my $defaultContext = $app->defaultContext;
-        if( defined( $defaultContext )) {
-            print "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n";
-            while( 1 ) {
-                $context = ask( 'Enter context path: ' );
-
-                if( UBOS::AppConfiguration::isValidContext( $context )) {
-                    last;
-                } else {
-                    print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes\n";
-                }
-            }
-        }
-
-        my $accessories = ask( "Any accessories for $appId? Enter list: " );
-        $accessories =~ s!^\s+!!;
-        $accessories =~ s!\s+$!!;
-        my @accList = split( /\s+,?\s*/, $accessories );
-        if( @accList ) {
-            UBOS::Host::ensurePackages( \@accList, $quiet );
-
-            foreach my $accId ( @accList ) {
-                my $acc = UBOS::Accessory->new( $accId );
-
-                push @accs, $acc;
-            }
-        }
-
-        foreach my $installable ( $app, @accs ) {
-            my $custPoints = $installable->customizationPoints;
-            if( $custPoints ) {
-                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
-                my @sortedCustPointNames         = _sortCustomizationPoints( $custPoints );
-
-                foreach my $custPointName ( @sortedCustPointNames ) {
-                    my $custPointDef = $custPoints->{$custPointName};
-
-                    if( !$askAll && !$custPointDef->{required} ) {
-                        next;
-                    }
-                    unless( $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{ask} ) {
-                        next; # can't ask for things that cannot be entered at the keyboard
-                    }
-                    my $value = ask(
-                            (( $installable == $app ) ? 'App ' : 'Accessory ' )
-                            . $installable->packageName
-                            . ( $askAll ? ' supports' : ' requires' )
-                            . " a value for $custPointName: " );
-
-                    my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                    unless( $custPointValidation->{valuecheck}->( $value )) {
-                        fatal( $custPointValidation->{valuecheckerror} );
-                    }
-                    $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $value;
-                }
-            }
-        }
-    }
-
     my $siteId        = UBOS::Host::createNewSiteId();
-    my $appConfigId   = UBOS::Host::createNewAppConfigId();
     my $adminUserId   = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
     my $adminUserName = ask( 'Site admin user name (e.g. John Doe): ' );
     my $adminCredential;
@@ -223,13 +149,11 @@ sub run {
         }
     }
 
-
     my $tlsKey;
     my $tlsCrt;
     my $tlsCrtChain;
     my $tlsCaCrt;
 
-    my $newSiteJson = {};
     if( $tls ) {
         if( $letsEncrypt ) {
             # nothing here
@@ -331,6 +255,7 @@ sub run {
         }
     }
 
+    my $newSiteJson = {};
     $newSiteJson->{siteid}   = $siteId;
     $newSiteJson->{hostname} = $hostname;
 
@@ -357,9 +282,91 @@ sub run {
         }
     }
 
-    unless( $noapp ) {
+    unless( $quiet ) {
+        print "** Now a few questions about the app(s) you are going to deploy to this site:\n";
+    }
+
+    my %contextPaths = ();
+    my $counter = 'First';
+    while( 1 ) {
+        my $appId = ask( $counter . " app to run (or empty when done): ", '^[-._a-z0-9]+$|^$' );
+        unless( $appId ) {
+            last;
+        }
+
+        UBOS::Host::ensurePackages( $appId, $quiet );
+
+        my $app = UBOS::App->new( $appId );
+
+        my $context         = undef;
+        my @accs            = ();
+        my $custPointValues = {};
+
+        my $defaultContext = $app->defaultContext;
+        if( defined( $defaultContext )) {
+            print "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n";
+            while( 1 ) {
+                $context = ask( 'Enter context path: ' );
+
+                if( !UBOS::AppConfiguration::isValidContext( $context )) {
+                    print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes\n";
+                } elsif( $context eq '' && keys %contextPaths > 0 ) {
+                    print "Cannot put an app at the root context path if there is another app at the same site\n";
+                } elsif( exists( $contextPaths{$context} )) {
+                    print "There is already an app at this context path\n";
+                } else {
+                    $contextPaths{$context} = $context;
+                    last;
+                } # we abort the loop as soon as there's an app at the root context
+            }
+        }
+
+        my $accessories = ask( "Any accessories for $appId? Enter list: " );
+        $accessories =~ s!^\s+!!;
+        $accessories =~ s!\s+$!!;
+        my @accList = split( /\s+,?\s*/, $accessories );
+        if( @accList ) {
+            UBOS::Host::ensurePackages( \@accList, $quiet );
+
+            foreach my $accId ( @accList ) {
+                my $acc = UBOS::Accessory->new( $accId );
+
+                push @accs, $acc;
+            }
+        }
+
+        foreach my $installable ( $app, @accs ) {
+            my $custPoints = $installable->customizationPoints;
+            if( $custPoints ) {
+                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+                my @sortedCustPointNames         = _sortCustomizationPoints( $custPoints );
+
+                foreach my $custPointName ( @sortedCustPointNames ) {
+                    my $custPointDef = $custPoints->{$custPointName};
+
+                    if( !$askAll && !$custPointDef->{required} ) {
+                        next;
+                    }
+                    unless( $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{ask} ) {
+                        next; # can't ask for things that cannot be entered at the keyboard
+                    }
+                    my $value = ask(
+                            (( $installable == $app ) ? 'App ' : 'Accessory ' )
+                            . $installable->packageName
+                            . ( $askAll ? ' supports' : ' requires' )
+                            . " a value for $custPointName: " );
+
+                    my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                    unless( $custPointValidation->{valuecheck}->( $value )) {
+                        fatal( $custPointValidation->{valuecheckerror} );
+                    }
+                    $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $value;
+                }
+            }
+        }
+        
         my $appConfigJson = {};
-        $appConfigJson->{appconfigid} = $appConfigId;
+        $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
         $appConfigJson->{appid}       = $appId;
         
         if( defined( $context )) {
@@ -373,7 +380,15 @@ sub run {
         if( keys %$custPointValues ) {
             $appConfigJson->{customizationpoints} = $custPointValues;
         }
-        $newSiteJson->{appconfigs} = [ $appConfigJson ];
+        unless( exists( $newSiteJson->{appconfigs} )) {
+            $newSiteJson->{appconfigs} = [];
+        }
+        push @{$newSiteJson->{appconfigs}}, $appConfigJson;
+
+        if( defined( $context ) && $context eq '' ) {
+            last;
+        }
+        $counter = 'Next';
     }
 
     my $ret = 1;
@@ -531,20 +546,19 @@ sub _sortCustomizationPoints {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>]
+    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>]
 SSS
-    Interactively define and install a new site. Unless --noapp is
-    provided, the site will run one app.
+    Interactively define and install a new site that runs any number of apps.
     If --tls is provided, the site will be secured with SSL. If additionally
     --selfsigned is provided, a self-signed certificate is automatically set
     up. If additionally --letsencrypt is provided, letsencrypt.org will be
     used to automatically setup a certificate; otherwise, keys and certificates
-    need to be entered.
+    need to be entered manually.
     If --out is provided, also save the created Site JSON to a file. Adding
     --quiet will skip progress messages.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--quiet] [--noapp] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed
@@ -553,7 +567,7 @@ SSS
     --selfsigned is provided, a self-signed certificate is automatically set
     up. If additionally --letsencrypt is provided, letsencrypt.org will be
     used to automatically setup a certificate; otherwise, keys and certificates
-    need to be entered.
+    need to be entered manually.
     If --out is provided, the created Site JSON will be saved to a file instead
     of writing it to stdout. Adding --quiet will skip progress messages.
 HHH
