@@ -23,6 +23,7 @@ use strict;
 use warnings;
 
 use Fcntl ':flock';
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -52,7 +53,9 @@ if( $commandPackage ) {
     }
 
     unless( $initOnly ) {
-        checkReady();
+        unless( defined( UBOS::Host::checkReady())) {
+            exit -1;
+        }
     }
     checkOnlyOne();
 
@@ -61,65 +64,6 @@ if( $commandPackage ) {
     exit !$result;
 } else {
     synopsisHelpQuit( 0, undef, 1 );
-}
-
-#####
-# Check whether the system is ready for the command
-sub checkReady {
-
-    my $readyFile = '/run/ubos-admin-ready';
-    if( -e $readyFile ) {
-        return;
-    }
-    my $out;
-    UBOS::Utils::myexec( 'systemctl is-system-running', undef, \$out );
-    if( $out =~ m!starting!i ) {
-        print <<END;
-UBOS is not done initializing yet. Please wait until:
-    systemctl is-system-running
-says "running" or until this message goes away.
-END
-        exit -1;
-    }
-
-    my @services = qw( ubos-admin ubos-httpd );
-
-    foreach my $service ( @services ) {
-        if( UBOS::Utils::myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
-            # if is-failed is true, attempt to restart
-            if( $< != 0 ) {
-                print <<END;
-Required service $service has failed. Try invoking your command again using 'sudo'.
-END
-            } else {
-                print <<END;
-Required service $service has failed. Attempting to restart. Try invoking your command again in a little while.
-END
-                UBOS::Utils::myexec( 'systemctl restart ' . $service );
-            }
-            exit -1;
-        }
-    }
-    foreach my $service ( @services ) {
-        if( UBOS::Utils::myexec( 'systemctl is-active ' . $service, undef, \$out )) {
-            if( $< != 0 ) {
-                print <<END;
-Required service $service is not active. Try invoking your command again using 'sudo'.
-END
-            } else {
-                print <<END;
-Required service $service is not active. Attempting to start. Try invoking your command again in a little while.
-END
-                UBOS::Utils::myexec( 'systemctl start ' . $service );
-            }
-            exit -1;
-        }
-    }
-    
-    if( $< == 0 ) {
-        UBOS::Utils::saveFile( $readyFile, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
-    }
-    1;
 }
 
 #####

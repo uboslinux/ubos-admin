@@ -40,6 +40,8 @@ use Sys::Hostname qw();
 my $SITES_DIR              = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE         = '/etc/ubos/config.json';
 my $AFTER_BOOT_FILE        = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
+my $READY_FILE             = '/run/ubos-admin-ready';
+my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
 
 my $_hostConf              = undef; # allocated as needed
@@ -531,6 +533,8 @@ sub updateCode {
         myexec( $cmd );
     }
 
+    UBOS::Utils::saveFile( $LAST_UPDATE_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
+
     # if installed kernel package is now different from running kernel: signal to reboot
     my $kernelPackageName = kernelPackageName();
     if( $kernelPackageName ) { # This will be undef in a container, so a container will never reboot automatically
@@ -965,6 +969,86 @@ sub defaultManifestFileReader {
 
     my $file = UBOS::Host::config()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
     return readJsonFromFile( $file );
+}
+
+#####
+# Check whether the system is ready for the command
+sub checkReady {
+
+    if( -e $READY_FILE ) {
+        my $ret = UBOS::Utils::slurpFile( $READY_FILE );
+        $ret =~ s!^\s+!!;
+        $ret =~ s!\s+$!!;
+        return $ret;
+    }
+    my $out;
+    UBOS::Utils::myexec( 'systemctl is-system-running', undef, \$out );
+    if( $out =~ m!starting!i ) {
+        print <<END;
+UBOS is not done initializing yet. Please wait until:
+    systemctl is-system-running
+says "running" or until this message goes away.
+END
+        return undef;
+    }
+
+    my @services = qw( ubos-admin ubos-httpd );
+
+    foreach my $service ( @services ) {
+        if( UBOS::Utils::myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
+            # if is-failed is true, attempt to restart
+            if( $< != 0 ) {
+                print <<END;
+Required service $service has failed. Try invoking your command again using 'sudo'.
+END
+            } else {
+                print <<END;
+Required service $service has failed. Attempting to restart. Try invoking your command again in a little while.
+END
+                UBOS::Utils::myexec( 'systemctl restart ' . $service );
+            }
+            return undef;
+        }
+    }
+    foreach my $service ( @services ) {
+        if( UBOS::Utils::myexec( 'systemctl is-active ' . $service, undef, \$out )) {
+            if( $< != 0 ) {
+                print <<END;
+Required service $service is not active. Try invoking your command again using 'sudo'.
+END
+            } else {
+                print <<END;
+Required service $service is not active. Attempting to start. Try invoking your command again in a little while.
+END
+                UBOS::Utils::myexec( 'systemctl start ' . $service );
+            }
+            return undef;
+        }
+    }
+    
+    if( $< == 0 ) {
+        UBOS::Utils::saveFile( $READY_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
+        my $ret = UBOS::Utils::slurpFile( $READY_FILE );
+        $ret =~ s!^\s+!!;
+        $ret =~ s!\s+$!!;
+        return $ret;
+    }
+    return '';
+}
+
+##
+# Determine when the host was last updated using ubos-admin update.
+# return: timestamp, or undef
+sub lastUpdated {
+    my $ret;
+    if( -e $LAST_UPDATE_FILE ) {
+        $ret = UBOS::Utils::slurpFile( $LAST_UPDATE_FILE );
+        $ret =~ s!^\s+!!;
+        $ret =~ s!\s+$!!;
+    } else {
+        $ret = undef;
+    }
+    return $ret;
 }
 
 1;

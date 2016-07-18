@@ -41,14 +41,15 @@ sub run {
         fatal( "This command must be run as root" ); 
     }
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $showJson      = 0;
-    my $showAll       = 0;
-    my $showPacnew    = 0;
-    my $showDisks     = 0;
-    my $showMemory    = 0;
-    my $showUptime    = 0;
+    my $verbose         = 0;
+    my $logConfigFile   = undef;
+    my $showJson        = 0;
+    my $showAll         = 0;
+    my $showPacnew      = 0;
+    my $showDisks       = 0;
+    my $showMemory      = 0;
+    my $showUptime      = 0;
+    my $showLastUpdated = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -59,7 +60,8 @@ sub run {
             'pacnew'       => \$showPacnew,
             'disks'        => \$showDisks,
             'memory'       => \$showMemory,
-            'uptime'       => \$showUptime );
+            'uptime'       => \$showUptime,
+            'lastupdated'  => \$showLastUpdated );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
@@ -71,11 +73,12 @@ sub run {
         $showPacnew = 1;
         $showDisks  = 1;
 
-    } elsif( !$showPacnew && !$showDisks && !$showMemory && !$showUptime ) {
+    } elsif( !$showPacnew && !$showDisks && !$showMemory && !$showUptime && !$showLastUpdated ) {
         # default
-        $showDisks  = 1;
-        $showMemory = 1;
-        $showUptime = 1;
+        $showDisks       = 1;
+        $showMemory      = 1;
+        $showUptime      = 1;
+        $showLastUpdated = 1;
     }
 
     my $json = $showJson ? {} : undef;
@@ -235,6 +238,11 @@ MSG
                 }
             }
 
+            my $ready = UBOS::Host::checkReady();
+            if( defined( $ready )) {
+                $json->{'ubos-admin-ready'} = $ready;
+            }
+
         } else {
             my $msg = <<MSG;
 uptime:
@@ -244,6 +252,21 @@ MSG
             $out =~ s!\n!\n    !g;
             $msg .= '    ' . $out . "\n";
             print( $msg );
+        }
+    }
+
+    if( $showLastUpdated ) {
+        debug( 'Determining when last updated' );
+
+        my $lastUpdated = UBOS::Host::lastUpdated();
+        if( $json ) {
+            $json->{lastupdated} = $lastUpdated;
+        } else {
+            if( defined( $lastUpdated )) {
+                print( "last updated: $lastUpdated\n" );
+            } else {
+                print( "last updated: <unknown>\n" );
+            }
         }
     }
 
