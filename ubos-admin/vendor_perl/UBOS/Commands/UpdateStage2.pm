@@ -95,7 +95,6 @@ sub finishUpdate {
 
             UBOS::Host::siteDeployed( $site );
         }
-        UBOS::Host::executeTriggers( $deployTriggers );
 
         info( 'Resuming sites' );
 
@@ -103,7 +102,6 @@ sub finishUpdate {
         foreach my $site ( values %$oldSites ) {
             $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
         }
-        UBOS::Host::executeTriggers( $resumeTriggers );
 
         info( 'Running upgraders' );
 
