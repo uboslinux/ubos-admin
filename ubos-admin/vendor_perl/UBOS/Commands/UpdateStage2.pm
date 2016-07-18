@@ -63,7 +63,7 @@ sub run {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
-    my $ret = finishUpdate();
+    my $ret = finishUpdate( 1 );
 
     unless( $ret && !$stage1exit ) {
         error( "Update failed." );
@@ -76,7 +76,10 @@ sub run {
 # Factored-out method that is invoked from UpdateStage2::run and from
 # ubos-admin-init after Update has invoked a reboot, and the system
 # has rebooted.
+# $restartServices: if true, restart Apache et all. If false, don't because that might deadlock systemd
 sub finishUpdate {
+    my $restartServices = shift;
+
     my $ret = 1;
 
     my $backup  = UBOS::UpdateBackup->new();
@@ -95,12 +98,18 @@ sub finishUpdate {
 
             UBOS::Host::siteDeployed( $site );
         }
+        if( $restartServices ) {
+            UBOS::Host::executeTriggers( $deployTriggers );
+        }
 
         info( 'Resuming sites' );
 
         my $resumeTriggers = {};
         foreach my $site ( values %$oldSites ) {
             $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        if( $restartServices ) {
+            UBOS::Host::executeTriggers( $resumeTriggers );
         }
 
         info( 'Running upgraders' );
