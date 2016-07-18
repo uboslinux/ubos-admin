@@ -180,7 +180,7 @@ sub findSiteByPartialId {
             $ret = $candidates[0];
 
         } elsif( @candidates ) {
-	        $@ = "There is more than one site whose siteid starts with $partial: "
+            $@ = "There is more than one site whose siteid starts with $partial: "
                . join( " vs ", map { $_->siteId } @candidates )
                . '.';
             return undef;
@@ -189,7 +189,7 @@ sub findSiteByPartialId {
             $@ = "No site found whose siteid starts with $partial.";
             return undef;
         }
-	
+
     } else {
         $ret = $sites->{$id};
         unless( $ret ) {
@@ -533,13 +533,14 @@ sub updateCode {
 
     # if installed kernel package is now different from running kernel: signal to reboot
     my $kernelPackageName = kernelPackageName();
-    if( $kernelPackageName ) {
+    if( $kernelPackageName ) { # This will be undef in a container, so a container will never reboot automatically
         my $kernelPackageVersion = packageVersion( $kernelPackageName );
         if( $kernelPackageVersion ) {
             my $kernelVersion;
             UBOS::Utils::myexec( 'uname -r', undef, \$kernelVersion );
             $kernelVersion =~ s!^\s+!!;
             $kernelVersion =~ s!\s+$!!;
+            $kernelVersion =~ s!-ARCH$!!; # somehow there's a -ARCH at the end
 
             if( $kernelPackageVersion ne $kernelVersion ) {
                 # reboot necessary
