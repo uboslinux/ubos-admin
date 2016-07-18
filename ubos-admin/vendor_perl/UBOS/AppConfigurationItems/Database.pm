@@ -241,7 +241,7 @@ sub exportLocalDatabase {
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
-        error( 'Unknown database type', $dbType );
+        error( 'Database::exportLocalDatabase: unknown database type', $dbType );
         return 0;
     }
 
@@ -269,7 +269,7 @@ sub importLocalDatabase {
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
     unless( $dbDriver ) {
-        error( 'Unknown database type', $dbType );
+        error( 'Database::importLocalDatabase: unknown database type', $dbType );
         return 0;
     }
 

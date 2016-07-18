@@ -105,7 +105,7 @@ sub deployOrCheck {
                     # $toName: the source of the link
                     UBOS::Utils::symlink( $fromName, $toName, $uname, $gname );
                 } else {
-                    error( 'Cannot create symlink:', $toName );
+                    error( 'Symlink::deployOrCheck: Cannot create symlink:', $toName );
                     $ret = 0;
                 }
             }
@@ -154,7 +154,7 @@ sub undeployOrCheck {
                 $ret &= UBOS::Utils::deleteFile( $toName );
 
             } else {
-                error( 'File does not exist:', $toName );
+                error( 'Symlink::undeployOrCheck: file does not exist:', $toName );
                 $ret = 0;
             }
         }

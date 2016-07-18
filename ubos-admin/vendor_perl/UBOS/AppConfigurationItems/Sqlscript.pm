@@ -135,7 +135,7 @@ sub _runIt {
     }
 
     unless( -r $sourceOrTemplate ) {
-        error( 'File to run does not exist:', $sourceOrTemplate );
+        error( 'Sqlscript::_runIt: file to run does not exist:', $sourceOrTemplate );
         return 0;
     }
 
@@ -155,7 +155,7 @@ sub _runIt {
 
         my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, $dbHost, $dbPort );
         unless( $dbDriver ) {
-            error( 'Unknown database type', $dbType );
+            error( 'Sqlscript::_runIt: unknown database type', $dbType );
             return 0;
         }
 

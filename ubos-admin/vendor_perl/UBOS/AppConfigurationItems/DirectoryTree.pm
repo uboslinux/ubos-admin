@@ -188,7 +188,7 @@ sub backup {
     debug( 'DirectoryTree::backup', $bucket, @$names );
 
     if( @$names != 1 ) {
-        error( 'Cannot backup item with more than one name:', @$names );
+        error( 'DirectoryTree::backup: cannot backup item with more than one name:', @$names );
         return 0;
     }
 
@@ -221,7 +221,7 @@ sub restore {
     debug( 'DirectoryTree::restore', $bucket, $names );
 
     if( @$names != 1 ) {
-        error( 'Cannot restore item with more than one name:', @$names );
+        error( 'DirectoryTree::restore: cannot restore item with more than one name:', @$names );
         return 0;
     }
 

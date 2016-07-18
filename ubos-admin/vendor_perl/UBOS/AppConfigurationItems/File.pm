@@ -111,13 +111,13 @@ sub deployOrCheck {
 
             if( $doIt ) {
                 unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
-                    error( 'Writing file failed:', $toName );
+                    error( 'File::deployOrCheck: writing file failed:', $toName );
                     $ret = 0;
                 }
             }
 
         } else {
-            error( 'File does not exist:', $fromName );
+            error( 'File::deployOrCheck: does not exist:', $fromName );
             $ret = 0;
         }
     }
@@ -179,18 +179,18 @@ sub backup {
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
+    debug( 'File::backup', $bucket, @$names );
+
     if( @$names != 1 ) {
-        error( 'Cannot backup item with more than one name:', @$names );
+        error( 'File::backup: cannot backup item with more than one name:', @$names );
         return 0;
     }
-    debug( 'File::backup', $bucket, @$names );
 
     my $toName = $names->[0];
     $toName = $config->replaceVariables( $toName );
     unless( $toName =~ m#^/# ) {
         $toName = "$dir/$toName";
     }
-
 
     return $backupContext->addFile( $toName, $bucket );
 }
@@ -215,7 +215,7 @@ sub restore {
     debug( 'File::restore', $bucket, $names );
 
     if( @$names != 1 ) {
-        error( 'Cannot restore item with more than one name:', @$names );
+        error( 'File::restore: cannot restore item with more than one name:', @$names );
         return 0;
     }
 

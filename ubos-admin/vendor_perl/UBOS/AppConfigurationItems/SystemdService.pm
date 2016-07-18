@@ -74,12 +74,12 @@ sub suspend {
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "systemctl disable '$name.service'", undef, \$out, \$err )) {
-        error( 'Failed to disable systemd service', "$name.service:", $out, $err );
+        error( 'SystemdService::suspend: failed to disable systemd service', "$name.service:", $out, $err );
         $ret = 0;
     }
     # stop even if disable failed
     if( UBOS::Utils::myexec( "systemctl stop '$name.service'", undef, \$out, \$err )) {
-        error( 'Failed to stop systemd service', "$name.service:", $out, $err );
+        error( 'SystemdService::suspend: failed to stop systemd service', "$name.service:", $out, $err );
         $ret = 0;
     }
 
@@ -108,12 +108,12 @@ sub resume {
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "systemctl start '$name.service'", undef, \$out, \$err )) {
-        error( 'Failed to start systemd service', "$name.service:", $out, $err );
+        error( 'SystemdService::resume: failed to start systemd service', "$name.service:", $out, $err );
         $ret = 0;
 
     # only enable if start succeeded
     } elsif( UBOS::Utils::myexec( "systemctl enable '$name.service'", undef, \$out, \$err )) {
-        error( 'Failed to enable systemd service', "$name.service:", $out, $err );
+        error( 'SystemdService::resume: failed to enable systemd service', "$name.service:", $out, $err );
         $ret = 0;
     }
 

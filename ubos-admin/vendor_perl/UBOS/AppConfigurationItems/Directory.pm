@@ -89,13 +89,13 @@ sub deployOrCheck {
 
         if( $doIt ) {
             if( -e $fullName ) {
-                error( 'Directory exists already:', $fullName );
+                error( 'Directory::deployOrCheck: exists already:', $fullName );
                 # FIXME: chmod, chown
 
                 $ret = 0;
 
             } elsif( UBOS::Utils::mkdir( $fullName, $dirmode, $uname, $gname ) != 1 ) {
-                error( 'Directory could not be created:', $fullName );
+                error( 'Directory::deployOrCheck: could not be created:', $fullName );
                 $ret = 0;
             }
         }
@@ -165,7 +165,7 @@ sub backup {
     debug( 'Directory::backup', $bucket, @$names );
 
     if( @$names != 1 ) {
-        error( 'Cannot backup item with more than one name:', @$names );
+        error( 'Directory::backup: cannot backup item with more than one name:', @$names );
         return 0;
     }
 
@@ -198,7 +198,7 @@ sub restore {
     debug( 'Directory::restore', $bucket, $names );
 
     if( @$names != 1 ) {
-        error( 'Cannot restore item with more than one name:', @$names );
+        error( 'Directory::restore: cannot restore item with more than one name:', @$names );
         return 0;
     }
 

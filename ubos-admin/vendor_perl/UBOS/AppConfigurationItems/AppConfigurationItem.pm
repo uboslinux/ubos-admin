@@ -80,7 +80,7 @@ sub runPostDeployScript {
         $ret &= $self->runUpgradeScript( $defaultFromDir, $defaultToDir, $config );
 
     } else {
-        error( 'Cannot perform runPostDeployScript( $methodName ) on', $self );
+        error( 'AppConfigurationItem::runPostDeployScript: cannot perform', $methodName, 'on', $self );
         $ret = 0;
     }
     return $ret;
@@ -98,7 +98,7 @@ sub runInstallScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    error( 'Cannot perform runInstallScript on', $self );
+    error( 'AppConfigurationItem::runInstallScript: cannot perform', $self );
 
     return 0;
 }
@@ -115,7 +115,7 @@ sub runUninstallScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    error( 'Cannot perform runUninstallScript on', $self );
+    error( 'AppConfigurationItem::runUninstallScript: cannot perform', $self );
 
     return 0;
 }
@@ -132,7 +132,7 @@ sub runUpgradeScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    error( 'Cannot perform runUpgradeScript on', $self );
+    error( 'AppConfigurationItem::runUpgradeScript: cannot perform', $self );
 
     return 0;
 }
@@ -215,7 +215,9 @@ sub backup {
     my $backupContext = shift;
     my $filesToDelete = shift;
 
-    error( 'Cannot perform backup() on', $self );
+    error( 'AppConfigurationItem::backup: cannot perform', $self );
+
+    return 0;
 }
 
 ##
@@ -230,7 +232,7 @@ sub restore {
     my $config        = shift;
     my $backupContext = shift;
 
-    error( 'Cannot perform restore() on', $self );
+    error( 'AppConfigurationItem::restore: cannot perform', $self );
 
     return 0;
 }

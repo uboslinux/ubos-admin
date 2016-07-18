@@ -74,12 +74,12 @@ sub suspend {
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "systemctl disable '$name.timer'", undef, \$out, \$err )) {
-        error( 'Failed to disable systemd timer', "$name.timer:", $out, $err );
+        error( 'SystemdTimer::suspend: ailed to disable systemd timer', "$name.timer:", $out, $err );
         $ret = 0;
     }
     # stop even if disable failed
     if( UBOS::Utils::myexec( "systemctl stop '$name.timer'", undef, \$out, \$err )) {
-        error( 'Failed to stop systemd timer', "$name.timer:", $out, $err );
+        error( 'SystemdTimer::suspend: ailed to stop systemd timer', "$name.timer:", $out, $err );
         $ret = 0;
     }
 
@@ -108,12 +108,12 @@ sub resume {
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "systemctl start '$name.timer'", undef, \$out, \$err )) {
-        error( 'Failed to start systemd timer', "$name.timer:", $out, $err );
+        error( 'SystemdTimer::resume: failed to start systemd timer', "$name.timer:", $out, $err );
         $ret = 0;
 
     # only enable if start succeeded
     } elsif( UBOS::Utils::myexec( "systemctl enable '$name.timer'", undef, \$out, \$err )) {
-        error( 'Failed to enable systemd timer', "$name.timer:", $out, $err );
+        error( 'SystemdTimer::resume: failed to enable systemd timer', "$name.timer:", $out, $err );
         $ret = 0;
     }
 

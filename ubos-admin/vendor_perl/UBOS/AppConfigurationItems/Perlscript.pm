@@ -76,7 +76,7 @@ sub deployOrCheck {
     }
 
     unless( -r $script ) {
-        error( 'File to run does not exist:', $script );
+        error( 'Perlscript::deployOrCheck: file to run does not exist:', $script );
         return 0;
     }
 
@@ -84,10 +84,10 @@ sub deployOrCheck {
         my $scriptcontent = slurpFile( $script );
         my $operation = 'deploy';
 
-        debug( 'Running eval', $script, $operation );
+        debug( 'Perlscript::deployOrCheck: running eval', $script, $operation );
 
         unless( eval $scriptcontent ) {
-            error( 'Running eval', $script, $operation, 'failed:', $@ );
+            error( 'Perlscript::deployOrCheck: running eval', $script, $operation, 'failed:', $@ );
             return 0;
         }
     }
@@ -120,7 +120,7 @@ sub undeployOrCheck {
     }
 
     unless( -r $script ) {
-        error( 'File to run does not exist:', $script );
+        error( 'Perlscript::undeployOrCheck: file to run does not exist:', $script );
         return 0;
     }
 
@@ -128,10 +128,10 @@ sub undeployOrCheck {
         my $scriptcontent = slurpFile( $script );
         my $operation = 'undeploy';
 
-        debug( 'Running eval', $script, $operation );
+        debug( 'Perlscript::undeployOrCheck: running eval', $script, $operation );
 
         unless( eval $scriptcontent ) {
-            error( 'Running eval', $script, $operation, 'failed:', $@ );
+            error( 'Perlscript::undeployOrCheck: running eval', $script, $operation, 'failed:', $@ );
             return 0;
         }
     }
@@ -160,17 +160,17 @@ sub runPostDeployScript {
     }
 
     unless( -r $script ) {
-        error( 'File to run does not exist:', $script );
+        error( 'Perlscript::runPostDeployScript: file to run does not exist:', $script );
         return 0;
     }
 
     my $scriptcontent = slurpFile( $script );
     my $operation     = $methodName;
 
-    debug( 'Running eval', $script, $operation );
+    debug( 'Perlscript::runPostDeployScript: running eval', $script, $operation );
 
     unless( eval $scriptcontent ) {
-        error( 'Running eval', $script, $operation, 'failed:', $@ );
+        error( 'Perlscript::runPostDeployScript: running eval', $script, $operation, 'failed:', $@ );
         return 0;
     }
     return 1;
