@@ -84,6 +84,17 @@ sub formatDisks {
                 error( "$cmd error:", $err );
                 ++$errors;
             }
+        } elsif( 'swap' eq $fs ) {
+            foreach my $dev ( @{$data->{devices}} ) {
+                my $out;
+                my $err;
+                my $cmd = "mkswap '$dev'";
+                if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
+                    error( "$cmd error:", $err );
+                    ++$errors;
+                }
+            }
+            
         } else {
             foreach my $device ( @{$data->{devices}} ) {
                 my $cmd = "mkfs.$fs";
@@ -116,16 +127,16 @@ sub mountDisks {
     my $errors = 0;
     # shortest first
     foreach my $mountPoint ( sort { length( $a ) <=> length( $b ) } keys %{$self->{devicetable}} ) {
-        my $deviceTable = $self->{devicetable}->{$mountPoint};
-        my $fs          = $deviceTable->{fs};
-        my $device      = $deviceTable->{devices}->[0];
+        my $entry  = $self->{devicetable}->{$mountPoint};
+        my $fs     = $entry->{fs};
+        my $device = $entry->{devices}->[0];
 
         unless( $fs ) {
             error( 'No fs given for', $mountPoint );
             ++$errors;
             next;
         }
-        unless( $fs ) {
+        unless( $device ) {
             error( 'No device known for', $mountPoint );
             ++$errors;
             next;
@@ -134,8 +145,14 @@ sub mountDisks {
         unless( -d "$target$mountPoint" ) {
             UBOS::Utils::mkdir( "$target$mountPoint" );
         }
-        if( UBOS::Utils::myexec( "mount -t $fs '$device' '$target$mountPoint'" )) {
-            ++$errors;
+        if( $fs eq 'swap' ) {
+            if( UBOS::Utils::myexec( "swapon '$device'" )) {
+                ++$errors;
+            }
+        } else {
+            if( UBOS::Utils::myexec( "mount -t $fs '$device' '$target$mountPoint'" )) {
+                ++$errors;
+            }
         }
     }
     return $errors;
@@ -152,9 +169,20 @@ sub umountDisks {
 
     my $errors = 0;
     # longest first
-    foreach my $dir ( sort { length( $b ) <=> length( $a ) } keys %{$self->{devicetable}} ) {
-        if( UBOS::Utils::myexec( "umount '$target$dir'" )) {
-            ++$errors;
+    foreach my $mountPoint ( sort { length( $b ) <=> length( $a ) } keys %{$self->{devicetable}} ) {
+        my $entry  = $self->{devicetable}->{$mountPoint};
+        my $fs     = $entry->{fs};
+
+        if( 'swap' eq $fs ) {
+            foreach my $device ( @{$entry->{devices}} ) {
+                if( UBOS::Utils::myexec( "swapoff '$device'" )) {
+                    ++$errors;
+                }
+            }
+        } else {
+            if( UBOS::Utils::myexec( "umount '$target$mountPoint'" )) {
+                ++$errors;
+            }
         }
     }
     return $errors;
@@ -169,26 +197,32 @@ sub appendFdiskChangePartitionType {
     my $fs   = shift;
     my $i    = shift;
 
+    my $typesToCode = {
+        'vfat' => 'c',
+        'swap' => '82'
+        # This may have to be extended
+    };
     my $script = '';
     if( $fs && $i ) {
-        # This may have to be extended
 
         # Only specify $i if $i > 1; we generate partitions in sequence, and fdisk does not
         # ask which partition if number == 1
-        if( 'vfat' eq $fs ) {
+        my $code = $typesToCode->{$fs};
+        if( $code ) {
             if( $i > 1 ) {
                 $script .= <<END;
 t
 $i
-c
+$code
 END
             } else {
                 $script .= <<END;
 t
-c
+$code
 END
             }
         }
+            
     }
     return $script;
 }
@@ -236,6 +270,18 @@ FSTAB
                 # $fsTab .= join( '', map { ",device=$_" } @devices );
                 $fsTab .= " $i $passno\n";
 
+            } elsif( 'swap' eq $fs ) {
+                my @devices = @{$deviceTable->{devices}};
+
+                foreach my $device ( @devices ) {
+                    my $uuid;
+                    UBOS::Utils::myexec( "blkid -s UUID -o value '" . $device . "'", undef, \$uuid );
+                    $uuid =~ s!^\s+!!g;
+                    $uuid =~ s!\s+$!!g;
+
+                    $fsTab .= "UUID=$uuid none swap defaults 0 0\n";
+                }
+
             } else {
                 my $device = $deviceTable->{devices}->[0];
 
@@ -246,9 +292,7 @@ FSTAB
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
-                $fsTab .= <<FSTAB;
-UUID=$uuid $mountPoint $fs rw,relatime $i $passno
-FSTAB
+                $fsTab .= "UUID=$uuid $mountPoint $fs rw,relatime $i $passno\n";
             }
             ++$i;
         }

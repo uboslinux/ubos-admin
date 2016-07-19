@@ -281,6 +281,8 @@ Optional arguments:
         --deviceclass <class>:
               The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
               is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
+        --checksignatures <never|optional|required>
+              Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
         --bootpartition <part>:
               Use this block device as boot partition. If not provided, there will be no
               separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
@@ -293,6 +295,8 @@ Optional arguments:
         --varpartition <part>:
               Use a separate /var partition. If more than one var partition is given, mirror
               across at least two partitions (RAID1).
+        --swappartion <part>:
+              Create a swap partition, or several if more than one is given.
         --addpackage <package>:
               Name of an additional package to install beyond the default of the device class
         --addservice <service>:
@@ -302,18 +306,16 @@ Optional arguments:
         --addkernelparameter <parameter>:
               Verbatim string to be appended to the kernel boot parameter. This currently only
               works on some device classes.
-        --checksignatures <never|optional|required>
-              Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
 END
     } else {
         print <<END;
 Optional arguments:
         [--verbose][--logConfFile <log4perlconf>]
         [--channel <channel>][--hostname <hostname>][--repository <path>][--target <path>]
-        [--deviceclass <class>][--bootpartition <part>][--bootloaderdevice <dev>]
-        [--varpartition <part>][--addpackage <package>][--addservice <service>]
-        [--addmodule <module>][--addkernelparameter <parameter>]
-        [--checksignatures <never|optional|required>]
+        [--deviceclass <class>][--checksignatures <never|optional|required>]
+        [--bootpartition <part>][--bootloaderdevice <dev>][--varpartition <part>][--swappartition <part>]
+        [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
+
 END
     }
     exit 1;

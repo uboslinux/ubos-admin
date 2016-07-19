@@ -77,16 +77,16 @@ sub createDiskLayout {
     # ubos-install ... image.img
 
     # Option 2: one or more disk devices (raid mode)
-    # Will create /boot (ext4) and / (btrfs) partitions
+    # Will create /boot (ext4), swap and / (btrfs) partitions
     # Will install boot loader on first disk
     # ubos-install ... /dev/sda
     # ubos-install ... /dev/sda /dev/sdb /dev/sdc
 
-    # Option 3: one or more boot partition devices, one more more root partition devices (raid mode)
-    # ubos-install ... --bootloaderdevice /dev/sda --bootpartition /dev/sda1 --bootpartition /dev/sdb1 --rootpartition /dev/sda2 --rootpartition /dev/sdb2
+    # Option 3: one or more boot partition devices, one more more root partition devices (raid mode), and possibly swap partition devices
+    # ubos-install ... --bootloaderdevice /dev/sda --bootpartition /dev/sda1 --bootpartition /dev/sdb1 --rootpartition /dev/sda2 --rootpartition /dev/sdb2 --swappartition /dev/sdc1
 
-    # Option 4: a boot partition device, a root partition device, one or more var partition devices
-    # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
+    # Option 4: a boot partition device, a root partition device, one or more var partition devices, and possibly swap partition devices
+    # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1 --swappartition /dev/sdc1
 
     # Option 5: a directory
 
@@ -94,6 +94,7 @@ sub createDiskLayout {
     my $bootpartition;
     my @rootpartitions;
     my @varpartitions;
+    my @swappartitions;
     my $directory;
 
     my $parseOk = GetOptionsFromArray(
@@ -102,6 +103,7 @@ sub createDiskLayout {
             'bootpartition=s'    => \$bootpartition,
             'rootpartition=s'    => \@rootpartitions,
             'varpartition=s'     => \@varpartitions,
+            'swappartitions=s'   => \@swappartitions,
             'directory=s'        => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
@@ -111,7 +113,7 @@ sub createDiskLayout {
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
         # Option 5
-        if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @$argvp ) {
+        if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions || @$argvp ) {
             error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
             $ret = undef;
         } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
@@ -125,7 +127,7 @@ sub createDiskLayout {
             $self->setTarget( $directory );
         }
 
-    } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions ) {
+    } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions ) {
         # Option 3 or 4
         if( @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
@@ -153,7 +155,7 @@ sub createDiskLayout {
         }
 
         if( $ret ) {
-            foreach my $part ( @rootpartitions, @varpartitions ) {
+            foreach my $part ( @rootpartitions, @varpartitions, @swappartitions ) {
                 if( $haveAlready{$part}) {
                     error( 'Specified more than once:', $part );
                     $ret = undef;
@@ -169,68 +171,66 @@ sub createDiskLayout {
         }
         if( $ret && @varpartitions == 0 ) {
             # Option 3
+            my $devicetable      = {};
+            my $devicetableIndex = 1;
+
             if( $bootpartition ) {
-                $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                        $bootloaderdevice,
-                        {   '/boot' => {
-                                'index'   => 1,
-                                'fs'      => 'ext4',
-                                'devices' => [ $bootpartition ],
-                                'boot'    => 1
-                            },
-                            '/' => {
-                                'index'   => 2,
-                                'fs'      => 'btrfs',
-                                'devices' => \@rootpartitions
-                            }
-                        } );
-            } else {
-                $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                        $bootloaderdevice,
-                        {   '/' => {
-                                'index'   => 1,
-                                'fs'      => 'btrfs',
-                                'devices' => \@rootpartitions
-                            }
-                        } );
+                $devicetable->{'/boot'} = {
+                    'index'   => $devicetableIndex++,
+                    'fs'      => 'ext4',
+                    'devices' => [ $bootpartition ],
+                    'boot'    => 1
+                };
             }
+            $devicetable->{'/'} = {
+                'index'   => $devicetableIndex++,
+                'fs'      => 'btrfs',
+                'devices' => \@rootpartitions
+            };
+            if( @swappartitions ) {
+                $devicetable->{'swap'} = {
+                    'index'   => $devicetableIndex++,
+                    'fs'      => 'swap',
+                    'devices' => \@swappartitions
+                };
+            }
+            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
+                    $bootloaderdevice,
+                    $devicetable );
+
         } elsif( $ret ) {
             # Options 4
+            my $devicetable      = {};
+            my $devicetableIndex = 1;
+
             if( $bootpartition ) {
-                $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                        $bootloaderdevice,
-                        {   '/boot' => {
-                                'index'   => 1,
-                                'fs'      => 'ext4',
-                                'devices' => [ $bootpartition ],
-                                'boot'    => 1
-                            },
-                            '/' => {
-                                'index'   => 2,
-                                'fs'      => 'btrfs',
-                                'devices' => \@rootpartitions
-                            },
-                            '/var' => {
-                                'index'   => 3,
-                                'fs'      => 'btrfs',
-                                'devices' => \@varpartitions
-                            }
-                        } );
-            } else {
-                $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                        $bootloaderdevice,
-                        {   '/' => {
-                                'index'   => 1,
-                                'fs'      => 'btrfs',
-                                'devices' => \@rootpartitions
-                            },
-                            '/var' => {
-                                'index'   => 2,
-                                'fs'      => 'btrfs',
-                                'devices' => \@varpartitions
-                            }
-                        } );
+                $devicetable->{'/boot'} = {
+                    'index'   => $devicetableIndex++,
+                    'fs'      => 'ext4',
+                    'devices' => [ $bootpartition ],
+                    'boot'    => 1
+                };
             }
+            $devicetable->{'/'} = {
+                'index'   => $devicetableIndex++,
+                'fs'      => 'btrfs',
+                'devices' => \@rootpartitions
+            };
+            $devicetable->{'/var'} = {
+                'index'   => $devicetableIndex++,
+                'fs'      => 'btrfs',
+                'devices' => \@varpartitions
+            };
+            if( @swappartitions ) {
+                $devicetable->{'swap'} = {
+                    'index'   => $devicetableIndex++,
+                    'fs'      => 'swap',
+                    'devices' => \@swappartitions
+                };
+            }
+            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
+                    $bootloaderdevice,
+                    $devicetable );
         }
             
     } else {
@@ -254,7 +254,7 @@ sub createDiskLayout {
                                 '/' => {
                                     'index' => 2,
                                     'fs'    => 'btrfs'
-                                },
+                                }
                             } );
                 }
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
@@ -285,10 +285,15 @@ sub createDiskLayout {
                                     'size'  => '100M',
                                     'boot'  => 1
                                 },
-                                '/' => {
+                                'swap' => {
                                     'index' => 2,
-                                    'fs'    => 'btrfs'
+                                    'fs'    => 'swap',
+                                    'size'  => '4G',
                                 },
+                                '/' => {
+                                    'index' => 3,
+                                    'fs'    => 'btrfs'
+                                }
                             } );
                 }
             } elsif( $ret ) {
