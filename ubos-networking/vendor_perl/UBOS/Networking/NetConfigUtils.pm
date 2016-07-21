@@ -3,7 +3,7 @@
 # Collection of utility methods for UBOS network configuration management.
 #
 # This file is part of ubos-networking.
-# (C) 2012-2015 Indie Computing Corp.
+# (C) 2012-2016 Indie Computing Corp.
 #
 # ubos-networking is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ use UBOS::Utils;
 
 my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
 my $iptablesConfigFile          = '/etc/iptables/iptables.rules';
+my $ip6tablesConfigFile         = '/etc/iptables/ip6tables.rules';
 my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.conf';
 my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
 my $dotNetworkFilePattern       = '/etc/systemd/network/50-ubos-%s.network';
@@ -44,7 +45,8 @@ my %alwaysServices = (
         'systemd-networkd.service' => 1,
         'systemd-networkd.socket'  => 1,
         'systemd-resolved.service' => 1,
-        'iptables.service'         => 1
+        'iptables.service'         => 1,
+        'ip6tables.service'        => 1,
 );
 
 # All services possibly started/stopped. Depending on Netconfig, not all of
@@ -651,6 +653,30 @@ END
     }
 
     UBOS::Utils::saveFile( $iptablesConfigFile, $iptablesContent );
+
+    my $ip6tablesContent = <<END;
+#
+# UBOS ip6tables configuration
+# Do not edit, your changes will be mercilessly overwritten as soon
+# as somebody invokes 'ubos-admin setnetconfig'.
+#
+
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT - [0:0]
+:NIC-tun99-TCP - [0:0]
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT -i tun99 -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-tun99-TCP
+-A INPUT -p udp -j REJECT
+-A INPUT -p tcp -j REJECT --reject-with tcp-reset
+-A INPUT -j REJECT
+-A NIC-tun99-TCP -p tcp --dport ssh -j ACCEPT
+COMMIT
+END
+
+    UBOS::Utils::saveFile( $ip6tablesConfigFile, $ip6tablesContent );
 
     # cloud-init
     foreach my $nic ( keys %$config ) {
