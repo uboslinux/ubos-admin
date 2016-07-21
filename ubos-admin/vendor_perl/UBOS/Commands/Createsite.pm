@@ -289,7 +289,7 @@ sub run {
     my %contextPaths = ();
     my $counter = 'First';
     while( 1 ) {
-        my $appId = ask( $counter . " app to run (or empty when done): ", '^[-._a-z0-9]+$|^$' );
+        my $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
         unless( $appId ) {
             last;
         }

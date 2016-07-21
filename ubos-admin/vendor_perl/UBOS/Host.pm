@@ -768,9 +768,10 @@ sub gpgHostKeyFingerprint {
     # pub   rsa2048/B0B434F0 2015-02-15
     #       Key fingerprint = 26FC BC8B 874A 9744 7718  5E8C 5311 6A36 B0B4 34F0
     # uid       [ultimate] Pacman Keyring Master Key <pacman@localhost>
+    # 2016-07: apparently the "Key fingerprint =" is not being emitted any more
 
     my $ret;
-    if( $out =~ m!Key fingerprint = ([0-9A-Z\s]+)$!m ) {
+    if( $out =~ m!((\s+[0-9A-F]{4}){10})!m ) {
         $ret = $1;
         $ret =~ s!\s+!!g;
     } else {
