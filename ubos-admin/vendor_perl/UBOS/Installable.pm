@@ -45,7 +45,7 @@ our $knownCustomizationPointTypes = {
     'email' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v !~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
+            return !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
         },
         'valuecheckerror' => 'valid e-mail address required',
         'ask' => 1
