@@ -46,7 +46,7 @@ my %alwaysServices = (
         'systemd-networkd.socket'  => 1,
         'systemd-resolved.service' => 1,
         'iptables.service'         => 1,
-        'ip6tables.service'        => 1,
+        'ip6tables.service'        => 1
 );
 
 # All services possibly started/stopped. Depending on Netconfig, not all of
@@ -61,7 +61,7 @@ my %allServices = (
         'cloud-init-local.service' => 1,
         'dnsmasq.service'          => 1
 );
-                   
+
 ##
 # Find all NetConfigs
 # return: hash of net config name to package name
@@ -247,7 +247,7 @@ sub configureAll {
             }
         }
         if( exists( $config->{$nic}->{forwarding} )) {
-            fatal( "The setting is called 'forward', not 'forwarding'. Please correct your netconfig $name." );
+            fatal( "The setting is called 'forward', not 'forwarding'. Please correct your netconfig '$name' in file " . sprintf( $netconfigConfFilePattern, $name ) . "." );
         }
     }
 
