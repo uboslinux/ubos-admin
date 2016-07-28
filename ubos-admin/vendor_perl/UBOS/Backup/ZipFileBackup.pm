@@ -306,8 +306,6 @@ sub restoreAppConfiguration {
             error( 'Cannot find installable on host:', $installableInBackup, '->', $installableOnHost );
             next;
         }
-print "packageNameInBackup $packageNameInBackup -> packageNameOnHost $packageNameOnHost\n";
-print "installableInBackup $installableInBackup -> installableOnHost $installableOnHost\n";
 
         my $config = $appConfigOnHost->obtainSubconfig(
                 "Installable=$packageNameInBackup" . ( $packageNameOnHost ne $packageNameInBackup ? "->$packageNameOnHost" : '' ),
