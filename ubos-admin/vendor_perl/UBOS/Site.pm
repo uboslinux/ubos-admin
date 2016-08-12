@@ -950,8 +950,8 @@ sub _checkJson {
     unless( $json->{admin}->{credential} ) {
         fatal( 'Site JSON: admin section: missing credential' );
     }
-    if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} =~ m!\s! ) {
-        fatal( 'Site JSON: admin section: invalid credential, must be string without white space' );
+    if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} =~ m!^\s! || $json->{admin}->{credential} =~ m!\s$! ) {
+        fatal( 'Site JSON: admin section: invalid credential, must be string without leading or trailing white space' );
     }
     unless( $json->{admin}->{email} ) {
         fatal( 'Site JSON: admin section: missing email' );

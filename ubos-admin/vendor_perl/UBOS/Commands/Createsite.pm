@@ -129,7 +129,7 @@ sub run {
     my $adminEmail;
 
     while( 1 ) {
-        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^[\S ]+$', undef, 1 );
+        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]+\S$', undef, 1 );
         if( $adminCredential =~ m!s3cr3t!i ) {
             print "Not that one!\n";
         } elsif( $adminCredential eq $adminUserId ) {
