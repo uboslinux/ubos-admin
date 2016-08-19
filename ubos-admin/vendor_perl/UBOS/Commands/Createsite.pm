@@ -289,12 +289,17 @@ sub run {
     my %contextPaths = ();
     my $counter = 'First';
     while( 1 ) {
-        my $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
+        my $appId;
+        while( 1 ) {
+            $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
+            if( !$appId || UBOS::Host::ensurePackages( $appId, $quiet ) >= 0 ) {
+                last;
+            }
+            error( $@ );
+        }
         unless( $appId ) {
             last;
         }
-
-        UBOS::Host::ensurePackages( $appId, $quiet );
 
         my $app = UBOS::App->new( $appId );
 
@@ -321,17 +326,25 @@ sub run {
             }
         }
 
-        my $accessories = ask( "Any accessories for $appId? Enter list: " );
-        $accessories =~ s!^\s+!!;
-        $accessories =~ s!\s+$!!;
-        my @accList = split( /\s+,?\s*/, $accessories );
-        if( @accList ) {
-            UBOS::Host::ensurePackages( \@accList, $quiet );
+        my $accessories;
+        while( 1 ) {
+            $accessories = ask( "Any accessories for $appId? Enter list: " );
+            $accessories =~ s!^\s+!!;
+            $accessories =~ s!\s+$!!;
+            my @accList = split( /\s+,?\s*/, $accessories );
+            if( @accList ) {
+                if( UBOS::Host::ensurePackages( \@accList, $quiet ) >= 0 ) {
+                    foreach my $accId ( @accList ) {
+                        my $acc = UBOS::Accessory->new( $accId );
 
-            foreach my $accId ( @accList ) {
-                my $acc = UBOS::Accessory->new( $accId );
-
-                push @accs, $acc;
+                        push @accs, $acc;
+                    }
+                    last;
+                } else {
+                    error( $@ );
+                }
+            } else {
+                last;
             }
         }
 
@@ -408,7 +421,9 @@ sub run {
 
         my $prerequisites = {};
         $newSite->addDependenciesToPrerequisites( $prerequisites );
-        UBOS::Host::ensurePackages( $prerequisites, $quiet );
+        if( UBOS::Host::ensurePackages( $prerequisites, $quiet ) < 0 ) {
+            fatal( $@ );
+        }
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             $newAppConfig->checkCustomizationPointValues();

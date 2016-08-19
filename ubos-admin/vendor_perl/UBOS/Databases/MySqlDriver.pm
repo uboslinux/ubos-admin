@@ -47,7 +47,9 @@ sub ensureRunning {
         return 1;
     }
 
-    UBOS::Host::ensurePackages( [ 'mariadb', 'perl-dbd-mysql' ] );
+    if( UBOS::Host::ensurePackages( [ 'mariadb', 'perl-dbd-mysql' ] ) < 0 ) {
+        warning( $@ );
+    }
 
     my $out;
     my $err;

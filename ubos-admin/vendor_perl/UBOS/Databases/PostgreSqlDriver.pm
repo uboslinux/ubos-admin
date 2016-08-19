@@ -45,7 +45,9 @@ sub ensureRunning {
         return 1;
     }
 
-    UBOS::Host::ensurePackages( 'postgresql' );
+    if( UBOS::Host::ensurePackages( 'postgresql' ) < 0 ) {
+        warning( $@ );
+    }
     
     my $dataDir = '/var/lib/postgres/data';
 

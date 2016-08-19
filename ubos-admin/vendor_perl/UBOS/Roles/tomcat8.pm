@@ -100,7 +100,9 @@ sub _setupSite {
 
     debug( 'tomcat8::_setupSite', $self->name(), $site->siteId );
 
-    UBOS::Host::ensurePackages( 'tomcat8' );
+    if( UBOS::Host::ensurePackages( 'tomcat8' ) < 0 ) {
+        warning( $@ );
+    }
 
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostnameorwildcard;

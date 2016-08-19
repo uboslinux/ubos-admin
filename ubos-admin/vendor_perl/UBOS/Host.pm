@@ -570,7 +570,7 @@ sub purgeCache {
 # Make sure the named packages are installed
 # $packages: List or hash of packages
 # $quiet: if false, and an actual download needs to be performed, print progress message
-# return: number of actually installed packages
+# return: number of actually installed packagesm or negative number if error
 sub ensurePackages {
     my $packages = shift;
     my $quiet    = shift;
@@ -607,7 +607,8 @@ sub ensurePackages {
         }
 
         if( myexec( $cmd, undef, undef, \$err )) {
-            fatal( 'Failed to install package(s). Pacman says:', $err );
+            $@ = 'Failed to install package(s). Pacman says: ' . $err;
+            return -1;
         }
     }
     return 0 + @filteredPackageList;

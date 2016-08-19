@@ -41,7 +41,9 @@ sub ensureRunning {
         return 1;
     }
 
-    UBOS::Host::ensurePackages( [ 'tomcat8', 'tomcat-native' ] );
+    if( UBOS::Host::ensurePackages( [ 'tomcat8', 'tomcat-native' ] ) < 0 ) {
+        warning( $@ );
+    }
 
     my $out;
     my $err;

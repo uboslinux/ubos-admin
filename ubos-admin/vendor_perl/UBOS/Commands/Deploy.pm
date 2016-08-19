@@ -203,13 +203,17 @@ sub run {
     foreach my $site ( @newSites ) {
         $site->addInstallablesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( $prerequisites );
+    if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
+        fatal( $@ );
+    }
 
     $prerequisites = {};
     foreach my $site ( @newSites ) {
         $site->addDependenciesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( $prerequisites );
+    if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
+        fatal( $@ );
+    }
 
     debug( 'Checking context paths and customization points', $ret );
     

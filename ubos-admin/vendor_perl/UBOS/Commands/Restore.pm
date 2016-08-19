@@ -297,13 +297,17 @@ sub restoreAppConfigs {
     foreach my $toSite ( @toSites ) {
         $toSite->addInstallablesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
+    if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
+        fatal( $@ );
+    }        
 
     $prerequisites = {};
     foreach my $toSite ( @toSites ) {
         $toSite->addDependenciesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
+    if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
+        fatal( $@ );
+    }
 
     # May not be interrupted, bad things may happen if it is
     UBOS::Host::preventInterruptions();
@@ -527,13 +531,17 @@ sub restoreSites {
     foreach my $newSite ( @sitesNew ) {
         $newSite->addInstallablesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
+    if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
+        fatal( $@ );
+    }
 
     $prerequisites = {};
     foreach my $newSite ( @sitesNew ) {
         $newSite->addDependenciesToPrerequisites( $prerequisites );
     }
-    UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet );
+    if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
+        fatal( $@ );
+    }
 
     # May not be interrupted, bad things may happen if it is
     UBOS::Host::preventInterruptions();
