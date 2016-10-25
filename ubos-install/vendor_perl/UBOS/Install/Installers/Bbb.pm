@@ -73,7 +73,7 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client
                 uboot-beaglebone uboot-tools archlinuxarm-keyring rng-tools
-                smartmontools wpa_supplicant ) ];
+                smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd systemd-timesyncd ) ];

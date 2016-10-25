@@ -35,13 +35,15 @@ Regards,
 MSG
 }
 
+##
+pre_install() {
+    ensureChattr
+}
+
 ## arg 1: the new package version
 ## arg 2: the old package version
 post_upgrade() {
-    # set btrfs nocow attributes for databases
-    [ -d /var/lib/mysql ]      && chattr +C /var/lib/mysql
-    [ -d /var/lib/postgresql ] && chattr +C /var/lib/postgresql
-    [ -d /var/log/journal ]    && chattr +C /var/log/journal
+    ensureChattr
 
     systemctl daemon-reload
 }
@@ -49,4 +51,11 @@ post_upgrade() {
 pre_upgrade() {
     # Fix directory permissions to avoid warning from pacman
     [ -d /var/lib/ubos/appconfigpars ] && chmod 755 /var/lib/ubos/appconfigpars
+}
+
+ensureChattr() {
+    # set btrfs nocow attributes for databases
+    ( [ -d /var/lib/mysql      ] || mkdir /var/lib/mysql      ) && chattr +C /var/lib/mysql
+    ( [ -d /var/lib/postgresql ] || mkdir /var/lib/postgresql ) && chattr +C /var/lib/postgresql
+    ( [ -d /var/log/journal    ] || mkdir /var/log/journal    ) && chattr +C /var/log/journal
 }

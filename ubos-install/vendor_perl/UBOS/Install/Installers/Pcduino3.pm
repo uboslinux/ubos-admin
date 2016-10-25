@@ -57,7 +57,7 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client
                 ubos-networking-standalone uboot-tools archlinuxarm-keyring
-                smartmontools wpa_supplicant ) ];
+                smartmontools wpa_supplicant crda ) ];
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
     unless( $self->{deviceservices} ) {

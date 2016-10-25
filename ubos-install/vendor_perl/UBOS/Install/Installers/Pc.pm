@@ -55,7 +55,7 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( rng-tools mkinitcpio
                 ubos-networking-client ubos-networking-gateway
-                ubos-networking-standalone smartmontools wpa_supplicant ) ];
+                ubos-networking-standalone smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
