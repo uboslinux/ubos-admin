@@ -245,7 +245,7 @@ sub read {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
             my $siteJson = readJsonFromString( $siteJsonContent );
-            my $site     = UBOS::Site->new( $siteJson, sub { return readManifestFromZip( $self->{zip}, shift ); } );
+            my $site     = UBOS::Site->new( $siteJson, 0, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             $self->{sites}->{$site->siteId()} = $site;
 

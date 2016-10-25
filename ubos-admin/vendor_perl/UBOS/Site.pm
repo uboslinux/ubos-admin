@@ -38,11 +38,14 @@ my $WILDCARDHOSTNAME = "__wildcard";
 ##
 # Constructor.
 # $json: JSON object containing Site JSON
+# $assignIdsIfNeeded: usually false. If true, instead of complaining about missing siteId and
+#       appConfigIds, silently assign new values
 # $manifestFileReader: pointer to a method that knows how to read manifest files
 # return: Site object
 sub new {
     my $self               = shift;
     my $json               = shift;
+    my $assignIdsIfNeeded  = shift || 0;
     my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
@@ -56,9 +59,10 @@ sub new {
     $self->{json}               = $json;
     $self->{manifestFileReader} = $manifestFileReader;
 
-    if ( $< == 0 ) { # Nobody else can create new files
-        $self->_checkJson();
-    }
+# FIXME: this check should run for everybody, no?
+#    if ( $< == 0 ) { # Nobody else can create new files
+        $self->_checkJson( $assignIdsIfNeeded );
+#    }
 
     return $self;
 }
@@ -201,6 +205,32 @@ sub hostnameorsystemhostname {
 }
 
 ##
+# Obtain the site's port.
+# return: 80 or 443
+sub port {
+    my $self = shift;
+
+    if( $self->hasTls() ) {
+        return 443;
+    } else {
+        return 80;
+    }
+}
+
+##
+# Obtain the site's protocol.
+# return: http or https
+sub protocol {
+    my $self = shift;
+
+    if( $self->hasTls() ) {
+        return 'https';
+    } else {
+        return 'http';
+    }
+}    
+
+##
 # Obtain the Configuration object
 # return: the Configuration object
 sub config {
@@ -216,8 +246,9 @@ sub config {
                         "site.hostname"                 => $self->hostname(),
                         "site.hostnameorwildcard"       => $self->hostnameorwildcard(),
                         "site.hostnameorsystemhostname" => $self->hostnameorsystemhostname(),
+                        "site.port"                     => $self->port(),
+                        "site.protocol"                 => $self->protocol(),
                         "site.siteid"                   => $siteId,
-                        "site.protocol"                 => ( $self->hasTls() ? 'https' : 'http' ),
                         "site.admin.userid"             => $adminJson->{userid},
                         "site.admin.username"           => $adminJson->{username},
                         "site.admin.credential"         => $adminJson->{credential},
@@ -282,10 +313,7 @@ sub hasLetsEncryptCerts {
 sub unsetLetsEncryptTls {
     my $self = shift;
 
-    delete $self->{json}->{tls}->{letsencrypt};
-    unless( %{$self->{json}->{tls}} ) {
-        delete $self->{json}->{tls};
-    }
+    delete $self->{json}->{tls}; # delete the whole tls subtree
 }
 
 ##
@@ -906,18 +934,25 @@ sub obtainLetsEncryptCertificate {
 
 ##
 # Check validity of the Site JSON
+# $assignIdsIfNeeded: if true, instead of complaining about missing siteId and
+#       appConfigIds, silently assign new values
 # return: 1 or exits with fatal error
 sub _checkJson {
-    my $self = shift;
-    my $json = $self->{json};
+    my $self              = shift;
+    my $assignIdsIfNeeded = shift;
 
+    my $json = $self->{json};
     unless( $json ) {
         fatal( 'No Site JSON present' );
     }
     $self->_checkJsonValidKeys( $json, [] );
 
     unless( $json->{siteid} ) {
-        fatal( 'Site JSON: missing siteid' );
+        if( $assignIdsIfNeeded ) {
+            $json->{siteid} = UBOS::Host::createNewSiteId();
+        } else {
+            fatal( 'Site JSON: missing siteid' );
+        }
     }
     unless( UBOS::Host::isValidSiteId( $json->{siteid} )) {
         fatal( 'Site JSON: invalid siteid, must be s followed by 40 hex chars, is', $json->{siteid} );
@@ -1032,7 +1067,11 @@ sub _checkJson {
         my $i=0;
         foreach my $appConfigJson ( @{$json->{appconfigs}} ) {
             unless( $appConfigJson->{appconfigid} ) {
-                fatal( "Site JSON: appconfig $i: missing appconfigid" );
+                if( $assignIdsIfNeeded ) {
+                    $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
+                } else {
+                    fatal( "Site JSON: appconfig $i: missing appconfigid" );
+                }
             }
             unless( UBOS::Host::isValidAppConfigId( $appConfigJson->{appconfigid} )) {
                 fatal( "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars, is", $appConfigJson->{appconfigid} );

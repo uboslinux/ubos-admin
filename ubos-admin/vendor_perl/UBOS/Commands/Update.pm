@@ -49,6 +49,7 @@ sub run {
 
     my $verbose          = 0;
     my $logConfigFile    = undef;
+    my $restIsPackages   = 0;
     my @packageFiles     = ();
     my $reboot           = 0;
     my $noreboot         = 0;
@@ -61,7 +62,7 @@ sub run {
             \@args,
             'verbose+'         => \$verbose,
             'logConfig=s'      => \$logConfigFile,
-            'pkgFile=s'        => \@packageFiles,
+            'pkgFiles'         => \$restIsPackages,
             'reboot'           => \$reboot,
             'noreboot'         => \$noreboot,
             'nosynchronize'    => \$nosync,
@@ -71,6 +72,11 @@ sub run {
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
+
+    if( $restIsPackages ) {
+        @packageFiles = @args;
+        $args = ();
+    }
 
     if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( @packageFiles && $noPackageUpgrade ) || ( $reboot && $noreboot )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
@@ -222,10 +228,11 @@ SSS
     --showpackages will print the packages that were updated.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--reboot | --noreboot] --pkgfile <package-file>
+    [--verbose | --logConfig <file>] [--reboot | --noreboot] --pkgfiles <package-file>...
 SSS
     Update this device, but only install the provided package files
-    as if they were the only code that can be upgraded. This will perform
+    as if they were the only code that can be upgraded. Any number of package
+    files more than 1 may be specified. This will perform
     package updates, configuration updates, database migrations
     et al as needed. This implies --nosynchronize.
     Use heuristics to determine whether the device needs to be rebooted,

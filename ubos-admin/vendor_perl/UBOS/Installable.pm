@@ -40,7 +40,7 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v !~ /\n/;
         },
         'valuecheckerror' => 'string value without newlines required',
-        'ask' => 1
+        'isFile' => 0
     },
     'email' => {
         'valuecheck' => sub {
@@ -48,7 +48,7 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
         },
         'valuecheckerror' => 'valid e-mail address required',
-        'ask' => 1
+        'isFile' => 0
     },
     'url' => {
         'valuecheck' => sub {
@@ -56,15 +56,15 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v =~ m!^https?://\S+$!;
         },
         'valuecheckerror' => 'valid http or https URL required',
-        'ask' => 1
+        'isFile' => 0
     },
     'text' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v );
+            return ( -r $v );
         },
-        'valuecheckerror' => 'string value required (multiple lines allowed)',
-        'ask' => 1
+        'valuecheckerror' => 'name of a readable file required',
+        'isFile' => 1
     },
     'password' => {
         'valuecheck' => sub {
@@ -72,7 +72,7 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v =~ /^\S{4,}$/;
         },
         'valuecheckerror' => 'must be at least four characters long and not contain white space',
-        'ask' => 1
+        'isFile' => 0
     },
     'boolean' => {
         'valuecheck' => sub {
@@ -80,7 +80,7 @@ our $knownCustomizationPointTypes = {
             return ref( $v ) =~ m/^JSON.*[Bb]oolean$/;
         },
         'valuecheckerror' => 'must be true or false',
-        'ask' => 1
+        'isFile' => 0
     },
     'integer' => {
         'valuecheck' => sub {
@@ -88,7 +88,7 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v =~ /^-?[0-9]+$/;
         },
         'valuecheckerror' => 'must be a whole number',
-        'ask' => 1
+        'isFile' => 0
     },
     'positiveinteger' => {
         'valuecheck' => sub {
@@ -96,7 +96,7 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v =~ /^[1-9][0-9]*$/;
         },
         'valuecheckerror' => 'must be a positive, whole number',
-        'ask' => 1
+        'isFile' => 0
     },
     'positiveintegerorzero' => {
         'valuecheck' => sub {
@@ -104,15 +104,15 @@ our $knownCustomizationPointTypes = {
             return !ref( $v ) && $v =~ /^[0-9]+$/;
         },
         'valuecheckerror' => 'must be a positive, whole number or 0',
-        'ask' => 1
+        'isFile' => 0
     },
     'image' => {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v );
         },
-        'valuecheckerror' => 'in-lined image string required',
-        'ask' => 0
+        'valuecheckerror' => 'name of a readable image file required',
+        'isFile' => 1
     }
 };
 
@@ -390,33 +390,41 @@ sub checkManifestCustomizationPointsSection {
             unless( JSON::is_bool( $custPointJson->{required} )) {
                 $self->myFatal( "customizationpoints section: customizationpoint $custPointName: field 'required' must be boolean" );
             }
-            if( defined( $custPointJson->{default} )) {
+            unless( $custPointJson->{required} ) {
+                unless( defined( $custPointJson->{default} )) {
+                    $self->myFatal( "customizationpoints section: customizationpoint $custPointName: a default value must be given if required=false" );
+                }
                 unless( ref( $custPointJson->{default} ) eq 'HASH' ) {
                     $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: not a JSON object" );
                 }
-                if( $custPointJson->{required} ) {
-                    unless( defined( $custPointJson->{default}->{value} )) {
-                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no value given" );
+                if( defined( $custPointJson->{default}->{value} )) {
+                    if( ref( $custPointJson->{default}->{value} )) {
+                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted" );
+                    }
+                    if( $custPointValidation && $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
+                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
+                    }
+                    if( $custPointJson->{default}->{encoding} ) {
+                        if( ref( $custPointJson->{default}->{encoding} )) {
+                            $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'encoding' must be string" );
+                        }
+                        if( $custPointJson->{default}->{encoding} ne 'base64' ) {
+                            $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: unknown encoding" );
+                        }
+                    }
+                    if( defined( $custPointJson->{default}->{expression} )) {
+                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: either specify value or expression, not both" );
+                    }
+                } elsif( defined( $custPointJson->{default}->{expression} )) {
+                    if( ref( $custPointJson->{default}->{expression} )) {
+                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted for expression" );
+                    }
+                    if( defined( $custPointJson->{default}->{encoding} )) {
+                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: if expression is given, do not specify encoding" );
                     }
                 } else {
-                    unless( exists( $custPointJson->{default}->{value} )) {
-                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: does not exist" );
-                    }
+                    $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: if expression is given, do not specify encoding" );
                 }
-                unless( $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
-                    $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
-                }
-                # FIXME: encoding and value needs to be checked together
-                if( $custPointJson->{default}->{encoding} ) {
-                    if( ref( $custPointJson->{default}->{encoding} )) {
-                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'encoding' must be string" );
-                    }
-                    if( $custPointJson->{default}->{encoding} ne 'base64' ) {
-                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: unknown encoding" );
-                    }
-                }
-            } elsif( !$custPointJson->{required} ) {
-                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: a default value must be given if required=false" );
             }
         }
     }

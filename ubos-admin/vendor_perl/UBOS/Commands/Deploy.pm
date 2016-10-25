@@ -96,7 +96,7 @@ sub run {
 
         } else {
             foreach my $siteJson ( @$json ) {
-                my $site   = UBOS::Site->new( $siteJson );
+                my $site   = UBOS::Site->new( $siteJson, 1 ); # allow templates without siteId and appConfigIds
                 my $siteId = $site->siteId;
                 if( $newSitesHash->{$siteId} ) {
                     fatal( "Duplicate site definition: $siteId" );

@@ -261,8 +261,10 @@ sub resolvedCustomizationPoints {
                 }
                 if( defined( $value )) {
                     $ret->{$packageName}->{$custPointName}->{value} = $value;
-                } else {
+                } elsif( defined( $custPointDef->{default}->{value} )) {
                     $ret->{$packageName}->{$custPointName}->{value} = $custPointDef->{default}->{value};
+                } else {
+                    $ret->{$packageName}->{$custPointName}->{value} = $self->config->replaceVariables( $custPointDef->{default}->{expression} );
                 }
             }
         }
@@ -678,19 +680,28 @@ sub _addCustomizationPointValuesToConfig {
                 $value = $custPointDef->{default};
             }
             if( defined( $value )) {
-                my $data = $value->{value};
-                if( defined( $data )) { # value might be null
-                    if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
-                        $data = decode_base64( $data );
+                my $data = undef;
+                if( exists( $value->{value} )) {
+                    $data = $value->{value};
+                    if( defined( $data )) { # value might be null
+                        if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
+                            $data = decode_base64( $data );
+                        }
                     }
+
+                } elsif( exists( $value->{expression} )) {
+                    $data = $value->{expression};
+                    $data = $self->config->replaceVariables( $data );
+                }
+                if( defined( $data )) {
+                    # do not generate the file in case of null
                     my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
                     if( $save ) {
                         UBOS::Utils::saveFile( $filename, $data );
                     }
-
                     $config->put( 'installable.customizationpoints.' . $custPointName . '.filename', $filename );
-                    $config->put( 'installable.customizationpoints.' . $custPointName . '.value', $data );
                 }
+                $config->put( 'installable.customizationpoints.' . $custPointName . '.value', $data );
             }
         }
     }
@@ -747,7 +758,8 @@ sub checkCustomizationPointValues {
                 unless( $custPointDef->{required} ) {
                     next;
                 }
-                if( !defined( $custPointDef->{default} ) || !defined( $custPointDef->{default}->{value} )) {
+                if(    !defined( $custPointDef->{default} )
+                    || !( defined( $custPointDef->{default}->{value} ) || defined( $custPointDef->{default}->{expression} ))) {
                     # make sure the Site JSON file provided one
                     unless( defined( $value )) {
                         fatal(   ', AppConfiguration ' . $self->appConfigId

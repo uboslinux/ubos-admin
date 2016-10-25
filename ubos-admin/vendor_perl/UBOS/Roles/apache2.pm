@@ -246,6 +246,7 @@ sub resumeSite {
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
+    my $port              = $site->port;
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
@@ -275,7 +276,6 @@ sub resumeSite {
 #
 CONTENT
     
-    my $siteAtPort;
     my $sslDir;
     my $sslKey;
     my $sslCert;
@@ -283,7 +283,6 @@ CONTENT
     my $sslCaCert;
     
     if( $site->hasTls ) {
-        $siteAtPort = 443;
         $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
@@ -316,14 +315,11 @@ CONTENT
             UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
         }
 
-    } else {
-        # No SSL
-        $siteAtPort = 80;
-    }
+    } # else No SSL
     
     $siteFileContent .= <<CONTENT;
 
-<VirtualHost *:$siteAtPort>
+<VirtualHost *:$port>
 $serverDeclaration
 
     DocumentRoot "$siteDocumentRoot"

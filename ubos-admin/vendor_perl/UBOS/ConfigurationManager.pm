@@ -241,19 +241,35 @@ sub loadCurrentConfiguration {
         $sshKey =~ s!^\s+!!;
         $sshKey =~ s!\s+$!!;
 
-        if( UBOS::Host::ensureOsUser( 'shepherd', undef, '/var/shepherd' )) {
-            unless( -d '/var/shepherd/.ssh' ) {
-                UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
-            }
-            # only the current ssh key may be there
-            UBOS::Utils::saveFile( "/var/shepherd/.ssh/authorized_keys", $sshKey . "\n", 0644, 'shepherd', 'shepherd' );
-
-            UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );
-shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/ubos-install *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mkdir *, /usr/bin/mount *, /usr/bin/umount *, /bin/bash *
-CONTENT
-        }
+        setupUpdateShepherd( 0, $sshKey );
     }
     return 0;
+}
+
+##
+# Create or update the shepherd user
+# $add: if true, add the keys
+# @keys: the public ssh keys that are allowed to log on
+sub setupUpdateShepherd {
+    my $add  = shift;
+    my @keys = @_;
+
+    if( UBOS::Host::ensureOsUser( 'shepherd', undef, '/var/shepherd' )) {
+        unless( -d '/var/shepherd/.ssh' ) {
+            UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
+        }
+        my $authorizedKeys;
+        if( $add ) {
+            $authorizedKeys = UBOS::Utils::slurpFile( "/var/shepherd/.ssh/authorized_keys" );
+        }
+        $authorizedKeys .= join( "\n", @keys ) . "\n";
+
+        UBOS::Utils::saveFile( "/var/shepherd/.ssh/authorized_keys", $authorizedKeys, 0644, 'shepherd', 'shepherd' );
+
+        UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );
+shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/ubos-install *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mkdir *, /usr/bin/mount *, /usr/bin/umount *, /bin/bash *
+CONTENT
+    }
 }
 
 1;
