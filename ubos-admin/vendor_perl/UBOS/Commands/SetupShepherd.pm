@@ -64,7 +64,7 @@ sub run {
 
     foreach my $key ( @args ) {
         unless( $key =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
-            fatal( 'This does not look like a valid ssh public key:', $key );
+            fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $key );
         }
     }
     UBOS::ConfigurationManager::setupUpdateShepherd( $add, @args );

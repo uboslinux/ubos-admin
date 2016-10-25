@@ -75,7 +75,7 @@ sub run {
 
     if( $restIsPackages ) {
         @packageFiles = @args;
-        $args = ();
+        @args         = ();
     }
 
     if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( @packageFiles && $noPackageUpgrade ) || ( $reboot && $noreboot )) {

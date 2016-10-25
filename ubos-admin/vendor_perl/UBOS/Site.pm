@@ -59,10 +59,7 @@ sub new {
     $self->{json}               = $json;
     $self->{manifestFileReader} = $manifestFileReader;
 
-# FIXME: this check should run for everybody, no?
-#    if ( $< == 0 ) { # Nobody else can create new files
-        $self->_checkJson( $assignIdsIfNeeded );
-#    }
+    $self->_checkJson( $assignIdsIfNeeded );
 
     return $self;
 }
@@ -982,11 +979,14 @@ sub _checkJson {
     if( ref( $json->{admin}->{username} ) ) {
         fatal( 'Site JSON: admin section: invalid username, must be string' );
     }
-    unless( $json->{admin}->{credential} ) {
-        fatal( 'Site JSON: admin section: missing credential' );
-    }
-    if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} =~ m!^\s! || $json->{admin}->{credential} =~ m!\s$! ) {
-        fatal( 'Site JSON: admin section: invalid credential, must be string without leading or trailing white space' );
+    if ( $< == 0 ) {
+        # only root has access to this
+        unless( $json->{admin}->{credential} ) {
+            fatal( 'Site JSON: admin section: missing credential' );
+        }
+        if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} =~ m!^\s! || $json->{admin}->{credential} =~ m!\s$! ) {
+            fatal( 'Site JSON: admin section: invalid credential, must be string without leading or trailing white space' );
+        }
     }
     unless( $json->{admin}->{email} ) {
         fatal( 'Site JSON: admin section: missing email' );
@@ -1133,7 +1133,6 @@ sub _checkJson {
                     }
                 }
             }
-            
             ++$i;
         }
     }

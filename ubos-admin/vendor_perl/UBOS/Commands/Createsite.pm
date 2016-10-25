@@ -129,7 +129,7 @@ sub run {
     my $adminEmail;
 
     while( 1 ) {
-        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ][\S ][\S ][\S ]\S$', undef, 1 );
+        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
         if( $adminCredential =~ m!s3cr3t!i ) {
             print "Not that one!\n";
         } elsif( $adminCredential eq $adminUserId ) {
@@ -325,11 +325,11 @@ sub run {
                     last;
                 } # we abort the loop as soon as there's an app at the root context
             }
-        } else if( defined( $fixedContext )) {
+        } elsif( defined( $fixedContext )) {
             if( exists( $contextPaths{$fixedContext} )) {
                 print "App $appId has an unchangeable context path of $fixedContext, but another app is already at this path. Cannot install here.\n";
                 exit 1;
-            } elsif( '' eq $fixedContext && keys %$contextPaths > 0 ) {
+            } elsif( '' eq $fixedContext && keys %contextPaths > 0 ) {
                 print "App $appId must be installed at the root of the site. This means no other app can run at this site.\n";
                 exit 1;
             }

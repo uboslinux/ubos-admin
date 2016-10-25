@@ -401,7 +401,7 @@ sub checkManifestCustomizationPointsSection {
                     if( ref( $custPointJson->{default}->{value} )) {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted" );
                     }
-                    if( $custPointValidation && $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
+                    unless( $custPointValidation && $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
                     }
                     if( $custPointJson->{default}->{encoding} ) {

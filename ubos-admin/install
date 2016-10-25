@@ -55,7 +55,7 @@ pre_upgrade() {
 
 ensureChattr() {
     # set btrfs nocow attributes for databases
-    ( [ -d /var/lib/mysql      ] || mkdir /var/lib/mysql      ) && chattr +C /var/lib/mysql
-    ( [ -d /var/lib/postgresql ] || mkdir /var/lib/postgresql ) && chattr +C /var/lib/postgresql
+    ( [ -d /var/lib/mysql      ] || mkdir -m 0700 /var/lib/mysql      ) && chattr +C /var/lib/mysql
+    ( [ -d /var/lib/postgresql ] || mkdir -m 0700 /var/lib/postgresql ) && chattr +C /var/lib/postgresql
     ( [ -d /var/log/journal    ] || mkdir /var/log/journal    ) && chattr +C /var/log/journal
 }
