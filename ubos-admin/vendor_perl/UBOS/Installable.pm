@@ -61,7 +61,14 @@ our $knownCustomizationPointTypes = {
     'text' => {
         'valuecheck' => sub {
             my $v = shift;
+            if( ref( $v )) {
+                return 0;
+            }
             return ( -r $v );
+        },
+        'contentvaluecheck' => sub {
+            my $v = shift;
+            return !ref( $v );
         },
         'valuecheckerror' => 'name of a readable file required',
         'isFile' => 1
@@ -110,6 +117,9 @@ our $knownCustomizationPointTypes = {
         'valuecheck' => sub {
             my $v = shift;
             return !ref( $v );
+        },
+        'contentvaluecheck' => sub {
+            return 1; # don't really know
         },
         'valuecheckerror' => 'name of a readable image file required',
         'isFile' => 1
@@ -397,12 +407,20 @@ sub checkManifestCustomizationPointsSection {
                 unless( ref( $custPointJson->{default} ) eq 'HASH' ) {
                     $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: not a JSON object" );
                 }
-                if( defined( $custPointJson->{default}->{value} )) {
-                    if( ref( $custPointJson->{default}->{value} )) {
+                if( exists( $custPointJson->{default}->{value} )) {
+                    if( ref( $custPointJson->{default}->{value} ) && 'JSON::PP::Boolean' ne ref( $custPointJson->{default}->{value} )) {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted" );
                     }
-                    unless( $custPointValidation && $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
-                        $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
+                    if( $custPointValidation ) {
+                        if( $custPointValidation->{isFile} ) {
+                            unless( $custPointValidation->{contentvaluecheck}->( $custPointJson->{default}->{value} )) {
+                                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
+                            }
+                        } else {
+                            unless( $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
+                                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
+                            }
+                        }
                     }
                     if( $custPointJson->{default}->{encoding} ) {
                         if( ref( $custPointJson->{default}->{encoding} )) {
@@ -423,7 +441,7 @@ sub checkManifestCustomizationPointsSection {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: if expression is given, do not specify encoding" );
                     }
                 } else {
-                    $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: if expression is given, do not specify encoding" );
+                    $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: must provide either value or expression" );
                 }
             }
         }

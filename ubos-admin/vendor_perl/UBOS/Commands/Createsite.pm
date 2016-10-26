@@ -459,10 +459,10 @@ sub run {
 
             my $success = $newSite->obtainLetsEncryptCertificate();
             unless( $success ) {
-                warning( 'Failed to obtain letsencrypt certificate for site', $newSite->hostname, '(', $newSite->siteId, '). Deploying site without TLS.' );
                 $newSite->unsetLetsEncryptTls;
+                $tls = 0;
             }
-            $ret &= $success;
+            # proceed anyway, so don't set $ret
         }
 
         my $deployUndeployTriggers = {};

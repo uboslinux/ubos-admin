@@ -75,18 +75,19 @@ sub get {
 
 ##
 # Add an additional configuration value. This will fail if the name exists already.
-# $name: name of the configuration value
-# $value: value of the configuration value
+# $pairs: name-value pairs
 sub put {
     my $self  = shift;
-    my $name  = shift;
-    my $value = shift;
+    my %pairs = @_;
 
-    if( !defined( $self->{flatMap}->{$name} )) {
-        $self->{flatMap}->{$name} = $value;
+    foreach my $name ( keys %pairs ) {
+        my $value = $pairs{$name};
+        if( !defined( $self->{flatMap}->{$name} )) {
+            $self->{flatMap}->{$name} = $value;
 
-    } elsif( $self->{flatMap}->{$name} ne $value ) {
-        error( 'Have different value already for', $name, 'was:', $self->{flatMap}->{$name}, ', new:', $value );
+        } elsif( $self->{flatMap}->{$name} ne $value ) {
+            error( 'Have different value already for', $name, 'was:', $self->{flatMap}->{$name}, ', new:', $value );
+        }
     }
 }
 

@@ -45,6 +45,11 @@ sub new {
         $self->checkManifest( 'accessory' );
         $self->checkManifestAccessoryInfo();
     }
+    $self->{config}->put(
+                "package.name"                            => $packageName,
+                "installable.accessoryinfo.appid"         => $self->{json}->{accessoryinfo}->{appid},
+                "installable.accessoryinfo.accessoryid"   => $self->{json}->{accessoryinfo}->{accessoryid},
+                "installable.accessoryinfo.accessorytype" => $self->{json}->{accessoryinfo}->{accessorytype} );
 
     return $self;
 }
@@ -53,7 +58,7 @@ sub new {
 # Check validity of the manifest JSON's accessoryinfo section.
 # return: 1 or exits with fatal error
 sub checkManifestAccessoryInfo {
-	my $self = shift;
+    my $self = shift;
 
     my $json = $self->{json};
 

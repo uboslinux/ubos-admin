@@ -518,6 +518,7 @@ sub hasLetsEncryptCerts {
 ##
 # If this role needs a letsencrypt certificate, obtain it.
 # $site: the site that needs the certificate
+# return: 1 if succeeded
 sub obtainLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
@@ -531,16 +532,25 @@ sub obtainLetsEncryptCertificate {
         UBOS::Utils::mkdir( $siteWellKnownDir );
     }
 
+    my $out;
+    my $err;
     my $ret = UBOS::Utils::myexec(
-            'certbot certonly'
+            'TERM=dumb'
+            . ' certbot certonly'
             . ' --webroot'
             . " --email '" . $adminHash->{email} . "'"
             . ' --agree-tos'
             . " --webroot-path '" . $siteWellKnownDir . "'"
-            . " -d '" . $hostname . "'" );
+            . " -d '" . $hostname . "'",
+            undef,
+            \$out,
+            \$err );
 
     if( $ret ) {
-        warning( "certbot failed; proceeding without certificate or TLS/SSL" );
+        debug( 'Letsencrypt said:', $err ); # strange formatting in stdout, let's not use this
+        warning( "Obtaining certificate from letsencrypt failed. proceeding without certificate or TLS/SSL.\n"
+                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly." );
+        return 0;
     }
     return 1;
 }

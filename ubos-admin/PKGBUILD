@@ -122,7 +122,7 @@ package() {
     mkdir -p $pkgdir/var/lib/mysql
 
 # Postgresql
-    mkdir -p $pkgdir/var/lib/postgresql
+    mkdir -p -m 700 $pkgdir/var/lib/postgresql
 
 # Systemd
     mkdir -p -m 755 $pkgdir/usr/lib/systemd/system/
