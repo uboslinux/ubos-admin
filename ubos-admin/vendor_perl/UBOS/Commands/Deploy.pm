@@ -45,67 +45,56 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
-    my $file          = undef;
+    my $template      = undef;
+    my @files         = ();
     my $stdin         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
-            'file=s'      => \$file,
+            'template'    => \$template,
+            'files=s'     => \@files,
             'stdin'       => \$stdin );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args || ( $file && $stdin ) || ( !$file && !$stdin ) || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || @args || ( @files && $stdin ) || ( !@files && !$stdin ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     debug( 'Parsing site JSON and checking' );
 
-    my $json;
-    if( $file ) {
-        $json = readJsonFromFile( $file );
-        unless( $json ) {
-            exit 1;
+    my %jsons; # hash from filename to parsed JSON content
+    if( @files ) {
+        foreach my $file ( @files ) {
+            my $json = readJsonFromFile( $file );
+            unless( $json ) {
+                exit 1;
+            }
+            $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
+            $jsons{$file} = $json;
         }
-        $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
     } else {
-        $json = readJsonFromStdin();
+        my $json = readJsonFromStdin();
         unless( $json ) {
             fatal( 'No JSON input provided on stdin' );
         }
         $json = UBOS::Utils::insertSlurpedFiles( $json, getcwd() );
+        $jsons{''} = $json;
     }
 
     my $newSitesHash = {};
-    if( ref( $json ) eq 'HASH' && %$json ) {
-        if( defined( $json->{siteid} )) {
-            $json = [ $json ];
-        } else {
-            my @newJson = ();
-            map { push @newJson, $_ } values %$json;
-            $json = \@newJson;
-        }
-    }
 
-    if( ref( $json ) eq 'ARRAY' ) {
-        if( !@$json ) {
-            fatal( 'No site given' );
-
-        } else {
-            foreach my $siteJson ( @$json ) {
-                my $site   = UBOS::Site->new( $siteJson, 1 ); # allow templates without siteId and appConfigIds
-                my $siteId = $site->siteId;
-                if( $newSitesHash->{$siteId} ) {
-                    fatal( "Duplicate site definition: $siteId" );
-                }
-                $newSitesHash->{$siteId} = $site;
-            }
-        }
-    } else {
-        fatal( "Not a Site JSON file" );
+   foreach my $fileName ( keys %jsons ) {
+       my $json   = $jsons{$fileName};
+       my $site   = UBOS::Site->new( $json, $template );
+       my $siteId = $site->siteId;
+       if( $newSitesHash->{$siteId} ) {
+           fatal( "Duplicate site definition: $siteId" );
+       }
+       $newSitesHash->{$siteId} = $site;
     }
 
     my $oldSites = UBOS::Host::sites();
@@ -335,7 +324,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--siteid <siteid>] ... --stdin
+    [--verbose | --logConfig <file>] [--siteid <siteid>]... --stdin
 SSS
     Deploy or update one or more websites based on the Site JSON
     information read from stdin. If one or more <siteid>s are given, ignore
@@ -344,13 +333,15 @@ SSS
     installing and configuring all web applications for the website(s).
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--siteid <siteid>] ... --file <site.json>
+    [--verbose | --logConfig <file>] [--template] [--siteid <siteid>]... ( --file <site.json> )...
 SSS
     Deploy or update one or more websites based on the information
     contained in <site.json>. If one or more <siteid>s are given, ignore
     all information contained in <site.json> other than sites with the
-    specified <siteid>s. This includes setting up the virtual host(s),
-    installing and configuring all web applications for the website(s).
+    specified <siteid>s. If --template is specified, do not complain about
+    missing site and appconfiguration identifier; assign new ones instead.
+    This includes setting up the virtual host(s), installing and configuring
+    all web applications for the website(s).
 HHH
     };
 }

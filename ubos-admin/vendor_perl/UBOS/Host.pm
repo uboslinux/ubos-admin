@@ -876,6 +876,32 @@ sub runAfterBootCommandsIfNeeded {
 }
 
 ##
+# Deploy any site templates
+sub deploySiteTemplatesIfNeeded {
+
+    unless( config()->get( 'ubos.deploysitetemplatesonboot', 0 )) {
+        return;
+    }
+    my $destDir = config()->get( 'ubos.deploysitetemplatesonbootdir', undef );
+    if( !defined( $destDir ) || !$destDir || !-d $destDir ) {
+        return;
+    }
+    my @templateFiles = <$destDir/*.json>;
+    unless( @templateFiles ) {
+        return;
+    }
+    my $cmd = 'ubos-admin deploy --template' . map { " --file '$_'" } @templateFiles;
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "/bin/bash", $cmd, \$out, \$err )) {
+        error( "Problems with attempting to install site templates from $destDir:\n" . $cmd, "\nout: " . $out . "\nerr: " . $err );
+        # if error, leave templates in place
+    } else {
+        UBOS::Utils::deleteFile( @templateFiles );
+    }
+}
+
+##
 # Determine the current network interfaces of this host and their properties.
 # Unless $all is specified, this does not return loopback and virtual devices
 #

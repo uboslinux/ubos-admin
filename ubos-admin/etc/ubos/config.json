@@ -1,11 +1,13 @@
 {
     "ubos" : {
         "checkmanifest" : true,
-        "readstaffonboot" : true
+        "readstaffonboot" : true,
+        "deploysitetemplatesonboot" : true
     },
 
     "host" : {
-        "tmpdir" : "/tmp",
+        "tmpdir"                       : "/tmp",
+        "deploysitetemplatesonbootdir" : "/var/lib/ubos/deploy-site-templates-on-boot"
     },
 
     "package" : {

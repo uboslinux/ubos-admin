@@ -56,6 +56,7 @@ package() {
 # Site files and AppConfiguration parameter files
     mkdir -p -m755 $pkgdir/var/lib/ubos/sites
     mkdir -p -m755 $pkgdir/var/lib/ubos/appconfigpars
+    mkdir -p -m755 $pkgdir/var/lib/ubos/deploy-site-templates-on-boot
 
 # Manifest files
     mkdir -p $pkgdir/var/lib/ubos/manifests

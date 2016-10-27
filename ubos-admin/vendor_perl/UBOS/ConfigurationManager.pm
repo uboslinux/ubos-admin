@@ -40,57 +40,56 @@ use UBOS::Utils;
 my $LABEL = 'UBOS-STAFF';
 
 ##
-# Initialize the configuration if there's a configuration device attached
+# 1. Initialize the configuration if there's a configuration device attached
+# 2. Deploy site templates if needed
 sub initializeIfNeeded {
     debug( 'ConfigurationManager::initializeIfNeeded' );
 
-    unless( UBOS::Host::config()->get( 'ubos.readstaffonboot', 1 )) {
-        debug( 'Not looking for staff, ubos.readstaffonboot is false' );
-        return;
-    }
+    if( UBOS::Host::config()->get( 'ubos.readstaffonboot', 1 )) {
+        my $device = guessConfigurationDevice();
 
-    my $device = guessConfigurationDevice();
+        my $targetFile = undef; # must be out here so unlinking happens at end of function
+        my $target     = undef;
+        my $init       = 0;
+        if( $device ) {
+            debug( 'Staff device:', $device );
 
-    my $targetFile = undef; # must be out here so unlinking happens at end of function
-    my $target     = undef;
-    my $init       = 0;
-    if( $device ) {
-        debug( 'Staff device:', $device );
+            $targetFile = File::Temp->newdir( DIR => '/var/tmp', UNLINK => 1 );
+            $target     = $targetFile->dirname;
 
-        $targetFile = File::Temp->newdir( DIR => '/var/tmp', UNLINK => 1 );
-        $target     = $targetFile->dirname;
+            if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
+                error( 'Failed to mount:', $device, $target );
+                return;
+            }
+            $init = 1;
 
-        if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
-            error( 'Failed to mount:', $device, $target );
-            return;
-        }
-        $init = 1;
-
-    } else {
-        if( -d "/$LABEL" ) {
-            $target = "/$LABEL";
-            # don't init
         } else {
-            debug( 'No staff device found' );
-            return;
+            if( -d "/$LABEL" ) {
+                $target = "/$LABEL";
+                # don't init
+            } else {
+                debug( 'No staff device found' );
+                return;
+            }
+        }
+
+        if( $init && UBOS::Host::config()->get( 'ubos.initializestaffonboot', 1 )) {
+            if( initializeConfigurationIfNeeded( $target )) {
+                error( 'Initialization staff device failed:', $device, $target );
+            }
+        }
+        
+        if( loadCurrentConfiguration( $target )) {
+            error( 'Loading current configuration failed from', $device, $target );
+        }
+
+        if( $device ) {
+            if( UBOS::Utils::myexec( "umount '$target'" )) {
+                error( 'Failed to unmount:', $device, $target );
+            }
         }
     }
 
-    if( $init && UBOS::Host::config()->get( 'ubos.initializestaffonboot', 1 )) {
-        if( initializeConfigurationIfNeeded( $target )) {
-            error( 'Initialization staff device failed:', $device, $target );
-        }
-    }
-    
-    if( loadCurrentConfiguration( $target )) {
-        error( 'Loading current configuration failed from', $device, $target );
-    }
-
-    if( $device ) {
-        if( UBOS::Utils::myexec( "umount '$target'" )) {
-            error( 'Failed to unmount:', $device, $target );
-        }
-    }
     return;
 }
 
@@ -242,6 +241,40 @@ sub loadCurrentConfiguration {
         $sshKey =~ s!\s+$!!;
 
         setupUpdateShepherd( 0, $sshKey );
+    }
+
+    my $destDir = UBOS::Host::config()->get( 'ubos.deploysitetemplatesonbootdir', undef );
+    if( -d $destDir ) {
+        # site templates for all hosts into which the device is plugged
+        # copy templates and leave the original in place
+        if( -d "$target/shepherd/site-templates" ) {
+            if( opendir( DIR, "$target/shepherd/site-templates" )) {
+                while( my $entry = readdir DIR ) {
+                    if( $entry ne '.' && $entry ne '..' ) {
+                        UBOS::Utils::copyRecursively( "$target/shepherd/site-templates/$entry", "$destDir/" );
+                    }
+                }
+                closedir DIR;
+            }
+        }
+
+        # site templates only for a specific host
+        # copy templates and remove the original
+        my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
+        my $templateDir    = "$target/flock/$keyFingerprint/site-templates";
+        if( -d $templateDir ) {
+            if( opendir( DIR, $templateDir )) {
+                my @done = ();
+                while( my $entry = readdir DIR ) {
+                    if( $entry ne '.' && $entry ne '..' ) {
+                        UBOS::Utils::copyRecursively( "$templateDir/$entry", "$destDir/" );
+                        push @done, "$templateDir/$entry";
+                    }
+                }
+                closedir DIR;
+                UBOS::Utils::deleteFile( @done );
+            }
+        }
     }
     return 0;
 }
