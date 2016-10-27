@@ -83,15 +83,16 @@ sub run {
 
     my $oldSites = UBOS::Host::sites();
 
-    unless( $quiet ) {
-        print "** First a few questions about the website that you are about to create:\n";
-    }
     if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostname ) {
         if( $dryRun ) {
             print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
         } else {
             fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
         }
+    }
+
+    unless( $quiet ) {
+        print "** First a few questions about the website that you are about to create:\n";
     }
 
     my $hostname = undef;
