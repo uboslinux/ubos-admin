@@ -369,21 +369,32 @@ sub run {
                     if( !$askAll && !$custPointDef->{required} ) {
                         next;
                     }
-                    my $value = ask(
-                            (( $installable == $app ) ? 'App ' : 'Accessory ' )
-                            . $installable->packageName
-                            . ( $askAll ? ' supports' : ' requires' )
-                            . " a value for $custPointName: " );
+                    my $isFile = $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile};
+                    while( 1 ) {
+                        my $value = ask(
+                                (( $installable == $app ) ? 'App ' : 'Accessory ' )
+                                . $installable->packageName
+                                . ( $askAll ? ' allows' : ' requires' )
+                                . " customization for $custPointName"
+                                . ( $isFile ? ' (enter filename)' : ' (enter value)' )
+                                . ': ' );
 
-                    if( $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile} ) {
-                        $value = UBOS::Utils::slurpFile( $value );
-                    }
+                        if( $isFile ) {
+                            unless( -r $value ) {
+                                error( 'Cannot read file:', $value );
+                                next;
+                            }
+                            $value = UBOS::Utils::slurpFile( $value );
+                        }
 
-                    my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                    unless( $custPointValidation->{valuecheck}->( $value )) {
-                        fatal( $custPointValidation->{valuecheckerror} );
+                        my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                        if( $custPointValidation->{valuecheck}->( $value )) {
+                            $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $value;
+                            last;
+                        } else {
+                            error( $custPointValidation->{valuecheckerror} );
+                        }
                     }
-                    $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $value;
                 }
             }
         }

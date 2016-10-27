@@ -61,13 +61,6 @@ our $knownCustomizationPointTypes = {
     'text' => {
         'valuecheck' => sub {
             my $v = shift;
-            if( ref( $v )) {
-                return 0;
-            }
-            return ( -r $v );
-        },
-        'contentvaluecheck' => sub {
-            my $v = shift;
             return !ref( $v );
         },
         'valuecheckerror' => 'name of a readable file required',
@@ -115,10 +108,6 @@ our $knownCustomizationPointTypes = {
     },
     'image' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return !ref( $v );
-        },
-        'contentvaluecheck' => sub {
             return 1; # don't really know
         },
         'valuecheckerror' => 'name of a readable image file required',
@@ -412,14 +401,8 @@ sub checkManifestCustomizationPointsSection {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted" );
                     }
                     if( $custPointValidation ) {
-                        if( $custPointValidation->{isFile} ) {
-                            unless( $custPointValidation->{contentvaluecheck}->( $custPointJson->{default}->{value} )) {
-                                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
-                            }
-                        } else {
-                            unless( $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
-                                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
-                            }
+                        unless( $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
+                            $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
                         }
                     }
                     if( $custPointJson->{default}->{encoding} ) {
