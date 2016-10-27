@@ -329,11 +329,12 @@ sub run {
         } elsif( defined( $fixedContext )) {
             if( exists( $contextPaths{$fixedContext} )) {
                 print "App $appId has an unchangeable context path of $fixedContext, but another app is already at this path. Cannot install here.\n";
-                exit 1;
+                next;
             } elsif( '' eq $fixedContext && keys %contextPaths > 0 ) {
-                print "App $appId must be installed at the root of the site. This means no other app can run at this site.\n";
-                exit 1;
+                print "App $appId must be installed at the root of the site. This means no other app can run at this site, but at least one is here already.\n";
+                next;
             }
+            $context = $fixedContext;
         }
 
         my $accessories;
