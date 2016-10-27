@@ -129,6 +129,14 @@ sub run {
     UBOS::Host::preventInterruptions();
     my $ret = 1;
 
+    debug( 'Suspending site(s)' );
+
+    my $suspendTriggers = {};
+    foreach my $oldSite ( values %$oldSites ) {
+        $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+    }
+    UBOS::Host::executeTriggers( $suspendTriggers );
+
     debug( 'Disabling site(s)' );
 
     my $disableTriggers = {};
