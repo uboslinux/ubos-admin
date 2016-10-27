@@ -54,6 +54,8 @@ sub run {
     my $logConfigFile   = undef;
     my $showIds         = 0;
     my $noTls           = 0;
+    my @ins             = ();
+    my @urls            = ();
     my $in              = undef;
     my $url             = undef;
     my @siteIds         = ();
@@ -76,8 +78,8 @@ sub run {
             'logConfig=s'      => \$logConfigFile,
             'showids'          => \$showIds,
             'notls'            => \$noTls,
-            'in=s'             => \$in,
-            'url=s'            => \$url,
+            'in=s'             => \@ins,
+            'url=s'            => \@urls,
             'siteid=s'         => \@siteIds,
             'hostname=s'       => \@hostnames,
             'createnew'        => \$createNew,
@@ -101,8 +103,7 @@ sub run {
     if(    !$parseOk
         || @args
         || ( $verbose && $logConfigFile )
-        || ( !$in && !$url )
-        || ( $in && $url )
+        || ( @ins + @urls != 1 )
         || ( !@appConfigIds && !$createNew && (
                    ( @siteIds && @hostnames )
                 || @newSiteIds
@@ -146,6 +147,11 @@ sub run {
         || ( @migrateFrom != _uniq( @migrateFrom )) )
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+    if( @ins ) {
+        $in = $ins[0];
+    } else {
+        $url = $urls[0];
     }
 
     my $file;
