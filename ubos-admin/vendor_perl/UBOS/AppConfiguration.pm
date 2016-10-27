@@ -671,6 +671,11 @@ sub _addCustomizationPointValuesToConfig {
         my $appConfigCustPoints = $self->customizationPoints();
 
         foreach my $custPointName ( keys %$installableCustPoints ) {
+            if( $config->get( 'installable.customizationpoints.' . $custPointName . '.value' )) {
+                # no need to do it again
+                next;
+            }
+
             my $custPointDef = $installableCustPoints->{$custPointName};
 
             my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
