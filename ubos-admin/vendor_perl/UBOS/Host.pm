@@ -879,10 +879,10 @@ sub runAfterBootCommandsIfNeeded {
 # Deploy any site templates
 sub deploySiteTemplatesIfNeeded {
 
-    unless( config()->get( 'ubos.deploysitetemplatesonboot', 0 )) {
+    unless( config()->get( 'host.deploysitetemplatesonboot', 0 )) {
         return;
     }
-    my $destDir = config()->get( 'ubos.deploysitetemplatesonbootdir', undef );
+    my $destDir = config()->get( 'host.deploysitetemplatesonbootdir', undef );
     if( !defined( $destDir ) || !$destDir || !-d $destDir ) {
         return;
     }
@@ -890,7 +890,7 @@ sub deploySiteTemplatesIfNeeded {
     unless( @templateFiles ) {
         return;
     }
-    my $cmd = 'ubos-admin deploy --template' . map { " --file '$_'" } @templateFiles;
+    my $cmd = 'ubos-admin deploy --template' . join( '', map { " --file '$_'" } @templateFiles );
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "/bin/bash", $cmd, \$out, \$err )) {

@@ -45,7 +45,7 @@ my $LABEL = 'UBOS-STAFF';
 sub initializeIfNeeded {
     debug( 'ConfigurationManager::initializeIfNeeded' );
 
-    if( UBOS::Host::config()->get( 'ubos.readstaffonboot', 1 )) {
+    if( UBOS::Host::config()->get( 'host.readstaffonboot', 1 )) {
         my $device = guessConfigurationDevice();
 
         my $targetFile = undef; # must be out here so unlinking happens at end of function
@@ -73,7 +73,7 @@ sub initializeIfNeeded {
             }
         }
 
-        if( $init && UBOS::Host::config()->get( 'ubos.initializestaffonboot', 1 )) {
+        if( $init && UBOS::Host::config()->get( 'host.initializestaffonboot', 1 )) {
             if( initializeConfigurationIfNeeded( $target )) {
                 error( 'Initialization staff device failed:', $device, $target );
             }
@@ -243,7 +243,7 @@ sub loadCurrentConfiguration {
         setupUpdateShepherd( 0, $sshKey );
     }
 
-    my $destDir = UBOS::Host::config()->get( 'ubos.deploysitetemplatesonbootdir', undef );
+    my $destDir = UBOS::Host::config()->get( 'host.deploysitetemplatesonbootdir', undef );
     if( -d $destDir ) {
         # site templates for all hosts into which the device is plugged
         # copy templates and leave the original in place

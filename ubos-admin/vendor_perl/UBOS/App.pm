@@ -41,7 +41,7 @@ sub new {
     }
     $self->SUPER::new( $packageName, $manifestFileReader );
 
-    if( $self->{config}->get( 'ubos.checkmanifest', 1 )) {
+    if( $self->{config}->get( 'host.checkmanifest', 1 )) {
         $self->checkManifest( 'app' );
     }
 

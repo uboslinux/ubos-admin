@@ -46,47 +46,59 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $target        = undef;
     my $device        = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'target=s'    => \$target,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args > 1 || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || @args > 1 || ( @args && $target ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( @args ) {
-        $device = shift @args;
-        $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
-        unless( -b $device ) {
-            fatal( 'Not a valid UBOS staff device:', $device );
+    my $errors = 0;
+
+    if( $target ) {
+        unless( -d $target ) {
+            fatal( 'Directory does not exist:', $target );
         }
-        
+
     } else {
-        $device = UBOS::ConfigurationManager::guessConfigurationDevice();
-        unless( $device ) {
-            fatal( 'Cannot determine UBOS staff device' );
+        if( @args ) {
+            $device = shift @args;
+            $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
+            unless( $device ) {
+                fatal( $@ );
+            }
+            
+        } else {
+            $device = UBOS::ConfigurationManager::guessConfigurationDevice();
+            unless( $device ) {
+                fatal( 'Cannot determine UBOS staff device' );
+            }
         }
-    }
-    debug( 'Configuration device:', $device );
+        debug( 'Configuration device:', $device );
 
-    my $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
-    my $target     = $targetFile->dirname;
-    my $errors     = 0;
+        my $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
+           $target     = $targetFile->dirname;
 
-    if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
-        ++$errors;
+        if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
+            ++$errors;
+        }
     }
 
     $errors += UBOS::ConfigurationManager::loadCurrentConfiguration( $target );
 
-    if( UBOS::Utils::myexec( "umount '$target'" )) {
-        ++$errors;
+    if( $device ) {
+        if( UBOS::Utils::myexec( "umount '$target'" )) {
+            ++$errors;
+        }
     }
 
     return 1;
@@ -97,11 +109,16 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
+        <<SSS => <<HHH,
     [--verbose | --logConfig <file>] [ <ubos-staff-device> ]
 SSS
     Read the desired configuration for this device from a UBOS staff device. If no
     drive block device is given, guess the device.
+HHH
+        <<SSS => <<HHH
+    [--verbose | --logConfig <file>] --target <directory>
+SSS
+    Read the desired configuration for this device from a UBOS staff directory
 HHH
     };
 }
