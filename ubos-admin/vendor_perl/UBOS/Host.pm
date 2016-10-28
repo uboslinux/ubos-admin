@@ -890,11 +890,12 @@ sub deploySiteTemplatesIfNeeded {
     unless( @templateFiles ) {
         return;
     }
-    my $cmd = 'ubos-admin deploy --template' . join( '', map { " --file '$_'" } @templateFiles );
+    my $cmd = 'ubos-admin deploy --skip-check-ready --template' . join( '', map { " --file '$_'" } @templateFiles );
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "/bin/bash", $cmd, \$out, \$err )) {
         error( "Problems with attempting to install site templates from $destDir:\n" . $cmd, "\nout: " . $out . "\nerr: " . $err );
+        UBOS::Utils::myexec( "systemctl" );
         # if error, leave templates in place
     } else {
         UBOS::Utils::deleteFile( @templateFiles );
@@ -1020,7 +1021,7 @@ END
         return undef;
     }
 
-    my @services = qw( ubos-admin ubos-httpd );
+    my @services = qw( ubos-admin ubos-httpd ubos-ready );
 
     foreach my $service ( @services ) {
         if( UBOS::Utils::myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {

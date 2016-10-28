@@ -23,11 +23,17 @@
 use strict;
 use warnings;
 
+use UBOS::ConfigurationManager;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::ResourceManager;
 
-UBOS::Logging::initialize( 'ubos-admin', 'ubos-admin-initialize', 0, '/etc/ubos/log-system.conf' );
+UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-initialize', 0, '/etc/ubos/log-system.conf' );
 
-UBOS::Host::ensurePacmanInit();
+UBOS::ConfigurationManager::initializeIfNeeded();
+
+UBOS::Host::runAfterBootCommandsIfNeeded();
+
+UBOS::Host::deploySiteTemplatesIfNeeded();
 
 1;

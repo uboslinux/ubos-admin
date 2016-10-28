@@ -1,0 +1,14 @@
+[Unit]
+Description=ubos-ready configuration
+Wants=network.target cronie.service ubos-httpd.service
+After=ubos-admin.service ubos-httpd.service ubos-mysqld.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-ready
+ExecStart=/usr/share/ubos-admin/bin/ubos-ready-initialize
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-ready
+
+[Install]
+WantedBy=multi-user.target

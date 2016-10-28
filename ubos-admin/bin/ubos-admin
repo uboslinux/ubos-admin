@@ -39,7 +39,8 @@ if( '--help' eq $command || '-h' eq $command ) {
 
 my $commandPackage = $commands->{$command};
 if( $commandPackage ) {
-    my $initOnly = 0;
+    my $skipCheckReady = 0;
+    my @remainingArgs  = ();
     foreach my $arg ( @ARGV ) {
         if( '--help' eq $arg || '-h' eq $arg ) {
             if( $commandPackage ) {
@@ -47,19 +48,21 @@ if( $commandPackage ) {
             } else {
                 synopsisHelpQuit( 1 );
             }
-        } elsif( '--init-only' eq $arg ) { # but keep it in ARGV
-            $initOnly = 1;
+        } elsif( '--skip-check-ready' eq $arg ) {
+            $skipCheckReady = 1;
+        } else {
+            push @remainingArgs, $arg;
         }
     }
 
-    unless( $initOnly ) {
+    unless( $skipCheckReady ) {
         unless( defined( UBOS::Host::checkReady())) {
             exit -1;
         }
     }
     checkOnlyOne();
 
-    my $result = UBOS::Utils::invokeMethod( $commandPackage . '::run', @ARGV );
+    my $result = UBOS::Utils::invokeMethod( $commandPackage . '::run', @remainingArgs );
 
     exit !$result;
 } else {
@@ -102,8 +105,8 @@ END
         }
     }
 
-	my $cmd = $0;
-	$cmd =~ s!.*/!!;
+    my $cmd = $0;
+    $cmd =~ s!.*/!!;
 
     foreach my $command ( sort keys %$commands ) {
         if( !$helpFor || $command eq $helpFor ) {

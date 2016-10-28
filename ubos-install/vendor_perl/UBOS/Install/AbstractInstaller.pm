@@ -66,7 +66,7 @@ sub new {
         $self->{basepackages} = [ qw( ubos-base ubos-networking snapper ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( ubos-admin sshd ) ];
+        $self->{baseservices} = [ qw( ubos-admin ubos-ready sshd ) ];
     }
     unless( $self->{basemodules} ) {
         $self->{basemodules} = [];
