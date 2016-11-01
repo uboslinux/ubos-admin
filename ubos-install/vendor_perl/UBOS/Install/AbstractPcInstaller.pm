@@ -81,19 +81,8 @@ END
     }
 
     # Boot loader
-    debug( "Installing grub" );
-    my $pacmanCmd = "pacman"
-            . " -r '$target'"
-            . " -S"
-            . " '--config=" . $pacmanConfigFile . "'"
-            . " --cachedir '$target/var/cache/pacman/pkg'"
-            . " --noconfirm"
-            . " grub";
-    if( UBOS::Utils::myexec( $pacmanCmd, undef, \$out, \$err )) {
-        error( "pacman failed", $err );
-        ++$errors;
-    }
     if( $bootLoaderDevice ) {
+        debug( "Installing grub" );
         
         if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
             error( "grub-install failed", $err );

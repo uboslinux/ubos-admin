@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( rng-tools mkinitcpio
+        $self->{devicepackages} = [ qw( rng-tools mkinitcpio grub
                 ubos-networking-client ubos-networking-gateway
                 ubos-networking-standalone smartmontools wpa_supplicant crda ) ];
     }
