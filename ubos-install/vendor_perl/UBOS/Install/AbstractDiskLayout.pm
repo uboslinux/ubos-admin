@@ -262,6 +262,8 @@ FSTAB
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
+                info( 'uuid of device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
+
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
                 $fsTab .= "UUID=$uuid $mountPoint btrfs rw,relatime";
@@ -278,6 +280,8 @@ FSTAB
                     UBOS::Utils::myexec( "blkid -s UUID -o value '" . $device . "'", undef, \$uuid );
                     $uuid =~ s!^\s+!!g;
                     $uuid =~ s!\s+$!!g;
+
+                    info( 'uuid of swap device', $device, 'is', $uuid );
 
                     $fsTab .= "UUID=$uuid none swap defaults 0 0\n";
                 }
