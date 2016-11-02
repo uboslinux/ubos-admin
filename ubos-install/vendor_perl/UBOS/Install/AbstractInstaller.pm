@@ -743,6 +743,10 @@ sub addConfigureSnapperToScript {
     foreach my $mountPoint ( @mountPoints ) {
         my $configName = $mountPoint;
         $configName =~ s!/!!g;
+        unless( $configName ) {
+            $configName = 'root';
+        }
+
         $$chrootScriptP .= "snapper -c '$configName' create-config -t ubos-default '$mountPoint'\n";
     }
     return $errors;
