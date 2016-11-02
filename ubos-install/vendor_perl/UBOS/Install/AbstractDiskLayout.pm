@@ -247,13 +247,14 @@ sub createSubvols {
         unless( -d "$target/var/log" ) {
             UBOS::Utils::mkdirDashP( "$target/var/log" );
         }
+        my $out;
         if( UBOS::Utils::myexec( "btrfs subvol create '$target/var/log'", undef, \$out, \$out )) {
             error( "Failed to create btrfs subvol for '$target/var/log':", $out );
             ++$errors;
         }
     }
             
-    return $errrors;
+    return $errors;
 }
 ##
 # Generate and save /etc/fstab
