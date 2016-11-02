@@ -680,6 +680,9 @@ sub ensureSnapperConfig {
     foreach my $target ( @targets ) {
         my $configName = $target;
         $configName =~ s!/!!g;
+        unless( $configName ) {
+            $configName = 'root';
+        }
 
         my $err;
         if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
@@ -706,6 +709,9 @@ sub preSnapshot {
     foreach my $target ( @targets ) {
         my $configName = $target;
         $configName =~ s!/!!g;
+        unless( $configName ) {
+            $configName = 'root';
+        }
 
         my $snapNumber;
         my $err;
@@ -737,6 +743,9 @@ sub postSnapshot {
 
             my $configName = $target;
             $configName =~ s!/!!g;
+            unless( $configName ) {
+                $configName = 'root';
+            }
 
             my $out;
             if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
