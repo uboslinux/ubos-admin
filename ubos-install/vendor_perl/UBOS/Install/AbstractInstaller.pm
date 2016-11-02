@@ -747,7 +747,7 @@ sub addConfigureSnapperToScript {
             $configName = 'root';
         }
 
-        $$chrootScriptP .= "snapper -c '$configName' create-config -t ubos-default '$mountPoint'\n";
+        $$chrootScriptP .= "snapper -c '$configName' --no-dbus create-config -t ubos-default '$mountPoint'\n";
     }
     return $errors;
 }
