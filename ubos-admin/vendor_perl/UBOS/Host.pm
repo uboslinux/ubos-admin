@@ -541,7 +541,7 @@ sub updateCode {
         my $kernelPackageVersion = packageVersion( $kernelPackageName );
         if( $kernelPackageVersion ) {
             my $kernelVersion;
-            UBOS::Utils::myexec( 'uname -r', undef, \$kernelVersion );
+            myexec( 'uname -r', undef, \$kernelVersion );
             $kernelVersion =~ s!^\s+!!;
             $kernelVersion =~ s!\s+$!!;
             $kernelVersion =~ s!-ARCH$!!; # somehow there's a -ARCH at the end
@@ -665,12 +665,38 @@ sub packageVersion {
 }
 
 ##
-# Create a "pre" filesystem snapshot
-# return: string to be passed into postSnapshot to perform the corresponding "post" snapshot
-sub preSnapshot{
+# Ensure that snapper is configured. Called during install only.
+sub ensureSnapperConfig {
 
     # Determine the btrfs filesystems
-    if( UBOS::Utils::myExec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
+    my $out;
+    if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
+        error( "findmnt failed:", $out );
+        return undef;
+    }
+    my $findmntJson = UBOS::Utils::readJsonFromString( $out );
+    my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
+
+    foreach my $target ( @targets ) {
+        my $configName = $target;
+        $configName =~ s!/!!g;
+
+        my $err;
+        if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
+            error( 'snapper (create-config) failed of config', $configName, $target, $err );
+        }
+    }
+    1;
+}
+
+##
+# Create a "pre" filesystem snapshot
+# return: string to be passed into postSnapshot to perform the corresponding "post" snapshot
+sub preSnapshot {
+
+    # Determine the btrfs filesystems
+    my $out;
+    if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
         error( "findmnt failed:", $out );
         return undef;
     }
@@ -683,7 +709,7 @@ sub preSnapshot{
 
         my $snapNumber;
         my $err;
-        if( UBOS::Utils::myExec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
+        if( myexec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
             error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
         } else {
             $snapNumber =~ s!^\s+!!;
@@ -705,7 +731,7 @@ sub postSnapshot {
     my $preInfo = shift;
 
     foreach my $item ( split ";", $preInfo ) {
-        if( $item =~ m!^(.+)=(\d+)$! {
+        if( $item =~ m!^(.+)=(\d+)$! ) {
             my $target     = $1;
             my $snapNumber = $2;
 
@@ -713,7 +739,7 @@ sub postSnapshot {
             $configName =~ s!/!!g;
 
             my $out;
-            if( UBOS::Utils::myExec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
+            if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
                 error( 'snapper (post) failed of config', $configName, ', number', $snapNumber, $out );
             }
         }
@@ -794,21 +820,21 @@ sub ensurePacmanInit {
 
             my $ds = sprintf( '%.2d%.2d%.2d%.2d%.4d.%.2d', $month, $day, $hour, $min, $year, $sec );
 
-            UBOS::Utils::myexec( "date $ds" );
+            myexec( "date $ds" );
         }
     }
     if( -x '/usr/bin/pacman-db-upgrade' ) {
-        UBOS::Utils::myexec( 'pacman-db-upgrade' ); # not sure when this can be removed again
+        myexec( 'pacman-db-upgrade' ); # not sure when this can be removed again
     }
     
-    UBOS::Utils::myexec( "pacman-key --init" );
+    myexec( "pacman-key --init" );
 
     # We trust the Arch people, Arch Linux ARM, Uplink Labs' EC2 packages and ourselves
     my $err;
-    UBOS::Utils::myexec( "pacman -Q archlinux-keyring    > /dev/null 2>&1 && pacman-key --populate archlinux",    undef, undef, \$err );
-    UBOS::Utils::myexec( "pacman -Q archlinuxarm-keyring > /dev/null 2>&1 && pacman-key --populate archlinuxarm", undef, undef, \$err );
-    UBOS::Utils::myexec( "pacman -Q ec2-keyring          > /dev/null 2>&1 && pacman-key --populate ec2"         , undef, undef, \$err );
-    UBOS::Utils::myexec( "pacman-key --populate ubos" );
+    myexec( "pacman -Q archlinux-keyring    > /dev/null 2>&1 && pacman-key --populate archlinux",    undef, undef, \$err );
+    myexec( "pacman -Q archlinuxarm-keyring > /dev/null 2>&1 && pacman-key --populate archlinuxarm", undef, undef, \$err );
+    myexec( "pacman -Q ec2-keyring          > /dev/null 2>&1 && pacman-key --populate ec2"         , undef, undef, \$err );
+    myexec( "pacman-key --populate ubos" );
 }
 
 ##
@@ -817,7 +843,7 @@ sub gpgHostKeyFingerprint {
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --fingerprint pacman@localhost', undef, \$out, \$err )) {
+    if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --fingerprint pacman@localhost', undef, \$out, \$err )) {
         error( 'Cannot determine host key', $out, $err );
         return '';
     }
@@ -852,11 +878,11 @@ sub ensureOsUser {
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "getent passwd $userId", undef, \$out, \$err )) {
+    if( myexec( "getent passwd $userId", undef, \$out, \$err )) {
 
         debug( 'Creating user', $userId );
 
-        if( UBOS::Utils::myexec( "sudo useradd -e '' -m -U $userId -d $homeDir", undef, undef, \$err )) {
+        if( myexec( "sudo useradd -e '' -m -U $userId -d $homeDir", undef, undef, \$err )) {
             error( 'Failed to create user', $userId, ', error:', $err );
             return 0;
         }
@@ -864,12 +890,12 @@ sub ensureOsUser {
         if( defined( $groupIds ) && @$groupIds ) {
             debug( 'Adding user to groups:', $userId, @$groupIds );
 
-            if( UBOS::Utils::myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
+            if( myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
                 error( 'Failed to add user to groups:', $userId, @$groupIds, 'error:', $err );
                 return 0;
             }
         }
-        if( UBOS::Utils::myexec( "sudo chown -R $userId $homeDir" )) {
+        if( myexec( "sudo chown -R $userId $homeDir" )) {
             error( 'Failed to chown home dir of user', $userId, $homeDir );
             return 0;
         }
@@ -917,7 +943,7 @@ sub runAfterBootCommandsIfNeeded {
                 my $cmd = $1;
                 my $out;
                 my $err;
-                if( UBOS::Utils::myexec( "/bin/bash", $cmd, \$out, \$err )) {
+                if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
                     error( "Problem when running after-boot commands. Bash command:\n" . $cmd . "\nout: " . $out . "\nerr: " . $err );
                 }
             } elsif( $line =~ m!^perleval:(.*)$! ) {
@@ -949,10 +975,10 @@ sub deploySiteTemplatesIfNeeded {
     my $cmd = 'ubos-admin deploy --skip-check-ready --template' . join( '', map { " --file '$_'" } @templateFiles );
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "/bin/bash", $cmd, \$out, \$err )) {
+    if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
         error( "Problems with attempting to install site templates from $destDir:\n" . $cmd, "\nout: " . $out . "\nerr: " . $err );
-        UBOS::Utils::myexec( "systemctl" );
         # if error, leave templates in place
+
     } else {
         UBOS::Utils::deleteFile( @templateFiles );
     }
@@ -970,7 +996,7 @@ sub nics {
     unless( defined( $_allNics )) {
         my $netctl;
         my $err; # swallow error messages
-        UBOS::Utils::myexec( "networkctl --no-pager --no-legend", undef, \$netctl, \$err );
+        myexec( "networkctl --no-pager --no-legend", undef, \$netctl, \$err );
         if( $err ) {
             debug( 'Host::nics: networkctl said:', $err );
         }
@@ -1019,7 +1045,7 @@ sub ipAddressesOnNic {
 
     my $netctl;
     my $err; # swallow error messages
-    UBOS::Utils::myexec( "networkctl --no-pager --no-legend status $nic", undef, \$netctl, \$err );
+    myexec( "networkctl --no-pager --no-legend status $nic", undef, \$netctl, \$err );
     if( $err ) {
         debug( 'Host::nics: networkctl said:', $err );
     }
@@ -1067,7 +1093,7 @@ sub checkReady {
         return $ret;
     }
     my $out;
-    UBOS::Utils::myexec( 'systemctl is-system-running', undef, \$out );
+    myexec( 'systemctl is-system-running', undef, \$out );
     if( $out =~ m!starting!i ) {
         print <<END;
 UBOS is not done initializing yet. Please wait until:
@@ -1080,7 +1106,7 @@ END
     my @services = qw( ubos-admin ubos-httpd ubos-ready );
 
     foreach my $service ( @services ) {
-        if( UBOS::Utils::myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
+        if( myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
             # if is-failed is true, attempt to restart
             if( $< != 0 ) {
                 print <<END;
@@ -1090,13 +1116,13 @@ END
                 print <<END;
 Required service $service has failed. Attempting to restart. Try invoking your command again in a little while.
 END
-                UBOS::Utils::myexec( 'systemctl restart ' . $service );
+                myexec( 'systemctl restart ' . $service );
             }
             return undef;
         }
     }
     foreach my $service ( @services ) {
-        if( UBOS::Utils::myexec( 'systemctl is-active ' . $service, undef, \$out )) {
+        if( myexec( 'systemctl is-active ' . $service, undef, \$out )) {
             if( $< != 0 ) {
                 print <<END;
 Required service $service is not active. Try invoking your command again using 'sudo'.
@@ -1105,7 +1131,7 @@ END
                 print <<END;
 Required service $service is not active. Attempting to start. Try invoking your command again in a little while.
 END
-                UBOS::Utils::myexec( 'systemctl start ' . $service );
+                myexec( 'systemctl start ' . $service );
             }
             return undef;
         }

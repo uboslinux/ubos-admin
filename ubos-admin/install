@@ -47,6 +47,8 @@ post_upgrade() {
 
     systemctl daemon-reload
 
+    perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
+
     systemctl enable ubos-ready snapper-cleanup
     systemctl start ubos-ready snapper-cleanup
 }

@@ -203,7 +203,7 @@ sub run {
         } else {
             $afterBoot .= 'undef';
         }
-        $afterBoot .= ' );' );
+        $afterBoot .= ' );';
 
         UBOS::Host::addAfterBootCommands( $afterBoot );
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
