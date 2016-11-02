@@ -314,7 +314,7 @@ sub mountSpecial {
     my $errors = 0;
 
     my $s = <<END;
-mkdir -m 0755 -p $target/var/{cache/pacman/pkg,lib/pacman,log} $target/{dev,run,etc}
+mkdir -m 0755 -p $target/var/{cache/pacman/pkg,lib/pacman} $target/{dev,run,etc}
 mkdir -m 1777 -p $target/tmp
 mkdir -m 0555 -p $target/{sys,proc}
 

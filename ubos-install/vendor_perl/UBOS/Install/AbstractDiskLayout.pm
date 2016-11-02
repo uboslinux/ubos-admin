@@ -252,6 +252,8 @@ sub createSubvols {
             error( "Failed to create btrfs subvol for '$target/var/log':", $out );
             ++$errors;
         }
+    } else {
+        UBOS::Utils::mkdirDashP( "$target/var/log" );
     }
             
     return $errors;
