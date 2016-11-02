@@ -149,7 +149,7 @@ sub addConfigureNetworkingToScript {
 
     debug( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= 'ubos-admin setnetconfig --skip-check-ready --init-only cloud';
+    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only cloud\n";
 
     return 0;
 }
