@@ -55,6 +55,7 @@ sub run {
     my $noreboot         = 0;
     my $nosync           = 0;
     my $noPackageUpgrade = 0;
+    my $noSnap           = 0;
     my $showPackages     = 0;
     my $stage1Only       = 0;
 
@@ -66,6 +67,7 @@ sub run {
             'reboot'           => \$reboot,
             'noreboot'         => \$noreboot,
             'nosynchronize'    => \$nosync,
+            'nosnapshot'       => \$noSnap,
             'showpackages'     => \$showPackages,
             'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
             'stage1Only'       => \$stage1Only ); # This option is not public
@@ -102,6 +104,11 @@ sub run {
     UBOS::Host::preventInterruptions();
     my $ret = 1;
 
+    my $snapNumber = undef;
+    unless( $noSnap ) {
+        $snapNumber = UBOS::Host::preSnapshot()
+    }
+
     UBOS::UpdateBackup::checkReadyOrQuit();
 
     if( keys %$oldSites ) {
@@ -134,6 +141,9 @@ sub run {
     UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
 
     my $stage2Cmd = 'ubos-admin update-stage2';
+    if( defined( $snapNumber )) {
+        $stage2Cmd .= ' --snapnumber ' . $snapNumber;
+    }
     for( my $i=0 ; $i<$verbose ; ++$i ) {
         $stage2Cmd .= ' -v';
     }
@@ -187,7 +197,15 @@ sub run {
     }
 
     if( $doReboot ) {
-        UBOS::Host::addAfterBootCommands( 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( 0 );' );
+        my $afterBoot = 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( 0, ';
+        if( defined( $snapNumber )) {
+            $afterBoot .= $snapNumber;
+        } else {
+            $afterBoot .= 'undef';
+        }
+        $afterBoot .= ' );' );
+
+        UBOS::Host::addAfterBootCommands( $afterBoot );
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
     } else {
@@ -205,7 +223,7 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages]
+    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages] [--nosnapshot]
 SSS
     Update all code installed on this device. This will perform
     package updates, configuration updates, database migrations
@@ -214,9 +232,10 @@ SSS
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
     --showpackages will print the packages that were updated.
+    --nosnapshot will skip creating a filesystem snapshot before and after the update
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages] --nosynchronize
+    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages]  [--nosnapshot] --nosynchronize
 SSS
     Update all code installed on this device, but do not update the list
     of available packages first. This will effectively only update code that
@@ -226,9 +245,10 @@ SSS
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
     --showpackages will print the packages that were updated.
+    --nosnapshot will skip creating a filesystem snapshot before and after the update
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--reboot | --noreboot] --pkgfiles <package-file>...
+    [--verbose | --logConfig <file>] [--reboot | --noreboot]  [--nosnapshot] --pkgfiles <package-file>...
 SSS
     Update this device, but only install the provided package files
     as if they were the only code that can be upgraded. Any number of package
@@ -239,6 +259,7 @@ SSS
     e.g. because the kernel was updated. If --reboot is specified, always
     reboot. If --noreboot is specified, do not reboot.
     --showpackages will print the packages that were updated.
+    --nosnapshot will skip creating a filesystem snapshot before and after the update
 HHH
     };
 }

@@ -49,12 +49,14 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $stage1exit    = 0;
+    my $snapNumber    = undef;
     
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
-            'stage1exit=s' => \$stage1exit );
+            'stage1exit=s' => \$stage1exit,
+            'snapNumber=s' => \$snapNumber );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
@@ -63,7 +65,7 @@ sub run {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
-    my $ret = finishUpdate( 1 );
+    my $ret = finishUpdate( 1, $snapNumber );
 
     unless( $ret && !$stage1exit ) {
         error( "Update failed." );
@@ -77,8 +79,10 @@ sub run {
 # ubos-admin-init after Update has invoked a reboot, and the system
 # has rebooted.
 # $restartServices: if true, restart Apache et all. If false, don't because that might deadlock systemd
+# $snapNumber: if defined, create a "post" snapshot that corresponds to the "pre" snapshot with this number
 sub finishUpdate {
     my $restartServices = shift;
+    my $snapNumber      = shift;
 
     my $ret = 1;
 
@@ -125,8 +129,12 @@ sub finishUpdate {
     $backup->delete();
 
     debug( 'Purging cache' );
-    
+
     UBOS::Host::purgeCache( 1 );
+
+    if( defined( $snapNumber )) {
+        UBOS::Host::postSnapshot( $snapNumber );
+    }
 
     return $ret;
 }

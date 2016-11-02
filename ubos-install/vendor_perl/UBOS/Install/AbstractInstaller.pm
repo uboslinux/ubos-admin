@@ -66,7 +66,7 @@ sub new {
         $self->{basepackages} = [ qw( ubos-base ubos-networking snapper ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( ubos-admin ubos-ready sshd ) ];
+        $self->{baseservices} = [ qw( ubos-admin ubos-ready sshd snapper-cleanup ) ];
     }
     unless( $self->{basemodules} ) {
         $self->{basemodules} = [];
@@ -202,6 +202,7 @@ sub install {
     $errors += $diskLayout->formatDisks();
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
+    $errors += $diskLayout->createSubvolumes( $self->{target} );
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
     unless( $errors ) {
         $errors += $self->savePacmanConfigProduction( $self->{packagedbs} );
@@ -213,7 +214,6 @@ sub install {
         $errors += $self->saveOther();
         $errors += $self->configureOs();
         $errors += $self->configureNetworkd();
-        $errors += $self->configureSnapper( $diskLayout );
         $errors += $self->doUpstreamFixes();
 
         $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
@@ -234,6 +234,7 @@ SCRIPT
         $errors += $self->addGenerateLocaleToScript( \$chrootScript );
         $errors += $self->addEnableServicesToScript( \$chrootScript );
         $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
+        $errors += $self->addConfigureSnapperToScript( \$chrootScript, $diskLayout );
 
         debug( "chroot script:\n" . $chrootScript );
         my $out;
@@ -642,78 +643,6 @@ sub configureNetworkd {
 }
 
 ##
-# Configure snapper
-# $diskLayout: the disk layout to use
-# return: number of errors
-sub configureSnapper {
-    my $self       = shift;
-    my $diskLayout = shift;
-
-    my $target = $self->{target};
-
-    my @mountPoints = $diskLayout->snapperBtrfsMountPoints();
-    foreach my $mountPoint ( @mountPoints ) {
-        my $name = $mountPoint;
-        if( $name eq '/' ) {
-            $name = 'root';
-        } else {
-            $name =~ s!/!_!g; # always starts with underscore, so it won't collide with root
-        }
-
-        UBOS::Utils::saveFile( "$target/etc/snapper/configs/$name", <<END, 0640 );
-# Snapper configuration for UBOS. Feel free to modify.
-#
-# subvolume to snapshot
-SUBVOLUME="$mountPoint"
-
-# filesystem type
-FSTYPE="btrfs"
-
-# users and groups allowed to work with config
-ALLOW_USERS=""
-ALLOW_GROUPS=""
-
-# sync users and groups from ALLOW_USERS and ALLOW_GROUPS to .snapshots
-# directory
-SYNC_ACL="no"
-
-# start comparing pre- and post-snapshot in background after creating
-# post-snapshot
-BACKGROUND_COMPARISON="no"
-
-# run daily number cleanup
-NUMBER_CLEANUP="yes"
-
-# limit for number cleanup; unit is seconds
-NUMBER_MIN_AGE="1800"
-NUMBER_LIMIT="50"
-NUMBER_LIMIT_IMPORTANT="10"
-
-# create hourly snapshots
-TIMELINE_CREATE="yes"
-
-# cleanup hourly snapshots after some time
-TIMELINE_CLEANUP="yes"
-
-# limits for timeline cleanup; unit is seconds
-TIMELINE_MIN_AGE="1800"
-TIMELINE_LIMIT_HOURLY="10"
-TIMELINE_LIMIT_DAILY="10"
-TIMELINE_LIMIT_WEEKLY="0"
-TIMELINE_LIMIT_MONTHLY="10"
-TIMELINE_LIMIT_YEARLY="10"
-
-# cleanup empty pre-post-pairs
-EMPTY_PRE_POST_CLEANUP="yes"
-
-# limits for empty pre-post-pair cleanup
-EMPTY_PRE_POST_MIN_AGE="1800"
-END
-    }
-    return 0;
-}
-
-##
 # Do whatever necessary to fix upstream bugs
 sub doUpstreamFixes {
     my $self = shift;
@@ -790,6 +719,27 @@ sub addConfigureNetworkingToScript {
     fatal( 'Method addConfigureNetworkingToScript() must be overridden in', ref( $self ));
 
     return 0;
+}
+
+##
+# Add commands to the provided script, to be run in a chroot, that configures
+# snapper
+# $chrootScriptP: pointer to script
+# $diskLayout: the disk layout to use
+# return: number of errors
+sub addConfigureSnapperToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+    my $diskLayout    = shift;
+
+    my $errors = 0;
+    my @mountPoints = $diskLayout->snapperBtrfsMountPoints();
+    foreach my $mountPoint ( @mountPoints ) {
+        my $configName = $mountPoint;
+        $configName =~ s!/!!g;
+        $$chrootScriptP .= "snapper -c '$configName' create-config -t ubos-default '$mountPoint'\n";
+    }
+    return $errors;
 }
 
 ##

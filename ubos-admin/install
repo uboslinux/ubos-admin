@@ -46,6 +46,9 @@ post_upgrade() {
     ensureChattr
 
     systemctl daemon-reload
+
+    systemctl enable ubos-ready snapper-cleanup
+    systemctl start ubos-ready snapper-cleanup
 }
 
 pre_upgrade() {

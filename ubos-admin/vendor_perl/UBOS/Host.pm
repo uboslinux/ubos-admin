@@ -665,6 +665,62 @@ sub packageVersion {
 }
 
 ##
+# Create a "pre" filesystem snapshot
+# return: string to be passed into postSnapshot to perform the corresponding "post" snapshot
+sub preSnapshot{
+
+    # Determine the btrfs filesystems
+    if( UBOS::Utils::myExec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
+        error( "findmnt failed:", $out );
+        return undef;
+    }
+    my $findmntJson = UBOS::Utils::readJsonFromString( $out );
+    my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
+    my $ret;
+    foreach my $target ( @targets ) {
+        my $configName = $target;
+        $configName =~ s!/!!g;
+
+        my $snapNumber;
+        my $err;
+        if( UBOS::Utils::myExec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
+            error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
+        } else {
+            $snapNumber =~ s!^\s+!!;
+            $snapNumber =~ s!\s+$!!;
+            $ret .= "$target=$snapNumber;"
+        }
+    }
+    if( $ret ) {
+        return $ret;
+    } else {
+        return undef;
+    }
+}
+
+##
+# Create a "post" filesystem snapshot
+# $preInfo: the return value of preSnapshot from the corresponding "pre" snapshot
+sub postSnapshot {
+    my $preInfo = shift;
+
+    foreach my $item ( split ";", $preInfo ) {
+        if( $item =~ m!^(.+)=(\d+)$! {
+            my $target     = $1;
+            my $snapNumber = $2;
+
+            my $configName = $target;
+            $configName =~ s!/!!g;
+
+            my $out;
+            if( UBOS::Utils::myExec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
+                error( 'snapper (post) failed of config', $configName, ', number', $snapNumber, $out );
+            }
+        }
+    }
+}
+
+##
 # Prevent interruptions of this script
 sub preventInterruptions {
     $SIG{'HUP'}  = 'IGNORE';

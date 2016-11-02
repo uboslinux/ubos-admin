@@ -84,6 +84,7 @@ sub formatDisks {
                 error( "$cmd error:", $err );
                 ++$errors;
             }
+
         } elsif( 'swap' eq $fs ) {
             foreach my $dev ( @{$data->{devices}} ) {
                 my $out;
@@ -94,7 +95,7 @@ sub formatDisks {
                     ++$errors;
                 }
             }
-            
+
         } else {
             foreach my $device ( @{$data->{devices}} ) {
                 my $cmd = "mkfs.$fs";
@@ -127,16 +128,16 @@ sub mountDisks {
     my $errors = 0;
     # shortest first
     foreach my $mountPoint ( sort { length( $a ) <=> length( $b ) } keys %{$self->{devicetable}} ) {
-        my $entry  = $self->{devicetable}->{$mountPoint};
-        my $fs     = $entry->{fs};
-        my $device = $entry->{devices}->[0];
+        my $entry   = $self->{devicetable}->{$mountPoint};
+        my $fs      = $entry->{fs};
+        my $devices = @{$entry->{devices}};
 
         unless( $fs ) {
             error( 'No fs given for', $mountPoint );
             ++$errors;
             next;
         }
-        unless( $device ) {
+        unless( @devices ) {
             error( 'No device known for', $mountPoint );
             ++$errors;
             next;
@@ -146,11 +147,14 @@ sub mountDisks {
             UBOS::Utils::mkdir( "$target$mountPoint" );
         }
         if( $fs eq 'swap' ) {
-            if( UBOS::Utils::myexec( "swapon '$device'" )) {
-                ++$errors;
+            foreach my $device ( @devices} ) {
+                if( UBOS::Utils::myexec( "swapon '$device'" )) {
+                    ++$errors;
+                }
             }
         } else {
-            if( UBOS::Utils::myexec( "mount -t $fs '$device' '$target$mountPoint'" )) {
+            my $firstDevice = $devices[0];
+            if( UBOS::Utils::myexec( "mount -t $fs '$firstDevice' '$target$mountPoint'" )) {
                 ++$errors;
             }
         }
@@ -228,10 +232,34 @@ END
 }
 
 ##
+# Create btrfs subvolumes if needed
+# $target: the path where the bootimage has been mounted
+# return: number of errors
+sub createSubvols {
+    my $self   = shift;
+    my $target = shift;
+
+    my $errors = 0;
+
+    my $deviceTable = $self->{devicetable}->{'/'};
+    if( 'btrfs' eq $deviceTable->{fs} ) {
+        # create separate subvol for /var/log, so snapper does not roll back the logs
+        unless( -d "$target/var/log" ) {
+            UBOS::Utils::mkdirDashP( "$target/var/log" );
+        }
+        if( UBOS::Utils::myexec( "btrfs subvol create '$target/var/log'", undef, \$out, \$out )) {
+            error( "Failed to create btrfs subvol for '$target/var/log':", $out );
+            ++$errors;
+        }
+    }
+            
+    return $errrors;
+}
+##
 # Generate and save /etc/fstab
 # $@mountPathSequence: the sequence of paths to mount
 # %$partitions: map of paths to devices
-# $targetDir: the path where the bootimage has been mounted
+# $target: the path where the bootimage has been mounted
 # return: number of errors
 sub saveFstab {
     my $self   = shift;
