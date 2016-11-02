@@ -147,7 +147,7 @@ sub mountDisks {
             UBOS::Utils::mkdir( "$target$mountPoint" );
         }
         if( $fs eq 'swap' ) {
-            foreach my $device ( @devices} ) {
+            foreach my $device ( @devices ) {
                 if( UBOS::Utils::myexec( "swapon '$device'" )) {
                     ++$errors;
                 }
