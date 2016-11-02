@@ -199,10 +199,16 @@ sub install {
     my $errors = 0;
 
     $errors += $diskLayout->createDisks();
+    if( $errors ) {
+        return $errors;
+    }
     $errors += $diskLayout->formatDisks();
+    if( $errors ) {
+        return $errors;
+    }
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
-    $errors += $diskLayout->createSubvolumes( $self->{target} );
+    $errors += $diskLayout->createSubvols( $self->{target} );
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
     unless( $errors ) {
         $errors += $self->savePacmanConfigProduction( $self->{packagedbs} );

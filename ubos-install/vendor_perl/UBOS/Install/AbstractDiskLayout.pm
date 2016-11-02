@@ -244,8 +244,8 @@ sub createSubvols {
     my $deviceTable = $self->{devicetable}->{'/'};
     if( 'btrfs' eq $deviceTable->{fs} ) {
         # create separate subvol for /var/log, so snapper does not roll back the logs
-        unless( -d "$target/var/log" ) {
-            UBOS::Utils::mkdirDashP( "$target/var/log" );
+        unless( -d "$target/var" ) {
+            UBOS::Utils::mkdirDashP( "$target/var" );
         }
         my $out;
         if( UBOS::Utils::myexec( "btrfs subvol create '$target/var/log'", undef, \$out, \$out )) {
