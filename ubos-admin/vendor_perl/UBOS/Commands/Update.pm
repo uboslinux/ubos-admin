@@ -183,7 +183,7 @@ sub run {
     } elsif( $rebootHeuristics ) {
         if( $noreboot ) {
             info( 'Reboot recommended, but --noreboot was specified. Not rebooting.' );
-            debug( 'Handing over to update-stage2' );
+            debug( 'Handing over to update-stage2:', $stage2Cmd );
             $doReboot = 0;
 
         } else {
@@ -192,7 +192,7 @@ sub run {
         }
 
     } else {
-        debug( 'Handing over to update-stage2' );
+        debug( 'Handing over to update-stage2:', $stage2Cmd );
         $doReboot = 0;
     }
 

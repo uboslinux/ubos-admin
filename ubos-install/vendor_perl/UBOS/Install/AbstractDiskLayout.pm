@@ -130,7 +130,7 @@ sub mountDisks {
     foreach my $mountPoint ( sort { length( $a ) <=> length( $b ) } keys %{$self->{devicetable}} ) {
         my $entry   = $self->{devicetable}->{$mountPoint};
         my $fs      = $entry->{fs};
-        my $devices = @{$entry->{devices}};
+        my @devices = @{$entry->{devices}};
 
         unless( $fs ) {
             error( 'No fs given for', $mountPoint );
