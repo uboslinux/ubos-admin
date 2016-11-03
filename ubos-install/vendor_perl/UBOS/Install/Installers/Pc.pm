@@ -58,7 +58,7 @@ sub new {
                 ubos-networking-standalone smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
+        $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];
     }
 
     $self->SUPER::new( @args );

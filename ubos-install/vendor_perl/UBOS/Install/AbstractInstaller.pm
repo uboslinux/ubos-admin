@@ -66,7 +66,7 @@ sub new {
         $self->{basepackages} = [ qw( ubos-base ubos-networking ) ];
     }
     unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( ubos-admin ubos-ready sshd snapper-cleanup ) ];
+        $self->{baseservices} = [ qw( ubos-admin.service ubos-ready.service sshd.service snapper-timeline.timer snapper-cleanup.timer ) ];
     }
     unless( $self->{basemodules} ) {
         $self->{basemodules} = [];

@@ -56,7 +56,7 @@ sub new {
         $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio grub ec2-keyring ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged systemd-timesyncd ) ];
+        $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];
     }
     unless( $self->{additionalkernelparameters} ) {
         $self->{additionalkernelparameters} = [

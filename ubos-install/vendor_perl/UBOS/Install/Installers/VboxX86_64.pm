@@ -57,7 +57,7 @@ sub new {
         $self->{devicepackages} = [ qw( ubos-networking-client mkinitcpio grub virtualbox-guest ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged vboxservice systemd-timesyncd ) ];
+        $self->{deviceservices} = [ qw( haveged.service vboxservice.service systemd-timesyncd.service ) ];
     }
     $self->SUPER::new( @args );
 
