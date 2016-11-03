@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.37
+pkgver=0.38
 pkgrel=1
 pkgdesc="UBOS Network management tools"
 arch=('any')

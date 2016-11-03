@@ -43,18 +43,20 @@ sub deployed {
     my $hostname = shift;
     my @nics     = @_;
 
-    my @ips = ();
-    map { push @ips, UBOS::Host::ipAddressesOnNic( $_ ) } @nics;
-    my @ipsOnLan = grep { UBOS::Networking::NetConfigUtils::isOnLan( $_ ) } @ips;
+    unless( '*' eq $hostname ) {
+        my @ips = ();
+        map { push @ips, UBOS::Host::ipAddressesOnNic( $_ ) } @nics;
+        my @ipsOnLan = grep { UBOS::Networking::NetConfigUtils::isOnLan( $_ ) } @ips;
 
-    if( @ipsOnLan ) {
-        my $ip = $ipsOnLan[0]; # take the first one
+        if( @ipsOnLan ) {
+            my $ip = $ipsOnLan[0]; # take the first one
 
-        my( $before, $after ) = _parseEtcHosts();
+            my( $before, $after ) = _parseEtcHosts();
 
-        $after .= "$ip $hostname # $siteId\n";
+            $after .= "$ip $hostname # $siteId\n";
 
-        _writeEtcHosts( $before, $after );
+            _writeEtcHosts( $before, $after );
+        }
     }
 
     return 1;
@@ -71,16 +73,18 @@ sub undeployed {
     my $hostname = shift;
     my @nics     = @_;
 
-    my( $before, $after ) = _parseEtcHosts();
+    unless( '*' eq $hostname ) {
+        my( $before, $after ) = _parseEtcHosts();
 
-    my $newAfter;
-    foreach my $line ( split "\n", $after ) {
-        if( $line !~ m!#\s*$siteId\s*$! ) {
-            $newAfter .= $line;
-            $newAfter .= "\n";
+        my $newAfter;
+        foreach my $line ( split "\n", $after ) {
+            if( $line !~ m!#\s*$siteId\s*$! ) {
+                $newAfter .= $line;
+                $newAfter .= "\n";
+            }
         }
+        _writeEtcHosts( $before, $newAfter );
     }
-    _writeEtcHosts( $before, $newAfter );
 
     return 1;
 }
