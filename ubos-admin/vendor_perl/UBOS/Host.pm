@@ -665,7 +665,7 @@ sub packageVersion {
 }
 
 ##
-# Ensure that snapper is configured. Called during install only.
+# Ensure that snapper is configured. Called during package install only.
 sub ensureSnapperConfig {
 
     # Determine the btrfs filesystems
@@ -684,9 +684,11 @@ sub ensureSnapperConfig {
             $configName = 'root';
         }
 
-        my $err;
-        if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
-            error( 'snapper (create-config) failed of config', $configName, $target, $err );
+        unless( -e "/etc/snapper/configs/$configName" ) {
+            my $err;
+            if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
+                error( 'snapper (create-config) failed of config', $configName, $target, $err );
+            }
         }
     }
     1;
@@ -713,14 +715,16 @@ sub preSnapshot {
             $configName = 'root';
         }
 
-        my $snapNumber;
-        my $err;
-        if( myexec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
-            error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
-        } else {
-            $snapNumber =~ s!^\s+!!;
-            $snapNumber =~ s!\s+$!!;
-            $ret .= "$target=$snapNumber;"
+        if( -e "$target/etc/snapper/configs/$configName" ) {
+            my $snapNumber;
+            my $err;
+            if( myexec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
+                error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
+            } else {
+                $snapNumber =~ s!^\s+!!;
+                $snapNumber =~ s!\s+$!!;
+                $ret .= "$target=$snapNumber;"
+            }
         }
     }
     if( $ret ) {
@@ -747,9 +751,11 @@ sub postSnapshot {
                 $configName = 'root';
             }
 
-            my $out;
-            if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
-                error( 'snapper (post) failed of config', $configName, ', number', $snapNumber, $out );
+            if( -e "$target/etc/snapper/configs/$configName" ) {
+                my $out;
+                if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
+                    error( 'snapper (post) failed of config', $configName, ', number', $snapNumber, $out );
+                }
             }
         }
     }

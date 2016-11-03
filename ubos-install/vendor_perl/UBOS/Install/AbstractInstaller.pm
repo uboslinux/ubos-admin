@@ -738,6 +738,10 @@ sub addConfigureSnapperToScript {
     my $chrootScriptP = shift;
     my $diskLayout    = shift;
 
+    debug( "Executing addConfigureSnapperToScript" );
+
+    my $target = $self->{target};
+
     my $errors = 0;
     my @mountPoints = $diskLayout->snapperBtrfsMountPoints();
     foreach my $mountPoint ( @mountPoints ) {
@@ -746,8 +750,9 @@ sub addConfigureSnapperToScript {
         unless( $configName ) {
             $configName = 'root';
         }
-
-        $$chrootScriptP .= "snapper -c '$configName' --no-dbus create-config -t ubos-default '$mountPoint'\n";
+        unless( -e "$target/etc/snapper/configs/$configName" ) {
+            $$chrootScriptP .= "snapper -c '$configName' --no-dbus create-config -t ubos-default '$mountPoint'\n";
+        }
     }
     return $errors;
 }
@@ -757,6 +762,8 @@ sub addConfigureSnapperToScript {
 sub cleanup {
     my $self = shift;
     
+    debug( "Executing cleanup" );
+
     my $target = $self->{target};
     my $ret    = 0;
 
