@@ -83,6 +83,32 @@ END
     # Boot loader
     if( $bootLoaderDevice ) {
         debug( "Installing grub" );
+
+# HACKING SOME DEBUG CODE IN
+my $tenLinux    = UBOS::Utils::slurpFile( "$target/etc/grub.d/10_linux" );
+my $splitIndex  = index( $tenLinux, '# btrfs may reside on multiple devices' );
+my $newTenLinux = substr( $tenLinux, 0, $splitIndex );
+$newTextLinux .= <<'INSERT';
+
+echo '# *** Some debug code'
+echo '# *** GRUB_DEVICE            ' ${GRUB_DEVICE}
+echo '# *** GRUB_DEVICE_UUID       ' ${GRUB_DEVICE_UUID}
+echo '# *** GRUB_DISABLE_LINUX_UUID' ${GRUB_DISABLE_LINUX_UUID}
+if test -e "/dev/disk/by-uuid/${GRUB_DEVICE_UUID}"; then
+    echo '# *** by-uuid exists'
+fi
+if test -e "${GRUB_DEVICE}"; then
+    echo '# *** grub-device exists'
+fi
+if uses_abstraction "${GRUB_DEVICE}" lvm; then
+    echo '# *** uses_abstraction'
+fi
+
+INSERT
+
+$newTenLinux .= substr( $tenLinux, $splitIndex );
+UBOS::Utils::saveFile( "$target/etc/grub.d/10_linux", $newTenLinux );
+# END HACKING
         
         if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
             error( "grub-install failed", $err );
