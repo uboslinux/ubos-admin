@@ -191,24 +191,23 @@ sub insertSlurpedFiles {
 # $errContentP: optional reference to variable into which stderr output will be written.
 #               if this has the same non-null value as $outContentP, both streams will be
 #               redirected together
-# $logInstead: log this command instead of $cmd (because $cmd may contain a secret)
+# $tee: if true and outContentP and errContentP are the same, print to stdout as well as the variable
 sub myexec {
     my $cmd         = shift;
     my $inContent   = shift;
     my $outContentP = shift;
     my $errContentP = shift;
-    my $logInstead  = shift;
+    my $tee         = shift;
 
     my $inFile;
     my $outFile;
     my $errFile;
 
-    if( $logInstead ) {
-        debug( 'Exec:', $logInstead );
-    } else {
-        debug( 'Exec:', $cmd );
-    }
+    debug( 'Exec:', $cmd );
 
+    if( $tee && ( !defined( $outContentP ) || $outContentP != $errContentP )) {
+        $tee = 0;
+    }
     if( $inContent ) {
         $inFile = File::Temp->new();
         print $inFile $inContent;
@@ -216,27 +215,33 @@ sub myexec {
 
         $cmd .= " <" . $inFile->filename;
     }
-    if( defined( $outContentP )) {
+    if( $tee ) {
         $outFile = File::Temp->new();
-        $cmd .= " >" . $outFile->filename;
-    }
-    if( defined( $errContentP )) {
-        if( defined( $outContentP ) && $outContentP == $errContentP ) {
-            $cmd .= " 2>&1";
-            $errContentP = undef;
-        } else {
-            $errFile = File::Temp->new();
-            $cmd .= " 2>" . $errFile->filename;
+        $cmd .= " |& tee " . $outFile->filename;
+
+    } else {
+        if( defined( $outContentP )) {
+            $outFile = File::Temp->new();
+            $cmd .= " >" . $outFile->filename;
+        }
+        if( defined( $errContentP )) {
+            if( defined( $outContentP ) && $outContentP == $errContentP ) {
+                $cmd .= " 2>&1";
+                $errContentP = undef;
+            } else {
+                $errFile = File::Temp->new();
+                $cmd .= " 2>" . $errFile->filename;
+            }
         }
     }
 
     system( $cmd );
     my $ret = $?;
 
-    if( defined( $outContentP )) {
+    if( defined( $outContentP ) && defined( $outFile )) {
         ${$outContentP} = slurpFile( $outFile->filename );
     }
-    if( defined( $errContentP )) {
+    if( defined( $errContentP ) && defined( $errFile )) {
         ${$errContentP} = slurpFile( $errFile->filename );
     }
 
