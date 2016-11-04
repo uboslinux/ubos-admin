@@ -753,7 +753,7 @@ sub postSnapshot {
 
             if( -e "$target/etc/snapper/configs/$configName" ) {
                 my $out;
-                if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, $out )) {
+                if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, \$out )) {
                     error( 'snapper (post) failed of config', $configName, ', number', $snapNumber, $out );
                 }
             }
