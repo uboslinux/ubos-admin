@@ -293,7 +293,7 @@ FSTAB
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
-                info( 'uuid of device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
+                info( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
@@ -324,6 +324,8 @@ FSTAB
                 UBOS::Utils::myexec( "blkid -s UUID -o value '$device'", undef, \$uuid );
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
+
+                info( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
