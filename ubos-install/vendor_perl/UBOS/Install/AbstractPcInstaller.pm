@@ -129,7 +129,7 @@ if uses_abstraction "${GRUB_DEVICE}" lvm; then
     echo '# *** uses_abstraction'
 fi
 
-
+ls -al /dev/disk/by-uuid | while read line; do echo "## /dev/disk/by-uuid $line"; done
 
 # btrfs may reside on multiple devices. We cannot pass them as value of root= parameter
 # and mounting btrfs requires user space scanning, so force UUID in this case.
