@@ -144,6 +144,8 @@ sub createLoopDevices {
     $out =~ m!/dev/(loop\d+)\s+!; # matches once for each partition, but that's okay
     my $partitionLoopDeviceRoot = "/dev/mapper/$1";
 
+    # in sequence of index
+    my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
     foreach my $mountPath ( @mountPathIndexSequence ) {
         my $data = $self->{devicetable}->{$mountPath};
         
