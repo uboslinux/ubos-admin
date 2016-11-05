@@ -82,8 +82,6 @@ END
 
     # Boot loader
     if( $bootLoaderDevice ) {
-        debug( "Installing grub *** HIT KEY" );
-getc();
 
 # HACKING SOME DEBUG CODE IN
 my $newTenLinux    = <<'INSERT';
@@ -379,14 +377,11 @@ INSERT
 
 UBOS::Utils::saveFile( "$target/etc/grub.d/10_linux", $newTenLinux, 0755, 'root', 'root' );
 # END HACKING
-        
+
         if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
             error( "grub-install failed", $err );
             ++$errors;
         }
-debug( "grub-mkconfig -- HIT KEY" );
-
-getc();
 
         my $chrootScript = <<'END';
 set -e

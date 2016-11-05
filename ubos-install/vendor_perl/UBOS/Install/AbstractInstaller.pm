@@ -202,7 +202,20 @@ sub install {
     if( $errors ) {
         return $errors;
     }
+    $errors += $diskLayout->createLoopDevices();
+    if( $errors ) {
+        return $errors;
+    }
     $errors += $diskLayout->formatDisks();
+    if( $errors ) {
+        return $errors;
+    }
+    # We redo the loop devices because of https://github.com/uboslinux/ubos-admin/issues/224
+    $errors += $diskLayout->deleteLoopDevices();
+    if( $errors ) {
+        return $errors;
+    }
+    $errors += $diskLayout->createLoopDevices();
     if( $errors ) {
         return $errors;
     }
@@ -254,6 +267,8 @@ SCRIPT
 
     $errors += $self->umountSpecial();
     $errors += $diskLayout->umountDisks( $self->{target} );
+
+    $errors += $diskLayout->deleteLoopDevices();
 
     unlink( $pacmanConfigInstall->filename );
 

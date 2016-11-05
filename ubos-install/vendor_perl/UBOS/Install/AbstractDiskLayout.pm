@@ -117,6 +117,24 @@ sub formatDisks {
 }
 
 ##
+# Create any needed loop devices. By default, this does nothing.
+# return: number of errors
+sub createLoopDevices {
+    my $self = shift;
+
+    return 0;
+}
+
+##
+# Delete any created loop devices. By default, this does nothing.
+# return: number of errors
+sub deleteLoopDevices {
+    my $self = shift;
+
+    return 0;
+}
+
+##
 # Mount this disk layout at the specified target directory
 # $target: the target directory
 sub mountDisks {

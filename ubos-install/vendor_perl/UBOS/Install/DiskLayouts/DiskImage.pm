@@ -121,13 +121,24 @@ END
 
     # Reread partition table
     UBOS::Utils::myexec( "partprobe '" . $self->{image} . "'" ); 
-        
-    # Create loopback devices and figure out what they are
+
+    return $errors;
+}
+
+##
+# Create any needed loop devices.
+# return: number of errors
+sub createLoopDevices {
+    my $self = shift;
+
     debug( "Creating loop devices" );
 
+    my $errors = 0;
+
     # -s: wait until created
-    if( UBOS::Utils::myexec( "kpartx -a -s -v '" . $self->{image} . "'", undef, \$out, \$err )) {
-        error( "kpartx error:", $err );
+    my $out;
+    if( UBOS::Utils::myexec( "kpartx -a -s -v '" . $self->{image} . "'", undef, \$out, \$out )) {
+        error( "kpartx -a error:", $out );
         ++$errors;
     }
     $out =~ m!/dev/(loop\d+)\s+!; # matches once for each partition, but that's okay
@@ -138,23 +149,23 @@ END
         
         $data->{devices} = [ $partitionLoopDeviceRoot . 'p' . $data->{index} ]; # augment $self->{devicetable}
     }
+
     return $errors;
 }
 
 ##
-# Unmount the previous mounts. Override because we need to take care of the
-# loopback devices.
-# $target: the target directory
-sub umountDisks {
-    my $self   = shift;
-    my $target = shift;
+# Delete any created loop devices.
+# return: number of errors
+sub deleteLoopDevices {
+    my $self = shift;
 
-    my $errors = $self->SUPER::umountDisks( $target );
+    debug( "Deleting loop devices" );
+
+    my $errors = 0;
 
     my $out;
-    my $err;
-    if( UBOS::Utils::myexec( "kpartx -d '" . $self->{image} . "'", undef, \$out, \$err )) {
-        error( "kpartx error:", $out, $err );
+    if( UBOS::Utils::myexec( "kpartx -d -v '" . $self->{image} . "'", undef, \$out, \$out )) {
+        error( "kpartx -d error:", $out );
         ++$errors;
     }
     
