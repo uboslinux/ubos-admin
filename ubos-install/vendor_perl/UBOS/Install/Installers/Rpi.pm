@@ -28,7 +28,6 @@ use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
 use UBOS::Install::DiskLayouts::DiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;

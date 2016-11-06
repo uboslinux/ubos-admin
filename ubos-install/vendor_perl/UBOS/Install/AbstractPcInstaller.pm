@@ -408,10 +408,6 @@ END
             ++$errors;
         }
     }
-
-debug( "grub-mkconfig done -- HIT KEY" );
-
-getc();
     return $errors;
 }
 

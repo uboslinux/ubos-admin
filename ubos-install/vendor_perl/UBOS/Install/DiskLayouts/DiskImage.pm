@@ -25,7 +25,7 @@ use warnings;
 package UBOS::Install::DiskLayouts::DiskImage;
 
 use base qw( UBOS::Install::AbstractDiskLayout );
-use fields qw( image );
+use fields qw( image loopDevice );
 
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Logging;
@@ -119,9 +119,6 @@ END
         ++$errors;
     }
 
-    # Reread partition table
-    UBOS::Utils::myexec( "partprobe '" . $self->{image} . "'" ); 
-
     return $errors;
 }
 
@@ -135,14 +132,14 @@ sub createLoopDevices {
 
     my $errors = 0;
 
-    # -s: wait until created
     my $out;
-    if( UBOS::Utils::myexec( "kpartx -a -s -v '" . $self->{image} . "'", undef, \$out, \$out )) {
-        error( "kpartx -a error:", $out );
+    if( UBOS::Utils::myexec( "losetup --show --find --partscan '" . $self->{image} . "'", undef, \$out, \$out )) {
+        error( "losetup -a error:", $out );
         ++$errors;
     }
     $out =~ m!/dev/(loop\d+)\s+!; # matches once for each partition, but that's okay
-    my $partitionLoopDeviceRoot = "/dev/mapper/$1";
+    $self->{loopDevice} = "/dev/loop$1";
+    my $partitionLoopDeviceRoot = $self->{loopDevice};
 
     # in sequence of index
     my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
@@ -166,8 +163,8 @@ sub deleteLoopDevices {
     my $errors = 0;
 
     my $out;
-    if( UBOS::Utils::myexec( "kpartx -d -v '" . $self->{image} . "'", undef, \$out, \$out )) {
-        error( "kpartx -d error:", $out );
+    if( UBOS::Utils::myexec( "losetup -d  '" . $self->{loopDevice} . "'", undef, \$out, \$out )) {
+        error( "losetup -d error:", $out );
         ++$errors;
     }
     

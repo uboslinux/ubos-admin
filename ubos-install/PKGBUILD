@@ -3,14 +3,13 @@ url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
 pkgver=0.76
-pkgrel=17
+pkgrel=18
 pkgdesc="UBOS installation tool"
 arch=('any')
 license=('GPL')
 depends=(
     'btrfs-progs'
     'dosfstools'
-    'multipath-tools'
     'parted'
     'ubos-keyring'
     'ubos-perl-utils' )
