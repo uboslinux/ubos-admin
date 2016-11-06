@@ -260,7 +260,7 @@ sub createSubvols {
     my $errors = 0;
 
     my $deviceTable = $self->{devicetable}->{'/'};
-    if( 'btrfs' eq $deviceTable->{fs} ) {
+    if( defined( $deviceTable->{fs} ) && 'btrfs' eq $deviceTable->{fs} ) {
         # create separate subvol for /var/log, so snapper does not roll back the logs
         unless( -d "$target/var" ) {
             UBOS::Utils::mkdirDashP( "$target/var" );
