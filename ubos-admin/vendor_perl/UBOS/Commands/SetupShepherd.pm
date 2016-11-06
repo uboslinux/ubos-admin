@@ -58,7 +58,7 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args == 0 || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || ( $add && @args == 0 ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
@@ -78,12 +78,12 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--add] <public ssh key>...
+    [--verbose | --logConfig <file>] [[--add] <public ssh key>] ...
 SSS
-    Replace (or add, if --add is specified) the given public ssh key(s) to
-    the shepherd account. Create the shepherd account if it does not exist
-    yet. This is a command-line mechanism similar to what can be done with
-    the UBOS Staff.
+    Create the shepherd account if it does not exist yet. Replace (or add,
+    if --add is specified) the given public ssh key(s) on the shepherd account.
+    This is a command-line mechanism similar to what can be done with the
+    UBOS Staff.
 HHH
     };
 }
