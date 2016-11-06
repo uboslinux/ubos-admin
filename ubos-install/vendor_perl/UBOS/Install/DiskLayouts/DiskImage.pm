@@ -137,8 +137,9 @@ sub createLoopDevices {
         error( "losetup -a error:", $out );
         ++$errors;
     }
-    $out =~ m!/dev/(loop\d+)\s+!; # matches once for each partition, but that's okay
-    $self->{loopDevice} = "/dev/loop$1";
+    $out =~ s!^\s+!!;
+    $out =~ s!\s+$!!;
+    $self->{loopDevice} = $out;
     my $partitionLoopDeviceRoot = $self->{loopDevice};
 
     # in sequence of index
