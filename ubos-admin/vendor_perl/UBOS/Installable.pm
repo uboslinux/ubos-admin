@@ -33,11 +33,14 @@ use JSON;
 
 ##
 # The known customization point types, validation routines, and error messages.
+# valuecheck returns two values:
+#  1. a boolean (ok or not)
+#  2. a cleaned-up version of the value 
 our $knownCustomizationPointTypes = {
     'string' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v !~ /\n/;
+            return ( !ref( $v ) && $v !~ /\n/, $v );
         },
         'valuecheckerror' => 'string value without newlines required',
         'isFile' => 0
@@ -45,7 +48,7 @@ our $knownCustomizationPointTypes = {
     'email' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
+            return ( !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i, $v );
         },
         'valuecheckerror' => 'valid e-mail address required',
         'isFile' => 0
@@ -53,7 +56,7 @@ our $knownCustomizationPointTypes = {
     'url' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v =~ m!^https?://\S+$!;
+            return ( !ref( $v ) && $v =~ m!^https?://\S+$!, $v );
         },
         'valuecheckerror' => 'valid http or https URL required',
         'isFile' => 0
@@ -61,7 +64,7 @@ our $knownCustomizationPointTypes = {
     'text' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v );
+            return ( !ref( $v ), $v );
         },
         'valuecheckerror' => 'name of a readable file required',
         'isFile' => 1
@@ -69,7 +72,7 @@ our $knownCustomizationPointTypes = {
     'password' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v =~ /^\S{4,}$/;
+            return ( !ref( $v ) && $v =~ /^\S{4,}$/, $v );
         },
         'valuecheckerror' => 'must be at least four characters long and not contain white space',
         'isFile' => 0
@@ -77,7 +80,21 @@ our $knownCustomizationPointTypes = {
     'boolean' => {
         'valuecheck' => sub {
             my $v = shift;
-            return ref( $v ) =~ m/^JSON.*[Bb]oolean$/;
+            if( ref( $v ) =~ m/^JSON.*[Bb]oolean$/ ) {
+                return ( 1, $v );
+            } elsif( ref( $v )) {
+                return ( 0, $v );
+            } elsif( $v eq 'true' ) {
+                return ( 1, JSON::true );
+            } elsif( $v eq 'false' ) {
+                return ( 1, JSON::false );
+            } elsif( $v == 1 ) {
+                return ( 1, JSON::true );
+            } elsif( $v == 0 ) {
+                return ( 1, JSON::false );
+            } else {
+                return ( 0, $v );
+            }
         },
         'valuecheckerror' => 'must be true or false',
         'isFile' => 0
@@ -85,7 +102,7 @@ our $knownCustomizationPointTypes = {
     'integer' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v =~ /^-?[0-9]+$/;
+            return ( !ref( $v ) && $v =~ /^-?[0-9]+$/, $v );
         },
         'valuecheckerror' => 'must be a whole number',
         'isFile' => 0
@@ -93,7 +110,7 @@ our $knownCustomizationPointTypes = {
     'positiveinteger' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v =~ /^[1-9][0-9]*$/;
+            return ( !ref( $v ) && $v =~ /^[1-9][0-9]*$/, $v );
         },
         'valuecheckerror' => 'must be a positive, whole number',
         'isFile' => 0
@@ -101,14 +118,15 @@ our $knownCustomizationPointTypes = {
     'positiveintegerorzero' => {
         'valuecheck' => sub {
             my $v = shift;
-            return !ref( $v ) && $v =~ /^[0-9]+$/;
+            return ( !ref( $v ) && $v =~ /^[0-9]+$/, $v );
         },
         'valuecheckerror' => 'must be a positive, whole number or 0',
         'isFile' => 0
     },
     'image' => {
         'valuecheck' => sub {
-            return 1; # don't really know
+            my $v = shift;
+            return ( 1, $v ); # don't really know
         },
         'valuecheckerror' => 'name of a readable image file required',
         'isFile' => 1

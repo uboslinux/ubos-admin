@@ -390,7 +390,8 @@ sub run {
                         }
 
                         my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                        if( $custPointValidation->{valuecheck}->( $value )) {
+                        my ( $ok, $value ) = $custPointValidation->{valuecheck}->( $value );
+                        if( $ok ) {
                             $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $value;
                             last;
                         } else {
