@@ -1049,36 +1049,53 @@ sub nics {
 }
 
 ##
-# Determine IP addresses assigned to a network interface.
+# Determine IP addresses assigned to a network interface given by a
+# name or a wildcard expression, e.g. "enp2s0" or "enp*".
 #
 # $nic: the network interface
 # return: the zero or more IP addresses assigned to the interface
 sub ipAddressesOnNic {
     my $nic = shift;
 
-    my @ret = ();
+    my $nicRegex = $nic;
+    $nicRegex =~ s!\*!.*!g;
 
     my $netctl;
     my $err; # swallow error messages
-    myexec( "networkctl --no-pager --no-legend status $nic", undef, \$netctl, \$err );
+    myexec( "networkctl --no-pager --no-legend status", undef, \$netctl, \$err );
+            # can't ask nic directly as we need wildcard support
     if( $err ) {
         debug( 'Host::nics: networkctl said:', $err );
     }
 
+    my @ret = ();
+
+    my $hasSeenAddressLine = 0;
     foreach my $line ( split "\n", $netctl ) {
-        if( @ret ) {
-            # found one already; "Gateway:" is the next item after "Address:"
+        if( $hasSeenAddressLine ) {
             if( $line =~ m!^\s*Gateway:! ) {
+                # "Gateway:" is the next item after "Address:", so we know we are done
                 last;
             } else {
-                if( $line =~ m!\s*(\S+)\s*$! ) {
-                    push @ret, $1;
+                if( $line =~ m!\s*(\S+)\s*on\s*(\S+)\s*$! ) {
+                    my $foundIp  = $1;
+                    my $foundNic = $2;
+
+                    if( $foundNic =~ m!$nicRegex! ) {
+                        push @ret, $foundIp;
+                    }
                 }
             }
         } else {
             # have not found one already
-            if( $line =~ m!^\s*Address:\s*(\S+)\s*$! ) {
-                push @ret, $1;
+            if( $line =~ m!^\s*Address:\s*(\S+)\s*on\s*(\S+)\s*$! ) {
+                my $foundIp  = $1;
+                my $foundNic = $2;
+
+                if( $foundNic =~ m!$nicRegex! ) {
+                    push @ret, $foundIp;
+                }
+                $hasSeenAddressLine = 1;
             }
         }
     }
