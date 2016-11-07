@@ -723,7 +723,7 @@ sub preSnapshot {
             } else {
                 $snapNumber =~ s!^\s+!!;
                 $snapNumber =~ s!\s+$!!;
-                $ret .= "$target=$snapNumber;"
+                $ret .= "$target=$snapNumber,"
             }
         }
     }
@@ -740,7 +740,7 @@ sub preSnapshot {
 sub postSnapshot {
     my $preInfo = shift;
 
-    foreach my $item ( split ";", $preInfo ) {
+    foreach my $item ( split ",", $preInfo ) {
         if( $item =~ m!^(.+)=(\d+)$! ) {
             my $target     = $1;
             my $snapNumber = $2;
