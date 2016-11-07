@@ -419,7 +419,8 @@ sub checkManifestCustomizationPointsSection {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted" );
                     }
                     if( $custPointValidation ) {
-                        unless( $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} )) {
+                        my( $ok, $cleanedValue ) = $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} );
+                        unless( $ok ) {
                             $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
                         }
                     }
