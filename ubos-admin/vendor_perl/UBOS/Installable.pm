@@ -39,40 +39,45 @@ use JSON;
 our $knownCustomizationPointTypes = {
     'string' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v !~ /\n/, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v !~ /\n/;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'string value without newlines required',
         'isFile' => 0
     },
     'email' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'valid e-mail address required',
         'isFile' => 0
     },
     'url' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v =~ m!^https?://\S+$!, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v =~ m!^https?://\S+$!;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'valid http or https URL required',
         'isFile' => 0
     },
     'text' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ), $v );
+            my $v  = shift;
+            my $ok = !ref( $v );
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'name of a readable file required',
         'isFile' => 1
     },
     'password' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v =~ /^\S{4,}$/, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v =~ /^\S{4,}$/;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'must be at least four characters long and not contain white space',
         'isFile' => 0
@@ -88,9 +93,9 @@ our $knownCustomizationPointTypes = {
                 return ( 1, JSON::true );
             } elsif( $v eq 'false' ) {
                 return ( 1, JSON::false );
-            } elsif( $v == 1 ) {
+            } elsif( $v eq '1' ) {
                 return ( 1, JSON::true );
-            } elsif( $v == 0 ) {
+            } elsif( $v eq '0' ) {
                 return ( 1, JSON::false );
             } else {
                 return ( 0, $v );
@@ -101,24 +106,27 @@ our $knownCustomizationPointTypes = {
     },
     'integer' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v =~ /^-?[0-9]+$/, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v =~ /^-?[0-9]+$/;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'must be a whole number',
         'isFile' => 0
     },
     'positiveinteger' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v =~ /^[1-9][0-9]*$/, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v =~ /^[1-9][0-9]*$/;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'must be a positive, whole number',
         'isFile' => 0
     },
     'positiveintegerorzero' => {
         'valuecheck' => sub {
-            my $v = shift;
-            return ( !ref( $v ) && $v =~ /^[0-9]+$/, $v );
+            my $v  = shift;
+            my $ok = !ref( $v ) && $v =~ /^[0-9]+$/;
+            return ( $ok, $v );
         },
         'valuecheckerror' => 'must be a positive, whole number or 0',
         'isFile' => 0

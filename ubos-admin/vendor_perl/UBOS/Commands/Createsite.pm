@@ -380,6 +380,10 @@ sub run {
                                 . " customization for $custPointName"
                                 . ( $isFile ? ' (enter filename)' : ' (enter value)' )
                                 . ': ' );
+                        if( !$value && !$custPointDef->{required} ) {
+                            # allow defaults for non-required values
+                            last;
+                        }
 
                         if( $isFile ) {
                             unless( -r $value ) {
