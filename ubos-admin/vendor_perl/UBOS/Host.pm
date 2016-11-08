@@ -674,20 +674,25 @@ sub ensureSnapperConfig {
         error( "findmnt failed:", $out );
         return undef;
     }
-    my $findmntJson = UBOS::Utils::readJsonFromString( $out );
-    my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
+    $out =~ s!^\s+!!;
+    $out =~ s!\s+$!!;
 
-    foreach my $target ( @targets ) {
-        my $configName = $target;
-        $configName =~ s!/!!g;
-        unless( $configName ) {
-            $configName = 'root';
-        }
+    if( $out ) {
+        my $findmntJson = UBOS::Utils::readJsonFromString( $out );
+        my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
 
-        unless( -e "/etc/snapper/configs/$configName" ) {
-            my $err;
-            if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
-                error( 'snapper (create-config) failed of config', $configName, $target, $err );
+        foreach my $target ( @targets ) {
+            my $configName = $target;
+            $configName =~ s!/!!g;
+            unless( $configName ) {
+                $configName = 'root';
+            }
+
+            unless( -e "/etc/snapper/configs/$configName" ) {
+                my $err;
+                if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
+                    error( 'snapper (create-config) failed of config', $configName, $target, $err );
+                }
             }
         }
     }
@@ -705,33 +710,39 @@ sub preSnapshot {
         error( "findmnt failed:", $out );
         return undef;
     }
-    my $findmntJson = UBOS::Utils::readJsonFromString( $out );
-    my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
-    my $ret;
-    foreach my $target ( @targets ) {
-        my $configName = $target;
-        $configName =~ s!/!!g;
-        unless( $configName ) {
-            $configName = 'root';
-        }
+    $out =~ s!^\s+!!;
+    $out =~ s!\s+$!!;
 
-        if( -e "$target/etc/snapper/configs/$configName" ) {
-            my $snapNumber;
-            my $err;
-            if( myexec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
-                error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
-            } else {
-                $snapNumber =~ s!^\s+!!;
-                $snapNumber =~ s!\s+$!!;
-                $ret .= "$target=$snapNumber,"
+    if( $out ) {
+        my $findmntJson = UBOS::Utils::readJsonFromString( $out );
+        my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
+        my $ret;
+        my $sep = '';
+        foreach my $target ( @targets ) {
+            my $configName = $target;
+            $configName =~ s!/!!g;
+            unless( $configName ) {
+                $configName = 'root';
+            }
+
+            if( -e "$target/etc/snapper/configs/$configName" ) {
+                my $snapNumber;
+                my $err;
+                if( myexec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
+                    error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
+                } else {
+                    $snapNumber =~ s!^\s+!!;
+                    $snapNumber =~ s!\s+$!!;
+                    $ret .= "$sep$target=$snapNumber";
+                    $sep = ',';
+                }
             }
         }
+        if( $ret ) {
+            return $ret;
+        }
     }
-    if( $ret ) {
-        return $ret;
-    } else {
-        return undef;
-    }
+    return undef;
 }
 
 ##
