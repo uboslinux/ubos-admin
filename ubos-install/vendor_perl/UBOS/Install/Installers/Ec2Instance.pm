@@ -62,7 +62,7 @@ sub new {
         $self->{additionalkernelparameters} = [
                 'ro',
                 'rootwait',
-                'rootfstype=ext4',
+                # 'rootfstype=btrfs', --not sure this is needed
                 'nomodeset',
                 'console=hvc0',
                 'earlyprintk=xen,verbose',
