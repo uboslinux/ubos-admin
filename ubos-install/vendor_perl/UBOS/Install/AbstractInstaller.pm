@@ -453,9 +453,8 @@ sub installPackages {
             . ' ' . join( ' ', @allPackages );
 
     my $out;
-    my $err;
-    if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
-        error( "pacman failed:", $err );
+    if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
+        error( "pacman failed:", $out );
         debug( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfig ) } );
         ++$errors;
     }
