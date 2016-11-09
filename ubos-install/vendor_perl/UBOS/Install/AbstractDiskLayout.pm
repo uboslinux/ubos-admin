@@ -311,7 +311,7 @@ FSTAB
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
-                info( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
+                debug( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
@@ -330,7 +330,7 @@ FSTAB
                     $uuid =~ s!^\s+!!g;
                     $uuid =~ s!\s+$!!g;
 
-                    info( 'uuid of swap device', $device, 'is', $uuid );
+                    debug( 'uuid of swap device', $device, 'is', $uuid );
 
                     $fsTab .= "UUID=$uuid none swap defaults 0 0\n";
                 }
@@ -343,7 +343,7 @@ FSTAB
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
-                info( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
+                debug( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
