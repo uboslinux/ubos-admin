@@ -540,6 +540,7 @@ sub obtainLetsEncryptCertificate {
             . ' --webroot'
             . " --email '" . $adminHash->{email} . "'"
             . ' --agree-tos'
+            . ' --no-self-upgrade'
             . " --webroot-path '" . $siteWellKnownDir . "'"
             . " -d '" . $hostname . "'",
             undef,

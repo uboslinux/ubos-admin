@@ -1,6 +1,6 @@
 [Unit]
 Description=ubos-ready configuration
-Wants=network.target cronie.service ubos-httpd.service
+Wants=network.target cronie.service ubos-httpd.service certbot.timer
 After=ubos-admin.service ubos-httpd.service ubos-mysqld.service
 
 [Service]
