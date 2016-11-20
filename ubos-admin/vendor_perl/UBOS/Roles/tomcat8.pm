@@ -82,49 +82,38 @@ sub setupSiteOrCheck {
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
-        return $self->_setupSite( $site, $triggers );
+
+        debug( 'tomcat8::_setupSite', $self->name(), $site->siteId );
+
+        if( UBOS::Host::ensurePackages( 'tomcat8' ) < 0 ) {
+            warning( $@ );
+        }
+
+        my $siteId          = $site->siteId;
+        my $hostname        = $site->hostnameorwildcard;
+        my $siteContextDir  = "$contextDir/$hostname";
+        my $webappsDir      = "$sitesAppsDir/$siteId";
+        my $siteDocumentDir = "$sitesDir/$siteId";
+        my $tomcatUser      = $site->config->getResolve( 'tomcat8.uname' );
+        my $tomcatGroup     = $site->config->getResolve( 'tomcat8.gname' );
+
+        debug( 'tomcat8::setupSite', $siteId );
+
+        unless( -d $siteContextDir ) {
+            UBOS::Utils::mkdir( $siteContextDir );
+        }
+        unless( -d $webappsDir ) {
+            UBOS::Utils::mkdir( $webappsDir, 0755, $tomcatUser, $tomcatGroup );
+        }
+        unless( -d $siteDocumentDir ) {
+            UBOS::Utils::mkdir( $siteDocumentDir );
+        }
+
+        return 1;
+
     } else {
         return 1;
     }
-}
-
-##
-# Do what is necessary to set up a Site, without activating/resuming it.
-# $site: the Site
-# $triggers: triggers to be executed may be added to this hash
-# return: success or fail
-sub _setupSite {
-    my $self     = shift;
-    my $site     = shift;
-    my $triggers = shift;
-
-    debug( 'tomcat8::_setupSite', $self->name(), $site->siteId );
-
-    if( UBOS::Host::ensurePackages( 'tomcat8' ) < 0 ) {
-        warning( $@ );
-    }
-
-    my $siteId          = $site->siteId;
-    my $hostname        = $site->hostnameorwildcard;
-    my $siteContextDir  = "$contextDir/$hostname";
-    my $webappsDir      = "$sitesAppsDir/$siteId";
-    my $siteDocumentDir = "$sitesDir/$siteId";
-    my $tomcatUser      = $site->config->getResolve( 'tomcat8.uname' );
-    my $tomcatGroup     = $site->config->getResolve( 'tomcat8.gname' );
-
-    debug( 'tomcat8::setupSite', $siteId );
-
-    unless( -d $siteContextDir ) {
-        UBOS::Utils::mkdir( $siteContextDir );
-    }
-    unless( -d $webappsDir ) {
-        UBOS::Utils::mkdir( $webappsDir, 0755, $tomcatUser, $tomcatGroup );
-    }
-    unless( -d $siteDocumentDir ) {
-        UBOS::Utils::mkdir( $siteDocumentDir );
-    }
-
-    return 1;
 }
 
 ##

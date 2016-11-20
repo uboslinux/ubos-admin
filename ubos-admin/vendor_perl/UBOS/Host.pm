@@ -33,6 +33,7 @@ use UBOS::Roles::mysql;
 use UBOS::Roles::postgresql;
 use UBOS::Roles::tomcat8;
 use UBOS::Site;
+use UBOS::Tor;
 use UBOS::Utils qw( readJsonFromFile myexec );
 use Socket;
 use Sys::Hostname qw();
@@ -466,6 +467,10 @@ sub executeTriggers {
             UBOS::Tomcat8::reload();
         } elsif( 'tomcat8-restart' eq $trigger ) {
             UBOS::Tomcat8::restart();
+        } elsif( 'tor-reload' eq $trigger ) {
+            UBOS::Tor::reload();
+        } elsif( 'tor-restart' eq $trigger ) {
+            UBOS::Tor::restart();
         } else {
             warning( 'Unknown trigger:', $trigger );
         }

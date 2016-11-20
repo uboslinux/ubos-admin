@@ -48,6 +48,7 @@ sub run {
     my $letsEncrypt   = 0;
     my $out           = undef;
     my $verbose       = 0;
+    my $tor           = 0;
     my $quiet         = 0;
     my $logConfigFile = undef;
     my $dryRun;
@@ -58,6 +59,7 @@ sub run {
             'tls'                          => \$tls,
             'selfsigned'                   => \$selfSigned,
             'letsencrypt'                  => \$letsEncrypt,
+            'tor'                          => \$tor,
             'out=s',                       => \$out,
             'verbose+'                     => \$verbose,
             'quiet',                       => \$quiet,
@@ -96,36 +98,38 @@ sub run {
     }
 
     my $hostname = undef;
-    outer: while( 1 ) {
-        $hostname = ask( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
+    unless( $tor ) {
+        outer: while( 1 ) {
+            $hostname = ask( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
 
-        if( '*' eq $hostname ) {
-            if( %$oldSites ) {
-                if( $dryRun ) {
-                    print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
-                } else {
-                    print "You can only create a site with hostname * (any) if no other sites exist.\n";
-                    next outer;
-                }
-            }
-        } else {
-            foreach my $oldSite ( values %$oldSites ) {
-                if( $oldSite->hostname eq $hostname ) {
+            if( '*' eq $hostname ) {
+                if( %$oldSites ) {
                     if( $dryRun ) {
-                        print "There is already a site with hostname $hostname. You will not be able to deploy the site you are creating on this device.\n";
+                        print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
                     } else {
-                        print "There is already a site with hostname $hostname.\n";
+                        print "You can only create a site with hostname * (any) if no other sites exist.\n";
                         next outer;
                     }
                 }
+            } else {
+                foreach my $oldSite ( values %$oldSites ) {
+                    if( $oldSite->hostname eq $hostname ) {
+                        if( $dryRun ) {
+                            print "There is already a site with hostname $hostname. You will not be able to deploy the site you are creating on this device.\n";
+                        } else {
+                            print "There is already a site with hostname $hostname.\n";
+                            next outer;
+                        }
+                    }
+                }
             }
+            last;
         }
-        last;
     }
 
     my $siteId        = UBOS::Host::createNewSiteId();
     my $adminUserId   = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
-    my $adminUserName = ask( 'Site admin user name (e.g. John Doe): ' );
+    my $adminUserName = ask( 'Site admin user name (e.g. John Doe): ', '\S+' );
     my $adminCredential;
     my $adminEmail;
 
@@ -257,8 +261,11 @@ sub run {
     }
 
     my $newSiteJson = {};
-    $newSiteJson->{siteid}   = $siteId;
-    $newSiteJson->{hostname} = $hostname;
+    $newSiteJson->{siteid} = $siteId;
+
+    if( defined( $hostname )) {
+        $newSiteJson->{hostname} = $hostname;
+    }
 
     $newSiteJson->{admin}->{userid}     = $adminUserId;
     $newSiteJson->{admin}->{username}   = $adminUserName;
@@ -281,6 +288,9 @@ sub run {
         if( $tlsCaCrt ) {
             $newSiteJson->{tls}->{cacrt} = $tlsCaCrt;
         }
+    }
+    if( $tor ) {
+        $newSiteJson->{tor} = {};
     }
 
     unless( $quiet ) {
@@ -379,7 +389,9 @@ sub run {
                                 . ( $askAll ? ' allows' : ' requires' )
                                 . " customization for $custPointName"
                                 . ( $isFile ? ' (enter filename)' : ' (enter value)' )
-                                . ': ' );
+                                . ': ',
+                                exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef );
+
                         if( !$value && !$custPointDef->{required} ) {
                             # allow defaults for non-required values
                             last;
@@ -441,13 +453,12 @@ sub run {
         }
 
     } else {
-        if( $out ) {
-            UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
-        }
-
         my $newSite = UBOS::Site->new( $newSiteJson );
 
         my $prerequisites = {};
+        if( $tor ) {
+            $prerequisites->{'tor'} = 'tor';
+        }
         $newSite->addDependenciesToPrerequisites( $prerequisites );
         if( UBOS::Host::ensurePackages( $prerequisites, $quiet ) < 0 ) {
             fatal( $@ );
@@ -487,6 +498,10 @@ sub run {
         $ret &= $newSite->deploy( $deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
+        if( $tor ) {
+            # determine private keys
+        }
+
         info( 'Resuming sites' );
 
         my $resumeTriggers = {};
@@ -500,7 +515,13 @@ sub run {
             $ret &= $appConfig->runInstaller();
         }
 
+        if( $out ) {
+            # Need to be at the end, so tor info has been inserted
+            UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+        }
+
         if( $ret ) {
+            $hostname = $newSite->hostname(); # tor site might have generated the hostname
             if( $tls ) {
                 print "Installed site $siteId at https://$hostname/\n";
             } else {
@@ -589,7 +610,7 @@ sub _sortCustomizationPoints {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>]
+    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--tor] [--out <file>]
 SSS
     Interactively define and install a new site that runs any number of apps.
     If --tls is provided, the site will be secured with SSL. If additionally
@@ -601,7 +622,7 @@ SSS
     --quiet will skip progress messages.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--out <file>] ( --dry-run | -n )
+    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--tor] [--out <file>] ( --dry-run | -n )
 SSS
     Interactively define a new site, but instead of installing,
     print the Site JSON file for the site, which then can be deployed

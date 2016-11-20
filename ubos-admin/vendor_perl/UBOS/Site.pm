@@ -172,7 +172,7 @@ sub _siteJsonWithout {
 sub hostname {
     my $self = shift;
 
-    return $self->{json}->{hostname};
+    return $self->{json}->{hostname} || "-not-assigned-yet";
 }
 
 ##
@@ -378,7 +378,35 @@ sub deleteTlsInfo {
         delete $json->{tls};
     }
 }
-    
+
+##
+# Determine whether this site should run under tor
+# return: 1 if it should
+sub isTor {
+    my $self = shift;
+
+    my $json = $self->{json};
+    if( defined( $json->{tor} )) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##
+# Obtain the tor private key for this site
+# return: private key, or undef
+sub torPrivateKey {
+    my $self = shift;
+
+    my $json = $self->{json};
+    if( defined( $json->{tor} ) && defined( $json->{tor}->{privatekey} )) {
+        return $json->{tor}->{privatekey};
+    } else {
+        return undef;
+    }
+}
+
 ##
 # Obtain the site's robots.txt file content, if any has been provided.
 # return: robots.txt content
@@ -706,6 +734,25 @@ sub _deployOrCheck {
         $ret &= $appConfig->deployOrCheck( $doIt, $triggers );
     }
     if( $doIt ) {
+        if( exists( $self->{json}->{tor} )) {
+            # This is not such a great place where to restart a daemon, but we need it to
+            # generate the key before continuing
+            UBOS::Tor::reload();
+
+            my $siteTorDir = $self->config->getResolve( 'site.apache2.sitetordir' );
+            unless( exists( $self->{json}->{tor}->{privatekey} )) {
+                my $privateKey = UBOS::Utils::slurpFile( "$siteTorDir/private_key" );
+                $privateKey =~ s!^\s+!!;
+                $privateKey =~ s!\s+$!!;
+                $self->{json}->{tor}->{privatekey} = $privateKey;
+            }
+            unless( exists( $self->{json}->{hostname} )) {
+                my $hostname = UBOS::Utils::slurpFile( "$siteTorDir/hostname" );
+                $hostname =~ s!^\s+!!;
+                $hostname =~ s!\s+$!!;
+                $self->{json}->{hostname} = $hostname;
+            }
+        }
         UBOS::Host::siteDeployed( $self );
     }
     return $ret;
@@ -954,11 +1001,13 @@ sub _checkJson {
     unless( UBOS::Host::isValidSiteId( $json->{siteid} )) {
         fatal( 'Site JSON: invalid siteid, must be s followed by 40 hex chars, is', $json->{siteid} );
     }
-    unless( $json->{hostname} ) {
-        fatal( 'Site JSON: missing hostname' );
-    }
-    unless( UBOS::Host::isValidHostname( $json->{hostname} )) {
-        fatal( 'Site JSON: invalid hostname, is', $json->{hostname} );
+    unless( exists( $json->{tor} )) {
+        unless( $json->{hostname} ) {
+            fatal( 'Site JSON: missing hostname' );
+        }
+        unless( UBOS::Host::isValidHostname( $json->{hostname} )) {
+            fatal( 'Site JSON: invalid hostname, is', $json->{hostname} );
+        }
     }
 
     unless( $json->{admin} ) {
@@ -1058,7 +1107,22 @@ sub _checkJson {
             fatal( 'Site JSON: wellknown section: invalid faviconicobase64' );
         }
     }
-    
+
+    if( exists( $json->{tor} )) {
+        unless( ref( $json->{tor} ) eq 'HASH' ) {
+            fatal( 'Site JSON: tor section: not a JSON hash' );
+        }
+        if( keys %{$json->{tor}} > 0 ) {
+            # allowed to be empty
+            unless( exists( $json->{tor}->{privatekey} )) {
+                fatal( 'Site JSON: tor section: missing privatekey' );
+            }
+            if( ref( $json->{tor}->{privatekey} ) || $json->{tor}->{privatekey} !~ m!\S+! ) {
+                fatal( 'Site JSON: tor section: privatekey must be a string' );
+            }
+        }
+    }
+
     if( exists( $json->{appconfigs} )) {
         unless( ref( $json->{appconfigs} ) eq 'ARRAY' ) {
             fatal( 'Site JSON: appconfigs section: not a JSON array' );

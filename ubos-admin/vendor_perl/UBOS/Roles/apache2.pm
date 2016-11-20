@@ -127,11 +127,53 @@ sub setupSiteOrCheck {
 
     debug( 'apache2::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
-    my $siteDocumentDir = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteDocumentDir     = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir          = $site->config->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile = $site->config->getResolve( 'site.apache2.sitetorfragmentfile' );
 
     if( $doIt ) {
-        UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
-        return $self->_setupSite( $site, $triggers );
+        debug( 'apache2::_setupSite', $self->name(), $site->siteId );
+
+        unless( -d $siteDocumentDir ) {
+            UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
+        }
+
+        my $siteId            = $site->siteId;
+        my $appConfigFilesDir = "$appConfigsDir/$siteId";
+        my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+
+        debug( 'apache2::setupSite', $siteId );
+
+        unless( -d $siteWellKnownDir ) {
+            UBOS::Utils::mkdir( $siteWellKnownDir );
+        }
+        unless( -d $appConfigFilesDir ) {
+            UBOS::Utils::mkdir( $appConfigFilesDir );
+        }
+
+        if( $site->isTor() ) {
+            UBOS::Utils::mkdirDashP( $siteTorDir, 0700, 'tor', 'tor' );
+
+            UBOS::Utils::saveFile( $siteTorFragmentFile, <<CONTENT );
+HiddenServiceDir $siteTorDir/
+CONTENT
+
+            my $siteTorDir = $site->config->getResolve( 'site.apache2.sitetordir' );
+            unless( -d $siteTorDir ) {
+                UBOS::Utils::mkdir( $siteTorDir, 0700, 'tor', 'tor' );
+            }
+
+            my $privateKey = $site->torPrivateKey();
+            my $hostname   = $site->hostname();
+            if( $privateKey ) {
+                UBOS::Utils::saveFile( "$siteTorDir/private_key", $privateKey, 0600, 'tor', 'tor' );
+            }
+            if( $hostname ) {
+                UBOS::Utils::saveFile( "$siteTorDir/hostname", $hostname, 0600, 'tor', 'tor' );
+            }
+        }
+        return 1;
+
     } else {
         return 1;
     }
@@ -149,7 +191,6 @@ sub suspendSite {
 
     return $self->setupPlaceholderSite( $site, 'maintenance', $triggers );
 }
-
 
 ##
 # Do what is necessary to set up a named placeholder Site.
@@ -200,34 +241,6 @@ CONTENT
     UBOS::Utils::saveFile( $siteFile, $content );
 
     $triggers->{'httpd-reload'} = 1;
-
-    return 1;
-}
-
-##
-# Do what is necessary to set up a Site, without activating/resuming it.
-# $site: the Site
-# $triggers: triggers to be executed may be added to this hash
-# return: success or fail
-sub _setupSite {
-    my $self     = shift;
-    my $site     = shift;
-    my $triggers = shift;
-
-    debug( 'apache2::_setupSite', $self->name(), $site->siteId );
-
-    my $siteId            = $site->siteId;
-    my $appConfigFilesDir = "$appConfigsDir/$siteId";
-    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
-
-    debug( 'apache2::setupSite', $siteId );
-
-    unless( -d $siteWellKnownDir ) {
-        UBOS::Utils::mkdir( $siteWellKnownDir );
-    }
-    unless( -d $appConfigFilesDir ) {
-        UBOS::Utils::mkdir( $appConfigFilesDir );
-    }
 
     return 1;
 }
@@ -442,7 +455,6 @@ CONTENT
     UBOS::Utils::saveFile( $siteFile, $siteFileContent, 0644 );
     
     $triggers->{'httpd-reload'} = 1;
-
     return 1;
 }
 
@@ -460,11 +472,14 @@ sub removeSite {
 
     debug( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
 
+    my $siteDocumentDir     = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir          = $site->config->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile = $site->config->getResolve( 'site.apache2.sitetorfragmentfile' );
+
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
     my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
-    my $siteDocumentDir   = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
     my $sslDir            = $site->config->getResolve( 'apache2.ssldir' );
 
@@ -476,8 +491,11 @@ sub removeSite {
         if( -d $appConfigFilesDir ) {
             UBOS::Utils::rmdir( $appConfigFilesDir );
         }
-        if( -d $siteWellKnownDir ) {
-            UBOS::Utils::deleteRecursively( $siteWellKnownDir );
+        if( -d $siteTorDir ) { # does not exist if not tor
+            UBOS::Utils::deleteRecursively( $siteTorDir );
+        }
+        if( -e $siteTorFragmentFile ) {
+            UBOS::Utils::deleteFile( $siteTorFragmentFile );
         }
 
         UBOS::Utils::rmdir( $siteDocumentDir );
@@ -493,6 +511,9 @@ sub removeSite {
             UBOS::Utils::deleteFile( @toDelete );
         }
 
+        if( $site->isTor() ) {
+            $triggers->{'tor-reload'} = 1;
+        }
         $triggers->{'httpd-reload'} = 1;
     }
 

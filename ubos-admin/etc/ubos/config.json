@@ -34,13 +34,21 @@
         "contextsdir" : "/etc/tomcat8/Catalina"
     },
 
+    "tor" : {
+        "sitefragmentdir" : "/etc/tor/ubos-sites.d",
+        "sitesdir"        : "/var/lib/tor/sites"
+    },
+
     "site" : {
         "apache2" : {
             "sitedocumentdir"      : "${apache2.sitesdir}/${site.siteid}",
             "sitefragmentfile"     : "${apache2.sitefragmentdir}/${site.siteid}.conf",
 
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
-            "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups"
+            "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups",
+
+            "sitetordir"           : "${tor.sitesdir}/${site.siteid}",
+            "sitetorfragmentfile"  : "${tor.sitefragmentdir}/${site.siteid}"
         },
         "tomcat8" : {
             "sitedocumentdir"      : "${tomcat8.sitesdir}/${site.siteid}",

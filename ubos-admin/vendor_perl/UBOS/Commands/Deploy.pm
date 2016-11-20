@@ -135,8 +135,8 @@ sub run {
                 }
             }
 
-        } else {
-            # site is new
+        } elsif( !$newSite->isTor() ) {
+            # site is new and not tor
             if( $newSiteHostName eq '*' ) {
                 if( keys %$oldSites > 0 ) {
                     fatal( "You can only create a site with hostname * (any) if no other sites exist." );
@@ -151,7 +151,10 @@ sub run {
                 }
             }            
         }
-        $haveHostAlready->{$newSiteHostName} = $newSite;
+        if( defined( $newSiteHostName )) {
+            # not tor
+            $haveHostAlready->{$newSiteHostName} = $newSite;
+        }
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             my $newAppConfigId = $newAppConfig->appConfigId;
@@ -191,6 +194,9 @@ sub run {
     my $prerequisites = {};
     foreach my $site ( @newSites ) {
         $site->addInstallablesToPrerequisites( $prerequisites );
+        if( $site->isTor() ) {
+            $prerequisites->{'tor'} = 'tor';
+        }
     }
     if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
         fatal( $@ );
