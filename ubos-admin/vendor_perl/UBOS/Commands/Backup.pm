@@ -50,6 +50,7 @@ sub run {
     my @hosts         = ();
     my @appConfigIds  = ();
     my $noTls         = undef;
+    my $noTorKey      = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -59,7 +60,8 @@ sub run {
             'siteid=s'      => \@siteIds,
             'hostname=s'    => \@hosts,
             'appconfigid=s' => \@appConfigIds,
-            'notls'         => \$noTls );
+            'notls'         => \$noTls,
+            'notorkey'      => \$noTorKey );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
@@ -77,7 +79,7 @@ sub run {
     UBOS::Host::preventInterruptions();
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
-    my $ret = UBOS::BackupUtils::performBackup( $backup, $out, \@siteIds, \@appConfigIds, $noTls );
+    my $ret = UBOS::BackupUtils::performBackup( $backup, $out, \@siteIds, \@appConfigIds, $noTls, $noTorKey );
 
     return $ret;
 }
@@ -88,31 +90,37 @@ sub run {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--notls] --siteid <siteid> --out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] [--notorkey ] --siteid <siteid> --out <backupfile>
 SSS
     Back up all data from all apps and accessories installed at a currently
     deployed site with siteid to backupfile. More than one siteid may be
     specified.
+    --notls means do not back up TLS keys; --notorkey means do not backup
+    Tor private keys for Tor sites
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--notls] --hostname <hostname> --out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] [--notorkey] --hostname <hostname> --out <backupfile>
 SSS
     Back up all data from all apps and accessories installed at a currently
     deployed site with the given hostname to backupfile. More than one hostname may be
     specified.
+    --notls means do not back up TLS keys; --notorkey means do not backup
+    Tor private keys for Tor sites
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--notls] --appconfigid <appconfigid> --out <backupfile>
+    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --out <backupfile>
 SSS
     Back up all data from the currently deployed app and its accessories at
     AppConfiguration appconfigid to backupfile. More than one appconfigid
     may be specified.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--notls] --out <backupfile>
+    [--verbose | --logConfig <file>] [--notls] [--notorkey] --out <backupfile>
 SSS
     Back up all data from all currently deployed apps and accessories at all
     deployed sites to backupfile.
+    --notls means do not back up TLS keys; --notorkey means do not backup
+    Tor private keys for Tor sites
 HHH
     };
 }

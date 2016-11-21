@@ -740,13 +740,13 @@ sub _deployOrCheck {
             UBOS::Tor::reload();
 
             my $siteTorDir = $self->config->getResolve( 'site.apache2.sitetordir' );
-            unless( exists( $self->{json}->{tor}->{privatekey} )) {
+            if( -e "$siteTorDir/private_key" ) {
                 my $privateKey = UBOS::Utils::slurpFile( "$siteTorDir/private_key" );
                 $privateKey =~ s!^\s+!!;
                 $privateKey =~ s!\s+$!!;
                 $self->{json}->{tor}->{privatekey} = $privateKey;
             }
-            unless( exists( $self->{json}->{hostname} )) {
+            if( -e "$siteTorDir/hostname" ) {
                 my $hostname = UBOS::Utils::slurpFile( "$siteTorDir/hostname" );
                 $hostname =~ s!^\s+!!;
                 $hostname =~ s!\s+$!!;

@@ -166,10 +166,10 @@ CONTENT
             my $privateKey = $site->torPrivateKey();
             my $hostname   = $site->hostname();
             if( $privateKey ) {
-                UBOS::Utils::saveFile( "$siteTorDir/private_key", $privateKey, 0600, 'tor', 'tor' );
+                UBOS::Utils::saveFile( "$siteTorDir/private_key", "$privateKey\n", 0600, 'tor', 'tor' );
             }
             if( $hostname ) {
-                UBOS::Utils::saveFile( "$siteTorDir/hostname", $hostname, 0600, 'tor', 'tor' );
+                UBOS::Utils::saveFile( "$siteTorDir/hostname", "$hostname\n", 0600, 'tor', 'tor' );
             }
         }
         return 1;

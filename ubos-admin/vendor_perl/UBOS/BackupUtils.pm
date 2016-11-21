@@ -36,19 +36,22 @@ use UBOS::Utils;
 # @siteIds: the SiteIds of the Sites to back up
 # @appConfigIds: the AppConfigIds of the AppConfigs to back up
 # $noTls: if true, no TLS info (key, cert...) will be backed up
+# $noTorKey: if true, for Tor sites, the Tor private key will not be backed up
 # return: desired exit code
 sub performBackup {
-    my $backup       = shift;
-    my $backupOut    = shift;
-    my @siteIds      = @{shift()};
-    my @appConfigIds = @{shift()};
-    my $noTls        = shift;
+    my $backup        = shift;
+    my $backupOut     = shift;
+    my @siteIds       = @{shift()};
+    my @appConfigIds  = @{shift()};
+    my $noTls         = shift;
+    my $noTorKey      = shift;
 
     my $ret = 1;
 
     # first make sure there is no overlap between them
-    my $sites      = {};
-    my $appConfigs = {};
+    my $sites         = {};
+    my $appConfigs    = {};
+    my $torSitesCount = 0;
 
     foreach my $appConfigId ( @appConfigIds ) {
         my $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
@@ -70,6 +73,7 @@ sub performBackup {
         }
         $sites->{$site->siteId} = $site;
     }
+
     if( !@appConfigIds && !@siteIds ) {
         $sites = UBOS::Host::sites();
     }
@@ -82,6 +86,12 @@ sub performBackup {
             }
             $appConfigs->{$appConfig->appConfigId} = $appConfig;
         }
+        if( $site->isTor() ) {
+            ++$torSitesCount;
+        }
+    }
+    if( $noTorKey && !$torSitesCount ) {
+        fatal( 'No Tor site found, but --notorkey specified.' );
     }
 
     my $sitesToSuspendResume = {};
@@ -102,7 +112,7 @@ sub performBackup {
 
     info( 'Creating and exporting backup' );
 
-    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $backupOut );
+    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $noTorKey, $backupOut );
 
     info( 'Resuming sites' );
 

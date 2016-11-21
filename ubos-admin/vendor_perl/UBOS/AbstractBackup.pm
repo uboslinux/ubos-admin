@@ -48,12 +48,16 @@ sub new {
 # will be saved.
 # $sites: array of Site objects
 # $appConfigs: array of AppConfiguration objects
+# $noTls: if 1, do not include TLS info
+# $noTorKey: if 1, do not include Tor private keys for Tor sites
 # $outFile: the file to save the backup to
 sub create {
-    my $self       = shift;
-    my $sites      = shift;
-    my $appConfigs = shift;
-    my $outFile    = shift;
+    my $self          = shift;
+    my $sites         = shift;
+    my $appConfigs    = shift;
+    my $noTls         = shift;
+    my $noTorKey      = shift;
+    my $outFile       = shift;
 
     error( 'Cannot perform create on', $self );
 }

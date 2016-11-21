@@ -54,6 +54,8 @@ sub run {
     my $logConfigFile   = undef;
     my $showIds         = 0;
     my $noTls           = 0;
+    my $noTor           = 0;
+    my @noTorHostname   = ();
     my @ins             = ();
     my @urls            = ();
     my $in              = undef;
@@ -78,6 +80,8 @@ sub run {
             'logConfig=s'      => \$logConfigFile,
             'showids'          => \$showIds,
             'notls'            => \$noTls,
+            'notor'            => \$noTor,
+            'notorhostname=s'  => \@noTorHostname,
             'in=s'             => \@ins,
             'url=s'            => \@urls,
             'siteid=s'         => \@siteIds,
@@ -104,6 +108,7 @@ sub run {
         || @args
         || ( $verbose && $logConfigFile )
         || ( @ins + @urls != 1 )
+        || ( $noTor && @noTorHostname == 0 )
         || ( !@appConfigIds && !$createNew && (
                    ( @siteIds && @hostnames )
                 || @newSiteIds
@@ -131,6 +136,7 @@ sub run {
                 || @newAppConfigIds
                 || ( @newContexts && ( @newContexts != @appConfigIds ))
                 || $noTls
+                || $noTor
            ))
         || ( @appConfigIds && $createNew && (
                    $nSites
@@ -142,6 +148,7 @@ sub run {
                 || ( @newAppConfigIds && @newAppConfigIds != @appConfigIds )
                 || ( @newContexts && ( @newContexts != @appConfigIds ))
                 || $noTls
+                || $noTor
            ))
         || ( @migrateFrom != @migrateTo )
         || ( @migrateFrom != _uniq( @migrateFrom )) )
@@ -193,9 +200,31 @@ sub run {
 
     my $ret;
     if( @appConfigIds ) {
-        $ret = restoreAppConfigs( \@appConfigIds, \@toSiteIds, \@toHostnames, $createNew, \@newAppConfigIds, \@newContexts, $showIds, \%migratePackages, $backup, $quiet );
+        $ret = restoreAppConfigs(
+                \@appConfigIds,
+                \@toSiteIds,
+                \@toHostnames,
+                $createNew,
+                \@newAppConfigIds,
+                \@newContexts,
+                $showIds,
+                \%migratePackages,
+                $backup,
+                $quiet );
     } else {
-        $ret = restoreSites( \@siteIds, \@hostnames, $createNew, \@newSiteIds, \@newHostnames, $noTls, $showIds, \%migratePackages, $backup, $quiet );
+        $ret = restoreSites(
+                \@siteIds,
+                \@hostnames,
+                $createNew,
+                \@newSiteIds,
+                \@newHostnames,
+                $noTls,
+                $noTor,
+                \@noTorHostname,
+                $showIds,
+                \%migratePackages,
+                $backup,
+                $quiet );
     }
 
     return $ret;
@@ -398,16 +427,18 @@ sub restoreAppConfigs {
 ##
 # Called if we restore entire sites
 sub restoreSites {
-    my @siteIds      = @{shift()};
-    my @hostnames    = @{shift()};
-    my $createNew    = shift;
-    my @newSiteIds   = @{shift()};
-    my @newHostnames = @{shift()};
-    my $noTls        = shift;
-    my $showIds      = shift;
+    my @siteIds         = @{shift()};
+    my @hostnames       = @{shift()};
+    my $createNew       = shift;
+    my @newSiteIds      = @{shift()};
+    my @newHostnames    = @{shift()};
+    my $noTls           = shift;
+    my $noTor           = shift;
+    my @noTorHostname   = @{shift()};
+    my $showIds         = shift;
     my $migratePackages = shift;
-    my $backup       = shift;
-    my $quiet        = shift;
+    my $backup          = shift;
+    my $quiet           = shift;
 
     my $sitesInBackup      = $backup->sites();
     my $appConfigsInBackup = $backup->appConfigs();
@@ -521,12 +552,24 @@ sub restoreSites {
                 push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
             }
         }
+        if( $noTor && exists( $siteJsonNew->{tor} )) {
+            unless( @noTorHostname ) {
+                fatal( 'More tor sites to restore with --notor than --notorhostname arguments given' );
+            }
+            my $newHostname = shift @noTorHostname;
+            $siteJsonNew->{hostname} = $newHostname;
+
+            delete $siteJsonNew->{tor};
+        }
 
         my $newSite = UBOS::Site->new( $siteJsonNew );
         if( $noTls ) {
             $newSite->deleteTlsInfo();
         }
         push @sitesNew, $newSite;
+    }
+    if( @noTorHostname ) {
+        fatal( 'Too many --notorhostname arguments given for the sites to be restored' );
     }
 
     info( 'Installing prerequisites' );
@@ -715,7 +758,7 @@ sub _uniq {
 sub synopsisHelp {
     return {
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] [--migratefrom <package-a> --migrateto <package-b>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] [--notor] [--notorhostname <hostname>]... [--migratefrom <package-a> --migrateto <package-b>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore all sites contained in backupfile. This includes all
     applications at that site and their data. None of the sites in the backup
@@ -726,7 +769,7 @@ SSS
     backupfile.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] [--migratefrom <package-a> --migrateto <package-b>] ( --siteid <siteid> | --hostname <hostname> ) [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    [--verbose | --logConfig <file>] [--showids] [--notls] [--notor] [--notorhostname <hostname>]... [--migratefrom <package-a> --migrateto <package-b>] ( --siteid <siteid> | --hostname <hostname> ) [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
     Restore the site with siteid or hostname contained in backupfile. This
     includes all applications at that site and their data. This site currently
