@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/perl
 #
 # Regenerate the ubos tor config file.
 #
@@ -19,10 +19,57 @@
 # along with ubos-admin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-( echo "## Automatically generated. Do not modify, your changes will be mercilessly overwritten."
-  cat /etc/tor/ubos-prefix
-  if [ "$(ls -A /etc/tor/ubos-sites.d/)" ]; then
-    cat /etc/tor/ubos-sites.d/*
-    cat /etc/tor/ubos-postfix
-  fi
-) > /etc/tor/torrc
+use strict;
+use warnings;
+
+use UBOS::Logging;
+use UBOS::Utils;
+
+my $prefixFile   = '/etc/tor/ubos-prefix';
+my $torSitesDir  = '/etc/tor/ubos-sites.d';
+my $openPortsDir = '/etc/ubos/open-ports.d';
+
+my $content = <<START;
+## Automatically generated. Do not modify, your changes will be mercilessly overwritten.
+START
+
+if( -e $prefixFile ) {
+    $content .= UBOS::Utils::slurpFile( $prefixFile );
+
+    if( !UBOS::Utils::isDirEmpty( $torSitesDir ) && !UBOS::Utils::isDirEmpty( $openPortsDir )) {
+        foreach my $file ( glob "$torSitesDir/*" ) {
+            $content .= UBOS::Utils::slurpFile( $file );
+        }
+
+        my $etcServices = UBOS::Utils::slurpFile( '/etc/services' );
+        my %portsTable  = ();
+        foreach my $line ( split /\n/, $etcServices ) {
+            if( $line =~ m!^(\S+)\s+(\d+)/(\S+)$! ) {
+                $portsTable{"$1/$3"} = $2;
+            }
+        }
+
+        my %openPorts = ();
+        foreach my $file ( glob "$openPortsDir/*" ) {
+            my $portsContent = UBOS::Utils::slurpFile( $file );
+
+            foreach my $line ( split /\n/, $portsContent ) {
+                if( exists( $portsTable{$line} )) {
+                    my $port = $portsTable{$line};
+                    $openPorts{$port} = $port;
+                }
+            }
+        }
+
+
+        foreach my $port ( sort { $a - $b } keys %openPorts ) {
+            $content .= <<CONTENT;
+HiddenServicePort $port 127.0.0.1:$port
+CONTENT
+        }
+    }
+}
+
+UBOS::Utils::saveFile( '/etc/tor/torrc', $content, 0644 );
+
+1;
