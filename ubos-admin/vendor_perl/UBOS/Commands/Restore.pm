@@ -517,6 +517,9 @@ sub restoreSites {
             if( exists( $appConfigIdTranslation{$newAppConfigId} )) {
                 fatal( 'AppConfig with this appConfigId exists already:', $newAppConfigId );
             }
+            if( exists( $appConfigIdTranslation{$appConfig->appConfigId} )) {
+                delete $appConfigIdTranslation{$appConfig->appConfigId};
+            }
             $appConfigIdTranslation{$newAppConfigId} = $appConfig->appConfigId;
 
             push @{$siteIdsToAppConfigIds{$newSiteId}}, $newAppConfigId;
