@@ -25,8 +25,8 @@
 
 use strict;
 use warnings;
-                                                  
-package UBOS::Install::Installers::VboxX86_64;
+
+package UBOS::Install::Installers::VboxPc;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
@@ -151,7 +151,7 @@ sub addConfigureNetworkingToScript {
 sub deviceClass {
     my $self = shift;
 
-    return 'vbox-x86_64';
+    return 'vbox-pc';
 }
 
 ##

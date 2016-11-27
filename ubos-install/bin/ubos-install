@@ -120,7 +120,7 @@ unless( $deviceclassname ) {
         $deviceclassname = 'bbb';
     } elsif( $out =~ m!pcduino3.*armv7l! ) {
         $deviceclassname = 'pcduino3';
-    } elsif( $out =~ m!x86_64! ) {
+    } elsif( $out =~ m!pc! ) {
         $deviceclassname = 'pc';
     } else {
         fatal( 'Cannot automatically determine --deviceclass. Need to specify as argument.' );
@@ -279,7 +279,7 @@ Optional arguments:
               Defaults to a temp directoy in the current working directory. Make sure there
               is enough disk space for the entire system
         --deviceclass <class>:
-              The device class, e.g. rpi (Raspberry Pi), pc (x86_64). The host on which $0
+              The device class, e.g. rpi (Raspberry Pi), pc (x86_64 PC). The host on which $0
               is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
         --checksignatures <never|optional|required>
               Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
@@ -290,7 +290,7 @@ Optional arguments:
               boot partition that can be formatted as vfat.
         --bootloaderdevice <dev>:
               Install the boot loader on this block device. This is only required for
-              some systems (e.g. x86_64) where boot loaders are written to a special place
+              some systems (e.g. PC) where boot loaders are written to a special place
               on the hard disk.
         --varpartition <part>:
               Use a separate /var partition. If more than one var partition is given, mirror

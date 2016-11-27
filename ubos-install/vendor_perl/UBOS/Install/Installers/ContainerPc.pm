@@ -21,7 +21,7 @@
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::ContainerX86_64;
+package UBOS::Install::Installers::ContainerPc;
 
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
@@ -38,7 +38,7 @@ sub arch {
 ##
 # Help text
 sub help {
-    return 'Linux container on x86_64';
+    return 'Linux container on PC (x86_64)';
 }
 
 1;
