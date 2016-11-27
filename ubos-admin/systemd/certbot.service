@@ -1,5 +1,8 @@
 [Unit]
 Description=Let's Encrypt renewal
+ConditionPathExists=/usr/bin/certbot
+# the certbot package may not actually be installed; only installed once the first
+# letsencrypt site is installed
 
 [Service]
 Type=oneshot
