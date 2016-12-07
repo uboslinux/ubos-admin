@@ -73,7 +73,8 @@ sub run {
         || @args
         || ( $verbose && $logConfigFile )
         || ( $selfSigned && !$tls )
-        || ( $letsEncrypt && !$tls )
+        || ( $letsEncrypt && !$tls
+        || ( $tor && $letsencrypt )
         || ( $selfSigned && $letsEncrypt ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
@@ -617,7 +618,8 @@ SSS
     --selfsigned is provided, a self-signed certificate is automatically set
     up. If additionally --letsencrypt is provided, letsencrypt.org will be
     used to automatically setup a certificate; otherwise, keys and certificates
-    need to be entered manually.
+    need to be entered manually. --tor will set up the site as a Tor hidden
+    service (--tls is optional, not --letsencrypt is not permitted).
     If --out is provided, also save the created Site JSON to a file. Adding
     --quiet will skip progress messages.
 HHH
@@ -631,7 +633,8 @@ SSS
     --selfsigned is provided, a self-signed certificate is automatically set
     up. If additionally --letsencrypt is provided, letsencrypt.org will be
     used to automatically setup a certificate; otherwise, keys and certificates
-    need to be entered manually.
+    need to be entered manually.  --tor will set up the site as a Tor hidden
+    service (--tls is optional, not --letsencrypt is not permitted).
     If --out is provided, the created Site JSON will be saved to a file instead
     of writing it to stdout. Adding --quiet will skip progress messages.
 HHH
