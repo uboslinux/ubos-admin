@@ -251,7 +251,7 @@ sub config {
                         "site.admin.credential"         => $adminJson->{credential},
                         "site.admin.email"              => $adminJson->{email}
                     },
-                UBOS::Host::config() );
+                    'UBOS::Host' );
     }
     return $self->{config};
 }
@@ -751,7 +751,9 @@ sub _deployOrCheck {
                 $hostname =~ s!^\s+!!;
                 $hostname =~ s!\s+$!!;
                 $self->{json}->{hostname} = $hostname;
+print STDERR "** read hostname from TOR: " . $self->{config} . "\n";
             }
+            delete $self->{config}; # will regenerate with correct hostname when needed
         }
         UBOS::Host::siteDeployed( $self );
     }

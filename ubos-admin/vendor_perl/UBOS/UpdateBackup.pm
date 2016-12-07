@@ -103,7 +103,7 @@ sub create {
 
                 my $config = $appConfig->obtainSubconfig(
                         "Installable=$packageName",
-                        $installable->config );
+                        $installable );
 
                 foreach my $roleName ( @{$installable->roleNames} ) {
                     my $role = $rolesOnHost->{$roleName};
@@ -195,7 +195,7 @@ sub restoreAppConfiguration {
 
         my $config = $appConfigOnHost->obtainSubconfig(
                 "Installable=$packageName",
-                $installable->config );
+                $installable );
 
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};

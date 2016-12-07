@@ -35,7 +35,7 @@ use fields qw( hierarchicalMap flatMap );
 # Constructor.
 # $name: name for this Configuration object. This helps with debugging.
 # $hierarchicalMap: map of name to value (which may be another map)
-# @delegates: more Configuration objects which may be used to resolve unknown variables
+# @delegates: more objects holding Configuration objects which may be used to resolve unknown variables
 sub new {
     my $self            = shift;
     my $name            = shift;
@@ -102,7 +102,7 @@ sub keys {
         $uniq->{$key} = 1;
     }
     foreach my $delegate ( @{$self->{delegates}} ) {
-        foreach my $key ( $delegate->keys() ) {
+        foreach my $key ( $delegate->config()->keys() ) {
             $uniq->{$key} = 1;
         }
     }

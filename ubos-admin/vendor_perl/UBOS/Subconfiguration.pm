@@ -34,8 +34,8 @@ use fields qw( parent );
 ##
 # Constructor.
 # $name: name for this Configuration object. This helps with debugging.
-# $parent: parent Configuration object to which puts are written
-# @delegates: more Configuration objects which may be used to resolve unknown variables
+# $parent: parent holding Configuration object to which puts are written
+# @delegates: objects holding Configuration objects which may be used to resolve unknown variables
 sub new {
     my $self      = shift;
     my $name      = shift;
@@ -60,7 +60,7 @@ sub put {
     my $name  = shift;
     my $value = shift;
 
-    return $self->{parent}->put( $name, $value );
+    return $self->{parent}->config()->put( $name, $value );
 }
 
 ##
@@ -71,7 +71,7 @@ sub keys {
 
     my $uniq = {};
     foreach my $delegate ( @{$self->{delegates}} ) {
-        foreach my $key ( $delegate->keys() ) {
+        foreach my $key ( $delegate->config()->keys() ) {
             $uniq->{$key} = 1;
         }
     }

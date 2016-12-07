@@ -159,7 +159,7 @@ sub new {
     $self->{config} = UBOS::Configuration->new(
             "Installable=$packageName",
             { "package.name" => $packageName },
-            UBOS::Host::config() );
+            'UBOS::Host' );
 
     $self->{json}        = $json;
     $self->{packageName} = $packageName;

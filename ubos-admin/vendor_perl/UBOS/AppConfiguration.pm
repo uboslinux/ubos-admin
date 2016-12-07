@@ -313,7 +313,7 @@ sub config {
                         "appconfig.contextorslash"       => $self->contextOrSlash(),
                         "appconfig.contextnoslashorroot" => $self->contextNoSlashOrRoot()
                     },
-                    $site->config );
+                    $site );
     }
     return $self->{config};
 }
@@ -321,7 +321,7 @@ sub config {
 ##
 # Smart factory to always return the same sub-Configuration objects.
 # $name: name of the sub-configuration; must be consistent as it is used as the key
-# @delegates: more Configuration objects which may be used to resolve unknown variables
+# @delegates: more objects that have config() methods that may be used to resolve unknown variables
 # return: new or reused Configuration object
 sub obtainSubconfig {
     my $self      = shift;
@@ -334,7 +334,7 @@ sub obtainSubconfig {
     } else {
         $ret = UBOS::Subconfiguration->new(
                 "$name,AppConfiguration=" . $self->appConfigId,
-                $self->config,
+                $self,
                 @delegates );
         $self->{subconfigs}->{$name} = $ret;
     }
@@ -416,7 +416,7 @@ sub deployOrCheck {
 
         my $config = $self->obtainSubconfig(
                 "Installable=$packageName",
-                $installable->config );
+                $installable );
 
         # Customization points for this Installable at this AppConfiguration
 
@@ -467,7 +467,7 @@ sub undeployOrCheck {
 
         my $config = $self->obtainSubconfig(
                 "Installable=$packageName",
-                $installable->config );
+                $installable );
 
         $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
@@ -504,7 +504,7 @@ sub suspend {
 
         my $config = $self->obtainSubconfig(
                 "Installable=$packageName",
-                $installable->config );
+                $installable );
 
         $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
@@ -541,7 +541,7 @@ sub resume {
 
         my $config = $self->obtainSubconfig(
                 "Installable=$packageName",
-                $installable->config );
+                $installable );
 
         $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
@@ -600,7 +600,7 @@ sub _runPostDeploy {
 
         my $config = $self->obtainSubconfig(
                 "Installable=$packageName",
-                $installable->config );
+                $installable );
 
         $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
