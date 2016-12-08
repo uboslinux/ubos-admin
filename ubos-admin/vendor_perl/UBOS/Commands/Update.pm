@@ -105,7 +105,7 @@ sub run {
     my $ret = 1;
 
     my $snapNumber = undef;
-    unless( $noSnap ) {
+    if( !$noSnap && UBOS::Host::config()->get( 'host.snapshotonupgrade', 0 )) {
         $snapNumber = UBOS::Host::preSnapshot()
     }
 

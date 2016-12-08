@@ -700,6 +700,10 @@ sub ensureSnapperConfig {
                 }
             }
         }
+        my $err;
+        if( myexec( 'snapper setup-quota', undef, \$err, \$err )) {
+            error( 'snapper setup-quota failed:', $err );
+        }
     }
     1;
 }

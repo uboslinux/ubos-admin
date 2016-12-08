@@ -132,8 +132,8 @@ sub finishUpdate {
 
     UBOS::Host::purgeCache( 1 );
 
-    if( defined( $snapNumber )) {
-        UBOS::Host::postSnapshot( $snapNumber );
+    if( defined( $snapNumber ) && UBOS::Host::config()->get( 'host.snapshotonupgrade', 0 )) {
+         UBOS::Host::postSnapshot( $snapNumber );
     }
 
     return $ret;

@@ -4,6 +4,7 @@
         "readstaffonboot"              : true,
         "deploysitetemplatesonboot"    : true,
         "deploysitetemplatesonbootdir" : "/var/lib/ubos/deploy-site-templates-on-boot",
+        "snapshotonupgrade"            : false,
         "tmpdir"                       : "/tmp"
     },
 
