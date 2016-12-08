@@ -751,7 +751,6 @@ sub _deployOrCheck {
                 $hostname =~ s!^\s+!!;
                 $hostname =~ s!\s+$!!;
                 $self->{json}->{hostname} = $hostname;
-print STDERR "** read hostname from TOR: " . $self->{config} . "\n";
             }
             delete $self->{config}; # will regenerate with correct hostname when needed
         }

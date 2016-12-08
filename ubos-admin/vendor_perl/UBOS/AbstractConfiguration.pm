@@ -79,7 +79,6 @@ sub get {
 
     my $ret;
     foreach my $delegate ( @{$self->{delegates}} ) {
-        print "** name is " . $self->{name} . ", delegate is $delegate\n";
         $ret = $delegate->config()->get( $name, undef, $remainingDepth-1 );
         if( defined( $ret )) {
             last;
@@ -146,8 +145,6 @@ sub getResolve {
     } else {
         $ret = '${' . $name . '}';
     }
-print STDERR "** getResolve( $name ) => $ret, $self\n";
-
     return $ret;
 }
 
