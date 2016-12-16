@@ -701,7 +701,7 @@ sub ensureSnapperConfig {
             }
         }
         my $err;
-        if( myexec( 'snapper setup-quota', undef, \$err, \$err )) {
+        if( myexec( 'snapper setup-quota', undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
             error( 'snapper setup-quota failed:', $err );
         }
     }
