@@ -288,19 +288,20 @@ sub setupUpdateShepherd {
     my @keys = @_;
 
     if( UBOS::Host::ensureOsUser( 'shepherd', undef, '/var/shepherd' )) {
+        my $authKeyFile = '/var/shepherd/.ssh/authorized_keys';
         unless( -d '/var/shepherd/.ssh' ) {
             UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
         }
         my $authorizedKeys;
-        if( $add ) {
-            $authorizedKeys = UBOS::Utils::slurpFile( "/var/shepherd/.ssh/authorized_keys" );
+        if( $add && -e $authKeyFile ) {
+            $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
         }
         if( @keys ) {
             $authorizedKeys .= join( "\n", @keys ) . "\n";
         }
 
         if( defined( $authorizedKeys )) {
-            UBOS::Utils::saveFile( "/var/shepherd/.ssh/authorized_keys", $authorizedKeys, 0644, 'shepherd', 'shepherd' );
+            UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
         }
 
         UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );

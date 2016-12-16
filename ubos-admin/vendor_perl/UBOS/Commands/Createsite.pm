@@ -73,8 +73,8 @@ sub run {
         || @args
         || ( $verbose && $logConfigFile )
         || ( $selfSigned && !$tls )
-        || ( $letsEncrypt && !$tls
-        || ( $tor && $letsencrypt )
+        || ( $letsEncrypt && !$tls )
+        || ( $tor && $letsEncrypt )
         || ( $selfSigned && $letsEncrypt ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
