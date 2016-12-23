@@ -40,6 +40,10 @@ pre_install() {
     ensureChattr
 }
 
+post_install() {
+    perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
+}
+
 ## arg 1: the new package version
 ## arg 2: the old package version
 post_upgrade() {
