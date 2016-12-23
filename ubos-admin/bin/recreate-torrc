@@ -45,7 +45,11 @@ if( -e $prefixFile ) {
         my %portsTable  = ();
         foreach my $line ( split /\n/, $etcServices ) {
             if( $line =~ m!^(\S+)\s+(\d+)/(\S+)$! ) {
-                $portsTable{"$1/$3"} = $2;
+                my( $name, $port, $proto ) = ( $1, $2, $3 );
+                if( 'tcp' eq $proto ) {
+                    # Tor only supports tcp at this time
+                    $portsTable{"$name/$proto"} = $port;
+                }
             }
         }
 
@@ -57,10 +61,16 @@ if( -e $prefixFile ) {
                 if( exists( $portsTable{$line} )) {
                     my $port = $portsTable{$line};
                     $openPorts{$port} = $port;
+                } elsif( $line =~ m!^(\d+)/(\S+)$! ) {
+                    # not in /etc/services, but numeric port given
+                    my( $port, $proto ) = ( $1, $2 );
+                    if( 'tcp' eq $proto ) {
+                        # Tor only supports tcp at this time
+                        $openPorts{$port} = $port;
+                    }
                 }
             }
         }
-
 
         foreach my $port ( sort { $a - $b } keys %openPorts ) {
             $content .= <<CONTENT;
