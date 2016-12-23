@@ -92,7 +92,7 @@ sub createDiskLayout {
                     $first,
                     {   '/' => {
                             'index' => 1,
-                            'fs'    => 'ext4'
+                            'fs'    => 'btrfs'
                         },
                     } );
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
@@ -101,7 +101,7 @@ sub createDiskLayout {
                     $argvp,
                     {   '/' => {
                             'index' => 1,
-                            'fs'    => 'ext4'
+                            'fs'    => 'btrfs'
                         },
                     } );
 
