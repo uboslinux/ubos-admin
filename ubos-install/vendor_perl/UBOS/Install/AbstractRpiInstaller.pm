@@ -58,8 +58,8 @@ sub new {
     $self->{kernelpackage} = 'linux-raspberrypi';
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client
-                raspberrypi-firmware raspberrypi-firmware-bootloader
-                raspberrypi-firmware-bootloader-x archlinuxarm-keyring
+                raspberrypi-firmware raspberrypi-bootloader
+                raspberrypi-bootloader-x archlinuxarm-keyring
                 rng-tools smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {

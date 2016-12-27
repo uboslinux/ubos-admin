@@ -768,6 +768,9 @@ sub addConfigureSnapperToScript {
             $$chrootScriptP .= "snapper -c '$configName' --no-dbus create-config -t ubos-default '$mountPoint'\n";
         }
     }
+    if( @mountPoints ) {
+        $$chrootScriptP .= 'snapper setup-quota';
+    }
     return $errors;
 }
 
