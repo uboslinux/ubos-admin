@@ -31,9 +31,8 @@ use UBOS::ResourceManager;
 UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-initialize', 0, '/etc/ubos/log-system.conf' );
 
 UBOS::ConfigurationManager::initializeIfNeeded();
-
+UBOS::Host::ensureSnapperConfig();
 UBOS::Host::runAfterBootCommandsIfNeeded();
-
 UBOS::Host::deploySiteTemplatesIfNeeded();
 
 1;

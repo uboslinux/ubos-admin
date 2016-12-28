@@ -768,9 +768,9 @@ sub addConfigureSnapperToScript {
             $$chrootScriptP .= "snapper -c '$configName' --no-dbus create-config -t ubos-default '$mountPoint'\n";
         }
     }
-    if( @mountPoints ) {
-        $$chrootScriptP .= 'snapper setup-quota';
-    }
+    # Cannot invoke 'snapper setup-quota' here -- it fails with a dbus fatal exception.
+    # Presumably it doesn't like the chroot it is running in.
+    # So we will have to do this during boot
     return $errors;
 }
 
