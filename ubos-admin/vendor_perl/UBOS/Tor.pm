@@ -87,7 +87,7 @@ sub ensureRunning {
 sub reload {
     ensureRunning();
 
-    UBOS::Utils::myexec( 'systemctl reload-or-restart ubos-tor' );
+    UBOS::Utils::myexec( 'systemctl restart ubos-tor' );
 
     1;
 }
@@ -97,7 +97,7 @@ sub reload {
 sub restart {
     ensureRunning();
 
-    UBOS::Utils::myexec( 'systemctl reload-or-restart ubos-tor' );
+    UBOS::Utils::myexec( 'systemctl restart ubos-tor' );
 
     1;
 }
