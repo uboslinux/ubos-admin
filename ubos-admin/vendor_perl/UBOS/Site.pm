@@ -737,7 +737,7 @@ sub _deployOrCheck {
         if( exists( $self->{json}->{tor} )) {
             # This is not such a great place where to restart a daemon, but we need it to
             # generate the key before continuing
-            UBOS::Tor::reload();
+            UBOS::Tor::restart();
 
             my $siteTorDir = $self->config->getResolve( 'site.apache2.sitetordir' );
             if( -e "$siteTorDir/private_key" ) {

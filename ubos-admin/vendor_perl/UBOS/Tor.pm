@@ -32,10 +32,12 @@ my $pidDir  = '/run/ubos-tor';
 my $pidFile = "$pidDir/pidfile";
 
 ##
-# Ensure that Tor is running.
-sub ensureRunning {
+# Ensure that Tor is running, using the provided systemctl command
+# $command: the Apache systemd command, such as 'restart' or 'reload'
+sub _ensureTor {
+    my $command = shift;
 
-    debug( 'Tor::ensureRunning' );
+    debug( 'Tor::_ensureTor', $command );
 
     if( $running ) {
         return 1;
@@ -47,8 +49,8 @@ sub ensureRunning {
 
     my $out;
     my $err;
-    UBOS::Utils::myexec( 'systemctl enable ubos-tor',  undef, \$out, \$err );
-    UBOS::Utils::myexec( 'systemctl restart ubos-tor', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl enable ubos-tor',   undef, \$out, \$err );
+    UBOS::Utils::myexec( "systemctl $command ubos-tor", undef, \$out, \$err );
 
     my $max  = 15;
     my $poll = 0.2;
@@ -58,6 +60,8 @@ sub ensureRunning {
 
     while( 1 ) {
         if( -e $pidFile ) {
+            sleep( 2 ); # two more seconds
+            debug( 'Detected Tor restart' );
             last;
         }
         unless( -d $pidDir ) {
@@ -85,21 +89,13 @@ sub ensureRunning {
 ##
 # Reload configuration
 sub reload {
-    ensureRunning();
-
-    UBOS::Utils::myexec( 'systemctl restart ubos-tor' );
-
-    1;
+    _ensureTor( 'reload' );
 }
 
 ##
 # Restart configuration
 sub restart {
-    ensureRunning();
-
-    UBOS::Utils::myexec( 'systemctl restart ubos-tor' );
-
-    1;
+    _ensureTor( 'restart' );
 }
 
 1;
