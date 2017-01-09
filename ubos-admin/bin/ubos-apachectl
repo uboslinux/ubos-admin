@@ -4,7 +4,8 @@
 # * adding an alternate config file
 # * making sure base modules are activated and tls key material is available
 # * no ssl commands
-# (C) 2014 Indie Computing Corp.
+#
+# (C) 2014-2017 Indie Computing Corp.
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with

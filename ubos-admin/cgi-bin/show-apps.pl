@@ -4,7 +4,7 @@
 # at the root of the site.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -115,7 +115,7 @@ HTML
     print <<HTML;
    </div>
    <div class="footer">
-    <p>&copy; 2016 Indie Computing Corp.<br/>
+    <p>&copy; 2017 Indie Computing Corp.<br/>
     UBOS, and the UBOS logo are trademarks or registered trademarks of <a href="http://indiecomputing.com/">Indie Computing Corp.</a></p>
    </div>
   </div>

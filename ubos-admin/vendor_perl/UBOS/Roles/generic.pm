@@ -3,7 +3,7 @@
 # A generic role that does not depend on some package like Apache or MySQL.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2016 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

@@ -3,7 +3,7 @@
 # An AppConfiguration item that is the running of a systemd timer.
 #
 # This file is part of ubos-admin.
-# (C) 2012-2015 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

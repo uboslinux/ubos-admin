@@ -3,7 +3,7 @@
 # apache2 role. The interface to Apache2 is in Apache2.pm
 #
 # This file is part of ubos-admin.
-# (C) 2012-2016 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -221,7 +221,7 @@ sub setupPlaceholderSite {
 #
 # Apache config fragment for placeholder site $siteId (placeholder $placeholderName) at host $hostname
 #
-# (C) 2013-2016 Indie Computing Corp.
+# (C) 2013-2017 Indie Computing Corp.
 # Generated automatically, do not modify.
 #
 
@@ -284,7 +284,7 @@ sub resumeSite {
 #
 # Apache config fragment for site $siteId at host $hostname
 #
-# (C) 2013-2016 Indie Computing Corp.
+# (C) 2013-2017 Indie Computing Corp.
 # Generated automatically, do not modify.
 #
 CONTENT
