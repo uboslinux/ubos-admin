@@ -2,24 +2,23 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.205
+pkgver=0.206
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
 license=('GPL')
 depends=(
-    'ubos-perl-utils'
-    'ubos-keyring'
-    'cronie'
+    'apache'
     'btrfs-progs'
-    'sudo'
+    'cronie'
+    'perl-archive-zip'
     'perl-cgi'
     'perl-dbi'
-    'perl-archive-zip'
     'php-apache'
-    'apache'
-    'mod_wsgi2'
     'snapper' )
+    'sudo'
+    'ubos-keyring'
+    'ubos-perl-utils' )
 backup=(
     'etc/ubos/config.json'
     'etc/httpd/ubos/defaults.conf'
