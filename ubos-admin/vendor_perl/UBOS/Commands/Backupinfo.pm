@@ -40,10 +40,6 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
-    if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
-    }
-
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $in            = undef;
