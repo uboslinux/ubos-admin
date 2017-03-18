@@ -1186,11 +1186,6 @@ sub _checkJson {
                         if( !$pointValue || ref( $pointValue ) ne 'HASH' ) {
                             fatal( 'Site JSON: customizationpoint values for package ' . $packageName . ', point ' . $pointName . ' must be a JSON hash' );
                         }
-                        # FIXME? Currently this check is too strict, see also https://github.com/uboslinux/ubos-admin/issues/39
-                        # my $valueValue = $pointValue->{value};
-                        # if( !$valueValue ) {
-                        #     fatal( 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' is not given' );
-                        # }
                         my $valueEncoding = $pointValue->{encoding};
                         if( $valueEncoding && $valueEncoding ne 'base64' ) {
                             fatal( 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' invalid encoding' );
