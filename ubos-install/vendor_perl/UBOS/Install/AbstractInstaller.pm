@@ -686,6 +686,37 @@ sub installBootLoader {
 }
 
 ##
+# Configure smartd (from smartmontools)
+# return: number of errors
+sub configureSmartd {
+    my $self = shift;
+
+    my $target = $self->{target};
+    my $confFile = $target . '/etc/smartd.conf';
+
+    if( -e $confFile ) {
+        # override with "monitor all" if smartmontools are installed
+        UBOS::Utils::saveFile( $confFile, <<CONTENT );
+# UBOS default configuration, following Arch recommendation
+
+#    -a (monitor all attributes)
+#    -o on (enable automatic online data collection)
+#    -S on (enable automatic attribute autosave)
+#    -n standby,q (do not check if disk is in standby, and suppress log message to that effect so as not to cause a write to disk)
+#    -s ... (schedule short and long self-tests)
+#    -W ... (monitor temperature)
+# but do not e-mail
+
+DEVICESCAN -a -o on -S on -n standby,q -s (S/../.././02|L/../../6/03) -W 4,35,40
+
+CONTENT
+    }
+
+    return 0;
+}
+
+
+##
 # Add commands to the provided script, to be run in a chroot, that generates the locale
 # $chrootScriptP: pointer to script
 sub addGenerateLocaleToScript {
