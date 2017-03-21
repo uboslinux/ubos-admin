@@ -25,6 +25,7 @@ use warnings;
 package UBOS::Backup::ZipFileBackupContext;
 
 use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
+use UBOS::Logging;
 
 use base qw( UBOS::AbstractBackupContext );
 use fields qw( backup contextPathInBackup );
