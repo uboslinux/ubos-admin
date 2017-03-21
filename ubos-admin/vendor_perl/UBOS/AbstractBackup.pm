@@ -196,7 +196,7 @@ sub findAppConfigurationByPartialId {
         }
 
     } else {
-        foreach my $appConfigId ( keys %{$self->appconfigs} ) {
+        foreach my $appConfigId ( keys %{$self->appConfigs} ) {
             my $appConfig = $self->{appconfigs}->{$appConfigId};
 
             if( $appConfig->appConfigId eq $appConfigId ) {
