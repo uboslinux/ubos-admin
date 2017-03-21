@@ -173,7 +173,7 @@ sub run {
         close $tmpFile;
         $file = $tmpFile->filename();
 
-        info( 'Downloading...' );
+        info( 'Downloading backup...' );
 
         my $stdout;
         my $stderr;

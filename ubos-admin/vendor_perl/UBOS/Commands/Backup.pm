@@ -72,6 +72,9 @@ sub run {
 
     foreach my $host ( @hosts ) {
         my $site = UBOS::Host::findSiteByHostname( $host );
+        unless( $site ) {
+            fatal( 'Cannot find site with hostname:', $host );
+        }
         push @siteIds, $site->siteId;
     }
 
