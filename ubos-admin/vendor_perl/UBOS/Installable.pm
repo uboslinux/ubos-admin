@@ -317,29 +317,35 @@ sub _localeToKeys {
 ##
 # Check validity of the manifest JSON.
 # $type: the required value of the type field
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with myFatal error
 sub checkManifest {
-    my $self = shift;
-    my $type = shift;
+    my $self                 = shift;
+    my $type                 = shift;
+    my $skipFilesystemChecks = shift;
 
     debug( 'Checking manifest for', $self->packageName );
 
-    $self->checkManifestStructure();
+    $self->checkManifestStructure( $skipFilesystemChecks );
 
     my $json = $self->{json};
     unless( $json->{type} eq $type ) {
         $self->myFatal( 'type must be', $type, 'is:', $json->{type} );
     }
 
-    $self->checkManifestRolesSection();
-    $self->checkManifestCustomizationPointsSection();
+    $self->checkManifestRolesSection( $skipFilesystemChecks );
+    $self->checkManifestCustomizationPointsSection( $skipFilesystemChecks );
 }
 
 ##
 # Check validity of the manifest JSON's structure.
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with fatal error
 sub checkManifestStructure {
-    my $self = shift;
+    my $self                 = shift;
+    my $skipFilesystemChecks = shift;
 
     my $json = $self->{json};
 
@@ -356,9 +362,12 @@ sub checkManifestStructure {
 
 ##
 # Check validity of the manifest JSON's roles section.
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with fatal error
 sub checkManifestRolesSection {
-    my $self = shift;
+    my $self                 = shift;
+    my $skipFilesystemChecks = shift;
 
     my $json   = $self->{json};
     my $config = $self->{config};
@@ -371,7 +380,7 @@ sub checkManifestRolesSection {
 
             my $role = $rolesOnHost->{$roleName};
             if( $role ) {
-                $role->checkAppManifestForRole( $roleName, $self, $roleJson, $retentionBuckets, $config );
+                $role->checkAppManifestForRole( $roleName, $self, $roleJson, $retentionBuckets, $skipFilesystemChecks, $config );
             } # else we ignore roles we don't know
         }
     }
@@ -379,9 +388,12 @@ sub checkManifestRolesSection {
 
 ##
 # Check validity of the manifest JSON's info section.
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with fatal error
 sub checkManifestCustomizationPointsSection {
-    my $self = shift;
+    my $self                 = shift;
+    my $skipFilesystemChecks = shift;
 
     my $json   = $self->{json};
     my $config = $self->{config};

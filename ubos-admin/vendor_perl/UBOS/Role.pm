@@ -400,16 +400,19 @@ sub obtainLetsEncryptCertificate {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration object to use
 sub checkAppManifestForRole {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
-    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
 }
 
 ##
@@ -418,16 +421,19 @@ sub checkAppManifestForRole {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration object to use
 sub checkAccessoryManifestForRole {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
-    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
 }
 
 ##
@@ -436,14 +442,17 @@ sub checkAccessoryManifestForRole {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration object to use
 sub checkInstallableManifestForRole {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
     $installable->myFatal( "roles section implementation errror: role $roleName does not define checkInstallableManifestForRole, checkAppManifestForRole or checkAccessoryManifestForRole" );
 }
@@ -485,15 +494,17 @@ sub checkManifestForRoleGenericDepends {
 # $jsonFragment: the JSON fragment that deals with this role
 # $allowedTypes: hash of allowed types
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration to use
 sub checkManifestForRoleGenericAppConfigItems {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $allowedTypes     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
     if( exists( $jsonFragment->{appconfigitems} )) {
         unless( ref( $jsonFragment->{appconfigitems} ) eq 'ARRAY' ) {
@@ -521,7 +532,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                 if( ref( $appConfigItem->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
+                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid source: " . $appConfigItem->{source} );
                 }
                 if( exists( $appConfigItem->{name} ) && ref( $appConfigItem->{name} )) {
@@ -546,7 +557,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{source} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'source' must be string" );
                     }
-                    unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
+                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid source: " . $appConfigItem->{source} );
                     }
                 } elsif( $appConfigItem->{template} ) {
@@ -556,7 +567,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{template} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'template' must be string" );
                     }
-                    unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template} )) {
+                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid template: " . $appConfigItem->{template} );
                     }
                     if( ref( $appConfigItem->{templatelang} )) {
@@ -630,9 +641,11 @@ sub checkManifestForRoleGenericAppConfigItems {
                         if( ref( $appConfigItem->{template} )) {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'template' must be string" );
                         }
-                        foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template}, $name )) {
-                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
+                        unless( $skipFilesystemChecks ) {
+                            foreach my $name ( @names ) {
+                                unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template}, $name )) {
+                                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
+                                }
                             }
                         }
                         if( ref( $appConfigItem->{templatelang} )) {
@@ -654,9 +667,11 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{source} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': field 'source' must be string" );
                     }
-                    foreach my $name ( @names ) {
-                        unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                    unless( $skipFilesystemChecks ) {
+                        foreach my $name ( @names ) {
+                            unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
+                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                            }
                         }
                     }
 
@@ -669,9 +684,11 @@ sub checkManifestForRoleGenericAppConfigItems {
                     }
                     unless( $appConfigItem->{source} =~ m!\$\{.*\}! ) {
                         # Symlinks get to have variables in their sources
-                        foreach my $name ( @names ) {
-                            unless( $name  && UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                        unless( $skipFilesystemChecks ) {
+                            foreach my $name ( @names ) {
+                                unless( $name  && UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
+                                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                                }
                             }
                         }
                     }

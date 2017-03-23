@@ -45,7 +45,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
-    my $template      = undef;
+    my $useAsTemplate = undef;
     my @files         = ();
     my $stdin         = 0;
 
@@ -53,7 +53,7 @@ sub run {
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
-            'template'    => \$template,
+            'template'    => \$useAsTemplate,
             'files=s'     => \@files,
             'stdin'       => \$stdin );
 
@@ -89,7 +89,7 @@ sub run {
 
    foreach my $fileName ( keys %jsons ) {
        my $json   = $jsons{$fileName};
-       my $site   = UBOS::Site->new( $json, $template );
+       my $site   = UBOS::Site->new( $json, $useAsTemplate );
        my $siteId = $site->siteId;
        if( $newSitesHash->{$siteId} ) {
            fatal( "Duplicate site definition: $siteId" );

@@ -234,14 +234,17 @@ END
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration object to use
 sub checkInstallableManifestForRole {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
     my $noDatabase = {
         'directory'     => 1,
@@ -255,7 +258,7 @@ sub checkInstallableManifestForRole {
     };
 
     $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $config );
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $config );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $config );
     $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $config );
     $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $config );
 }

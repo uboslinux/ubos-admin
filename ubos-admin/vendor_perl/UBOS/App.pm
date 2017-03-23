@@ -30,11 +30,14 @@ use fields;
 ##
 # Constructor.
 # $packageName: unique identifier of the package
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $manifestFileReader: pointer to a method that knows how to read the manifest file
 sub new {
-    my $self               = shift;
-    my $packageName        = shift;
-    my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
+    my $self                 = shift;
+    my $packageName          = shift;
+    my $skipFilesystemChecks = shift;
+    my $manifestFileReader   = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -42,7 +45,7 @@ sub new {
     $self->SUPER::new( $packageName, $manifestFileReader );
 
     if( $self->{config}->get( 'host.checkmanifest', 1 )) {
-        $self->checkManifest( 'app' );
+        $self->checkManifest( 'app', $skipFilesystemChecks );
     }
 
     return $self;

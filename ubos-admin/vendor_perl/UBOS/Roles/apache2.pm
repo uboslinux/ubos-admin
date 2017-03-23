@@ -585,14 +585,17 @@ sub obtainLetsEncryptCertificate {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration object to use
 sub checkAppManifestForRole {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
     if( $installable->isa( 'UBOS::App' )) {
         if( defined( $jsonFragment->{defaultcontext} )) {
@@ -622,7 +625,7 @@ sub checkAppManifestForRole {
         $installable->myFatal( "roles section: role $roleName: only provide field 'fixedcontext' for apps" );
     }        
 
-    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $config );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
 }
 
 ##
@@ -631,14 +634,17 @@ sub checkAppManifestForRole {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $config: the Configuration object to use
 sub checkInstallableManifestForRole {
-    my $self             = shift;
-    my $roleName         = shift;
-    my $installable      = shift;
-    my $jsonFragment     = shift;
-    my $retentionBuckets = shift;
-    my $config           = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $retentionBuckets     = shift;
+    my $skipFilesystemChecks = shift;
+    my $config               = shift;
 
     if( $jsonFragment->{apache2modules} ) {
         unless( ref( $jsonFragment->{apache2modules} ) eq 'ARRAY' ) {
@@ -684,7 +690,7 @@ sub checkInstallableManifestForRole {
     };
 
     $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $config );
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $config );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $config );
     $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $config );
     $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $config );
 }
