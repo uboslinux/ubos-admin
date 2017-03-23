@@ -978,6 +978,21 @@ sub obtainLetsEncryptCertificate {
 }
 
 ##
+# Remove the letsencrypt certificate for this site
+# return: 1 for success
+sub removeLetsEncryptCertificate {
+    my $self = shift;
+
+    my $ret = 1;
+    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
+    foreach my $role ( reverse @rolesOnHost ) {
+        $ret &= $role->removeLetsEncryptCertificate( $self );
+    }
+
+    return $ret;
+}
+
+##
 # Check validity of the Site JSON
 # $assignIdsIfNeeded: if true, instead of complaining about missing siteId and
 #       appConfigIds, silently assign new values

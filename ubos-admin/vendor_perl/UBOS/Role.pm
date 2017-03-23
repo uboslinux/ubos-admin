@@ -392,6 +392,18 @@ sub obtainLetsEncryptCertificate {
     return 1;
 }
 
+##
+# If this role needs (needed) a letsencrypt certificate, remove it.
+# $site: the site that needs (needed) the certificate
+sub removeLetsEncryptCertificate {
+    my $self = shift;
+    my $site = shift;
+
+    # on this level: nothing
+
+    return 1;
+}
+
 # === Manifest checking routines from here ===
 
 ##

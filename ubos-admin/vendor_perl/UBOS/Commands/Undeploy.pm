@@ -150,6 +150,11 @@ sub run {
     my $undeployTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
         $ret &= $oldSite->undeploy( $undeployTriggers );
+
+        if( $oldSite->hasLetsEncryptTls()) {
+            # If we don't do this, a new site with the same hostname may be deployed, and then things get messy
+            $ret &= $oldSite->removeLetsEncryptCertificate();
+        }
     }
     UBOS::Host::executeTriggers( $undeployTriggers );
 

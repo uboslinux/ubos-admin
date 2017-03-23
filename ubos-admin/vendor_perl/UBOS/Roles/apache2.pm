@@ -577,6 +577,31 @@ sub obtainLetsEncryptCertificate {
     return 1;
 }
 
+##
+# If this role needs (needed) a letsencrypt certificate, remove it.
+# $site: the site that needs (needed) the certificate
+sub removeLetsEncryptCertificate {
+    my $self = shift;
+    my $site = shift;
+
+    my $hostname = $site->hostname;
+
+    my $out;
+    my $ret = UBOS::Utils::myexec(
+            'TERM=dumb'
+            . ' certbot delete'
+            . " --cert-name '" . $hostname . "'",
+            undef,
+            \$out,
+            \$out );
+
+    if( $ret ) {
+        debug( 'Letsencrypt said:', $out );
+        return 0;
+    }
+    return 1;
+}
+
 # === Manifest checking routines from here ===
 
 ##
