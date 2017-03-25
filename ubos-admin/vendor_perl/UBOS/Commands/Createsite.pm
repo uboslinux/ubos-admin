@@ -112,7 +112,15 @@ sub run {
                         next outer;
                     }
                 }
+                if( $tls ) {
+                    print "You cannot create a site with hostname * (any) that is protected by TLS/\n";
+                    next outer;
+                }
             } else {
+                if( $letsEncrypt && $hostname =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
+                    print "You must have an official hostname at an official domain, publicly resolvable and fully set up, to use Letsencrypt.\n";
+                    next outer;
+                }
                 foreach my $oldSite ( values %$oldSites ) {
                     if( $oldSite->hostname eq $hostname ) {
                         if( $dryRun ) {
