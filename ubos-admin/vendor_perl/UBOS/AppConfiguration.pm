@@ -704,8 +704,8 @@ sub _addCustomizationPointValuesToConfig {
                     $data = $value->{expression};
                     $data = $self->config->replaceVariables( $data );
                 }
-                if( defined( $data )) {
-                    # do not generate the file in case of null
+                if( defined( $data ) && ( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} )) {
+                    # do not generate the file in case of null data, or if customizationpoint is declared private
                     my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
                     if( $save ) {
                         UBOS::Utils::saveFile( $filename, $data );
