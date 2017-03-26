@@ -185,7 +185,7 @@ sub run {
             if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
                 fatal( 'openssl genrsa failed', $err );
             }
-            if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch", undef, undef, \$err )) {
+            if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch -subj '/CN=$hostname'", undef, undef, \$err )) {
                 fatal( 'openssl req failed', $err );
             }
             if( UBOS::Utils::myexec( "openssl x509 -req -days 3650 -in '$dir/csr' -signkey '$dir/key' -out '$dir/crt'", undef, undef, \$err )) {
