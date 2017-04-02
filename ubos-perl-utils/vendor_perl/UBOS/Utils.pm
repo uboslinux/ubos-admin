@@ -205,6 +205,8 @@ sub myexec {
 
     debug( 'Exec:', $cmd );
 
+    $cmd = "( $cmd )"; # in case it is several commands
+
     if( $tee && ( !defined( $outContentP ) || $outContentP != $errContentP )) {
         $tee = 0;
     }

@@ -514,6 +514,7 @@ sub checkManifestForRoleGenericAppConfigItems {
     my $roleName             = shift;
     my $installable          = shift;
     my $jsonFragment         = shift;
+    my $allowedTypes         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
     my $config               = shift;

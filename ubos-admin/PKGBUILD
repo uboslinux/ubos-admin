@@ -15,7 +15,7 @@ depends=(
     'perl-cgi'
     'perl-dbi'
     'php-apache'
-    'snapper' )
+    'snapper'
     'sudo'
     'ubos-keyring'
     'ubos-perl-utils' )
@@ -71,8 +71,8 @@ package() {
 
 # Web server config files
     mkdir -p $pkgdir/etc/httpd/conf
-    mkdir -p $pkgdir/etc/httpd/ubos/{appconfigs,defaultsites,mods-available,mods-enabled,sites,ssl}
-    install -m644 $startdir/etc/httpd/conf/{httpd-ubos.conf,revocations.crl} $pkgdir/etc/httpd/conf/
+    mkdir -p $pkgdir/etc/httpd/ubos/{appconfigs,defaultsites,mods-available,mods-enabled,revocations,sites,ssl}
+    install -m644 $startdir/etc/httpd/conf/httpd-ubos.conf $pkgdir/etc/httpd/conf/
     for f in $startdir/etc/httpd/ubos/*.conf; do
         install -m644 $f $pkgdir/etc/httpd/ubos/
     done
