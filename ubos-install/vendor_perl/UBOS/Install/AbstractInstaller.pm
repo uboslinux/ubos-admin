@@ -27,6 +27,7 @@ package UBOS::Install::AbstractInstaller;
 use fields qw( hostname
                target tempTarget
                repo
+               depotRoot
                channel
                kernelpackage
                basepackages devicepackages additionalpackages
@@ -61,6 +62,9 @@ sub new {
     }
     unless( $self->{channel} ) {
         $self->{channel} = 'yellow'; # FIXME once we have 'green';
+    }
+    unless( $self->{depotRoot} ) {
+        $self->{depotRoot} = 'http://depot.ubos.net';
     }
     unless( $self->{basepackages} ) {
         $self->{basepackages} = [ qw( ubos-base ubos-networking ) ];
@@ -126,6 +130,16 @@ sub setChannel {
     my $channel = shift;
 
     $self->{channel} = $channel;
+}
+
+##
+# Set the depot root URL
+# $depotRoot: the depot root URL
+sub setDepotRoot {
+    my $self      = shift;
+    my $depotRoot = shift;
+
+    $self->{depotRoot} = $depotRoot;
 }
 
 ##
@@ -474,6 +488,7 @@ sub savePacmanConfigProduction {
     my $arch        = $self->arch;
     my $channel     = $self->{channel};
     my $target      = $self->{target};
+    my $depotRoot   = $self->{depotRoot};
     my $levelString = $self->getSigLevelString();
 
     my $pacmanConfigProduction = <<END;
@@ -501,7 +516,7 @@ END
     foreach my $db ( @$dbs ) {
         unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
 [$db]
-Server = http://depot.ubos.net/$channel/\$arch/$db
+Server = $depotRoot/$channel/\$arch/$db
 END
             # Note what is and isn't escaped here
             ++$errors;

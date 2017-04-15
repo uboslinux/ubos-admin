@@ -47,6 +47,7 @@ my $hostname           = undef;
 my $deviceclassname    = undef;
 my $target             = undef;
 my $repo               = undef;
+my $depotRoot          = undef;
 my @additionalPackages = ();
 my @additionalServices = ();
 my @additionalModules  = ();
@@ -63,6 +64,7 @@ my $parseOk = GetOptions(
         'deviceclass=s'        => \$deviceclassname,
         'target=s'             => \$target,
         'repository=s'         => \$repo,
+        'depotroot=s'          => \$depotRoot,
         'addpackage=s'         => \@additionalPackages,
         'addservice=s'         => \@additionalServices,
         'addmodule=s'          => \@additionalModules,
@@ -148,6 +150,9 @@ if( $channel ) {
 }
 if( $repo ) {
     $installer->setRepo( $repo );
+}
+if( $depotRoot ) {
+    $installer->setDepotRoot( $depotRoot );
 }
 if( @additionalPackages ) {
     $installer->addPackages( @additionalPackages );
@@ -273,7 +278,9 @@ Optional arguments:
         --hostname <hostname>:
               The hostname to set; defaults to a deviceclass-specific name.
         --repository <path>:
-              Use this local UBOS repository instead of http://depot.ubos.net/
+              Use this local UBOS repository for installation instead of http://depot.ubos.net/
+        --depotroot <url>:
+              Use this URL for the root of the update repository instead of http://depot.ubos.net
         --target <path>:
               The directory to which the new system will be mounted temporarily during assembly.
               Defaults to a temp directoy in the current working directory. Make sure there
