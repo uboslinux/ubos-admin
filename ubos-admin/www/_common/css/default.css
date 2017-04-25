@@ -42,11 +42,11 @@ a img {
 div.apps {
     clear: both;
 }
-div.apps > a,
-div.apps > div {
+div.apps > a {
     display: block;
     float: left;
     margin: 20px 10px;
+    height: 120px;
     width: 120px;
 }
 div.app > div.icon {
