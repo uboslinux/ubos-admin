@@ -61,7 +61,7 @@ sub new {
         # Do not add uboot-pcduino3 here: it wants interactive input, and we can't handle this here.
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service smartd.service ) ];
+        $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service ) ];
     }
 
     $self->SUPER::new( @args );

@@ -63,7 +63,7 @@ sub new {
                 rng-tools smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service smartd.service ) ];
+        $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service ) ];
     }
     unless( $self->{devicemodules} ) {
         $self->{devicemodules} = [ qw( snd-bcm2835 ) ];
