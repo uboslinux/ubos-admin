@@ -195,7 +195,7 @@ sub createDiskLayout {
                         $rootDiskOrImage,
                         {   '/boot' => {
                                 'index' => 1,
-                                'fs'    => 'vfat',
+                                'fs'    => 'ext4',
                                 'size'  => '100M'
                             },
                             '/' => {
@@ -209,7 +209,7 @@ sub createDiskLayout {
                         [   $rootDiskOrImage    ],
                         {   '/boot' => {
                                 'index' => 1,
-                                'fs'    => 'vfat',
+                                'fs'    => 'ext4',
                                 'size'  => '100M'
                             },
                             '/' => {

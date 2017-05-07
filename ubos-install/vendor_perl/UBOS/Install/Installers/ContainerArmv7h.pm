@@ -55,7 +55,7 @@ sub arch {
 ##
 # Help text
 sub help {
-    return 'Linux container on ARMv7';
+    return 'Linux container on ' . $self->arch;
 }
 
 1;

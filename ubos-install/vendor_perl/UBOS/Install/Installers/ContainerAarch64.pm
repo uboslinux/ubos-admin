@@ -1,8 +1,8 @@
 # 
-# Install UBOS for a Linux container running on an ARMv6 device.
+# Install UBOS for a Linux container running on an aarch64 device.
 # 
 # This file is part of ubos-install.
-# (C) 2012-2015 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-install is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::ContainerArmv6h;
+package UBOS::Install::Installers::ContainerAarch64;
 
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
@@ -49,7 +49,7 @@ sub new {
 sub arch {
     my $self = shift;
 
-    return 'armv6h';
+    return 'aarch64';
 }
 
 ##
