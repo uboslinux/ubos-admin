@@ -79,13 +79,7 @@ sub createDiskLayout {
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
-    # Option 3: a bootloader device, one or more root partition devices
-    # ubos-install ... --bootloaderdevice /dev/sda --rootpartition /dev/sda2 --rootpartition /dev/sdb1
-
-    # Option 4: a bootloaderdevice device, one or more root partition devices, one or more var partition devices
-    # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
-
-    # Option 5: a directory
+    # Option 3: a directory
 
     my $bootloaderdevice;
     my @rootpartitions;
@@ -105,7 +99,7 @@ sub createDiskLayout {
 
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
-        # Option 5
+        # Option 3
         if( $bootloaderdevice || @rootpartitions || @varpartitions || @$argvp ) {
             error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
             $ret = undef;
@@ -120,71 +114,6 @@ sub createDiskLayout {
             $self->setTarget( $directory );
         }
 
-    } elsif( @rootpartitions || @varpartitions ) {
-        # Option 3 or 4
-        if( @$argvp ) {
-            error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
-            $ret = undef;
-        }
-        if( $ret && !$bootloaderdevice ) {
-            error( 'Invalid invocation: Device class pcduino requires a --bootloaderdevice parameter when specifying partitions' );
-            $ret = undef;
-        }
-        if( $ret && @rootpartitions == 0 ) {
-            error( 'Invalid invocation: A --rootpartition must be provided when specifying partitions' );
-            $ret = undef;
-        }
-        if( $ret && !UBOS::Install::AbstractDiskLayout::isDisk( $bootloaderdevice ) && !UBOS::Install::AbstractDiskLayout::isLoopDevice( $bootloaderdevice )) {
-            error( 'Provided bootloaderdevice is not a disk:', $bootloaderdevice );
-            $ret = undef;
-        }
-
-        my %haveAlready = ();
-
-        if( $ret ) {
-            foreach my $part ( @rootpartitions, @varpartitions ) {
-                if( $haveAlready{$part} ) {
-                    error( 'Specified more than once:', $part );
-                    $ret = undef;
-                    last;
-                }
-                unless( UBOS::Install::AbstractDiskLayout::isPartition( $part )) {
-                    error( 'Not a partition:', $part );
-                    $ret = undef;
-                    last;
-                }
-                $haveAlready{$part} = 1;
-            }
-        }
-        if( @varpartitions == 0 ) {
-            # Option 3
-            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                    $bootloaderdevice,
-                    {   '/' => {
-                            'index'       => 1,
-                            'fs'          => 'ext4',
-                            'devices'     => \@rootpartitions,
-                            'startsector' => '2048'
-                        }
-                    } );
-        } else {
-            # Options 4
-            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                    $bootloaderdevice,
-                    {   '/' => {
-                            'index'       => 1,
-                            'fs'          => 'ext4',
-                            'devices'     => \@rootpartitions,
-                            'startsector' => '2048'
-                        },
-                        '/var' => {
-                            'index'       => 2,
-                            'fs'          => 'btrfs',
-                            'devices'     => \@varpartitions
-                        }
-                    } );
-        }
-            
     } else {
         # Option 1 or 2
         if( @$argvp == 1 ) {
@@ -249,23 +178,22 @@ sub installBootLoader {
     my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
     my $target           = $self->{target};
 
-    # Boot loader
-    my $bootLoaderPkg = 'uboot-' . $self->deviceClass();
-    debug( "Installing $bootLoaderPkg" );
-    my $pacmanCmd = "pacman"
-            . " -r '$target'"
-            . " -S"
-            . " '--config=" . $pacmanConfigFile . "'"
-            . " --cachedir '$target/var/cache/pacman/pkg'"
-            . " --noconfirm"
-            . " $bootLoaderPkg";
-
-    my $out;
-    my $err;
-    if( UBOS::Utils::myexec( $pacmanCmd, undef, \$out, \$err )) {
-        error( "pacman failed", $err );
-        ++$errors;
-    }
+    my $uEnv = UBOS::Utils::slurpFile( "$target/bootpart/uEnv.txt" );
+    $uEnv .= <<'TXT';
+kernel_addr=0x2000000
+ramdisk_addr=0x1100000
+fdt_addr=0x1000000
+fdt_high=0xffffffffffffffff
+image_name=Image
+ramdisk_name=initramfs-linux.uimg
+fdt_name=/dtbs/marvell/armada-3720-espressobin.dtb
+get_env=if ext4load mmc 0 $loadaddr uEnv.txt; then env import -t $loadaddr $filesize; if test -n ${uenvcmd}; then run uenvcmd; fi; fi
+get_images=ext4load mmc 0 $kernel_addr $image_name && ext4load mmc 0 $fdt_addr $fdt_name
+get_ramdisk=ext4load mmc 0 $ramdisk_addr $ramdisk_name
+bootargs=console=ttyMV0,115200 earlycon=ar3700_uart,0xd0012000 root=/dev/mmcblk0p1 rw rootwait rootfstype=btrfs
+bootcmd=mmc dev 0; run get_env; if run get_images; then if run get_ramdisk; then booti $kernel_addr $ramdisk_addr $fdt_addr; else booti $kernel_addr - $fdt_addr; fi; fi
+TXT
+    UBOS::Utils::saveFile( "$target/boot/uEnv.txt", $uEnv );
 
     return $errors;
 }
