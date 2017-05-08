@@ -55,6 +55,7 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-gateway
                 ubos-networking-standalone uboot-tools archlinuxarm-keyring
+                espressobin-uboot-config
                 smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
@@ -174,26 +175,8 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
+    # don't do anything here. All contained in uboot-espressobin-config
     my $errors           = 0;
-    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
-    my $target           = $self->{target};
-
-    my $uEnv = UBOS::Utils::slurpFile( "$target/bootpart/uEnv.txt" );
-    $uEnv .= <<'TXT';
-kernel_addr=0x2000000
-ramdisk_addr=0x1100000
-fdt_addr=0x1000000
-fdt_high=0xffffffffffffffff
-image_name=Image
-ramdisk_name=initramfs-linux.uimg
-fdt_name=/dtbs/marvell/armada-3720-espressobin.dtb
-get_env=if ext4load mmc 0 $loadaddr uEnv.txt; then env import -t $loadaddr $filesize; if test -n ${uenvcmd}; then run uenvcmd; fi; fi
-get_images=ext4load mmc 0 $kernel_addr $image_name && ext4load mmc 0 $fdt_addr $fdt_name
-get_ramdisk=ext4load mmc 0 $ramdisk_addr $ramdisk_name
-bootargs=console=ttyMV0,115200 earlycon=ar3700_uart,0xd0012000 root=/dev/mmcblk0p1 rw rootwait rootfstype=btrfs
-bootcmd=mmc dev 0; run get_env; if run get_images; then if run get_ramdisk; then booti $kernel_addr $ramdisk_addr $fdt_addr; else booti $kernel_addr - $fdt_addr; fi; fi
-TXT
-    UBOS::Utils::saveFile( "$target/boot/uEnv.txt", $uEnv );
 
     return $errors;
 }
