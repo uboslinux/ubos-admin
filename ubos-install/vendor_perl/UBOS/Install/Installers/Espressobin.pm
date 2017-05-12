@@ -59,7 +59,7 @@ sub new {
                 smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( systemd-timesyncd.service ) ];
+        $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];
     }
 
     $self->SUPER::new( @args );
