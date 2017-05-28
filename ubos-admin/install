@@ -55,14 +55,13 @@ post_upgrade() {
 
     systemctl enable ubos-ready.service snapper-timeline.timer snapper-cleanup.timer
     systemctl start ubos-ready.service  snapper-timeline.timer snapper-cleanup.timer
+
+    [ -x /usr/share/ubos-admin/bin/post-upgrade ] && /usr/share/ubos-admin/bin/post-upgrade
 }
 
 pre_upgrade() {
     # Fix directory permissions to avoid warning from pacman
     [ -d /var/lib/ubos/appconfigpars ] && chmod 755 /var/lib/ubos/appconfigpars
-
-    # This file has moved into a package, so remove otherwise upgrade will fail
-    [ -f /etc/ssl/certs/ca-certificates.crt ] && ( pacman -Qo /etc/ssl/certs/ca-certificates.crt > /dev/null 2>&1 || /bin/rm /etc/ssl/certs/ca-certificates.crt )
 }
 
 ensureChattr() {

@@ -499,13 +499,27 @@ sub updateCode {
         myexec( $cmd );
     }
 
+    my $out;
     if( $syncFirst ) {
-        $cmd = 'pacman -Syu --noconfirm';
-    } else {
-        $cmd = 'pacman -Su --noconfirm';
+        $cmd = 'pacman -Sy --noconfirm';
+        if( myexec( $cmd, undef, \$out ) != 0 ) {
+            error( 'Command failed:', $cmd, "\n$out" );
+
+        } elsif( UBOS::Logging::isDebugActive() ) {
+            print $out;
+        }
     }
 
-    my $out;
+    # ubos-admin comes first
+    $cmd = 'pacman -S ubos-admin --noconfirm';
+    if( myexec( $cmd, undef, \$out ) != 0 ) {
+        error( 'Command failed:', $cmd, "\n$out" );
+
+    } elsif( UBOS::Logging::isDebugActive() ) {
+        print $out;
+    }
+
+    $cmd = 'pacman -Su --noconfirm';
     if( myexec( $cmd, undef, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
