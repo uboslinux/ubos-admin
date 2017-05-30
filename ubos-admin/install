@@ -56,7 +56,7 @@ post_upgrade() {
     systemctl enable ubos-ready.service snapper-timeline.timer snapper-cleanup.timer
     systemctl start ubos-ready.service  snapper-timeline.timer snapper-cleanup.timer
 
-    [ -x /usr/share/ubos-admin/bin/post-upgrade ] && /usr/share/ubos-admin/bin/post-upgrade
+    if [ -x /usr/share/ubos-admin/bin/post-upgrade ]; then /usr/share/ubos-admin/bin/post-upgrade; fi
 }
 
 pre_upgrade() {
