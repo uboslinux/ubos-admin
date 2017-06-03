@@ -145,11 +145,4 @@ sub activate {
     return $ret;
 }
 
-##
-# Return help text for this network configuration
-# return: help text
-sub help {
-    return 'Act as a home router with an upstream connection and a local network.';
-}
-
 1;
