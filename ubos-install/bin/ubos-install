@@ -276,7 +276,8 @@ Optional arguments:
         --logConfFile <log4perlconf>:
               Alternate logging configuration file (not common).
         --channel <channel>:
-              The UBOS release channel; defaults to green.
+              The UBOS release channel; defaults to the release channel of the system on which
+              the command is run.
         --hostname <hostname>:
               The hostname to set; defaults to a deviceclass-specific name.
         --repository <path>:
