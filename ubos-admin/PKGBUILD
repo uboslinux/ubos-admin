@@ -87,6 +87,7 @@ package() {
     mkdir -p $pkgdir/srv/http/_common/{css,images}
     install -m644 $startdir/www/_common/css/*.css $pkgdir/srv/http/_common/css/
     install -m644 $startdir/www/_common/images/*.png $pkgdir/srv/http/_common/images/
+    mkdir -p $pkgdir/srv/http/_errors
     install -m644 $startdir/www/_errors/*.html $pkgdir/srv/http/_errors/
 
     mkdir -p $pkgdir/srv/http/_appicons/default
