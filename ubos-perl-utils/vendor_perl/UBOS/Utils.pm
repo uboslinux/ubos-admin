@@ -634,7 +634,7 @@ sub findPerlModuleNamesInPackage {
             while( my $file = readdir( DIR )) {
                if( $file =~ m!^($regex)\.pm$! ) {
                    my $fileName    = "$parentDir2/$file";
-                   my $packageName = "$parentPackage::$1";
+                   my $packageName = $parentPackage . '::' . $1;
 
                    $ret->{$fileName} = $packageName;
                }
