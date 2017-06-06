@@ -408,7 +408,7 @@ END
 
             $dnsmasqConfigContent .= <<END;
 interface=$nic
-dhcp-range=$nic,$range,12h
+dhcp-range=$nic,$range
 END
             # dnsmasq allows trailing * for wildcard
             $servicesNeeded{'dnsmasq.service'} = 1;
