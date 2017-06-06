@@ -117,9 +117,16 @@ sub run {
                     next outer;
                 }
             } else {
-                if( $letsEncrypt && $hostname =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
-                    print "You must have an official hostname at an official domain, publicly resolvable and fully set up, to use Letsencrypt.\n";
-                    next outer;
+                if( $letsEncrypt ) {
+                    if( $hostname =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
+                        print "You cannot specify an IP address as a hostname when using Letsencrypt certificates.\n";
+                        print "Use an official hostname, publicly accessible, instead.\n";
+                        next outer;
+                    } elsif( $hostname =~ m!\.local$! ) {
+                        print "You cannot specify an mDNS (.local) as a hostname when using Letsencrypt certificates.\n";
+                        print "Use an official hostname, publicly accessible, instead.\n";
+                        next outer;
+                    }
                 }
                 foreach my $oldSite ( values %$oldSites ) {
                     if( $oldSite->hostname eq $hostname ) {

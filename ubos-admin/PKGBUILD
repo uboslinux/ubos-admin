@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.210
+pkgver=0.211
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -87,6 +87,7 @@ package() {
     mkdir -p $pkgdir/srv/http/_common/{css,images}
     install -m644 $startdir/www/_common/css/*.css $pkgdir/srv/http/_common/css/
     install -m644 $startdir/www/_common/images/*.png $pkgdir/srv/http/_common/images/
+    install -m644 $startdir/www/_errors/*.html $pkgdir/srv/http/_errors/
 
     mkdir -p $pkgdir/srv/http/_appicons/default
     install -m644 $startdir/www/_appicons/default/{72x72,144x144}.png $pkgdir/srv/http/_appicons/default/
