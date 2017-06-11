@@ -191,7 +191,7 @@ sub addConfigureNetworkingToScript {
 
     debug( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only gateway\n";
+    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 
     return 0;
 }
