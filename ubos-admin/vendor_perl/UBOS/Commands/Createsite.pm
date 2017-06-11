@@ -113,7 +113,7 @@ sub run {
                     }
                 }
                 if( $tls ) {
-                    print "You cannot create a site with hostname * (any) that is protected by TLS/\n";
+                    print "You cannot create a site with hostname * (any) that is protected by TLS.\n";
                     next outer;
                 }
             } else {
