@@ -44,7 +44,8 @@ CapabilityBoundingSet=CAP_IPC_LOCK
 # Prevent writes to /usr, /boot, and /etc
 ProtectSystem=full
 
-NoNewPrivileges=true
+# Doesn't yet work properly with SELinux enabled
+# NoNewPrivileges=true
 
 PrivateDevices=true
 
@@ -58,12 +59,14 @@ PermissionsStartOnly=true
 # galera_recovery simply returns an empty string. In any case, however,
 # the script is not expected to return with a non-zero status.
 # It is always safe to unset _WSREP_START_POSITION environment variable.
+# Do not panic if galera_recovery script is not available. (MDEV-10538)
 ExecStartPre=/bin/sh -c "systemctl unset-environment _WSREP_START_POSITION"
-ExecStartPre=/bin/sh -c "VAR=`/usr/bin/galera_recovery`; [ $? -eq 0 ] && \
- systemctl set-environment _WSREP_START_POSITION=$VAR || exit 1"
+ExecStartPre=/bin/sh -c "[ ! -e /usr/bin/galera_recovery ] && VAR= || \
+ VAR=`/usr/bin/galera_recovery`; [ $? -eq 0 ] \
+ && systemctl set-environment _WSREP_START_POSITION=$VAR || exit 1"
 
 # Needed to create system tables etc.
-ExecStartPre=/usr/bin/mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+ExecStartPre=/usr/bin/mysql_install_db -u mysql
 
 # Start main service
 # MYSQLD_OPTS here is for users to set in /etc/systemd/system/mariadb.service.d/MY_SPECIAL.conf
@@ -71,7 +74,7 @@ ExecStartPre=/usr/bin/mysql_install_db --user=mysql --basedir=/usr --datadir=/va
 # This isn't a replacement for my.cnf.
 # _WSREP_NEW_CLUSTER is for the exclusive use of the script galera_new_cluster
 
-ExecStart=/usr/sbin/mysqld --defaults-file=/etc/mysql/mysql-ubos.cnf --pid-file=/run/mysqld/mysqld.pid $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION
+ExecStart=/usr/sbin/mysqld --defaults-file=/etc/mysql/mysql-ubos.cnf $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION
 
 # Unset _WSREP_START_POSITION environment variable.
 ExecStartPost=/bin/sh -c "systemctl unset-environment _WSREP_START_POSITION"
@@ -142,6 +145,6 @@ LimitNOFILE=16364
 # FailureAction=
 
 
+# Doubling the timeout for UBOS -- can take a long time on little devices with sd cards
 TimeoutStartSec=180
-# Doubling the timeout -- can take a long time on little devices with sd cards
 
