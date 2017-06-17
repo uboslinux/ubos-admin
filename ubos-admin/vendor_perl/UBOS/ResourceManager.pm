@@ -45,6 +45,7 @@ use UBOS::Logging;
 use UBOS::Utils;
 
 my $RESOURCES_DIR = '/var/lib/ubos/resources';
+my $PINNED_DIR    = '/var/lib/ubos/pinned';
 
 ##
 # Find an already-provisioned database of a certain type for a given id of an AppConfiguration,
@@ -103,28 +104,49 @@ sub provisionLocalDatabase {
         return;
     }
 
-    my $dbName              = UBOS::Utils::randomIdentifier( 16 ); # unlikely to collide
-    my $dbHost              = 'localhost';
-    my $dbPort              = $dbDriver->defaultPort();
-    my $dbUserLid           = UBOS::Utils::randomPassword( 16 );
-    my $dbUserLidCredential = UBOS::Utils::randomPassword( 16 );
-    my $dbUserLidCredType   = 'simple-password';
+    my $json = findPinnedLocalDatabaseData( $dbType, $appConfigId, $installableId, $itemName );
 
-    my $json = {
-        dbName => $dbName,
-        dbHost => $dbHost,
-        dbPort => $dbPort,
-        dbUserLid           => $dbUserLid,
-        dbUserLidCredential => $dbUserLidCredential,
-        dbUserLidCredType   => $dbUserLidCredType
-    };
+    unless( $json ) {
+        $json = {};
+    }
+    unless( exists( $json->{dbName} )) {
+        $json->{dbName} = UBOS::Utils::randomIdentifier( 16 ), # unlikely to collide
+    }
+    unless( exists( $json->{dbHost} )) {
+        $json->{dbHost} = 'localhost';
+    }
+    unless( exists( $json->{dbPort} )) {
+        $json->{dbPort} = $dbDriver->defaultPort();
+    }
+    unless( exists( $json->{dbUserLid} )) {
+        $json->{dbUserLid} = UBOS::Utils::randomPassword( 16 );
+    }
+    unless( exists( $json->{dbUserLidCredential} )) {
+        $json->{dbUserLidCredential} = UBOS::Utils::randomPassword( 16 );
+    }
+    unless( exists( $json->{dbUserLidCredType} )) {
+        $json->{dbUserLidCredType} = 'simple-password';
+    }
+
+    $dbDriver->provisionLocalDatabase(
+            $json->{dbName},
+            $json->{dbUserLid},
+            $json->{dbUserLidCredential},
+            $json->{dbUserLidCredType},
+            $privileges,
+            $charset,
+            $collate );
+
     my $file = $RESOURCES_DIR . '/' . $appConfigId . '_' . $installableId . '_' . $dbType . '_' . $itemName . '.json';
-
-    $dbDriver->provisionLocalDatabase( $dbName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType, $privileges, $charset, $collate );
-
     UBOS::Utils::writeJsonToFile( $file, $json, 0600 );
 
-    return( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
+    return(
+            $json->{dbName},
+            $json->{dbHost},
+            $json->{dbPort},
+            $json->{dbUserLid},
+            $json->{dbUserLidCredential},
+            $json->{dbUserLidCredType} );
 }
 
 ##
@@ -168,6 +190,27 @@ sub unprovisionLocalDatabase {
         return $dbDriver->unprovisionLocalDatabase( $dbName, $dbUserLid );
     }
     return 0;
+}
+
+##
+# If a database name has been pinned, find it.
+# $dbType: database type
+# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
+# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
+# $itemName: the symbolic database name per application manifest
+# return: hash of dbName, dbHost, dbUser, dbPassword, or undef
+sub findPinnedLocalDatabaseData {
+    my $dbType        = shift;
+    my $appConfigId   = shift;
+    my $installableId = shift;
+    my $itemName      = shift;
+
+    my $file = $PINNED_DIR . '/' . $appConfigId . '_' . $installableId . '_' . $dbType . '_' . $itemName . '.json';
+    unless( -e $file  ) {
+        return undef;
+    }
+    my $json = UBOS::Utils::readJsonFromFile( $file );
+    return $json;
 }
 
 1;
