@@ -21,12 +21,16 @@ read_rnd_buffer_size = 512K
 myisam_sort_buffer_size = 8M
 
 # Point the following paths to different dedicated disks
-#tmpdir         = /tmp/
+#tmpdir = /tmp/
 
+# For replication, modify as needed:
 log-bin = mysql-bin
 binlog_format = mixed
-
-server-id = 1
+relay-log=mysql-relay-log
+# binlog-do-db=
+server-id=1
+# auto-increment-increment = 2
+# auto-increment-offset = 1
 
 [mysqldump]
 quick

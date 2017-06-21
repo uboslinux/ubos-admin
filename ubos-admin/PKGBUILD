@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.215
+pkgver=0.216
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -21,7 +21,6 @@ depends=(
     'ubos-perl-utils' )
 backup=(
     'etc/ubos/config.json'
-    'etc/httpd/conf/revocations.conf'
     'etc/httpd/ubos/defaults.conf'
     'etc/httpd/ubos/defaultsites/fallback.conf'
     'etc/httpd/ubos/errors.conf'
@@ -124,7 +123,6 @@ package() {
     chown 89:1 $pkgdir/var/lib/mysql
     mkdir -p -m 755 $pkgdir/etc/mysql
     install -m644 $startdir/etc/mysql/mysql-ubos.cnf $pkgdir/etc/mysql/
-    mkdir -p $pkgdir/var/lib/mysql
 
 # Postgresql
     mkdir -p -m 700 $pkgdir/var/lib/postgresql
