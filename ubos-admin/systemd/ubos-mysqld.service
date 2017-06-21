@@ -66,7 +66,7 @@ ExecStartPre=/bin/sh -c "[ ! -e /usr/bin/galera_recovery ] && VAR= || \
  && systemctl set-environment _WSREP_START_POSITION=$VAR || exit 1"
 
 # Needed to create system tables etc.
-ExecStartPre=/usr/bin/mysql_install_db -u mysql --defaults-file=/etc/mysql/mysql-ubos.cnf --basedir=/usr --datadir=/var/lib/mysql
+ExecStartPre=/usr/bin/mysql_install_db --user=mysql --defaults-file=/etc/mysql/mysql-ubos.cnf --basedir=/usr --datadir=/var/lib/mysql
 
 # Start main service
 # MYSQLD_OPTS here is for users to set in /etc/systemd/system/mariadb.service.d/MY_SPECIAL.conf
@@ -74,7 +74,7 @@ ExecStartPre=/usr/bin/mysql_install_db -u mysql --defaults-file=/etc/mysql/mysql
 # This isn't a replacement for my.cnf.
 # _WSREP_NEW_CLUSTER is for the exclusive use of the script galera_new_cluster
 
-ExecStart=/usr/sbin/mysqld --defaults-file=/etc/mysql/mysql-ubos.cnf $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION
+ExecStart=/usr/sbin/mysqld --defaults-file=/etc/mysql/mysql-ubos.cnf --pid-file=/run/mysqld/mysqld.pid $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION
 
 # Unset _WSREP_START_POSITION environment variable.
 ExecStartPost=/bin/sh -c "systemctl unset-environment _WSREP_START_POSITION"
