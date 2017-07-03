@@ -292,7 +292,6 @@ CONTENT
     my $sslDir;
     my $sslKey;
     my $sslCert;
-    my $sslCertChain;
     my $sslCaCert;
     
     if( $site->hasTls ) {
@@ -310,7 +309,6 @@ CONTENT
         $sslDir       = $site->config->getResolve( 'apache2.ssldir' );
         $sslKey       = $site->tlsKey;
         $sslCert      = $site->tlsCert;
-        $sslCertChain = $site->tlsCertChain;
         $sslCaCert    = $site->tlsCaCert;
 
         my $group = $site->config->getResolve( 'apache2.gname' );
@@ -321,11 +319,8 @@ CONTENT
         if( $sslCert ) {
             UBOS::Utils::saveFile( "$sslDir/$siteId.crt",      $sslCert,      0440, 'root', $group );
         }
-        if( $sslCertChain ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.crtchain", $sslCertChain, 0440, 'root', $group );
-        }
         if( $sslCaCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
+            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt",    $sslCaCert,    0040, 'root', $group );
         }
 
     } # else No SSL
@@ -364,10 +359,7 @@ CONTENT
     SSLCertificateKeyFile $letsEncryptLiveDir/$hostname/privkey.pem
 
     # Letsencrypt cert
-    SSLCertificateFile $letsEncryptLiveDir/$hostname/cert.pem
-
-    # Letsencrypt certificate chain
-    SSLCertificateChainFile $letsEncryptLiveDir/$hostname/chain.pem
+    SSLCertificateFile $letsEncryptLiveDir/$hostname/fullchain.pem
 CONTENT
             # see https://github.com/certbot/certbot/issues/608
 
@@ -380,13 +372,6 @@ CONTENT
     # our own cert
     SSLCertificateFile $sslDir/$siteId.crt
 CONTENT
-            if( $sslCertChain ) {
-                $siteFileContent .= <<CONTENT;
- 
-    # the CA certs explaining where we got our own cert from
-    SSLCertificateChainFile $sslDir/$siteId.crtchain
-CONTENT
-            }
             if( $sslCaCert ) {
                 $siteFileContent .= <<CONTENT;
 

@@ -223,7 +223,7 @@ sub run {
             }
 
             while( 1 ) {
-                $tlsCrt = ask( 'Certificate file: ' );
+                $tlsCrt = ask( 'Certificate file (only domain cert, or entire chain): ' );
                 unless( $tlsCrt ) {
                     redo;
                 }
@@ -240,9 +240,10 @@ sub run {
             }
 
             while( 1 ) {
-                $tlsCrtChain = ask( 'Certificate chain file: ' );
+                $tlsCrtChain = ask( 'Certificate chain file (enter blank if chain was already contained in certificate file): ' );
                 unless( $tlsCrtChain ) {
-                    redo;
+                    $tlsCrtChain = undef;
+                    last;
                 }
                 unless( -r $tlsCrtChain ) {
                     print "Cannot find or read file $tlsCrtChain\n";
@@ -297,9 +298,10 @@ sub run {
         }
         if( $tlsCrt ) {
             $newSiteJson->{tls}->{crt} = $tlsCrt;
-        }
-        if( $tlsCrtChain ) {
-            $newSiteJson->{tls}->{crtchain} = $tlsCrtChain;
+            if( $tlsCrtChain ) {
+                $newSiteJson->{tls}->{crt} .= "\n$tlsCrtChain";
+            }
+            # not using crtchain any more as it is deprecated in Apache
         }
         if( $tlsCaCrt ) {
             $newSiteJson->{tls}->{cacrt} = $tlsCaCrt;

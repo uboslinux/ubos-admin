@@ -4,12 +4,11 @@ After=network.target remote-fs.target nss-lookup.target ubos-admin.service
 Conflicts=httpd.service
 
 [Service]
-Type=forking
-PIDFile=/run/httpd/httpd.pid
+Type=simple
 ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-httpd
-ExecStart=/usr/share/ubos-admin/bin/ubos-apachectl start
-ExecStop=/usr/share/ubos-admin/bin/ubos-apachectl graceful-stop
-ExecReload=/usr/share/ubos-admin/bin/ubos-apachectl graceful
+ExecStart=/usr/bin/httpd -k start -DFOREGROUND -f /etc/httpd/conf/httpd-ubos.conf
+ExecStop=/usr/bin/httpd -k graceful-stop -f /etc/httpd/conf/httpd-ubos.conf
+ExecReload=/usr/bin/httpd -k graceful -f /etc/httpd/conf/httpd-ubos.conf
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-http
 PrivateTmp=true
 LimitNOFILE=infinity
@@ -18,3 +17,4 @@ TimeoutStartSec=180
 
 [Install]
 WantedBy=multi-user.target
+

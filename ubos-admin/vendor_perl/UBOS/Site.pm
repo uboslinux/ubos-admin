@@ -342,20 +342,6 @@ sub tlsCert {
 }
 
 ##
-# Obtain the TLS certificate chain, if any has been provided.
-# return: the TLS certificate chain
-sub tlsCertChain {
-    my $self = shift;
-
-    my $json = $self->{json};
-    if( defined( $json->{tls} )) {
-        return $json->{tls}->{crtchain};
-    } else {
-        return undef;
-    }
-}
-
-##
 # Obtain the TLS certificate chain to be used with clients, if any has been provided.
 sub tlsCaCert {
     my $self = shift;
@@ -1074,9 +1060,6 @@ sub _checkJson {
             if( exists( $json->{tls}->{crt} )) {
                 fatal( 'Site JSON: tls section: crt must not be given if letsencrypt is set' );
             }
-            if( exists( $json->{tls}->{crtchain} )) {
-                fatal( 'Site JSON: tls section: crtchain must not be given if letsencrypt is set' );
-            }
             if( exists( $json->{tls}->{cacrt} )) {
                 fatal( 'Site JSON: tls section: cacrt must not be given if letsencrypt is set' );
             }
@@ -1087,8 +1070,13 @@ sub _checkJson {
             unless( $json->{tls}->{crt} || !ref( $json->{tls}->{crt} )) {
                 fatal( 'Site JSON: tls section: missing or invalid crt' );
             }
-            unless( $json->{tls}->{crtchain} || !ref( $json->{tls}->{crtchain} )) {
-                fatal( 'Site JSON: tls section: missing or invalid crtchain' );
+            if( $json->{tls}->{crtchain} ) {
+                # migrate
+                if( ref( $json->{tls}->{crtchain} )) {
+                    fatal( 'Site JSON: tls section: missing or invalid crtchain' );
+                }
+                $json->{tls}->{crt} .= "\n" . $json->{tls}->{crtchain};
+                delete $json->{tls}->{crtchain};
             }
             if( $json->{tls}->{cacrt} && ref( $json->{tls}->{cacrt} )) {
                 fatal( 'Site JSON: tls section: invalid cacrt' );
