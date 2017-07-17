@@ -39,6 +39,7 @@ my $networkingDefaultsConfFile  = '/etc/ubos/networking-defaults.json';
 my $_networkingDefaultsConf     = undef; # cached content of $networkingDefaultsConfFile
 my $netconfigConfFilePattern    = '/etc/ubos/netconfig-%s.json';
 my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePattern, keyed by netconfig name
+my $resolvedConfFile            = '/etc/systemd/resolved.conf';
 
 # Regardless of Netconfig, always run these
 my %alwaysServices = (
@@ -689,6 +690,21 @@ END
             last;
         }
     }
+
+    # updates to resolved.conf
+    if( -e $resolvedConfFile ) {
+		my $resolvedConfContent = UBOS::Utils::slurpFile( $resolvedConfFile );
+		if( $resolvedConfContent !~ m!DNSStubListener=no! ) {
+			# it can match anywhere, it does not matter where -- it means somebody manually edited the file,
+			# in which case we leave it alone
+			if( $resolvedConfContent =~ m!^\[Resolve\]! ) {
+				$resolvedConfContent =~ s!(\[Resolve\])!$1\nDNSStubListener=no!;
+			} else {
+				$resolvedConfContent .=~ "\n[Resolve]\nDNSStubListener=no";
+			}
+			UBOS::Utils::saveFile( $resolvedConfFile, $resolvedConfContent, 0x644 );
+		}
+	}
 
     # configure callbacks
     my @appNics = grep { exists( $config->{$_}->{appnic} ) && $config->{$_}->{appnic} }
