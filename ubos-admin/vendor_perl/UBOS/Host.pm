@@ -76,7 +76,7 @@ sub config {
 sub _getOsReleaseInfo {
     unless( defined( $_osReleaseInfo )) {
         $_osReleaseInfo = {};
-        
+
         if( -e '/etc/os-release' ) {
             my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
             while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9])\"!mg ) {
@@ -164,7 +164,7 @@ sub findSiteById {
 # $sites: hash of siteid to Site (defaults to sites installed on host)
 # return: the Site, or undef
 sub findSiteByPartialId {
-	my $id    = shift;
+    my $id    = shift;
     my $sites = shift || sites();
 
     my $ret;
@@ -512,11 +512,17 @@ sub updateCode {
 
     # ubos-admin comes first
     $cmd = 'pacman -S ubos-admin --noconfirm';
-    if( myexec( $cmd, undef, \$out ) != 0 ) {
+    if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
     } elsif( UBOS::Logging::isDebugActive() ) {
         print $out;
+    }
+    my $ubosAdminUpdated;
+    if( $out =~ m!warning.*reinstalling!i ) {
+        $ubosAdminUpdated = 0;
+    } else {
+        $ubosAdminUpdated = 1;
     }
 
     $cmd = 'pacman -Su --noconfirm';
@@ -536,9 +542,9 @@ sub updateCode {
             print 'Packages installed: ' . join( ' ', @installed ) . "\n";
         }
         if( @upgraded ) {
-            print 'Packages upgraded: ' . join( ' ', @upgraded ) . "\n";
+            print 'Packages upgraded:' . ( $ubosAdminUpdated ? ' ubos-admin' : '' ) . ' ' . join( ' ', @upgraded ) . "\n";
         }
-        if( scalar( @installed ) + scalar( @upgraded ) == 0 ) {
+        if( $ubosAdminUpdated + scalar( @installed ) + scalar( @upgraded ) == 0 ) {
             print "No packages installed or upgraded.\n";
         }
     }
@@ -835,14 +841,14 @@ sub obtainDbDriver {
     my $shortName = shift;
     my $dbHost    = shift;
     my $dbPort    = shift || 'default';
-    
+
     my $ret = $dbDriverInstances->{$shortName}->{"$dbHost:$dbPort"};
     unless( $ret ) {
         my $dbs = _findDatabases();
         my $db  = $dbs->{$shortName};
         if( $db ) {
             $ret = UBOS::Utils::invokeMethod( $db . '::new', $db, $dbHost, $dbPort );
-            
+
             if( $dbPort eq 'default' ) {
                 $dbDriverInstances->{$shortName}->{"$dbHost:default"} = $ret;
                 $dbPort = $ret->defaultPort();
@@ -875,7 +881,7 @@ sub ensurePacmanInit {
     if( -x '/usr/bin/pacman-db-upgrade' ) {
         myexec( 'pacman-db-upgrade' ); # not sure when this can be removed again
     }
-    
+
     myexec( "pacman-key --init" );
 
     # We trust the Arch people, Arch Linux ARM, Uplink Labs' EC2 packages and ourselves
@@ -1202,7 +1208,7 @@ END
             return undef;
         }
     }
-    
+
     if( $< == 0 ) {
         UBOS::Utils::saveFile( $READY_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
         my $ret = UBOS::Utils::slurpFile( $READY_FILE );
