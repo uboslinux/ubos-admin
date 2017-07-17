@@ -102,7 +102,7 @@ unless( $deviceclassname ) {
     # see also UBOS::Host::deviceClass
     if( -e '/etc/os-release' ) {
         my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
-        while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9])\"!mg ) {
+        while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9]+)\"!mg ) {
             if( $1 eq 'UBOS_DEVICECLASS' ) {
                 $deviceclassname = $2;
                 last;
