@@ -83,6 +83,11 @@ HTML
      <a class="appconfig" href="$context/">
 HTML
                 }
+            } else {
+                # need equivalent element to attach CSS to
+                print <<HTML;
+     <span>
+HTML
             }
             print <<HTML;
       <div class="app">
@@ -100,6 +105,10 @@ HTML
             if( defined( $context )) {
                 print <<HTML;
      </a>
+HTML
+            } else {
+                print <<HTML;
+     </span>
 HTML
             }
         }
