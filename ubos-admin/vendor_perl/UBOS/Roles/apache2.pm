@@ -36,6 +36,7 @@ my $appConfigsDir    = '/etc/httpd/ubos/appconfigs';
 my $sitesDocumentRootDir            = '/srv/http/sites';
 my $sitesWellknownDir               = '/srv/http/wellknown';
 my $placeholderSitesDocumentRootDir = '/srv/http/placeholders';
+my @forErrors = ( '_errors', '_common' );
 
 # $sitesDir: contains one config file per virtual host, which includes files from $appConfigsDir/$siteId
 # $appConfigsDir: contains one directory per site with name $siteId. Each of those contains
@@ -136,6 +137,11 @@ sub setupSiteOrCheck {
 
         unless( -d $siteDocumentDir ) {
             UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
+
+            # Allow Apache to find the error documents for this site
+            foreach my $forError( @forErrors ) {
+                UBOS::Utils::symlink( "/srv/http/$forError", "$siteDocumentDir/$forError" );
+            }
         }
 
         my $siteId            = $site->siteId;
@@ -288,12 +294,12 @@ sub resumeSite {
 # Generated automatically, do not modify.
 #
 CONTENT
-    
+
     my $sslDir;
     my $sslKey;
     my $sslCert;
     my $sslCaCert;
-    
+
     if( $site->hasTls ) {
         $siteFileContent .= <<CONTENT;
 
@@ -312,7 +318,7 @@ CONTENT
         $sslCaCert    = $site->tlsCaCert;
 
         my $group = $site->config->getResolve( 'apache2.gname' );
-        
+
         if( $sslKey ) {
             UBOS::Utils::saveFile( "$sslDir/$siteId.key",      $sslKey,       0440, 'root', $group ); # avoid overwrite by apache
         }
@@ -324,7 +330,7 @@ CONTENT
         }
 
     } # else No SSL
-    
+
     $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:$port>
@@ -438,7 +444,7 @@ CONTENT
 CONTENT
 
     UBOS::Utils::saveFile( $siteFile, $siteFileContent, 0644 );
-    
+
     $triggers->{'httpd-reload'} = 1;
     return 1;
 }
@@ -481,6 +487,9 @@ sub removeSite {
         }
         if( -e $siteTorFragmentFile ) {
             UBOS::Utils::deleteFile( $siteTorFragmentFile );
+        }
+        foreach my $forError( @forErrors ) {
+            UBOS::Utils::deleteFile( "$siteDocumentDir/$forError" );
         }
 
         UBOS::Utils::rmdir( $siteDocumentDir );
@@ -633,7 +642,7 @@ sub checkAppManifestForRole {
         $installable->myFatal( "roles section: role $roleName: only provide field 'defaultcontext' for apps" );
     } elsif( defined( $jsonFragment->{fixedcontext} )) {
         $installable->myFatal( "roles section: role $roleName: only provide field 'fixedcontext' for apps" );
-    }        
+    }
 
     $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
 }

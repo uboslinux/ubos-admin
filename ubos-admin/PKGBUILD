@@ -100,6 +100,8 @@ package() {
         for f in $startdir/www/placeholders/$d/*.html; do
             install -m644 $f $pkgdir/srv/http/placeholders/$d/
         done
+        ln -s /srv/http/_errors $pkgdir/srv/http/placeholders/$d/_errors
+        ln -s /srv/http/_common $pkgdir/srv/http/placeholders/$d/_common
     done
 
     mkdir -p $pkgdir/srv/http/sites
