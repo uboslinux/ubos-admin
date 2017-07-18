@@ -35,12 +35,17 @@ use JSON;
 # The known customization point types, validation routines, and error messages.
 # valuecheck returns two values:
 #  1. a boolean (ok or not)
-#  2. a cleaned-up version of the value 
+#  2. a cleaned-up version of the value
 our $knownCustomizationPointTypes = {
     'string' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift;
+
             my $ok = !ref( $v ) && $v !~ /\n/;
+            if( defined( $custPointJson->{regex} )) {
+                $ok &= ( $v =~ $custPointJson->{regex} );
+            }
             return ( $ok, $v );
         },
         'valuecheckerror' => 'string value without newlines required',
@@ -48,7 +53,9 @@ our $knownCustomizationPointTypes = {
     },
     'email' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v ) && $v =~ /^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i;
             return ( $ok, $v );
         },
@@ -57,7 +64,9 @@ our $knownCustomizationPointTypes = {
     },
     'url' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v ) && $v =~ m!^https?://\S+$!;
             return ( $ok, $v );
         },
@@ -66,7 +75,9 @@ our $knownCustomizationPointTypes = {
     },
     'text' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v );
             return ( $ok, $v );
         },
@@ -75,7 +86,9 @@ our $knownCustomizationPointTypes = {
     },
     'password' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v ) && $v =~ /^\S{4,}$/;
             return ( $ok, $v );
         },
@@ -84,7 +97,9 @@ our $knownCustomizationPointTypes = {
     },
     'boolean' => {
         'valuecheck' => sub {
-            my $v = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             if( ref( $v ) =~ m/^JSON.*[Bb]oolean$/ ) {
                 return ( 1, $v );
             } elsif( ref( $v )) {
@@ -106,7 +121,9 @@ our $knownCustomizationPointTypes = {
     },
     'integer' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v ) && $v =~ /^-?[0-9]+$/;
             return ( $ok, $v );
         },
@@ -115,7 +132,9 @@ our $knownCustomizationPointTypes = {
     },
     'positiveinteger' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v ) && $v =~ /^[1-9][0-9]*$/;
             return ( $ok, $v );
         },
@@ -124,7 +143,9 @@ our $knownCustomizationPointTypes = {
     },
     'positiveintegerorzero' => {
         'valuecheck' => sub {
-            my $v  = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             my $ok = !ref( $v ) && $v =~ /^[0-9]+$/;
             return ( $ok, $v );
         },
@@ -133,7 +154,9 @@ our $knownCustomizationPointTypes = {
     },
     'image' => {
         'valuecheck' => sub {
-            my $v = shift;
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
             return ( 1, $v ); # don't really know
         },
         'valuecheckerror' => 'name of a readable image file required',
@@ -299,11 +322,11 @@ sub _l10nInfo {
 # return: array of keys to try, e.g. ( 'en_US', 'en', 'default' )
 sub _localeToKeys {
     my $locale = shift;
-    
+
     my @ret = ();
     if( $locale ) {
         push @ret, $locale;
-    
+
         if( $locale =~ m!(.*)_(.*)! ) {
             push @ret, $1;
         }
@@ -421,6 +444,9 @@ sub checkManifestCustomizationPointsSection {
             unless( ref( $custPointValidation )) {
                 $self->myFatal( "customizationpoints section: customizationpoint $custPointName: unknown type: " . $custPointJson->{type} );
             }
+            if( $custPointJson->{type} ne 'string' && defined( $custPointJson->{regex} )) {
+                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: only string types may have a regex" );
+            }
             unless( defined( $custPointJson->{required} ) ) {
                 $self->myFatal( "customizationpoints section: customizationpoint $custPointName: field 'required' must be given" );
             }
@@ -439,7 +465,7 @@ sub checkManifestCustomizationPointsSection {
                         $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: no complex value permitted" );
                     }
                     if( $custPointValidation ) {
-                        my( $ok, $cleanedValue ) = $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value} );
+                        my( $ok, $cleanedValue ) = $custPointValidation->{valuecheck}->( $custPointJson->{default}->{value}, $custPointJson );
                         unless( $ok ) {
                             $self->myFatal( "customizationpoints section: customizationpoint $custPointName: default: field 'value': " . $custPointValidation->{valuecheckerror} );
                         }

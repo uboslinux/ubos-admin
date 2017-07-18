@@ -176,7 +176,7 @@ sub accessories {
 
     return @{$self->{accessories}};
 }
-    
+
 ##
 # Obtain the installables at this AppConfiguration.
 # return: list of Installable
@@ -250,7 +250,7 @@ sub resolvedCustomizationPoints {
     foreach my $installable ( $self->installables ) {
         my $packageName           = $installable->packageName;
         my $installableCustPoints = $installable->customizationPoints;
-        
+
         if( $installableCustPoints ) {
             foreach my $custPointName ( keys %$installableCustPoints ) {
                 my $custPointDef = $installableCustPoints->{$custPointName};
@@ -298,7 +298,7 @@ sub customizationPointDefinition {
     warn( 'Cannot find customization point', $customizationPointName, 'in package', $packageName );
     return undef;
 }
-  
+
 ##
 # Obtain the Configuration object
 # return: the Configuration object
@@ -650,7 +650,7 @@ sub _initialize {
                   { UBOS::Accessory->new( $_, $self->{skipFilesystemChecks}, $self->{manifestFileReader} ) }
                   @{$self->{json}->{accessoryids}};
         $self->{accessories} = \@acc;
-        
+
     } else {
         $self->{accessories} = [];
     }
@@ -669,7 +669,7 @@ sub _addCustomizationPointValuesToConfig {
     my $config      = shift;
     my $installable = shift;
     my $save        = shift || 0;
-    
+
     my $installableCustPoints = $installable->customizationPoints;
     if( $installableCustPoints ) {
         my $packageName         = $installable->packageName;
@@ -756,7 +756,7 @@ sub checkCustomizationPointValues {
                         my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
                         my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                         # checked earlier that this is non-null
-                        unless( $custPointValidation->{valuecheck}->( $value )) {
+                        unless( $custPointValidation->{valuecheck}->( $value, $custPointDef )) {
                             fatal(   'AppConfiguration ' . $self->appConfigId
                                    . ', package ' . $packageName
                                    . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
@@ -788,14 +788,14 @@ sub checkCustomizationPointValues {
 # Print this appconfiguration in human-readable form.
 # $detail: 1: only appconfigid,
 #          2: plus app, accessories,
-#          3: plus customizationpoints 
+#          3: plus customizationpoints
 sub print {
     my $self   = shift;
     my $detail = shift || 2;
 
     if( $detail <= 1 ) {
         print $self->appConfigId . "\n";
-        
+
     } else {
         print "AppConfiguration: ";
 
@@ -816,7 +816,7 @@ sub print {
         } else {
             print "\n";
         }
-                            
+
         my $custPoints = $self->resolvedCustomizationPoints;
         foreach my $installable ( $self->installables ) {
             print '    ';
@@ -837,5 +837,5 @@ sub print {
         }
     }
 }
-                            
+
 1;
