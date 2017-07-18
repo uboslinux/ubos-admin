@@ -57,13 +57,21 @@ HTML
         print <<HTML;
     <div class="apps">
 HTML
-        @$appConfigs    = sort { $a->context cmp $b->context } @$appConfigs; # consistent ordering
+        @$appConfigs = sort {
+            ( defined( $a->context ) && defined( $b->context ))
+            ? ( $a->context cmp $b->context )
+            : ( $a->app->packageName() cmp $b->app->packageName() )
+        } @$appConfigs; # consistent ordering
+
         my %apps        = (); # show contexts for duplicate apps
         my $showContext = 0;
         foreach my $appConfig ( @$appConfigs ) {
-            my $appId   = $appConfig->app->packageName();
-            if( ++$apps{$appId} > 1 ) {
-                $showContext = 1;
+            my $context = $appConfig->context;
+            if( defined( $context )) {
+                my $appId = $appConfig->app->packageName();
+                if( ++$apps{$appId} > 1 ) {
+                    $showContext = 1;
+                }
             }
         }
 
@@ -94,8 +102,8 @@ HTML
        <div class="icon" style="background-image: url(/_appicons/$appId/72x72.png)"></div>
        <p class="name">$appName</p>
 HTML
-            if( $showContext ) {
-            print <<HTML;
+            if( defined( $context ) && $showContext ) {
+                print <<HTML;
        <p class="context">$context</p>
 HTML
             }
