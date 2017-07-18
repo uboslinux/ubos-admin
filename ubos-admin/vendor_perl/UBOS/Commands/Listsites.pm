@@ -43,14 +43,16 @@ sub run {
     my $json          = 0;
     my $brief         = 0;
     my @siteIds       = ();
+    my @hosts         = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'     => \$verbose,
-            'logConfig=s'  => \$logConfigFile,
-            'json'         => \$json,
-            'brief'        => \$brief,
-            'siteid=s'     => \@siteIds );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'json'        => \$json,
+            'brief'       => \$brief,
+            'siteid=s'    => \@siteIds,
+            'hostname=s'  => \@hosts );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
@@ -60,9 +62,17 @@ sub run {
     }
 
     my $sites;
-    if( @siteIds ) {
-        foreach my $siteId ( sort @siteIds ) {
+    if( @siteIds || @hosts ) {
+        foreach my $siteId ( @siteIds ) {
             my $site = UBOS::Host::findSiteByPartialId( $siteId );
+            if( $site ) {
+                $sites->{$site->siteId} = $site;
+            } else {
+                fatal( $@ );
+            }
+        }
+        foreach my $host ( @hosts ) {
+            my $site = UBOS::Host::findSiteByHostname( $host );
             if( $site ) {
                 $sites->{$site->siteId} = $site;
             } else {
@@ -85,7 +95,7 @@ sub run {
             $sites->{$siteId}->print( $brief ? 1 : 2 );
         }
     }
-    
+
     return 1;
 }
 
@@ -94,10 +104,18 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
+        <<SSS => <<HHH,
     [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]...
 SSS
     Show the sites with siteid, or if not given, show all sites currently
+    deployed to this device. If invoked as root, more information is available.
+    --json: show them in JSON format
+    --brief: only show the site ids.
+HHH
+        <<SSS => <<HHH
+    [--verbose | --logConfig <file>] [--json | --brief] [--hostname <hostname>]...
+SSS
+    Show the sites with the given hostname, or if not given, show all sites currently
     deployed to this device. If invoked as root, more information is available.
     --json: show them in JSON format
     --brief: only show the site ids.
