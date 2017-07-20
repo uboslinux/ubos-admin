@@ -271,10 +271,10 @@ HHH
             '--noreboot' => <<HHH,
     Skip the reboot heuristics, and do not reboot.
 HHH
-            '--nosnapshot' => <<HHH
+            '--nosnapshot' => <<HHH,
     Do not create filesystem shapshots before and after the upgrade.
 HHH
-            '--showpackages' => <<HHH,
+            '--showpackages' => <<HHH
     Print the names of the packages that were upgraded.
 HHH
 
