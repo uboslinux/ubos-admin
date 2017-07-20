@@ -41,7 +41,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $initOnly      = 0;
@@ -73,12 +73,42 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        '<name>' => <<HHH,
-    Sets the active network configuration, attempting to restore previously set values (if any).
+        'summary' => <<SSS,
+    Activate a particular network configuration.
+SSS
+        'detail' => <<DDD,
+    A network configuration determines which of the device's networking
+    interfaces (Ethernet, WiFi) are active, how IP addresses are
+    assigned (e.g. static vs DHCP), which ports are open and which are
+    firewalled on which interface, and the like.
+    To determine which network configurations are available, use
+    "ubos-admin listnetconfigs".
+DDD
+        'cmds' => {
+            <<SSS => <<HHH,
+    <name>
+SSS
+    Activate network configuration with name <name>. If this network
+    configuration had been set previously, it will attempt to reuse
+    the previous configuration values (e.g. same static IP addresses
+    allocated to the same local network interfaces)
 HHH
-        '--force <name>' => <<HHH
-    Sets the active network configuration, forgetting previously set values (if any).
+            <<SSS => <<HHH,
+    --force <name>
+SSS
+    Activate network configuration with name <name>. Ignore previously
+    set values for this configuration and act as if this network
+    configuration had never been set before.
 HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH
+    Use an alternate log configuration file for this command.
+HHH
+        }
     };
 }
 

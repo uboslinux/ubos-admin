@@ -41,7 +41,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose       = 0;
@@ -77,14 +77,43 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [[--add] <public ssh key>] ...
+        'summary' => <<SSS,
+    Configure the shepherd account.
 SSS
-    Create the shepherd account if it does not exist yet. Replace (or add,
-    if --add is specified) the given public ssh key(s) on the shepherd account.
-    This is a command-line mechanism similar to what can be done with the
-    UBOS Staff.
+        'detail' => <<DDD,
+    This command creates the shepherd account if it does not exist yet,
+    and optionally, adds or replaces a public ssh key on the shepherd
+    account so key-based ssh login is possible over the network.
+DDD
+        'cmds' => {
+            '' => <<HHH,
+    When creating the shepherd account, do not set a public ssh key.
+    If the shepherd account exists already, does nothing.
 HHH
+            <<SSS => <<HHH,
+    <public ssh key> ...
+SSS
+    Set the given public ssh key on the shepherd account. If a previous
+    ssh key was already set, replace it with this one. If the shepherd
+    account did not exist yet, create it first.
+HHH
+            <<SSS => <<HHH
+    --add <public ssh key> ...
+SSS
+    Add the given public ssh key to the shepherd account. If a previous
+    ssh key was already set, add this ssh key and do not replace the
+    previous one. If the shepherd account did not exist yet, create it
+    first.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH
+    Use an alternate log configuration file for this command.
+HHH
+        }
     };
 }
 

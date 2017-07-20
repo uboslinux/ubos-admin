@@ -59,13 +59,13 @@ sub run {
             $netConfigs,
             sub {
                 my $netConfig = shift;
-                
+
                 if( !$all && !UBOS::Utils::invokeMethod( $netConfig . '::isPossible' ) ) {
                     return undef; # skip this
                 }
                 UBOS::Utils::invokeMethod( $netConfig . '::help' );
             } );
-    
+
     return 1;
 }
 
@@ -74,12 +74,31 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        '' => <<HHH,
+        'summary' => <<SSS,
+    Show information about known network configurations.
+SSS
+        'detail' => <<DDD,
+    To activate a network configuration with name <name>, use
+    "ubos-admin setnetconfig <name>".
+DDD
+        'cmds' => {
+            '' => <<HHH,
     Show available network configurations.
 HHH
-        '--all' => <<HHH
+            <<SSS => <<HHH,
+    --all
+SSS
     Show all network configurations, even those that cannot be activated.
 HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH
+    Use an alternate log configuration file for this command.
+HHH
+        }
     };
 }
 

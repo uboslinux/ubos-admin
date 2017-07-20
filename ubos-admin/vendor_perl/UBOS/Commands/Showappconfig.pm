@@ -45,6 +45,7 @@ sub run {
     my $host;
     my $appConfigId;
     my $context;
+    my $url;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -55,15 +56,19 @@ sub run {
             'siteid=s'      => \$siteId,
             'hostname=s'    => \$host,
             'appconfigid=s' => \$appConfigId,
-            'context=s'     => \$context );
+            'context=s'     => \$context,
+            'url=s'         => \$url );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
         || ( $json && $brief )
-        || ( $appConfigId && ( $siteId || $host || $context ))
-        || ( !$appConfigId && ( !$context || ( $siteId && $host )))
+        || ( $appConfigId && ( $siteId || $host || $context || $url ))
+        || ( $siteId && $host )
+        || ( $siteId && $url )
+        || ( $host && $url )
+        || ( !$appConfigId && !$context && !$url )
         || @args
         || ( $verbose && $logConfigFile ))
     {
@@ -77,6 +82,11 @@ sub run {
             fatal( 'Cannot find a appconfiguration with appconfigid:', $appConfigId );
         }
     } else {
+        # Can use the same code here for url vs. host+context
+        if( $url && $url =~ m!^(https?://)?([-a-z0-9_.]+)(/.*)?$! ) {
+            $host    = $2;
+            $context = $3;
+        }
         my $site;
 
         if( $host ) {
@@ -106,7 +116,7 @@ sub run {
     } else { # human-readable, brief or not
         $appConfig->print( $brief ? 1 : 2 );
     }
-    
+
     return 1;
 }
 
@@ -115,30 +125,55 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--json | --brief] --appconfigid <appconfigid>
+        'summary' => <<SSS,
+    Show information about one AppConfiguration currently deployed on
+    this device.
 SSS
-    Show the appconfiguration with the provided appconfigid.
-    If invoked as root, more information is available.
-    --json: show it in JSON format
-    --brief: only show the appconfig id
-HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--json | --brief] --siteid <siteid> --context <context>
+        'detail' => <<DDD,
+    If invoked as root, more information may be shown than when invoked
+    as a different user (e.g. credentials, keys, values for
+    customization points marked as "private").
+DDD
+        'cmds' => {
+            <<SSS => <<HHH,
+    --appconfigid <appconfigid>
 SSS
-    Show the appconfiguration at the site with siteid with the provided context path.
-    If invoked as root, more information is available.
-    --json: show it in JSON format
-    --brief: only show the appconfig id
+    Show information about the AppConfiguration with the provided
+    <appconfigid>.
 HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json | --brief] --hostname <hostname> --context <context>
+            <<SSS => <<HHH,
+    --siteid <siteid> --context <context>
 SSS
-    Show the appconfiguration at the provided hostname with the provided context path.
-    If invoked as root, more information is available.
-    --json: show it in JSON format
-    --brief: only show the appconfig id
+    Show information about the AppConfiguration at the site with
+    site id <siteid> and context path <context>.
 HHH
+            <<SSS => <<HHH,
+    --hostname <hostname> --context <context>
+SSS
+    Show information about the AppConfiguration at the site with
+    hostname <hostname> and context path <context>.
+HHH
+            <<SSS => <<HHH
+    --url <url>
+SSS
+    Show information about the AppConfiguration referred to by URL
+    <url>.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--json' => <<HHH,
+    Use JSON as the output format, instead of human-readable text.
+HHH
+            '--brief' => <<HHH
+    Only show the appconfigid.
+HHH
+        }
     };
 }
 

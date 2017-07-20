@@ -34,7 +34,11 @@ unless( @ARGV ) {
 }
 my $command = $ARGV[0];
 if( '--help' eq $command || '-h' eq $command ) {
-    synopsisHelpQuit( 1 );
+    if( @ARGV == 2 ) {
+        synopsisHelpQuit( 1, $ARGV[1] );
+    } else {
+        synopsisHelpQuit( 1 );
+    }
 }
 
 my $commandPackage = $commands->{$command};
@@ -91,11 +95,76 @@ sub synopsisHelpQuit {
     my $helpFor = shift;
     my $exit    = shift || 0;
 
-    unless( $helpFor ) {
+    my $cmd = $0;
+    $cmd =~ s!.*/!!;
+
+    if( $helpFor ) {
+        my $package = $commands->{$helpFor};
+        unless( $package ) {
+            print STDERR <<END;
+Command does not exist: ubos-admin $helpFor
+END
+            exit -1;
+        }
+
+        my $synopsisHelp = UBOS::Utils::invokeMethod( $package . '::synopsisHelp' ) || '';
+
+        if( $synopsisHelp ) { # skip commands that don't have this
+            if( exists( $synopsisHelp->{'summary'} )) {
+                my $summary = $synopsisHelp->{'summary'};
+                $summary =~ s!^\s+!!gm;
+                $summary =~ s!\s+$!!gm;
+
+                print "$summary\n\n";
+            }
+            if( exists( $synopsisHelp->{'detail'} )) {
+                my $detail = $synopsisHelp->{'detail'};
+                $detail =~ s!^\s+!!gm;
+                $detail =~ s!\s+$!!gm;
+
+                print "$detail\n\n";
+            }
+
+            print "It can be invoked as follows:\n\n";
+
+            foreach my $invocation ( sort keys %{$synopsisHelp->{'cmds'}} ) {
+                my $help = $synopsisHelp->{'cmds'}->{$invocation};
+
+                $invocation =~ s!^\s+!!;
+                $invocation =~ s!\s+$!!;
+                $help =~ s!^\s+!!gm;
+                $help =~ s!\s+$!!gm;
+                $help =~ s!^!        !gm;
+
+                print "    $cmd $helpFor" . ( $invocation ? " $invocation" : '' ) . "\n";
+                print "$help\n\n";
+            }
+            if( exists( $synopsisHelp->{'args'} )) {
+                print "Optional arguments:\n\n";
+                foreach my $arg ( sort keys %{$synopsisHelp->{'args'}} ) {
+                    my $help = $synopsisHelp->{'args'}->{$arg};
+
+                    $help =~ s!^\s+!!;
+                    $help =~ s!\s+$!!;
+                    $help =~ s!^\s+!!gm;
+                    $help =~ s!\s+$!!gm;
+                    $help =~ s!^!        !gm;
+
+                    print "    $arg\n";
+                    print "$help\n\n";
+                }
+            }
+        } else {
+            print "This command exists but has no help text.\n";
+        }
+
+    } else {
+        # !$helpFor
         if( $long ) {
             print <<END;
-The central UBOS administration command. For more information about
-UBOS, visit http://ubos.net/
+
+ubos-admin is the central UBOS administration command.
+For more information about UBOS, visit http://ubos.net/
 
 This command may be invoked in the following ways:
 
@@ -103,37 +172,26 @@ END
         } else {
             print "Synopsis:\n";
         }
-    }
 
-    my $cmd = $0;
-    $cmd =~ s!.*/!!;
-
-    foreach my $command ( sort keys %$commands ) {
-        if( !$helpFor || $command eq $helpFor ) {
-            my $package      = $commands->{$command};
+        foreach my $subCommand ( sort keys %$commands ) {
+            my $package      = $commands->{$subCommand};
             my $synopsisHelp = UBOS::Utils::invokeMethod( $package . '::synopsisHelp' ) || '';
 
             if( $synopsisHelp ) { # skip commands that don't have this
-                foreach my $synopsis ( sort keys %$synopsisHelp ) {
-                    my $help = $synopsisHelp->{$synopsis};
 
-                    $synopsis =~ s!^\s+!!;
-                    $synopsis =~ s!\s+$!!;
+                print "    $cmd $subCommand [<args>...]\n";
 
-                    print "    $cmd $command" . ( $synopsis ? " $synopsis" : '' ) . "\n";
-                    if( $long || $helpFor ) {
-                        $help =~ s!^\s+!!gm;
-                        $help =~ s!\s+$!!gm;
-                        $help =~ s!^!        !gm;
+                if( $long && exists( $synopsisHelp->{'summary'} )) {
+                    my $help = $synopsisHelp->{'summary'};
+                    $help =~ s!^\s+!!gm;
+                    $help =~ s!\s+$!!gm;
+                    $help =~ s!^!        !gm;
 
-                        print "$help\n\n";
-                    }
+                    print "$help\n\n";
                 }
             }
         }
-    }
 
-    unless( $helpFor ) {
         print "    $cmd --help\n";
         if( $long ) {
             print <<END;

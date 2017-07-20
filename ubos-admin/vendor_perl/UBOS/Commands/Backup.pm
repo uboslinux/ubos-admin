@@ -40,7 +40,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose       = 0;
@@ -70,6 +70,8 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
+    # Don't need to do any cleanup of siteIds or appConfigIds, BackupUtils::performBackup
+    # does that for us
     foreach my $host ( @hosts ) {
         my $site = UBOS::Host::findSiteByHostname( $host );
         unless( $site ) {
@@ -92,39 +94,59 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--notls] [--notorkey ] --siteid <siteid> --out <backupfile>
+        'summary' => <<SSS,
+    Create a backup and save it to a local file.
 SSS
-    Back up all data from all apps and accessories installed at a currently
-    deployed site with siteid to backupfile. More than one siteid may be
-    specified.
-    --notls means do not back up TLS keys; --notorkey means do not backup
-    Tor private keys for Tor sites
-HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--notls] [--notorkey] --hostname <hostname> --out <backupfile>
+        'detail' => <<DDD,
+    The backup may include all or just some of the sites currently
+    deployed on this device.
+DDD
+        'cmds' => {
+            <<SSS => <<HHH,
+    --out <backupfile>
 SSS
-    Back up all data from all apps and accessories installed at a currently
-    deployed site with the given hostname to backupfile. More than one hostname may be
-    specified.
-    --notls means do not back up TLS keys; --notorkey means do not backup
-    Tor private keys for Tor sites
+    Back up all data from all sites currently deployed on this device by
+    saving all data from all apps and accessories on the device into
+    local file <backupfile>.
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --appconfigid <appconfigid> --out <backupfile>
+            <<SSS => <<HHH,
+    --out <backupfile> --siteid <siteid> [--siteid <siteid>]...
 SSS
-    Back up all data from the currently deployed app and its accessories at
-    AppConfiguration appconfigid to backupfile. More than one appconfigid
-    may be specified.
+    Back up one or more sites identified by their site ids <siteid> by
+    saving all data from all apps and accessories at those sites into
+    local file <backupfile>.
 HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--notls] [--notorkey] --out <backupfile>
+            <<SSS => <<HHH,
+    --out <backupfile> --hostname <hostname> [--hostname <hostname>]...
 SSS
-    Back up all data from all currently deployed apps and accessories at all
-    deployed sites to backupfile.
-    --notls means do not back up TLS keys; --notorkey means do not backup
-    Tor private keys for Tor sites
+    Back up one or more sites identified by their hostnames <hostname>
+    by saving all data from all apps and accessories at those sites into
+    local file <backupfile>.
 HHH
+            <<SSS => <<HHH
+    --out <backupfile> --appconfigid <appconfigid> [--appconfigid <appconfigid>]...
+SSS
+    Back up one or more AppConfigurations identified by their
+    AppConfigIds <appconfigid> by saving all data from the apps and
+    accessories at these AppConfigurations into local file <backupfile>.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--notls' => <<HHH,
+    If a site uses TLS, do not put the TLS key and certificate into the
+    backup.
+HHH
+            '--notorkey' => <<HHH
+    If a site is on the Tor network, do not put the Tor key into the
+    backup.
+HHH
+        }
     };
 }
 

@@ -44,6 +44,7 @@ sub run {
     my $logConfigFile = undef;
     my $in            = undef;
     my $url           = undef;
+    my $json          = 0;
     my $brief         = 0;
 
     my $parseOk = GetOptionsFromArray(
@@ -52,6 +53,7 @@ sub run {
             'logConfig=s'   => \$logConfigFile,
             'in=s'          => \$in,
             'url=s'         => \$url,
+            'json'          => \$json,
             'brief'         => \$brief );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
@@ -96,7 +98,15 @@ sub run {
         fatal( UBOS::AnyBackup::cannotParseArchiveErrorMessage( $in || $url ));
     }
 
-    unless( $brief ) {
+    my $jsonOutput;
+    if( $json ) {
+        $jsonOutput = {};
+        $jsonOutput->{'type'}       = $backup->backupType;
+        $jsonOutput->{'created'}    = $backup->startTimeString;
+        $jsonOutput->{'sites'}      = [];
+        $jsonOutput->{'appconfigs'} = [];
+
+    } elsif( !$brief ) {
         print "Type:    " . $backup->backupType      . "\n";
         print "Created: " . $backup->startTimeString . "\n";
     }
@@ -104,22 +114,35 @@ sub run {
     my $sites      = $backup->sites();
     my $appConfigs = $backup->appConfigs();
     my $seenAppConfigIds = {};
-    
+
     foreach my $siteId ( sort keys %$sites ) {
-        $sites->{$siteId}->print( $brief ? 1 : 2 );
+        if( $json ) {
+            $jsonOutput->{'sites'}->{$siteId} = $sites->{$siteId}->siteJson();
+        } else {
+            $sites->{$siteId}->print( $brief ? 1 : 2 );
+        }
 
         map { $seenAppConfigIds->{ $_->appConfigId } = 1; } @{ $sites->{$siteId}->appConfigs };
     }
 
     my @unattachedAppConfigIds = sort grep { !$seenAppConfigIds->{$_} } keys %$appConfigs;
     if( @unattachedAppConfigIds ) {
-        print "=== Unattached AppConfigurations ===\n";
+        if( $json ) {
+            foreach my $appConfigId ( @unattachedAppConfigIds ) {
+                $jsonOutput->{'appconfigs'}->{$appConfigId} = $appConfigs->{$appConfigId}->appConfigurationJson();
+            }
+        } else {
+            print "=== Unattached AppConfigurations ===\n";
 
-        foreach my $appConfigId ( @unattachedAppConfigIds ) {
-            $appConfigs->{$appConfigId}->print( $brief ? 1 : 2 );
+            foreach my $appConfigId ( @unattachedAppConfigIds ) {
+                $appConfigs->{$appConfigId}->print( $brief ? 1 : 2 );
+            }
         }
     }
-    
+    if( $json ) {
+        UBOS::Utils::writeJsonToStdout( $jsonOutput );
+    }
+
     return 1;
 }
 
@@ -128,14 +151,36 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--brief] ( --in <backupfile> | --url <backupurl> )
+        'summary' => <<SSS,
+    Display information about a UBOS backup file.
 SSS
-    Display the content of <backupfile>.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
-    --brief: only show the site ids.
+        'cmds' => {
+            <<SSS => <<HHH,
+    --in <backupfile>
+SSS
+    Display information about the local backupfile <backupfile>.
 HHH
+            <<SSS => <<HHH,
+   --url <backupurl>
+SSS
+    Retrieve the backup file from URL <backupurl>, and display
+    information about the backup contained in the retrieved file.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--json' => <<HHH,
+    Use JSON as the output format, instead of human-readable text.
+HHH
+            '--brief' => <<HHH
+    Only show the siteids.
+HHH
+        }
     };
 }
 

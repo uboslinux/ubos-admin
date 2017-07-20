@@ -47,7 +47,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose         = 0;
@@ -231,7 +231,7 @@ sub run {
 }
 
 ##
-# Call if we restore appconfigurations, not sites        
+# Call if we restore appconfigurations, not sites
 sub restoreAppConfigs {
     my @appConfigIds    = @{shift()};
     my @toSiteIds       = @{shift()};
@@ -334,7 +334,7 @@ sub restoreAppConfigs {
     }
     if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
         fatal( $@ );
-    }        
+    }
 
     $prerequisites = {};
     foreach my $toSite ( @toSites ) {
@@ -421,7 +421,7 @@ sub restoreAppConfigs {
         }
     }
 
-    return $ret;    
+    return $ret;
 }
 
 ##
@@ -760,67 +760,154 @@ sub _uniq {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] [--notor] [--notorhostname <hostname>]... [--migratefrom <package-a> --migrateto <package-b>] ( --in <backupfile> | --url <backupurl> )
+        'summary' => <<SSS,
+    Restore sites or AppConfigurations from a backup file.
 SSS
-    Restore all sites contained in backupfile. This includes all
-    applications at that site and their data. None of the sites in the backup
-    file must currently exist on the host: siteids, appconfigids, and
-    hostnames must all be different.
-    Instead of restoring app or accessory package-a, restore to package-b.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
+        'detail' => <<DDD,
+    Various options are provided to only selectively restore some sites
+    or AppConfigurations contained in the backup file, or to restore
+    data into a somewhat different configuration (e.g. different host
+    name). None of the sites or AppConfigurations to be restored must
+    currently be deployed on this device. The backup file can generally
+    be provided as a local file (with --in <backupfile>) or as a URL
+    from where it will be downloaded (with --url <backupurl>). This
+    operation does not modify the backup file.
+DDD
+        'cmds' => {
+        <<SSS => <<HHH,
+    --in <backupfile>
+SSS
+    Restore all sites contained in local UBOS backup file <backupfile>.
+    This includes all applications at that site and their data.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] [--notor] [--notorhostname <hostname>]... [--migratefrom <package-a> --migrateto <package-b>] ( --siteid <siteid> | --hostname <hostname> ) [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    --url <backupurl>
 SSS
-    Restore the site with siteid or hostname contained in backupfile. This
-    includes all applications at that site and their data. This site currently
-    must not exist on the host: siteid, appconfigids, and hostname must
-    all be different.
-    Instead of restoring app or accessory package-a, restore to package-b.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
+    Download a UBOS backup file from URL <backupurl>, and restore all
+    sites contained in that backup file. This includes all applications
+    at that site and their data.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--notls] [--migratefrom <package-a> --migrateto <package-b>] ( --siteid <siteid> | --hostname <hostname> ) --createnew [--newsiteid <newid>] [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+    --siteid <siteid> [--newhostname <newhostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
-    Restore the site with siteid or hostname contained in backupfile, but
-    instead of using the siteids and appconfigids given in the backup,
-    allocate new ones. Optionally specify the new siteid to use with --newsiteid.
-    Optionally recreate the site on the host with a new hostname with --newhostname.
-    Instead of restoring app or accessory package-a, restore to package-b.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
-
-    This allows the user to run the restored backup of a site in parallel
-    with the current site, as long as they use a different hostname.
-
-    This exists mainly to facilitate testing.
+    Restore only one site identified by its site id <siteid> from local
+    UBOS backup file <backupfile>, or from the UBOS backup file
+    downloaded from URL <backupurl>. Optionally, if --newhostname
+    <newhostname> is provided, assign a different hostname when
+    deploying.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--showids] [--migratefrom <package-a> --migrateto <package-b>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) [--newcontext <context>] ( --in <backupfile> | --url <backupurl> )
+    --hostname <hostname> [--newhostname <newhostname>] ( --in <backupfile> | --url <backupurl> )
 SSS
-    Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
-    to a currently deployed Site with tositeid. No AppConfiguration with appconfigid
-    must currently exist on the host. Optionally use a different context path
-    for the AppConfiguration using --newcontext.
-    Instead of restoring app or accessory package-a, restore to package-b.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
+    Restore only one site identified by its hostname <hostname> from
+    local UBOS backup file <backupfile>, or from the UBOS backup file
+    downloaded from URL <backupurl>. Optionally, if --newhostname
+    <newhostname> is provided, assign a different hostname when
+    deploying.
+HHH
+        <<SSS => <<HHH,
+    --siteid <siteid> --createnew [--newsiteid <newid>] [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+SSS
+    Restore only one site identified by its site id <siteid> from local
+    UBOS backup file <backupfile>, or from the UBOS backup file
+    downloaded from URL <backupurl>. However, use a new site id <newid>
+    for it (or, if not provided, generate a new one). Optionally, if
+    --newhostname <newhostname> is provided, assign a different hostname
+    when deploying.
+HHH
+        <<SSS => <<HHH,
+    --hostname <hostname> --createnew [--newsiteid <newid>] [--newhostname <hostname>] ( --in <backupfile> | --url <backupurl> )
+SSS
+    Restore only one site identified by its hostname <hostname> from
+    local UBOS backup file <backupfile>, or from the UBOS backup file
+    downloaded from URL <backupurl>. However, use a new site id <newid>
+    for it (or, if not provided, generate a new one). Optionally, if
+    --newhostname <newhostname> is provided, assign a different hostname
+    when deploying.
+HHH
+        <<SSS => <<HHH,
+    --appconfigid <appconfigid> --tositeid <tositeid> [--newcontext <context>] ( --in <backupfile> | --url <backupurl> )
+SSS
+    Restore only one AppConfiguration identified by its appconfigid
+    <appconfigid> from local UBOS backup file <backupfile>, or from the
+    UBOS backup file downloaded from URL <backupurl>, by adding it as a
+    new AppConfiguration to a currently deployed site identified by
+    its site id <tositeid>. Optionally, if --newcontext <context> is
+    provided, deploy the AppConfiguration to a different context path.
+HHH
+        <<SSS => <<HHH,
+    --appconfigid <appconfigid> --tohostname <tohostname> [--newcontext <context>] ( --in <backupfile> | --url <backupurl> )
+SSS
+    Restore only one AppConfiguration identified by its appconfigid
+    <appconfigid> from local UBOS backup file <backupfile>, or from the
+    UBOS backup file downloaded from URL <backupurl>, by adding it as a
+    new AppConfiguration to a currently deployed site identified by
+    its hostname <tohostname>. Optionally, if --newcontext <context> is
+    provided, deploy the AppConfiguration to a different context path.
+HHH
+        <<SSS => <<HHH,
+    --appconfigid <appconfigid> --tositeid <tositeid> --createnew [--newappconfigid <newid>] [--newcontext <context>] --in <backupfile>
+SSS
+    Restore only one AppConfiguration identified by its appconfigid
+    <appconfigid> from local UBOS backup file <backupfile>, or from the
+    UBOS backup file downloaded from URL <backupurl>, by adding it as a
+    new AppConfiguration to a currently deployed site identified by its
+    site id <tositeid>. However, use new appconfigid <newid> for it (or,
+    if not provided, generate a new one). Optionally, if --newcontext
+    <context> is provided, deploy the AppConfiguration to a different
+    context path.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--showids] [--migratefrom <package-a> --migrateto <package-b>] --appconfigid <appconfigid> ( --tositeid <tositeid> | --tohostname <tohostname> ) --createnew [--newappconfigid <newid>] [--newcontext <context>] --in <backupfile>
+    --appconfigid <appconfigid> --tohostname <tohostname> --createnew [--newappconfigid <newid>] [--newcontext <context>] --in <backupfile>
 SSS
-    Restore AppConfiguration appconfigid by adding it as a new AppConfiguration
-    to a currently deployed Site with tositeid, but instead of using the
-    appconfigid given in the backup, allocate a new one. Optional specify the
-    new appconfigid to use with --newappconfigid. Optionally use a
-    different context path for the AppConfiguration using --newcontext.
-    Instead of restoring app or accessory package-a, restore to package-b.
-    Alternatively, a URL may be specified from where to retrieve the
-    backupfile.
+    Restore only one AppConfiguration identified by its appconfigid
+    <appconfigid> from local UBOS backup file <backupfile>, or from the
+    UBOS backup file downloaded from URL <backupurl>, by adding it as a
+    new AppConfiguration to a currently deployed site identified by
+    its hostname <tohostname>. However, use new appconfigid <newid>
+    for it (or, if not provided, generate a new one). Optionally, if
+    --newcontext <context> is provided, deploy the AppConfiguration to a
+    different context path.
 HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--showids' => <<HHH,
+    If specified, print the identifiers of the sites and
+    AppConfigurations that were restored.
+HHH
+            '--notls' => <<HHH,
+    If specified, ignore TLS information that may be contained in the
+    backup and restore to a non-TLS site instead.
+HHH
+            '--notor' => <<HHH,
+    If specified, restore Tor sites that may be contained in the backup
+    to a non-Tor site instead. For each site being restored, a
+    --notorhostname must be provided.
+HHH
+            '--notorhostname <hostname>' => <<HHH,
+    If --notor is specified, this flag provides replacement hostnames
+    for the Tor sites contained in the backup. This must be given as
+    many times as sites are to be restored, in the same sequence as
+    the to-be-restored sites to know which sites end up with which new
+    hostname.
+HHH
+            '--migratefrom <package-a>' => <<HHH,
+    Indicates that instead of restoring to the app <package-a> as
+    indicated in the backup file, the restore shall be performed to app
+    <package-b>, which is specified with the --migrateto argument.
+HHH
+            '--migrateto <package-b>' => <<HHH,
+    For the app <package-a> which was specified with --migratefrom, the
+    restore shall be performed to app <package-b>. These two arguments
+    must come in pairs, are are matched to each other in sequence.
+HHH
+        }
     };
 }
 

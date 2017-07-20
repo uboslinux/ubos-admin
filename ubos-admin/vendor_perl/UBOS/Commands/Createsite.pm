@@ -81,7 +81,7 @@ sub run {
     }
 
     if( !$dryRun && $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $oldSites = UBOS::Host::sites();
@@ -187,7 +187,7 @@ sub run {
 
             my $dir = File::Temp->newdir();
             chmod 0700, $dir;
-    
+
             my $err;
             if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
                 fatal( 'openssl genrsa failed', $err );
@@ -435,11 +435,11 @@ sub run {
                 }
             }
         }
-        
+
         my $appConfigJson = {};
         $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
         $appConfigJson->{appid}       = $appId;
-        
+
         if( defined( $context )) {
             $appConfigJson->{context} = $context;
         }
@@ -627,34 +627,74 @@ sub _sortCustomizationPoints {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--tor] [--out <file>]
+        'summary' => <<SSS,
+    Interactively define and install a new website.
 SSS
-    Interactively define and install a new site that runs any number of apps.
-    If --tls is provided, the site will be secured with SSL. If additionally
-    --selfsigned is provided, a self-signed certificate is automatically set
-    up. If additionally --letsencrypt is provided, letsencrypt.org will be
-    used to automatically setup a certificate; otherwise, keys and certificates
-    need to be entered manually. --tor will set up the site as a Tor hidden
-    service (--tls is optional, not --letsencrypt is not permitted).
-    If --out is provided, also save the created Site JSON to a file. Adding
-    --quiet will skip progress messages.
+        'detail' => <<DDD,
+    This command will ask for all configuration information necessary
+    for this site, including which app(s) to run at the site, which
+    accessories, hostname, and the like. It can be used to run more than
+    one app at a site, as long as the apps' context URLs don't overlap.
+DDD
+        'cmds' => {
+            '' => <<HHH,
+    Create the site with a http URL.
 HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--quiet] [--askForAllCustomizationPoints] [--tls [--selfsigned | --letsencrypt]] [--tor] [--out <file>] ( --dry-run | -n )
+            <<SSS => <<HHH,
+    --tls
 SSS
-    Interactively define a new site, but instead of installing,
-    print the Site JSON file for the site, which then can be deployed
-    using 'ubos-admin deploy'.
-    If --tls is provided, the site will be secured with SSL. If additionally
-    --selfsigned is provided, a self-signed certificate is automatically set
-    up. If additionally --letsencrypt is provided, letsencrypt.org will be
-    used to automatically setup a certificate; otherwise, keys and certificates
-    need to be entered manually.  --tor will set up the site as a Tor hidden
-    service (--tls is optional, not --letsencrypt is not permitted).
-    If --out is provided, the created Site JSON will be saved to a file instead
-    of writing it to stdout. Adding --quiet will skip progress messages.
+    Create the site with a https URL. The user will be prompted for the
+    names of files containing the TLS key and certificate chain.
 HHH
+            <<SSS => <<HHH,
+    --tls --selfsigned
+SSS
+    Create the site with a https URL. UBOS will automatically generate
+    a self-signed TLS certificate.
+HHH
+            <<SSS => <<HHH,
+    --tls --letsencrypt
+SSS
+    Create the site with a https URL. UBOS will automatically contact
+    the letsencrypt.org certificate authority and obtain a letsencrypt
+    certificate. This only works if 1) the device has a publicly
+    reachable IP address, and 2) the public hostname of the site
+    correctly resolves to the device.
+HHH
+            <<SSS => <<HHH,
+    --tor
+SSS
+    Create the site as a Tor hidden service. It will only be accessible
+    through The Onion Network using a special Tor browser or router.
+    A random .onion hostname will be automatically assigned.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--quiet' => <<HHH,
+    Reduce the number of progress messages printed to the terminal.
+HHH
+            '--askForAllCustomizationPoints' => <<HHH,
+    Ask the user for values for all customization points, not just the
+    ones that are required and have no default value.
+HHH
+            '--out <file>' => <<HHH,
+    Save the generated Site JSON file locally to file <file>.
+HHH
+            '--dry-run' => <<HHH,
+    Do not actually deploy the site. In conjunction with --out, this is
+    useful to only generate a Site JSON file without deploying it on the
+    current device.
+HHH
+            '-n' => <<HHH
+    Synonyn for --dry-run.
+HHH
+        }
     };
 }
 

@@ -40,7 +40,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose       = 0;
@@ -104,14 +104,14 @@ sub run {
     my $haveIdAlready      = {}; # it's okay that we have an old site by this id
     my $haveHostAlready    = {}; # it's not okay that we have an old site by this hostname if site id is different
     my $haveAnyHostAlready = 0; # true if we have the * (any) host
-    
+
     foreach my $oldSite ( values %$oldSites ) {
         $haveHostAlready->{$oldSite->hostname} = $oldSite;
         if( '*' eq $oldSite->hostname ) {
             $haveAnyHostAlready = 1;
         }
     }
-    
+
     foreach my $newSite ( @newSites ) {
         my $newSiteId = $newSite->siteId;
         if( $haveIdAlready->{$newSiteId} ) {
@@ -128,7 +128,7 @@ sub run {
                 if( keys %$oldSites > 1 ) {
                     fatal( "You can only redeploy a site with hostname * (any) if no other sites exist." );
                 }
-                
+
             } else {
                 if( $haveHostAlready->{$newSiteHostName} && $newSiteId ne $existingSite->siteId ) {
                     fatal( 'There is already a different site with hostname', $newSiteHostName );
@@ -149,7 +149,7 @@ sub run {
                 if( $haveHostAlready->{$newSiteHostName} ) {
                     fatal( 'There is already a different site with hostname', $newSiteHostName );
                 }
-            }            
+            }
         }
         if( defined( $newSiteHostName )) {
             # not tor
@@ -162,7 +162,7 @@ sub run {
                 fatal( 'More than one site or appconfig with id', $newAppConfigId );
             }
             $haveIdAlready->{$newSiteId} = $newSite;
-        
+
             foreach my $oldSite ( values %$oldSites ) {
                 foreach my $oldAppConfig ( @{$oldSite->appConfigs} ) {
                     if( $newAppConfigId eq $oldAppConfig->appConfigId ) {
@@ -211,7 +211,7 @@ sub run {
     }
 
     debug( 'Checking context paths and customization points', $ret );
-    
+
     foreach my $newSite ( @newSites ) {
         my %contexts = ();
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
@@ -279,7 +279,7 @@ sub run {
             my $backup = UBOS::UpdateBackup->new();
             $ret &= $backup->create( { $site->siteId => $oldSite } );
             $ret &= $oldSite->undeploy( $deployUndeployTriggers );
-            
+
             $ret &= $site->deploy( $deployUndeployTriggers );
             $ret &= $backup->restoreSite( $site );
 
@@ -329,26 +329,51 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--siteid <siteid>]... --stdin
+        'summary' => <<SSS,
+    Deploy one or more websites.
 SSS
-    Deploy or update one or more websites based on the Site JSON
-    information read from stdin. If one or more <siteid>s are given, ignore
-    all information contained in <site.json> other than sites with the
-    specified <siteid>s. This includes setting up the virtual host(s),
-    installing and configuring all web applications for the website(s).
+        'detail' => <<DDD,
+    This command will set up the virtual host(s), download, install and
+    configure all web applications and their accessories for the
+    website(s), potentially obtain and provisioning TLS or Tor keys,
+    populate databases and the like, and restart daemons, depending on
+    the site configuration(s) and the needs of the application(s).
+    Each site's desired configuration is provided in one or more Site
+    JSON files.
+DDD
+        'cmds' => {
+            <<SSS => <<HHH,
+    --stdin
+SSS
+    Read Site JSON information from the terminal. (Useful when deploying
+    over the internet, using a command such as:
+    cat site.json | ssh shepherd\@device sudo ubos-admin deploy --stdin)
+HHH
+        <<SSS => <<HHH,
+    --file <site.json> [--file <site.json> ]...
+SSS
+    Read the Site JSON information from one or more Site JSON files.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--template] [--siteid <siteid>]... ( --file <site.json> )...
+    --template --file <site.json> [--file <site.json> ]...
 SSS
-    Deploy or update one or more websites based on the information
-    contained in <site.json>. If one or more <siteid>s are given, ignore
-    all information contained in <site.json> other than sites with the
-    specified <siteid>s. If --template is specified, do not complain about
-    missing site and appconfiguration identifier; assign new ones instead.
-    This includes setting up the virtual host(s), installing and configuring
-    all web applications for the website(s).
+    Read the Site JSON information from one or more Site JSON files.
+    However, ignore the site ids and appconfigids in the provided file(s)
+    and assign new ones instead.
 HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--siteid <siteid>' => <<HHH
+    If specified, only deploy the site(s) with this site id <siteid>.
+    May be specified more than once.
+HHH
+        }
     };
 }
 

@@ -79,7 +79,7 @@ sub run {
     } else { # human-readable, brief or not
         $site->print( $brief ? 1 : 2 );
     }
-    
+
     return 1;
 }
 
@@ -88,22 +88,41 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--json | --brief] --siteid <siteid>
+        'summary' => <<SSS,
+    Show information about one site currently deployed on this device.
 SSS
-    Show the site with the provided siteid.
-    If invoked as root, more information is available.
-    --json: show it in JSON format
-    --brief: only show the site id
-HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json | --brief] --hostname <hostname>
+        'detail' => <<DDD,
+    If invoked as root, more information may be shown than when invoked
+    as a different user (e.g. credentials, keys, values for
+    customization points marked as "private").
+DDD
+        'cmds' => {
+            <<SSS => <<HHH,
+    --siteid <siteid>
 SSS
-    Show the site with the provided hostname.
-    If invoked as root, more information is available.
-    --json: show it in JSON format
-    --brief: only show the site id
+    Show information about the site with the provided site id <siteid>.
 HHH
+            <<SSS => <<HHH
+    --hostname <hostname>
+SSS
+    Show information about the site with the provided hostname
+    <hostname>.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--json' => <<HHH,
+    Use JSON as the output format, instead of human-readable text.
+HHH
+            '--brief' => <<HHH
+    Only show the siteid.
+HHH
+        }
     };
 }
 

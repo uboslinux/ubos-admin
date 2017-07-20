@@ -41,7 +41,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose       = 0;
@@ -76,7 +76,7 @@ sub run {
             unless( $device ) {
                 fatal( $@ );
             }
-            
+
         } else {
             $device = UBOS::ConfigurationManager::guessConfigurationDevice();
             unless( $device ) {
@@ -109,17 +109,36 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ <ubos-staff-device> ]
+        'summary' => <<SSS,
+    Configure this device with information read from a UBOS staff device.
 SSS
-    Read the desired configuration for this device from a UBOS staff device. If no
-    drive block device is given, guess the device.
+        'detail' => <<DDD,
+    This command performs similar actions would be performed when the
+    device is booted with a UBOS staff device attached.
+DDD
+        'cmds' => {
+            '' => <<HHH,
+    Guess which device is the UBOS staff device.
 HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] --target <directory>
+            <<SSS => <<HHH,
+    <ubos-staff-device>
 SSS
-    Read the desired configuration for this device from a UBOS staff directory
+    Read from the provided UBOS staff device, such as /dev/sdc.
 HHH
+            <<SSS => <<HHH
+    --target <directory>
+SSS
+    Read from a directory that contains UBOS staff information instead.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH
+    Use an alternate log configuration file for this command.
+HHH
+        }
     };
 }
 

@@ -38,7 +38,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose         = 0;
@@ -321,7 +321,7 @@ sub _usageAsJson {
         foreach my $line ( split "\n", $out ) {
             if( $out =~ m!^(\s+),\s*(\S+):\S*total=([^,]+),\S*used=(\S*)$! ) {
                 $ret->{lc($1)} = {
-                    'allocationprofile' => lc($2), 
+                    'allocationprofile' => lc($2),
                     'total' => $3,
                     'used'  => $4
                 };
@@ -376,39 +376,37 @@ sub _usageAsText {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --json ]
+        'summary' => <<SSS,
+    Report on the status of this device.
 SSS
-    Show the status of the device in default format
-    --json: show it in JSON format
+        'cmds' => {
+            <<SSS => <<HHH,
+    [--disks] [--memory] [--pacnew] [--uptime]
+SSS
+    If any of the optional arguments are given, only report on the
+    specified subjects:
+    * disks:  report on attached disks and their usage.
+    * memory: report how much RAM and swap memory is being used.
+    * pacnew: report on manually modified configuration files.
+    * uptime: report how long the device has been up since last boot.
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --json ] --all
+            <<SSS => <<HHH
+    --all
 SSS
     Show the full status of the device.
-    --json: show it in JSON format
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --json ] --pacnew
-SSS
-    Show the modified configuration files on the device that UBOS
-    cannot continue to upgrade.
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --json ] --disks
-SSS
-    Show the attached disks and their usage.
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [ --json ] --memory
-SSS
-    Show memory usage.
+            '--json' => <<HHH,
+    Use JSON as the output format, instead of human-readable text.
 HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [ --json ] --uptime
-SSS
-    Show how long the system has been up
-HHH
+        }
     };
 }
 

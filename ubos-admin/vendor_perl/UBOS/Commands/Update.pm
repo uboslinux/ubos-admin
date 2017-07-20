@@ -44,7 +44,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose          = 0;
@@ -222,45 +222,63 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages] [--nosnapshot]
+        'summary' => <<SSS,
+    Update all code installed on this device.
 SSS
-    Update all code installed on this device. This will perform
-    package updates, configuration updates, database migrations
-    et al as needed.
-    Use heuristics to determine whether the device needs to be rebooted,
-    e.g. because the kernel was updated. If --reboot is specified, always
-    reboot. If --noreboot is specified, do not reboot.
-    --showpackages will print the packages that were updated.
-    --nosnapshot will skip creating a filesystem snapshot before and after the update
+        'detail' => <<DDD,
+    This command will perform package upgrades, configuration updates,
+    database migrations and the like as needed. It uses heuristics to
+    determine whether the device needs to be rebooted. If UBOS
+    determines that a reboot is needed, it will automatically do so,
+    finishing the update as soon as the device is back up. If this is
+    run on a filesystem that supports shapshots (e.g. btrfs), a
+    filesystem snapshot will be created just prior to the update and a
+    second one just after the update.
+DDD
+        'cmds' => {
+            '' => <<HHH,
+    Upgrade all packages that can be upgraded.
 HHH
         <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--reboot | --noreboot] [--showpackages]  [--nosnapshot] --nosynchronize
+    --nosynchronize
 SSS
-    Update all code installed on this device, but do not update the list
-    of available packages first. This will effectively only update code that
-    has been downloaded and cached already. This will perform package updates,
-    configuration updates, database migrations et al as needed.
-    Use heuristics to determine whether the device needs to be rebooted,
-    e.g. because the kernel was updated. If --reboot is specified, always
-    reboot. If --noreboot is specified, do not reboot.
-    --showpackages will print the packages that were updated.
-    --nosnapshot will skip creating a filesystem snapshot before and after the update
+    Upgrade all packages that have been downloaded already (such as with
+    "pacman -Syuw") and that can be upgraded. Do not perform any network
+    operations to determine which packages might exist in the cloud that
+    could be upgraded.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--reboot | --noreboot]  [--nosnapshot] --pkgfiles <package-file>...
+    --pkgfiles <package-file>...
 SSS
-    Update this device, but only install the provided package files
-    as if they were the only code that can be upgraded. Any number of package
-    files more than 1 may be specified. This will perform
-    package updates, configuration updates, database migrations
-    et al as needed. This implies --nosynchronize.
-    Use heuristics to determine whether the device needs to be rebooted,
-    e.g. because the kernel was updated. If --reboot is specified, always
-    reboot. If --noreboot is specified, do not reboot.
-    --showpackages will print the packages that were updated.
-    --nosnapshot will skip creating a filesystem snapshot before and after the update
+    Upgrade using the provided package files only. Do not perform any
+    network operations to determine which packages might exist in the
+    cloud that could be upgraded.
+    This is useful for development when the device needs to remain in
+    the same state, while only repeatedly upgrading to new versions of
+    a package under development.
 HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--reboot' => <<HHH,
+    Skip the reboot heuristics, and always reboot.
+HHH
+            '--noreboot' => <<HHH,
+    Skip the reboot heuristics, and do not reboot.
+HHH
+            '--nosnapshot' => <<HHH
+    Do not create filesystem shapshots before and after the upgrade.
+HHH
+            '--showpackages' => <<HHH,
+    Print the names of the packages that were upgraded.
+HHH
+
+        }
     };
 }
 

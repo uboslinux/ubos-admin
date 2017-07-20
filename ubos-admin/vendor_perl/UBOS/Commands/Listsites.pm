@@ -104,22 +104,43 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] [--json | --brief] [--siteid <siteid>]...
+        'summary' => <<SSS,
+    Show information about the sites currently deployed on this device.
 SSS
-    Show the sites with siteid, or if not given, show all sites currently
-    deployed to this device. If invoked as root, more information is available.
-    --json: show them in JSON format
-    --brief: only show the site ids.
+        'detail' => <<DDD,
+    If invoked as root, more information may be shown than when invoked
+    as a different user (e.g. credentials, keys, values for
+    customization points marked as "private").
+DDD
+        'cmds' => {
+            '' => <<HHH,
+    Show all sites.
 HHH
-        <<SSS => <<HHH
-    [--verbose | --logConfig <file>] [--json | --brief] [--hostname <hostname>]...
+            <<SSS => <<HHH,
+    --siteid <siteid> [--siteid <siteid>]...
 SSS
-    Show the sites with the given hostname, or if not given, show all sites currently
-    deployed to this device. If invoked as root, more information is available.
-    --json: show them in JSON format
-    --brief: only show the site ids.
+    Show only the the site or sites with site ids <siteid>.
 HHH
+            <<SSS => <<HHH
+    --hostname <hostname> [--hostname <hostname>]...
+SSS
+    Show only the the site or sites with hostnames <hostname>.
+HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
+            '--json' => <<HHH,
+    Use JSON as the output format, instead of human-readable text.
+HHH
+            '--brief' => <<HHH
+    Only show the siteids.
+HHH
+        }
     };
 }
 

@@ -39,7 +39,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     my $verbose       = 0;
@@ -70,11 +70,11 @@ sub run {
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
-    
+
     debug( 'Looking for site(s)' );
 
     my $oldSites = {};
-    if( @hosts ) {        
+    if( @hosts ) {
         foreach my $host ( @hosts ) {
             my $site = UBOS::Host::findSiteByHostname( $host );
             if( $site ) {
@@ -169,29 +169,47 @@ sub run {
 # return: hash of synopsis to help text
 sub synopsisHelp {
     return {
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --siteid <siteid> [--siteid <siteid>]...
+        'summary' => <<SSS,
+    Undeploy one or more currently deployed websites.
 SSS
-    Undeploy one or more previously deployed site(s) by specifying their site id.
+        'detail' => <<DDD,
+    This command will remove the virtual host(s) configuration, web
+    application and accessory configuration, and delete all data of the
+    undeployed site(s), such as databases and files. If you do not wish
+    to lose data, back up your site(s) first.
+DDD
+        'cmds' => {
+            <<SSS => <<HHH,
+    --siteid <siteid> [--siteid <siteid>]...
+SSS
+    Identify the to-be-undeployed site or sites by site id <siteid>.
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --hostname <hostname> [--hostname <hostname>]...
+            <<SSS => <<HHH,
+    --hostname <hostname> [--hostname <hostname>]...
 SSS
-    Undeploy one or more previously deployed site(s) by specifying their hostname.
-    This is equivalent to undeploying the site ids, but may be more convenient.
+    Identify the to-be-undeployed site or sites by hostname <hostname>.
 HHH
-        <<SSS => <<HHH,
-    [--verbose | --logConfig <file>] --file <site.json>
+            <<SSS => <<HHH,
+    --file <site.json>
 SSS
-    Undeploy one or more previously deployed site(s) whose site JSON
-    file is given. This is equivalent to undeploying the site ids of the
-    site(s) contained in the file.
+    Undeploy those sites whose Site JSON is contained in local file
+    <site.json>. This is a convenience method so deploy and undeploy
+    commands can use the same arguments.
 HHH
         <<SSS => <<HHH
-    [--verbose | --logConfig <file>] --all
+    --all
 SSS
     Undeploy all currently deployed site(s).
 HHH
+        },
+        'args' => {
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH
+    Use an alternate log configuration file for this command.
+HHH
+        }
     };
 }
 
