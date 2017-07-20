@@ -1,0 +1,10 @@
+# For replication, uncomment and change as needed:
+
+# log-bin = mysql-bin
+# binlog_format = mixed
+# relay-log=mysql-relay-log
+# binlog-do-db=
+# server-id=1
+# auto-increment-increment = 2
+# auto-increment-offset = 1
+

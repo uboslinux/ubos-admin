@@ -26,6 +26,8 @@ backup=(
     'etc/httpd/ubos/errors.conf'
     'etc/httpd/ubos/logging.conf'
     'etc/httpd/ubos/usersettings.conf'
+    'etc/mysql/mysql-ubos.cnf'
+    'etc/mysql/conf.d/50-replication.cnf'
 )
 options=('!strip')
 install=install
@@ -123,8 +125,9 @@ package() {
     # create /var/lib/mysql
     mkdir -p -m 700 $pkgdir/var/lib/mysql
     chown 89:1 $pkgdir/var/lib/mysql
-    mkdir -p -m 755 $pkgdir/etc/mysql
+    mkdir -p -m 755 $pkgdir/etc/mysql/conf.d
     install -m644 $startdir/etc/mysql/mysql-ubos.cnf $pkgdir/etc/mysql/
+    install -m644 $startdir/etc/mysql/conf.d/50-replication.cnf $pkgdir/etc/mysql/conf.d/
 
 # Postgresql
     mkdir -p -m 700 $pkgdir/var/lib/postgresql
