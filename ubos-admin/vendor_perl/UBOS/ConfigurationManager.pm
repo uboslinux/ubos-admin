@@ -78,7 +78,7 @@ sub initializeIfNeeded {
                 error( 'Initialization staff device failed:', $device, $target );
             }
         }
-        
+
         if( loadCurrentConfiguration( $target )) {
             error( 'Loading current configuration failed from', $device, $target );
         }
@@ -106,7 +106,7 @@ sub checkConfigurationDevice {
         $@ = 'Not a valid UBOS staff device: ' . $device;
         return undef;
     }
-     
+
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "lsblk --pairs --output NAME,TYPE,FSTYPE,LABEL '$device'", undef, \$out, \$err )) {
@@ -153,7 +153,7 @@ sub guessConfigurationDevice {
     }
 
     my $ret;
-                
+
     # NAME="sda" TYPE="disk" FSTYPE="" LABEL=""
     # NAME="sda1" TYPE="part" FSTYPE="ext4" LABEL=""
     # NAME="sda2" TYPE="part" FSTYPE="vfat" LABEL=""
@@ -305,7 +305,20 @@ sub setupUpdateShepherd {
         }
 
         UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );
-shepherd ALL = NOPASSWD: /usr/bin/ubos-admin *, /usr/bin/ubos-install *, /usr/bin/systemctl *, /usr/bin/journalctl *, /usr/bin/pacman *, /usr/bin/reboot *, /usr/bin/shutdown *, /usr/bin/mkdir *, /usr/bin/mount *, /usr/bin/umount *, /usr/bin/snapper *, /bin/bash *
+shepherd ALL = NOPASSWD: \
+    /usr/bin/journalctl *, \
+    /usr/bin/mkdir *, \
+    /usr/bin/mount *, \
+    /usr/bin/pacman *, \
+    /usr/bin/reboot *, \
+    /usr/bin/shutdown *, \
+    /usr/bin/smartctl *, \
+    /usr/bin/systemctl *, \
+    /usr/bin/ubos-admin *, \
+    /usr/bin/ubos-install *, \
+    /usr/bin/umount *, \
+    /usr/bin/snapper *, \
+    /bin/bash *
 CONTENT
     }
 }
