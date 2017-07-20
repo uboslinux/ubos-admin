@@ -132,7 +132,9 @@ sub run {
                 $jsonOutput->{'appconfigs'}->{$appConfigId} = $appConfigs->{$appConfigId}->appConfigurationJson();
             }
         } else {
-            print "=== Unattached AppConfigurations ===\n";
+            unless( $brief ) {
+                print "=== Unattached AppConfigurations ===\n";
+            }
 
             foreach my $appConfigId ( @unattachedAppConfigIds ) {
                 $appConfigs->{$appConfigId}->print( $brief ? 1 : 2 );
@@ -178,7 +180,8 @@ HHH
     Use JSON as the output format, instead of human-readable text.
 HHH
             '--brief' => <<HHH
-    Only show the siteids.
+    Only show the site ids and AppConfiguration ids of unattached
+    AppConfigurations.
 HHH
         }
     };

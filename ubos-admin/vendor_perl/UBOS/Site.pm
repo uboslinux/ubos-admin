@@ -114,7 +114,7 @@ sub _siteJsonWithout {
 
     $ret->{siteid}   = $json->{siteid};
     $ret->{hostname} = $json->{hostname};
-    
+
     $ret->{admin}->{userid}   = $json->{admin}->{userid};
     $ret->{admin}->{username} = $json->{admin}->{username};
     $ret->{admin}->{email}    = $json->{admin}->{email};
@@ -162,7 +162,7 @@ sub _siteJsonWithout {
 
         push @{$ret->{appconfigs}}, $appConfigRet;
     }
-    
+
     return $ret;
 }
 
@@ -225,7 +225,7 @@ sub protocol {
     } else {
         return 'http';
     }
-}    
+}
 
 ##
 # Obtain the Configuration object
@@ -507,7 +507,7 @@ sub appConfig {
 sub appConfigAtContext {
     my $self    = shift;
     my $context = shift;
-    
+
     foreach my $appConfig ( @{$self->appConfigs} ) {
         if( $context eq $appConfig->context ) {
             return $appConfig;
@@ -520,14 +520,14 @@ sub appConfigAtContext {
 # Print this site in human-readable form.
 # $detail: 1: only siteid,
 #          2: plus hostname, apps, accessories,
-#          3: plus customizationpoints 
+#          3: plus customizationpoints
 sub print {
     my $self   = shift;
     my $detail = shift || 2;
 
     if( $detail <= 1 ) {
         print $self->siteId . "\n";
-        
+
     } else {
         print "Site";
         if( $self->hasTls ) {
@@ -563,7 +563,7 @@ sub print {
                             print "\n";
                         } else {
                             print "\n";
-                            
+
                             my $custPoints = $appConfig->resolvedCustomizationPoints;
                             foreach my $installable ( $appConfig->installables ) {
                                 print '          ';
@@ -589,7 +589,7 @@ sub print {
         }
     }
 }
-    
+
 ##
 # Add names of application packages that are required to run this site.
 # $packages: hash of packages
@@ -754,7 +754,7 @@ sub checkUndeployable {
 
     return $self->_undeployOrCheck( 0 );
 }
-    
+
 ##
 # Undeploy this Site
 # $triggers: triggers to be executed may be added to this hash
@@ -1157,7 +1157,7 @@ sub _checkJson {
             }
             my %installables = ();
             $installables{$appConfigJson->{appid}} = 1;
-            
+
             if( exists( $appConfigJson->{accessoryids} )) {
                 unless( ref( $appConfigJson->{accessoryids} ) eq 'ARRAY' ) {
                     fatal( "Site JSON: appconfig $i, accessoryids: not a JSON array, is", $appConfigJson->{accessryids} );
@@ -1199,7 +1199,7 @@ sub _checkJson {
             ++$i;
         }
     }
-    
+
     return 1;
 }
 
@@ -1211,7 +1211,7 @@ sub _checkJsonValidKeys {
     my $self    = shift;
     my $json    = shift;
     my $context = shift;
-    
+
     if( ref( $json ) eq 'HASH' ) {
         if( @$context >= 2 && $context->[-1] eq 'customizationpoints' ) {
             # This is a package name, which has laxer rules

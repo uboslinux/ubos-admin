@@ -815,23 +815,23 @@ sub print {
             print "\n";
         } else {
             print "\n";
-        }
 
-        my $custPoints = $self->resolvedCustomizationPoints;
-        foreach my $installable ( $self->installables ) {
-            print '    ';
-            if( $installable == $self->app ) {
-                print 'app:      ';
-            } else {
-                print 'accessory: ';
-            }
-            print $installable->packageName . "\n";
-            my $installableCustPoints = $custPoints->{$installable->packageName};
-            if( defined( $installableCustPoints )) {
-                foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                    my $custPointValue = $installableCustPoints->{$custPointName};
+            my $custPoints = $self->resolvedCustomizationPoints;
+            foreach my $installable ( $self->installables ) {
+                print '    ';
+                if( $installable == $self->app ) {
+                    print 'app:      ';
+                } else {
+                    print 'accessory: ';
+                }
+                print $installable->packageName . "\n";
+                my $installableCustPoints = $custPoints->{$installable->packageName};
+                if( defined( $installableCustPoints )) {
+                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                        my $custPointValue = $installableCustPoints->{$custPointName};
 
-                    print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                        print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                    }
                 }
             }
         }
