@@ -30,6 +30,7 @@ use UBOS::Logging;
 use UBOS::Roles::apache2;
 use UBOS::Roles::generic;
 use UBOS::Roles::mysql;
+use UBOS::Roles::ports;
 use UBOS::Roles::postgresql;
 use UBOS::Roles::tomcat8;
 use UBOS::Site;
@@ -365,6 +366,7 @@ sub rolesOnHostInSequence {
                 UBOS::Roles::mysql->new,
                 UBOS::Roles::postgresql->new,
                 # UBOS::Roles::mongo->new,
+                UBOS::Roles::ports->new,
                 UBOS::Roles::generic->new,
                 UBOS::Roles::tomcat8->new,
                 UBOS::Roles::apache2->new ];

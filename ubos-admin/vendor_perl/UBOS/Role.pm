@@ -33,6 +33,8 @@ use UBOS::AppConfigurationItems::Sqlscript;
 use UBOS::AppConfigurationItems::Symlink;
 use UBOS::AppConfigurationItems::SystemdService;
 use UBOS::AppConfigurationItems::SystemdTimer;
+use UBOS::AppConfigurationItems::TcpPort;
+use UBOS::AppConfigurationItems::UdpPort;
 use UBOS::Host;
 use UBOS::Installable;
 use UBOS::Logging;
@@ -362,6 +364,10 @@ sub instantiateAppConfigurationItem {
         $ret = UBOS::AppConfigurationItems::SystemdTimer->new( $json, $self, $appConfig, $installable );
     } elsif( 'database' eq $type ) {
         $ret = UBOS::AppConfigurationItems::Database->new( $json, $self, $appConfig, $installable );
+    } elsif( 'tcp' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::TcpPort->new( $json, $self, $appConfig, $installable );
+    } elsif( 'udp' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::UdpPort->new( $json, $self, $appConfig, $installable );
     }
     unless( $ret ) {
         error( 'Unknown AppConfigurationItem type:', $type );
@@ -597,10 +603,24 @@ sub checkManifestForRoleGenericAppConfigItems {
                 if( defined( $appConfigItem->{names} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name; names not allowed" );
                 }
-                if( !defined( $appConfigItem->{name} ) || ref( $appConfigItem->{name} )) {
+                if( !defined( $appConfigItem->{name} ) || ref( $appConfigItem->{name} || !$appConfigItem->{name} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
                 }
-                
+
+            } elsif( $appConfigItem->{type} eq 'tcp' || $appConfigItem->{type} eq 'udp' ) {
+                if( defined( $appConfigItem->{names} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name; names not allowed" );
+                }
+                if( !defined( $appConfigItem->{name} ) || ref( $appConfigItem->{name} || !$appConfigItem->{name} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
+                }
+                if( !defined( $appConfigItem->{scope} ) || ref( $appConfigItem->{scope} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'scope' must be string" );
+                }
+                if( 'hostonly' ne $appConfigItem->{scope} && 'open' ne $appConfigItem->{scope} ) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'scope' must value value 'hostonly' or 'open'" );
+                }
+
             } else {
                 my @names = ();
                 if( defined( $appConfigItem->{name} )) {
@@ -721,7 +741,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     } else {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be given" );
                     }
-                        
+
                 } else { # perlscript and sqlscript handled above
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type (1): " . $appConfigItem->{type}
                                               . ". Allowed types are: " . join( ', ', sort keys %$allowedTypes ) );
@@ -933,7 +953,7 @@ sub _checkRetention {
             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
         }
         $retentionBuckets->{$appConfigItem->{retentionbucket}} = 1;
-        
+
     } elsif( exists( $appConfigItem->{retentionbucket} )) {
         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
     }
