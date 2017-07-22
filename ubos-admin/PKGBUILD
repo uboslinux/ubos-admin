@@ -26,9 +26,10 @@ backup=(
     'etc/httpd/ubos/errors.conf'
     'etc/httpd/ubos/logging.conf'
     'etc/httpd/ubos/usersettings.conf'
-    'etc/mysql/mysql-ubos.cnf'
     'etc/mysql/conf.d/50-replication.cnf'
 )
+# Let's leave this out of backup: 'etc/mysql/mysql-ubos.cnf'
+
 options=('!strip')
 install=install
 
