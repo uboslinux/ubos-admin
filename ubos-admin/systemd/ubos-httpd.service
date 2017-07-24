@@ -6,6 +6,7 @@ Conflicts=httpd.service
 [Service]
 Type=simple
 ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-httpd
+ExecStartPre=/usr/bin/perl -MUBOS::Apache2 -e 'UBOS::Apache2::ensureConfigFiles();'
 ExecStart=/usr/bin/httpd -k start -DFOREGROUND -f /etc/httpd/conf/httpd-ubos.conf
 ExecStop=/usr/bin/httpd -k graceful-stop -f /etc/httpd/conf/httpd-ubos.conf
 ExecReload=/usr/bin/httpd -k graceful -f /etc/httpd/conf/httpd-ubos.conf
