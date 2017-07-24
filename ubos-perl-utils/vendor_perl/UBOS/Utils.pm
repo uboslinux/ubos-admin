@@ -38,6 +38,8 @@ our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
 my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
 my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
+my $CHANNEL_FILE    = '/etc/ubos/channel';
+my @VALID_CHANNELS  = qw( dev red yellow green );
 
 my $_now = time(); # Time the script(s) started running, use now() to access
 
@@ -150,13 +152,13 @@ sub insertSlurpedFiles {
     my $json = shift;
     my $dir  = shift;
     my $ret;
-    
+
     if( ref( $json ) eq 'ARRAY' ) {
         $ret = [];
         foreach my $item ( @$json ) {
             push @$ret, insertSlurpedFiles( $item, $dir );
         }
-        
+
     } elsif( ref( $json ) eq 'HASH' ) {
         $ret = {};
         foreach my $name ( keys %$json ) {
@@ -164,10 +166,10 @@ sub insertSlurpedFiles {
 
             $ret->{$name} = insertSlurpedFiles( $value, $dir );
         }
-        
+
     } elsif( ref( $json ) ) {
         $ret = $json;
-        
+
     } elsif( defined( $json )) {
         # string
         if( $json =~ m!^\@(/.*)$! ) {
@@ -180,7 +182,7 @@ sub insertSlurpedFiles {
     } else {
         $ret = undef;
     }
-    return $ret;    
+    return $ret;
 }
 
 ##
@@ -277,7 +279,7 @@ sub slurpFile {
 
 ##
 # Save content to a file. If the desired owner of the file is not the current
-# user, this will write to a temp file, and then move the temp file in 
+# user, this will write to a temp file, and then move the temp file in
 # $filename: the name of the file to create/write
 # $content: the content of the file
 # $mask: permissions on the file
@@ -326,7 +328,7 @@ sub saveFile {
 
     } else {
         # Write to a temp file, and them move it in place as root
-        
+
         debug( sub { ( 'saveFile-as-non-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
         my $temp = File::Temp->new( UNLINK => 1 );
         print $temp $content;
@@ -593,7 +595,7 @@ sub readFilesInDirectory {
     my $pattern = shift;
 
     my $ret = {};
-    
+
     opendir( DIR, $dir ) || error( $! );
 
     while( my $file = readdir( DIR )) {
@@ -624,7 +626,7 @@ sub findPerlModuleNamesInPackage {
     $parentDir =~ s!::!/!g;
 
     my $ret = {};
-    
+
     foreach my $inc2 ( @$inc ) {
         my $parentDir2 = "$inc2/$parentDir";
 
@@ -684,7 +686,7 @@ sub findModulesInDirectory {
     my $pattern = shift || '\.pm$';
 
     my $ret = {};
-    
+
     opendir( DIR, $dir ) || error( $! );
 
     while( my $file = readdir( DIR )) {
@@ -875,9 +877,9 @@ sub randomHex {
 # return: escaped string
 sub escapeSquote {
     my $raw = shift;
-    
+
     $raw =~ s/'/\\'/g;
-    
+
     return $raw;
 }
 
@@ -887,9 +889,9 @@ sub escapeSquote {
 # return: escaped string
 sub escapeDquote {
     my $raw = shift;
-    
+
     $raw =~ s/"/\\"/g;
-    
+
     return $raw;
 }
 
@@ -899,10 +901,10 @@ sub escapeDquote {
 # return: trimmed string
 sub trim {
     my $raw = shift;
-    
+
     $raw =~ s/^\s*//g;
     $raw =~ s/\s*$//g;
-    
+
     return $raw;
 }
 
@@ -912,9 +914,9 @@ sub trim {
 # return: converted string
 sub cr2space {
     my $raw = shift;
-    
+
     $raw =~ s/\s+/ /g;
-    
+
     return $raw;
 }
 
@@ -963,10 +965,26 @@ sub uri_escape {
 # otherwise a pacman error will occur.
 # $pacmanConfFile: the pacman config file, or default if not provided.
 # $pacmanRepoDir: directory containing the repository fragement statements.
-# This allows ubos-install to invoke this for staged images
+#    This allows ubos-install to invoke this for staged images
+# $channel: use this as the value for $channel in the repo URLs, or, if not
+#    given, use value of /etc/ubos/channel
 sub regeneratePacmanConf {
     my $pacmanConfFile = shift || '/etc/pacman.conf';
     my $pacmanRepoDir  = shift || '/etc/pacman.d/repositories.d';
+    my $channel        = shift;
+
+    unless( $channel ) {
+        if( -e $CHANNEL_FILE ) {
+            $channel = slurpFile( $CHANNEL_FILE );
+            $channel =~ s!^\s+!!;
+            $channel =~ s!\s+$!!;
+        }
+        $channel = isValidChannel( $channel );
+        unless( $channel ) {
+             warning( 'Cannot read channel file, defaulting to yellow:', $CHANNEL_FILE );
+             $channel = 'yellow';
+        }
+    }
 
     my $pacmanConf    = slurpFile( $pacmanConfFile );
     my $oldPacmanConf = $pacmanConf;
@@ -986,6 +1004,8 @@ sub regeneratePacmanConf {
         my $toAdd = UBOS::Utils::slurpFile( $repoFile );
         $toAdd =~ s!^\s+!!;
         $toAdd =~ s!\s+$!!;
+        $toAdd =~ s!\$channel!$channel!g;
+
         $pacmanConf .= "\n" . $toAdd . "\n";
     }
 
@@ -994,6 +1014,27 @@ sub regeneratePacmanConf {
 
         UBOS::Utils::saveFile( $pacmanConfFile, $pacmanConf );
     }
+}
+
+##
+# Determine whether a candidate channel name is indeed a valid channel.
+# If so, return the canonical name of the valid channel.
+# $channelCandidate: the candidate name for the channel
+# return: channel name, or undef
+sub isValidChannel {
+    my $channelCandidate = shift;
+
+    unless( $channelCandidate ) {
+        return undef;
+    }
+
+    $channelCandidate = lc( $channelCandidate );
+    foreach my $channel ( @VALID_CHANNELS ) {
+        if( $channel eq $channelCandidate ) {
+            return $channel;
+        }
+    }
+    return undef;
 }
 
 ##
@@ -1029,9 +1070,6 @@ sub removeDanglingSymlinks {
 
     return 0 + ( @remove );
 }
-
-
-
 
 ##
 # Invoke the method with the name held in a variable.

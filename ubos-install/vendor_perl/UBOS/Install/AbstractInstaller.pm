@@ -1,7 +1,7 @@
-# 
+#
 # Abstract superclass for device-specific installers. Device-specific parts are
 # factored out in methods that can be overridden in subclasses.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -250,7 +250,7 @@ sub install {
         $errors += $self->doUpstreamFixes();
 
         $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
-     
+
         my $chrootScript = <<'SCRIPT';
 #!/bin/bash
 # Script to be run in chroot
@@ -321,11 +321,9 @@ sub check {
         }
     }
 
+    $self->{channel} = UBOS::Utils::isValidChannel( $self->{channel} );
     unless( $self->{channel} ) {
-        fatal( 'No channel given' );
-    }
-    if( $self->{channel} ne 'dev' && $self->{channel} ne 'red' && $self->{channel} ne 'yellow' && $self->{channel} ne 'green' ) {
-        fatal( 'Invalid channel:', $self->{channel} );
+        fatal( 'No valid channel given' );
     }
 
     # Would be nice to check that packages actually exist, but that's hard if
@@ -516,14 +514,14 @@ END
     foreach my $db ( @$dbs ) {
         unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
 [$db]
-Server = $depotRoot/$channel/\$arch/$db
+Server = $depotRoot/\$channel/\$arch/$db
 END
             # Note what is and isn't escaped here
             ++$errors;
         }
     }
 
-    UBOS::Utils::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d" );
+    UBOS::Utils::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d", $channel );
     return $errors;
 }
 
@@ -551,7 +549,7 @@ sub saveHostname {
 # Generate and save the /etc/ubos/channel file
 sub saveChannel {
     my $self = shift;
-    
+
     debug( "Executing saveChannel" );
 
     # hostname
@@ -740,7 +738,7 @@ sub addGenerateLocaleToScript {
 
     debug( "Executing addGenerateLocaleToScript" );
 
-    # Run perl with the old locale 
+    # Run perl with the old locale
     $$chrootScriptP .= "perl -pi -e 's/^#en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
     $$chrootScriptP .= "echo LANG=en_US.utf8 > /etc/locale.conf\n";
     $$chrootScriptP .= "locale-gen\n";
@@ -758,7 +756,7 @@ sub addEnableServicesToScript {
     debug( "Executing addEnableServicesToScript" );
 
     my @allServices = ();
-    
+
     if( defined( $self->{baseservices} )) {
         push @allServices, @{$self->{baseservices}};
     }
@@ -824,7 +822,7 @@ sub addConfigureSnapperToScript {
 # Clean up after install is done
 sub cleanup {
     my $self = shift;
-    
+
     debug( "Executing cleanup" );
 
     my $target = $self->{target};
