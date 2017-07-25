@@ -304,7 +304,7 @@ sub setupUpdateShepherd {
             UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
         }
 
-        UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<CONTENT, 0600, 'root', 'root' );
+        UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' );
 shepherd ALL = NOPASSWD: \
     /usr/bin/journalctl *, \
     /usr/bin/mkdir *, \
