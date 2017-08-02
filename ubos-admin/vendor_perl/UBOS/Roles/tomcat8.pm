@@ -198,7 +198,7 @@ END
             my $hostname = $site->hostnameorwildcard;
             my $appBase  = "$sitesAppsDir/$siteId";
             my $logFile  = $siteId . '_access_log.';
-            
+
             $hostsSection .= <<END;
       <Host name="$hostname" appBase="$appBase" unpackWARs="true" autoDeploy="true">
 
@@ -222,7 +222,7 @@ END
     $hostsSection .= <<END;
 <!-- End hosts section -->
 END
-    
+
     UBOS::Tomcat8::updateServerXmlFile( $hostsSection );
 }
 
@@ -247,11 +247,14 @@ sub checkInstallableManifestForRole {
     my $config               = shift;
 
     my $noDatabase = {
-        'directory'     => 1,
-        'directorytree' => 1,
-        'file'          => 1,
-        'perlscript'    => 1,
-        'symlink'       => 1
+        'directory'       => 1,
+        'directorytree'   => 1,
+        'file'            => 1,
+        'perlscript'      => 1,
+        'symlink'         => 1,
+        'systemd-service' => 1,
+        'tcpport'         => 1,
+        'udpport'         => 1
     };
     my $perlOnly = {
         'perlscript' => 1

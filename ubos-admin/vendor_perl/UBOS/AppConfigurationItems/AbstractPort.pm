@@ -95,7 +95,13 @@ sub deployOrCheck {
         }
     }
     # now insert those values into the config object
-    $config->put( "appconfig.port.$name", $port );
+    if( 'tcp' eq $self->{portType} ) {
+        $config->put( "appconfig.tcpport.$name", $port );
+    } elsif( 'udp' eq $self->{portType} ) {
+        $config->put( "appconfig.udpport.$name", $port );
+    } else {
+        error( 'Unknown port type:', $self->{portType} );
+    }
 
     return $port ? 1 : 0;
 }

@@ -364,9 +364,9 @@ sub instantiateAppConfigurationItem {
         $ret = UBOS::AppConfigurationItems::SystemdTimer->new( $json, $self, $appConfig, $installable );
     } elsif( 'database' eq $type ) {
         $ret = UBOS::AppConfigurationItems::Database->new( $json, $self, $appConfig, $installable );
-    } elsif( 'tcp' eq $type ) {
+    } elsif( 'tcpport' eq $type ) {
         $ret = UBOS::AppConfigurationItems::TcpPort->new( $json, $self, $appConfig, $installable );
-    } elsif( 'udp' eq $type ) {
+    } elsif( 'udpport' eq $type ) {
         $ret = UBOS::AppConfigurationItems::UdpPort->new( $json, $self, $appConfig, $installable );
     }
     unless( $ret ) {
@@ -607,18 +607,12 @@ sub checkManifestForRoleGenericAppConfigItems {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
                 }
 
-            } elsif( $appConfigItem->{type} eq 'tcp' || $appConfigItem->{type} eq 'udp' ) {
+            } elsif( $appConfigItem->{type} eq 'tcpport' || $appConfigItem->{type} eq 'udpport' ) {
                 if( defined( $appConfigItem->{names} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name; names not allowed" );
                 }
                 if( !defined( $appConfigItem->{name} ) || ref( $appConfigItem->{name} || !$appConfigItem->{name} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
-                }
-                if( !defined( $appConfigItem->{scope} ) || ref( $appConfigItem->{scope} )) {
-                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'scope' must be string" );
-                }
-                if( 'hostonly' ne $appConfigItem->{scope} && 'open' ne $appConfigItem->{scope} ) {
-                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'scope' must value value 'hostonly' or 'open'" );
                 }
 
             } else {

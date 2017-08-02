@@ -75,12 +75,15 @@ sub checkInstallableManifestForRole {
         $installable->myFatal( "roles section: role $roleName: triggersactivate not allowed here" );
     }
 
-    my $script = {
-        'perlscript' => 1
+    my $scriptAndPorts = {
+        'perlscript'      => 1,
+        'systemd-service' => 1,
+        'tcpport'         => 1,
+        'udpport'         => 1
     };
-    
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $script, $retentionBuckets, $skipFilesystemChecks, $config );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $script, $config );
+
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $scriptAndPorts, $retentionBuckets, $skipFilesystemChecks, $config );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $scriptAndPorts, $config );
 }
 
 1;

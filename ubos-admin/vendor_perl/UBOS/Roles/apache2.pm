@@ -702,7 +702,9 @@ sub checkInstallableManifestForRole {
         'file'            => 1,
         'perlscript'      => 1,
         'symlink'         => 1,
-        'systemd-service' => 1
+        'systemd-service' => 1,
+        'tcpport'         => 1,
+        'udpport'         => 1
     };
     my $perlOnly = {
         'perlscript' => 1
