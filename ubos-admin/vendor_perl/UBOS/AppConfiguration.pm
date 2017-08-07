@@ -309,9 +309,14 @@ sub config {
         my $site        = $self->site();
         my $appConfigId = $self->appConfigId();
 
+        my $appId        = $self->{json}->{appid};
+        my $accessoryIds = $self->{json}->{accessoryids};
+
         $self->{config} = UBOS::Configuration->new(
                     "AppConfiguration=$appConfigId",
                     {
+                        "appconfig.appid"                => $appId,
+                        "appconfig.accessoryids"         => join( ',', @$accessoryIds ),
                         "appconfig.appconfigid"          => $appConfigId,
                         "appconfig.context"              => $self->context(),
                         "appconfig.contextorslash"       => $self->contextOrSlash(),

@@ -444,7 +444,7 @@ sub run {
             $appConfigJson->{context} = $context;
         }
         if( @accs ) {
-            $appConfigJson->{accessories} = [];
+            $appConfigJson->{accessoryids} = [];
             map { push @{$appConfigJson->{accessoryids}}, $_->packageName; } @accs;
         }
 

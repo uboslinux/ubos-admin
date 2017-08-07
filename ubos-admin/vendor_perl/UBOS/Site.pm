@@ -245,6 +245,7 @@ sub config {
                         "site.hostnameorsystemhostname" => $self->hostnameorsystemhostname(),
                         "site.port"                     => $self->port(),
                         "site.protocol"                 => $self->protocol(),
+                        "site.protocolport"             => ( 'http' eq $self->protocol() ? 80 : 443 ),
                         "site.siteid"                   => $siteId,
                         "site.admin.userid"             => $adminJson->{userid},
                         "site.admin.username"           => $adminJson->{username},
