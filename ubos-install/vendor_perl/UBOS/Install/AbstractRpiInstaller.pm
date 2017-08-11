@@ -1,6 +1,6 @@
-# 
+#
 # Abstract superclass for Raspberry Pi installers.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -83,7 +83,7 @@ sub createDiskLayout {
 
     # Option 1: a single image file
     # ubos-install ... image.img
-    
+
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
@@ -202,7 +202,7 @@ sub createDiskLayout {
                         }
                     } );
         }
-            
+
     } else {
         # Option 1 or 2
         if( @$argvp == 1 ) {
@@ -249,7 +249,7 @@ sub createDiskLayout {
             $ret = undef;
         }
     }
-    
+
     return $ret;
 }
 
@@ -259,16 +259,26 @@ sub createDiskLayout {
 sub saveOther {
     my $self = shift;
 
+    my $ret    = 0;
     my $target = $self->{target};
 
     # Use hardware random generator by default
 
-    UBOS::Utils::saveFile( "$target/etc/conf.d/rngd", <<CONTENT );
-# Changed for UBOS 
+    unless( UBOS::Utils::saveFile( "$target/etc/conf.d/rngd", <<CONTENT )) {
+# Changed for UBOS
 RNGD_OPTS="-o /dev/random -r /dev/hwrng"
 CONTENT
+        ++$ret;
+    }
 
-    return 0;
+    unless( UBOS::Utils::saveFile( "$target/etc/udev/rules.d/raspberrypi.rules", <<CONTENT )) {
+SUBSYSTEM=="vchiq|input", MODE="0777"
+KERNEL=="mouse*|mice|event*", MODE="0777"
+CONTENT
+        ++$ret;
+    }
+
+    return $ret;
 }
 
 ##
