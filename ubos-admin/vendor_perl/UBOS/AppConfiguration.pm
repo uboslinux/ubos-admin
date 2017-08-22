@@ -316,7 +316,7 @@ sub config {
                     "AppConfiguration=$appConfigId",
                     {
                         "appconfig.appid"                => $appId,
-                        "appconfig.accessoryids"         => join( ',', @$accessoryIds ),
+                        "appconfig.accessoryids"         => defined( $accessoryIds ) ? join( ',', @$accessoryIds ) : '',
                         "appconfig.appconfigid"          => $appConfigId,
                         "appconfig.context"              => $self->context(),
                         "appconfig.contextorslash"       => $self->contextOrSlash(),
