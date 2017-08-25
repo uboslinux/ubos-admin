@@ -122,7 +122,7 @@ unless( $deviceclassname ) {
         $deviceclassname = 'bbb';
     } elsif( $out =~ m!pcduino3.*armv7l! ) {
         $deviceclassname = 'pcduino3';
-    } elsif( $out =~ m!expressobin.*aarch64! ) {
+    } elsif( $out =~ m!espressobin.*aarch64! ) {
         $deviceclassname = 'espressobin';
     } elsif( $out =~ m!pc! ) {
         $deviceclassname = 'pc';
