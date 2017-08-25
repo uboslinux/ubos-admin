@@ -333,7 +333,7 @@ sub run {
         my $app = UBOS::App->new( $appId );
 
         my $context         = undef;
-        my @accs            = ();
+        my %accs            = (); # map name->Accessory
         my $custPointValues = {};
 
         my $defaultContext = $app->defaultContext;
@@ -365,29 +365,47 @@ sub run {
             $context = $fixedContext;
         }
 
-        my $accessories;
         while( 1 ) {
-            $accessories = ask( "Any accessories for $appId? Enter list: " );
+            my $askUserAgain = 0;
+            my $accessories = ask( "Any accessories for $appId? Enter list: " );
             $accessories =~ s!^\s+!!;
             $accessories =~ s!\s+$!!;
-            my @accList = split( /\s+,?\s*/, $accessories );
-            if( @accList ) {
-                if( UBOS::Host::ensurePackages( \@accList, $quiet ) >= 0 ) {
-                    foreach my $accId ( @accList ) {
-                        my $acc = UBOS::Accessory->new( $accId );
 
-                        push @accs, $acc;
+            my %currentAccs;
+            map { $currentAccs{$_} = $_ } split( /\s+,?\s*/, $accessories );
+            while( %currentAccs && !$askUserAgain ) {
+                # accessories can require other accessories, and so forth
+                my %nextAccs;
+
+                my @currentAccList = keys %currentAccs;
+                if( UBOS::Host::ensurePackages( \@currentAccList, $quiet ) >= 0 ) {
+                    foreach my $currentAccId ( @currentAccList ) {
+                        my $acc = UBOS::Accessory->new( $currentAccId );
+
+                        # don't repeat accessories
+                        map {
+                            unless( exists( $accs{$_} )) {
+                                $nextAccs{$_} = $_;
+                            }
+                        } $acc->requires;
+
+                        $accs{$acc->packageName} = $acc;
                     }
-                    last;
+                    %currentAccs = %nextAccs;
+                    %nextAccs    = ();
+
                 } else {
                     error( $@ );
+                    $askUserAgain = 1;
                 }
-            } else {
+            }
+
+            unless( $askUserAgain ) {
                 last;
             }
         }
 
-        foreach my $installable ( $app, @accs ) {
+        foreach my $installable ( $app, values %accs ) {
             my $custPoints = $installable->customizationPoints;
             if( $custPoints ) {
                 my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
@@ -443,9 +461,9 @@ sub run {
         if( defined( $context )) {
             $appConfigJson->{context} = $context;
         }
-        if( @accs ) {
+        if( %accs ) {
             $appConfigJson->{accessoryids} = [];
-            map { push @{$appConfigJson->{accessoryids}}, $_->packageName; } @accs;
+            map { push @{$appConfigJson->{accessoryids}}, $_; } keys %accs;
         }
 
         if( keys %$custPointValues ) {

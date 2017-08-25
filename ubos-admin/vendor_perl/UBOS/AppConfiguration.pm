@@ -423,6 +423,13 @@ sub deployOrCheck {
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
+        foreach my $required ( $installable->requires()) {
+            unless( grep { $required eq $_->packageName } @installables ) {
+                error( 'Installable', $packageName, 'requires installable', $required, 'to be deployed to the same AppConfiguration' );
+                $ret = 0;
+            }
+        }
+
         my $config = $self->obtainSubconfig(
                 "Installable=$packageName",
                 $installable );

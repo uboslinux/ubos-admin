@@ -292,6 +292,16 @@ sub needsRole {
 }
 
 ##
+# Determine the set of other installables that must also be deployed at the
+# same AppConfiguration.
+# return: array (usually empty)
+sub requires {
+    my $self = shift;
+
+    return ();
+}
+
+##
 # Helper method to find a localized attribute in the info section
 # $att: name of the attribute in the info section
 # $locale: the locale

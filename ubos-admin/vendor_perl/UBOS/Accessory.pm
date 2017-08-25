@@ -58,6 +58,22 @@ sub new {
 }
 
 ##
+# Determine the set of other installables that must also be deployed at the
+# same AppConfiguration.
+# return: array (usually empty)
+sub requires {
+    my $self = shift;
+
+    my $json = $self->{json};
+
+    if( exists( $json->{accessoryinfo}->{requires} )) {
+        return @{$json->{accessoryinfo}->{requires}};
+    } else {
+        return ();
+    }
+}
+
+##
 # Check validity of the manifest JSON's accessoryinfo section.
 # return: 1 or exits with fatal error
 sub checkManifestAccessoryInfo {
@@ -74,16 +90,26 @@ sub checkManifestAccessoryInfo {
     unless( defined( $json->{accessoryinfo}->{appid} )) {
         $self->myFatal( "accessoryinfo section: no appid given" );
     }
-    if( ref( defined( $json->{accessoryinfo}->{appid} )) || !$json->{accessoryinfo}->{appid} ) {
+    if( ref( $json->{accessoryinfo}->{appid} ) || !$json->{accessoryinfo}->{appid} ) {
         $self->myFatal( "accessoryinfo section: appid must be a valid package name" );
     }
-    if( defined( $json->{accessoryinfo}->{accessoryid} ) && ref( $json->{accessoryinfo}->{accessoryid} )) {
+    if( exists( $json->{accessoryinfo}->{accessoryid} ) && ref( $json->{accessoryinfo}->{accessoryid} )) {
         $self->myFatal( "accessoryinfo section: accessoryid, if provided, must be a string" );
     }
-    if( defined( $json->{accessoryinfo}->{accessorytype} ) && ref( $json->{accessoryinfo}->{accessorytype} )) {
+    if( exists( $json->{accessoryinfo}->{accessorytype} ) && ref( $json->{accessoryinfo}->{accessorytype} )) {
         $self->myFatal( "accessoryinfo section: accessorytype, if provided, must be a string" );
     }
-    
+    if( exists( $json->{accessoryinfo}->{requires} )) {
+        if( ref( $json->{accessoryinfo}->{requires} ) ne 'ARRAY' ) {
+            $self->myFatal( "accessoryinfo section: requires, if provided, must be an array" );
+        }
+        foreach my $required ( @{$json->{accessoryinfo}->{requires}} ) {
+            if( ref( $required ) || !$required ) {
+            $self->myFatal( "accessoryinfo section: entries into requires must be strings" );
+            }
+        }
+    }
+
     return 1;
 }
 
