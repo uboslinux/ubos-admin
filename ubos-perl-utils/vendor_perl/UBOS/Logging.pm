@@ -176,12 +176,16 @@ sub isErrorActive {
 sub fatal {
     my @msg = @_;
 
-	if( @msg ) {
-		if( $log->is_error()) {
-			$log->error( _constructMsg( @msg ));
-		}
-    }
+    if( @msg ) {
+        # print stack trace when debug is on
+        if( $log->is_debug()) {
+            use Carp qw( confess );
+            confess( _constructMsg( @msg ));
 
+        } elsif( $log->is_error()) {
+            $log->error( _constructMsg( @msg ));
+        }
+    }
     exit 1;
 }
 
@@ -200,7 +204,7 @@ sub _constructMsg {
     my @args = @_;
 
     my @args2 = map { my $a = $_; ref( $a ) eq 'CODE' ? $a->() : $a; } @args;
-    
+
     my $ret = join( ' ', map { defined( $_ ) ? $_ : '<undef>' } @args2 );
     return $ret;
 }

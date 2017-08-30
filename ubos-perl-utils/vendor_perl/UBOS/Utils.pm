@@ -194,6 +194,7 @@ sub insertSlurpedFiles {
 #               if this has the same non-null value as $outContentP, both streams will be
 #               redirected together
 # $tee: if true and outContentP and errContentP are the same, print to stdout as well as the variable
+# return: value of the system() command: 0 generally indicates success
 sub myexec {
     my $cmd         = shift;
     my $inContent   = shift;
@@ -553,7 +554,7 @@ sub copyRecursively {
     my $from = shift;
     my $to   = shift;
 
-    if( myexec( "cp -d -r -p '$from' '$to'" )) {
+    if( myexec( "cp -d -r -p --reflink=always '$from' '$to'" )) {
         return 0;
     } else {
         return 1;
