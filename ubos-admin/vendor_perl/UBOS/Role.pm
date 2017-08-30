@@ -551,7 +551,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                 if( ref( $appConfigItem->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
                 }
-                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
+                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ))) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid source: " . $appConfigItem->{source} );
                 }
                 if( exists( $appConfigItem->{name} ) && ref( $appConfigItem->{name} )) {
@@ -576,7 +576,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{source} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'source' must be string" );
                     }
-                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source} )) {
+                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ))) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid source: " . $appConfigItem->{source} );
                     }
                 } elsif( $appConfigItem->{template} ) {
@@ -586,7 +586,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{template} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'template' must be string" );
                     }
-                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template} )) {
+                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{template} ))) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid template: " . $appConfigItem->{template} );
                     }
                     if( ref( $appConfigItem->{templatelang} )) {
@@ -657,7 +657,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'source' must be string" );
                         }
                         foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
+                            unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ), $name )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
@@ -670,7 +670,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         }
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{template}, $name )) {
+                                unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{template} ), $name )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
                                 }
                             }
@@ -696,7 +696,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     }
                     unless( $skipFilesystemChecks ) {
                         foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
+                            unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ), $name )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
@@ -713,7 +713,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         # Symlinks get to have variables in their sources
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                unless( $name  && UBOS::Installable::validFilename( $codeDir, $appConfigItem->{source}, $name )) {
+                                unless( $name  && UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ), $name )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
                                 }
                             }
@@ -877,14 +877,14 @@ sub checkManifestForRoleGenericInstallersEtc {
                 if( ref( $item->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'source' must be string" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $item->{source} )) {
+                unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $item->{source} ))) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid source" );
                 }
             } else {
                 unless( $item->{template} ) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $item->{template} )) {
+                unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $item->{template} ))) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid template" );
                 }
                 if( ref( $item->{templatelang} )) {
