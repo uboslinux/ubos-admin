@@ -230,8 +230,11 @@ sub restore {
     my $gname       = $config->replaceVariables( $self->{json}->{gname} );
     my $mode        = $self->permissionToMode( $permissions, 0644 );
 
+    my $ret = 1;
     unless( $backupContext->restore( $bucket, $toName )) {
-        return 0;
+        error( 'Cannot restore file: bucket:', $bucket, 'toName:', $toName, 'context:', $backupContext->asString() );
+        $ret = 0;
+        return $ret;
     }
     if( defined( $mode )) {
         chmod $mode, $toName;
@@ -244,7 +247,7 @@ sub restore {
         chown $uid, $gid, $toName;
     }
 
-    return 1;
-}        
+    return $ret;
+}
 
 1;

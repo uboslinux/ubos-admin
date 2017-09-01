@@ -41,7 +41,7 @@ sub readArchive {
     my $archive = shift;
 
     debug( 'AnyBackup::readArchive', $archive );
-    
+
     my $ret = undef;
     foreach my $backupType ( sort values %$backupTypes ) {
         my $compressionType = UBOS::Utils::invokeMethod( $backupType . '::compression' );
@@ -53,7 +53,7 @@ sub readArchive {
                     return $ret;
                 }
             }
-                
+
         } else {
             fatal( 'Unknown compression type', $compressionType ); # internal error
         }
@@ -71,13 +71,13 @@ sub readArchive {
 sub cannotParseArchiveErrorMessage {
     my $in = shift;
 
-    my $ret = 'Cannot read backup file ' . $in . ' ';
+    my $ret = 'Cannot read backup file ' . $in . '.';
     if( keys %$backupTypes ) {
-        $ret .= ' Supported backup types are: ';
+        $ret .= "\nSupported backup types are: ";
         $ret .= join( ', ', map { UBOS::Utils::invokeMethod( $_ . '::backupType' ); } sort values %$backupTypes );
-        
+
     } else {
-        $ret .= ' No backup types seem to be known on this device.';
+        $ret .= "\nNo backup types seem to be known on this device.";
     }
 
     return $ret;

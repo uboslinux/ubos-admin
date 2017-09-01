@@ -216,7 +216,11 @@ sub restore {
     my $filemode        = ( defined( $filepermissions ) && $filepermissions eq 'preserve' ) ? -1 : $self->permissionToMode( $filepermissions, 0644 );
     my $dirmode         = ( defined( $dirpermissions  ) && $dirpermissions  eq 'preserve' ) ? -1 : $self->permissionToMode( $dirpermissions, 0755 );
 
-    my $ret = $backupContext->restoreRecursive( $bucket, $fullName );
+    my $ret = 1;
+    unless( $backupContext->restoreRecursive( $bucket, $fullName )) {
+        error( 'Cannot restore directory: bucket:', $bucket, 'fullName:', $fullName, 'context:', $backupContext->asString() );
+        $ret = 0;
+    }
 
     if( $filemode > -1 ) {
         my $asOct = sprintf( "%o", $filemode );

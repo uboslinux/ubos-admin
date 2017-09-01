@@ -47,6 +47,15 @@ sub new {
 }
 
 ##
+# Obtain printable representation, for error messages.
+# return: string
+sub asString {
+    my $self = shift;
+
+    return "backup entry " . $self->{contextPathInBackup};
+}
+
+##
 # Callback by which an AppConfigurationItem can add a file to a Backup
 # $fileToAdd: the name of the file to add in the file system
 # $bucket: the name of the bucket to which the file shall be added
@@ -55,6 +64,8 @@ sub addFile {
     my $self      = shift;
     my $fileToAdd = shift;
     my $bucket    = shift;
+
+    debug( 'ZipFileBackupContext::addFile', $fileToAdd, $bucket );
 
     if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket )) {
         return 1;
@@ -72,6 +83,8 @@ sub addDirectoryHierarchy {
     my $dirToAdd = shift;
     my $bucket   = shift;
 
+    debug( 'ZipFileBackupContext::addDirectoryHierarchy', $dirToAdd, $bucket );
+
     return $self->_addRecursive( $dirToAdd, $self->{contextPathInBackup} . $bucket );
 }
 
@@ -85,6 +98,8 @@ sub restore {
     my $bucket   = shift;
     my $fileName = shift;
 
+    debug( 'ZipFileBackupContext::restore', $bucket, $fileName );
+
     my $member = $self->{backup}->{zip}->memberNamed( $self->{contextPathInBackup} . $bucket );
     unless( $member ) {
         return 0;
@@ -95,7 +110,6 @@ sub restore {
     return 1;
 }
 
-
 ##
 # Helper method to restore a directory hierarchy from a Backup
 # $bucket: the name of the bucket from which the directory hierarchy is to be restored
@@ -105,6 +119,8 @@ sub restoreRecursive {
     my $self    = shift;
     my $bucket  = shift;
     my $dirName = shift;
+
+    debug( 'ZipFileBackupContext::restoreRecursive', $bucket, $dirName );
 
     # Contrary to the docs, trailing slashes are required, otherwise
     # restoring /foo will also restore /foobar

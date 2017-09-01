@@ -50,7 +50,7 @@ sub new {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $json, $role, $appConfig, $installable );
-    
+
     return $self;
 }
 
@@ -193,9 +193,12 @@ sub restore {
 
     debug( 'Database::restore', $bucket, $name );
 
+    my $ret = 1;
     my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
     unless( $backupContext->restore( $bucket, $tmp->filename )) {
-        return 0;
+        error( 'Cannot restore database: bucket:', $bucket, 'context:', $backupContext->asString() );
+        $ret = 0;
+        return $ret;
     }
 
     my ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
@@ -213,11 +216,10 @@ sub restore {
         $config->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
         $config->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
 
-        return 1;
-
     } else {
-        return 0;
+        $ret = 0;
     }
+    return $ret;
 }
 
 ##

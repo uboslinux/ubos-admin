@@ -46,6 +46,15 @@ sub new {
 }
 
 ##
+# Obtain printable representation, for error messages.
+# return: string
+sub asString {
+    my $self = shift;
+
+    return "backup entry " . $self->{contextPathInBackup};
+}
+
+##
 # Callback by which an AppConfigurationItem can add a file to a Backup
 # $fileToAdd: the name of the file to add in the file system
 # $bucket: the name of the bucket to which the file shall be added
@@ -74,7 +83,7 @@ sub addDirectoryHierarchy {
     my $bucket   = shift;
 
     UBOS::Utils::mkdir( $self->{contextPathInBackup} . "/$bucket", 0700 );
-    
+
     unless( opendir( DIR, $dirToAdd )) {
         error( $! );
         return 0;
@@ -85,7 +94,7 @@ sub addDirectoryHierarchy {
         if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
             next;
         }
-        $ret &= move( "$dirToAdd/$file", $self->{contextPathInBackup} . "/$bucket/$file" );        
+        $ret &= move( "$dirToAdd/$file", $self->{contextPathInBackup} . "/$bucket/$file" );
     }
     closedir( DIR );
 
@@ -130,7 +139,7 @@ sub restoreRecursive {
         if( $file =~ m!^\.\.?$! ) { # skip . and .. but not other .something files
             next;
         }
-        $ret &= move( $self->{contextPathInBackup} . "/$bucket/$file", "$dirName/$file",  );        
+        $ret &= move( $self->{contextPathInBackup} . "/$bucket/$file", "$dirName/$file",  );
     }
     closedir( DIR );
 
