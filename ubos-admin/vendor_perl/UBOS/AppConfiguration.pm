@@ -295,7 +295,7 @@ sub customizationPointDefinition {
             }
         }
     }
-    warn( 'Cannot find customization point', $customizationPointName, 'in package', $packageName );
+    warning( 'Cannot find customization point', $customizationPointName, 'in package', $packageName );
     return undef;
 }
 
@@ -785,7 +785,7 @@ sub checkCustomizationPointValues {
                     || !( defined( $custPointDef->{default}->{value} ) || defined( $custPointDef->{default}->{expression} ))) {
                     # make sure the Site JSON file provided one
                     unless( defined( $value )) {
-                        fatal(   ', AppConfiguration ' . $self->appConfigId
+                        fatal(   'AppConfiguration ' . $self->appConfigId
                                . ', package ' . $packageName
                                . ', required value not provided for customizationpoint: ' .  $custPointName );
                     }

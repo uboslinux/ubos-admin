@@ -120,7 +120,7 @@ sub restoreRecursive {
     my $bucket  = shift;
     my $dirName = shift;
 
-    debug( 'ZipFileBackupContext::restoreRecursive', $bucket, $dirName );
+    debug( 'ZipFileBackupContext::restoreRecursive', $bucket, $dirName, $self->{contextPathInBackup} );
 
     # Contrary to the docs, trailing slashes are required, otherwise
     # restoring /foo will also restore /foobar
