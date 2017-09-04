@@ -208,7 +208,7 @@ sub fatal {
             use Carp qw( confess );
             confess( _constructMsg( @msg ));
 
-        } elsif( $log->is_error()) {
+        } elsif( $LOG->is_error()) {
             $LOG->error( _constructMsg( @msg ));
         }
     }
