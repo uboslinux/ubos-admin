@@ -311,7 +311,7 @@ sub siteDeployed {
     my $publicSiteJson = $site->publicSiteJson;
     my $hostname       = $site->hostname;
 
-    debug( 'Host::siteDeployed', $siteId );
+    trace( 'Host::siteDeployed', $siteId );
 
     UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
     UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
@@ -330,7 +330,7 @@ sub siteUndeployed {
     my $siteId   = $site->siteId;
     my $hostname = $site->hostname;
 
-    debug( 'Host::siteUndeployed', $siteId );
+    trace( 'Host::siteUndeployed', $siteId );
 
     UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-world.json" );
     UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-full.json" );
@@ -456,7 +456,7 @@ sub executeTriggers {
         fatal( 'Unexpected type:', $triggers );
     }
 
-    debug( 'Host::executeTriggers:', @triggerList );
+    trace( 'Host::executeTriggers:', @triggerList );
 
     foreach my $trigger ( @triggerList ) {
         if( 'httpd-reload' eq $trigger ) {
@@ -486,36 +486,38 @@ sub updateCode {
     my $syncFirst    = shift;
     my $showPackages = shift;
 
-    debug( 'Host::UpdateCode', $syncFirst, $showPackages );
+    trace( 'Host::UpdateCode', $syncFirst, $showPackages );
 
     my $ret = 0;
     my $cmd;
     if( -x '/usr/bin/pacman-db-upgrade' ) {
-        # not sure when this can be removed again
         $cmd = 'pacman-db-upgrade';
-        unless( UBOS::Logging::isDebugActive() ) {
+        unless( UBOS::Logging::isTraceActive() ) {
             $cmd .= ' > /dev/null';
         }
+        debugAndSuspend( 'Execute pacman-db-upgrade' );
         myexec( $cmd );
     }
 
     my $out;
     if( $syncFirst ) {
         $cmd = 'pacman -Sy --noconfirm';
+        debugAndSuspend( 'Execute pacman -Sy' );
         if( myexec( $cmd, undef, \$out ) != 0 ) {
             error( 'Command failed:', $cmd, "\n$out" );
 
-        } elsif( UBOS::Logging::isDebugActive() ) {
+        } elsif( UBOS::Logging::isTraceActive() ) {
             print $out;
         }
     }
 
     # ubos-admin comes first
     $cmd = 'pacman -S ubos-admin --noconfirm';
+    debugAndSuspend( 'Execute pacman -S ubos-admin' );
     if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
-    } elsif( UBOS::Logging::isDebugActive() ) {
+    } elsif( UBOS::Logging::isTraceActive() ) {
         print $out;
     }
     my $ubosAdminUpdated;
@@ -526,10 +528,11 @@ sub updateCode {
     }
 
     $cmd = 'pacman -Su --noconfirm';
+    debugAndSuspend( 'Execute pacman -Su' );
     if( myexec( $cmd, undef, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
-    } elsif( UBOS::Logging::isDebugActive() ) {
+    } elsif( UBOS::Logging::isTraceActive() ) {
         print $out;
     }
 
@@ -550,11 +553,11 @@ sub updateCode {
     }
 
     if( -x '/usr/bin/pacman-db-upgrade' ) {
-        # not sure when this can be removed again
         $cmd = 'pacman-db-upgrade';
-        unless( UBOS::Logging::isDebugActive() ) {
+        unless( UBOS::Logging::isTraceActive() ) {
             $cmd .= ' > /dev/null';
         }
+        debugAndSuspend( 'Execute pacman-db-upgrade' );
         myexec( $cmd );
     }
 
@@ -585,9 +588,10 @@ sub updateCode {
 sub purgeCache {
 
     my $cmd = 'pacman -Sc --noconfirm';
-    unless( UBOS::Logging::isDebugActive() ) {
+    unless( UBOS::Logging::isTraceActive() ) {
         $cmd .= ' > /dev/null';
     }
+    debugAndSuspend( 'Execute pacman -Sc' );
     myexec( $cmd );
 }
 
@@ -616,7 +620,7 @@ sub ensurePackages {
         @packageList = ();
     }
 
-    debug( 'ensurePackages', @packageList );
+    trace( 'ensurePackages', @packageList );
 
     # only install what isn't installed yet
     my @filteredPackageList = grep { myexec( "pacman -Q $_ > /dev/null 2>&1" ) } @packageList;
@@ -627,10 +631,11 @@ sub ensurePackages {
         }
         my $err;
         my $cmd = 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
-        unless( UBOS::Logging::isDebugActive() ) {
+        unless( UBOS::Logging::isTraceActive() ) {
             $cmd .= ' > /dev/null';
         }
 
+        debugAndSuspend( 'Execute pacman -S', @filteredPackageList );
         if( myexec( $cmd, undef, undef, \$err )) {
             $@ = 'Failed to install package(s). Pacman says: ' . $err;
             return -1;
@@ -650,10 +655,11 @@ sub installPackageFiles {
 
     my $err;
     my $cmd = 'pacman -U --noconfirm ' . join( ' ', @$packageFiles );
-    unless( UBOS::Logging::isDebugActive() ) {
+    unless( UBOS::Logging::isTraceActive() ) {
         $cmd .= ' > /dev/null';
     }
 
+    debugAndSuspend( 'Execute pacman -U', @$packageFiles );
     if( myexec( $cmd, undef, undef, \$err )) {
         error( 'Failed to install package file(s). Pacman says:', $err );
         return 0;
@@ -715,12 +721,14 @@ sub ensureSnapperConfig {
 
             unless( -e "/etc/snapper/configs/$configName" ) {
                 my $err;
+                debugAndSuspend( 'Execute snapper -c', $configName, 'create-config' );
                 if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
                     error( 'snapper (create-config) failed of config', $configName, $target, $err );
                 }
             }
         }
         my $err;
+        debugAndSuspend( 'Execute snapper setup-quota' );
         if( myexec( 'snapper setup-quota', undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
             error( 'snapper setup-quota failed:', $err );
         }
@@ -879,9 +887,11 @@ sub ensurePacmanInit {
         }
     }
     if( -x '/usr/bin/pacman-db-upgrade' ) {
+        debugAndSuspend( 'Execute pacman-db-upgrade' );
         myexec( 'pacman-db-upgrade' ); # not sure when this can be removed again
     }
 
+    debugAndSuspend( 'Setup pacman keys' );
     myexec( "pacman-key --init" );
 
     # We trust the Arch people, Arch Linux ARM, Uplink Labs' EC2 packages and ourselves
@@ -935,16 +945,18 @@ sub ensureOsUser {
     my $err;
     if( myexec( "getent passwd $userId", undef, \$out, \$err )) {
 
-        debug( 'Creating user', $userId );
+        trace( 'Creating user', $userId );
 
+        debugAndSuspend( 'Creating user', $userId );
         if( myexec( "sudo useradd -e '' -m -U $userId -d $homeDir", undef, undef, \$err )) {
             error( 'Failed to create user', $userId, ', error:', $err );
             return 0;
         }
 
         if( defined( $groupIds ) && @$groupIds ) {
-            debug( 'Adding user to groups:', $userId, @$groupIds );
+            trace( 'Adding user to groups:', $userId, @$groupIds );
 
+            debugAndSuspend( 'Adding groups', @$groupIds );
             if( myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
                 error( 'Failed to add user to groups:', $userId, @$groupIds, 'error:', $err );
                 return 0;
@@ -987,7 +999,7 @@ sub addAfterBootCommands {
 # the file
 sub runAfterBootCommandsIfNeeded {
 
-    debug( 'Host::runAfterBootCommandsIfNeeded' );
+    trace( 'Host::runAfterBootCommandsIfNeeded' );
 
     if( -e $AFTER_BOOT_FILE ) {
         my $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
@@ -1030,11 +1042,13 @@ sub deploySiteTemplatesIfNeeded {
     my $cmd = 'ubos-admin deploy --skip-check-ready --template' . join( '', map { " --file '$_'" } @templateFiles );
     my $out;
     my $err;
+    debugAndSuspend( 'Deploy site templates', @templateFiles );
     if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
         error( "Problems with attempting to install site templates from $destDir:\n" . $cmd, "\nout: " . $out . "\nerr: " . $err );
         # if error, leave templates in place
 
     } else {
+        debugAndSuspend( 'Delete site templates', @templateFiles );
         UBOS::Utils::deleteFile( @templateFiles );
     }
 }
@@ -1053,7 +1067,7 @@ sub nics {
         my $err; # swallow error messages
         myexec( "networkctl --no-pager --no-legend", undef, \$netctl, \$err );
         if( $err ) {
-            debug( 'Host::nics: networkctl said:', $err );
+            trace( 'Host::nics: networkctl said:', $err );
         }
 
         $_allNics = {};
@@ -1105,7 +1119,7 @@ sub ipAddressesOnNic {
     myexec( "networkctl --no-pager --no-legend status", undef, \$netctl, \$err );
             # can't ask nic directly as we need wildcard support
     if( $err ) {
-        debug( 'Host::nics: networkctl said:', $err );
+        trace( 'Host::nics: networkctl said:', $err );
     }
 
     my @ret = ();

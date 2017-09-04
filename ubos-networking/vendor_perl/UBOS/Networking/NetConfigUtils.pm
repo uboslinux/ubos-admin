@@ -87,7 +87,7 @@ sub activateNetConfig {
     if( exists( $netConfigs->{$newConfigName} )) {
         my $newConfig  = $netConfigs->{$newConfigName};
 
-        debug( 'Activating netconfig', $newConfigName );
+        trace( 'Activating netconfig', $newConfigName );
 
         return UBOS::Utils::invokeMethod( $newConfig . '::activate', $initOnly, $force );
 
@@ -417,7 +417,7 @@ END
     }
     if( exists( $servicesNeeded{'dnsmasq.service'} )) {
         UBOS::Utils::saveFile( $dnsmasqConfigFile, $dnsmasqConfigContent );
-        
+
     } elsif( -e $dnsmasqConfigFile ) {
         UBOS::Utils::deleteFile( $dnsmasqConfigFile );
     }
@@ -693,18 +693,18 @@ END
 
     # updates to resolved.conf
     if( -e $resolvedConfFile ) {
-		my $resolvedConfContent = UBOS::Utils::slurpFile( $resolvedConfFile );
-		if( $resolvedConfContent !~ m!DNSStubListener=no! ) {
-			# it can match anywhere, it does not matter where -- it means somebody manually edited the file,
-			# in which case we leave it alone
-			if( $resolvedConfContent =~ m!^\[Resolve\]! ) {
-				$resolvedConfContent =~ s!(\[Resolve\])!$1\nDNSStubListener=no!;
-			} else {
-				$resolvedConfContent .=~ "\n[Resolve]\nDNSStubListener=no";
-			}
-			UBOS::Utils::saveFile( $resolvedConfFile, $resolvedConfContent, 0x644 );
-		}
-	}
+        my $resolvedConfContent = UBOS::Utils::slurpFile( $resolvedConfFile );
+        if( $resolvedConfContent !~ m!DNSStubListener=no! ) {
+            # it can match anywhere, it does not matter where -- it means somebody manually edited the file,
+            # in which case we leave it alone
+            if( $resolvedConfContent =~ m!^\[Resolve\]! ) {
+                $resolvedConfContent =~ s!(\[Resolve\])!$1\nDNSStubListener=no!;
+            } else {
+                $resolvedConfContent .=~ "\n[Resolve]\nDNSStubListener=no";
+            }
+            UBOS::Utils::saveFile( $resolvedConfFile, $resolvedConfContent, 0x644 );
+        }
+    }
 
     # configure callbacks
     my @appNics = grep { exists( $config->{$_}->{appnic} ) && $config->{$_}->{appnic} }
@@ -733,7 +733,7 @@ END
         %enabledServices   = ();
         @toDisable         = ();
         @toEnable          = keys %servicesNeeded;
-        
+
     } else {
         my $out;
         UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --state=active', undef, \$out );
@@ -751,10 +751,10 @@ END
     }
 
     if( @toDisable ) {
-        UBOS::Utils::myexec( 'sudo systemctl disable -q ' . join( ' ', @toDisable ) . ( UBOS::Logging::isDebugActive() ? '' : ' 2> /dev/null' ));
+        UBOS::Utils::myexec( 'sudo systemctl disable -q ' . join( ' ', @toDisable ) . ( UBOS::Logging::isTraceActive() ? '' : ' 2> /dev/null' ));
     }
     if( @toEnable ) {
-        UBOS::Utils::myexec( 'sudo systemctl enable -q ' . join( ' ', @toEnable ) . ( UBOS::Logging::isDebugActive() ? '' : ' 2> /dev/null' ));
+        UBOS::Utils::myexec( 'sudo systemctl enable -q ' . join( ' ', @toEnable ) . ( UBOS::Logging::isTraceActive() ? '' : ' 2> /dev/null' ));
     }
     unless( $initOnly ) {
         if( @runningServices ) {
@@ -869,7 +869,7 @@ sub _binNetMask {
 # return: IP address as string, e.g. 0.0.1.1
 sub _stringIpAddress {
     my $bin = shift;
-    
+
     return join( '.', ( map { 0 + ($bin >> ($_*8)) & 255 } (3,2,1,0) ));
 }
 
@@ -890,7 +890,7 @@ sub _calculateDhcpRange {
         my $defaults = networkingDefaults();
         $lease = exists( $defaults->{'dhcp-lease'} ) ? $defaults->{'dhcp-lease'} : '12h';
     }
-        
+
     my $binAddress   = _binIpAddress( $address );
     my $binFrom      = $binAddress+1;
     my $from         = _stringIpAddress( $binFrom );
@@ -936,7 +936,7 @@ sub isOnLan {
         # 10.0.0.0        -   10.255.255.255  (10/8 prefix)
         return 1;
     }
-        
+
     my $mask12 = _binNetMask( 12 );
     if( ( $binIp & $mask12 ) == _binIpAddress( '172.16.0.0' )) {
         # 172.16.0.0      -   172.31.255.255  (172.16/12 prefix)

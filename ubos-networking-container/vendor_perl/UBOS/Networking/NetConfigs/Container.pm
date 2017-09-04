@@ -22,13 +22,13 @@
 use strict;
 use warnings;
 
-package UBOS::Networking::NetConfigs::NspawnContainer;
+package UBOS::Networking::NetConfigs::Container;
 
 use JSON;
 use UBOS::Host;
 use UBOS::Networking::NetConfigUtils;
 
-my $name = 'nspawn-container';
+my $name = 'container';
 
 ##
 # Determine whether this network configuration could currently be activated.

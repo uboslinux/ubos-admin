@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS on an SD Card for a Pcduino3.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -78,7 +78,7 @@ sub createDiskLayout {
 
     # Option 1: a single image file
     # ubos-install ... image.img
-    
+
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
@@ -187,7 +187,7 @@ sub createDiskLayout {
                         }
                     } );
         }
-            
+
     } else {
         # Option 1 or 2
         if( @$argvp == 1 ) {
@@ -226,7 +226,7 @@ sub createDiskLayout {
             $ret = undef;
         }
     }
-    
+
     return $ret;
 }
 
@@ -245,7 +245,7 @@ sub installBootLoader {
     my $target           = $self->{target};
 
     # Boot loader
-    debug( "Installing uboot-pcduino3" );
+    trace( "Installing uboot-pcduino3" );
     my $pacmanCmd = "pacman"
             . " -r '$target'"
             . " -S"
@@ -261,7 +261,7 @@ sub installBootLoader {
         ++$errors;
     }
 
-    # Instead, we do it ourselves  
+    # Instead, we do it ourselves
     if( UBOS::Utils::myexec( "dd 'if=$target/boot/u-boot-sunxi-with-spl.bin' 'of=$bootLoaderDevice' bs=1024 seek=8 conv=notrunc status=none" )) {
         ++$errors;
     }
@@ -277,7 +277,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 

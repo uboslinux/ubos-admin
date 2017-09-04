@@ -43,7 +43,7 @@ my $LABEL = 'UBOS-STAFF';
 # 1. Initialize the configuration if there's a configuration device attached
 # 2. Deploy site templates if needed
 sub initializeIfNeeded {
-    debug( 'ConfigurationManager::initializeIfNeeded' );
+    trace( 'ConfigurationManager::initializeIfNeeded' );
 
     if( UBOS::Host::config()->get( 'host.readstaffonboot', 1 )) {
         my $device = guessConfigurationDevice();
@@ -52,7 +52,7 @@ sub initializeIfNeeded {
         my $target     = undef;
         my $init       = 0;
         if( $device ) {
-            debug( 'Staff device:', $device );
+            trace( 'Staff device:', $device );
 
             $targetFile = File::Temp->newdir( DIR => '/var/tmp', UNLINK => 1 );
             $target     = $targetFile->dirname;
@@ -68,7 +68,7 @@ sub initializeIfNeeded {
                 $target = "/$LABEL";
                 # don't init
             } else {
-                debug( 'No staff device found' );
+                trace( 'No staff device found' );
                 return;
             }
         }
@@ -100,7 +100,7 @@ sub initializeIfNeeded {
 sub checkConfigurationDevice {
     my $device = shift;
 
-    debug( 'ConfigurationManager::checkConfigurationDevice', $device );
+    trace( 'ConfigurationManager::checkConfigurationDevice', $device );
 
     unless( -b $device ) {
         $@ = 'Not a valid UBOS staff device: ' . $device;
@@ -144,7 +144,7 @@ sub checkConfigurationDevice {
 # return: device, or undef
 sub guessConfigurationDevice {
 
-    debug( 'ConfigurationManager::guessConfigurationDevice' );
+    trace( 'ConfigurationManager::guessConfigurationDevice' );
 
     my $out;
     my $err;
@@ -186,7 +186,7 @@ sub guessConfigurationDevice {
 sub saveCurrentConfiguration {
     my $target = shift;
 
-    debug( 'ConfigurationManager::saveCurrentConfiguration', $target );
+    trace( 'ConfigurationManager::saveCurrentConfiguration', $target );
 
     my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
     my $sshDir         = "flock/$keyFingerprint/ssh";
@@ -208,7 +208,7 @@ sub saveCurrentConfiguration {
 sub initializeConfigurationIfNeeded {
     my $target = shift;
 
-    debug( 'ConfigurationManager::initializeConfigurationIfNeeded', $target );
+    trace( 'ConfigurationManager::initializeConfigurationIfNeeded', $target );
 
     my $errors = 0;
     unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
@@ -233,7 +233,7 @@ sub initializeConfigurationIfNeeded {
 sub loadCurrentConfiguration {
     my $target = shift;
 
-    debug( 'ConfigurationManager::loadCurrentConfiguration', $target );
+    trace( 'ConfigurationManager::loadCurrentConfiguration', $target );
 
     if( -e "$target/shepherd/ssh/id_rsa.pub" ) {
         my $sshKey = UBOS::Utils::slurpFile( "$target/shepherd/ssh/id_rsa.pub" );

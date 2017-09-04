@@ -45,6 +45,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $out           = undef;
     my @siteIds       = ();
     my @hosts         = ();
@@ -56,6 +57,7 @@ sub run {
             \@args,
             'verbose+'      => \$verbose,
             'logConfig=s'   => \$logConfigFile,
+            'debug'         => \$debug,
             'out=s',        => \$out,
             'siteid=s'      => \@siteIds,
             'hostname=s'    => \@hosts,
@@ -63,7 +65,7 @@ sub run {
             'notls'         => \$noTls,
             'notorkey'      => \$noTorKey );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || !$out || ( $verbose && $logConfigFile ) ) {

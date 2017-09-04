@@ -73,7 +73,7 @@ sub deployOrCheck {
     }
     my $source = $self->{json}->{source};
 
-    debug( 'DirectoryTree::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source, @$names );
+    trace( 'DirectoryTree::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source, @$names );
 
     my $filepermissions = $config->replaceVariables( $self->{json}->{filepermissions} );
     my $dirpermissions  = $config->replaceVariables( $self->{json}->{dirpermissions} );
@@ -148,7 +148,7 @@ sub undeployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'DirectoryTree::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+    trace( 'DirectoryTree::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
 
     foreach my $name ( reverse @$names ) {
         my $toName = $name;
@@ -185,7 +185,7 @@ sub backup {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'DirectoryTree::backup', $bucket, @$names );
+    trace( 'DirectoryTree::backup', $bucket, @$names );
 
     if( @$names != 1 ) {
         error( 'DirectoryTree::backup: cannot backup item with more than one name:', @$names );
@@ -218,7 +218,7 @@ sub restore {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'DirectoryTree::restore', $bucket, $names );
+    trace( 'DirectoryTree::restore', $bucket, $names );
 
     if( @$names != 1 ) {
         error( 'DirectoryTree::restore: cannot restore item with more than one name:', @$names );

@@ -269,7 +269,7 @@ SCRIPT
         $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
         $errors += $self->addConfigureSnapperToScript( \$chrootScript, $diskLayout );
 
-        debug( "chroot script:\n" . $chrootScript );
+        trace( "chroot script:\n" . $chrootScript );
         my $out;
         my $err;
         if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
@@ -335,7 +335,7 @@ sub check {
 sub mountSpecial {
     my $self = shift;
 
-    debug( "Executing mountSpecial" );
+    trace( "Executing mountSpecial" );
 
     my $target = $self->{target};
     my $errors = 0;
@@ -365,7 +365,7 @@ END
 sub umountSpecial {
     my $self = shift;
 
-    debug( "Executing unmountSpecial" );
+    trace( "Executing unmountSpecial" );
 
     my $target = $self->{target};
     my $errors = 0;
@@ -393,7 +393,7 @@ sub generatePacmanConfigTarget {
     my $self = shift;
     my $dbs  = shift;
 
-    debug( "Executing generatePacmanConfigTarget" );
+    trace( "Executing generatePacmanConfigTarget" );
 
     my $repo = $self->{repo};
     my $arch = $self->arch;
@@ -467,7 +467,7 @@ sub installPackages {
     my $out;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
         error( "pacman failed:", $out );
-        debug( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfig ) } );
+        trace( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfig ) } );
         ++$errors;
     }
 
@@ -480,7 +480,7 @@ sub savePacmanConfigProduction {
     my $self = shift;
     my $dbs  = shift;
 
-    debug( "Executing savePacmanConfigProduction" );
+    trace( "Executing savePacmanConfigProduction" );
 
     my $errors      = 0;
     my $arch        = $self->arch;
@@ -530,7 +530,7 @@ END
 sub saveHostname {
     my $self = shift;
 
-    debug( "Executing saveHostname" );
+    trace( "Executing saveHostname" );
 
     # hostname
     if( UBOS::Utils::saveFile(
@@ -550,7 +550,7 @@ sub saveHostname {
 sub saveChannel {
     my $self = shift;
 
-    debug( "Executing saveChannel" );
+    trace( "Executing saveChannel" );
 
     # hostname
     if( UBOS::Utils::saveFile(
@@ -621,11 +621,11 @@ sub configureOs {
     my $errors        = 0;
 
     # Limit size of system journal
-    debug( "System journal" );
+    trace( "System journal" );
     UBOS::Utils::myexec( "perl -pi -e 's/^\\s*(#\\s*)?SystemMaxUse=.*\$/SystemMaxUse=50M/' '$target/etc/systemd/journald.conf'" );
 
     # version
-    debug( "OS version info" );
+    trace( "OS version info" );
     my $issue = <<ISSUE;
 
 +--------------------------------------------------------------------------+
@@ -736,7 +736,7 @@ sub addGenerateLocaleToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addGenerateLocaleToScript" );
+    trace( "Executing addGenerateLocaleToScript" );
 
     # Run perl with the old locale
     $$chrootScriptP .= "perl -pi -e 's/^#en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
@@ -753,7 +753,7 @@ sub addEnableServicesToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addEnableServicesToScript" );
+    trace( "Executing addEnableServicesToScript" );
 
     my @allServices = ();
 
@@ -796,7 +796,7 @@ sub addConfigureSnapperToScript {
     my $chrootScriptP = shift;
     my $diskLayout    = shift;
 
-    debug( "Executing addConfigureSnapperToScript" );
+    trace( "Executing addConfigureSnapperToScript" );
 
     my $target = $self->{target};
 
@@ -823,7 +823,7 @@ sub addConfigureSnapperToScript {
 sub cleanup {
     my $self = shift;
 
-    debug( "Executing cleanup" );
+    trace( "Executing cleanup" );
 
     my $target = $self->{target};
     my $ret    = 0;

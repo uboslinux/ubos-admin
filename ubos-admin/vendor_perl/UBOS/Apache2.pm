@@ -77,19 +77,19 @@ sub _syncApacheCtl {
     close( FH );
 
     UBOS::Utils::myexec( "systemctl $command ubos-httpd" );
-    
+
     my( $seconds, $microseconds ) = gettimeofday;
     my $until = $seconds + 0.000001 * $microseconds + $max;
-    
+
     while( 1 ) {
-        select( undef, undef, undef, $poll ); # apparently a tricky way of sleeping for $poll seconds that works with fractions        
+        select( undef, undef, undef, $poll ); # apparently a tricky way of sleeping for $poll seconds that works with fractions
 
         unless( open( FH, '<', $logFile )) {
             error( 'Cannot open', $logFile );
             return;
         }
         my $pos = sysseek( FH, 0, SEEK_END );
-        
+
         my $written = '';
         if( $pos != $lastPos ) {
             sysseek( FH, $lastPos, SEEK_SET );
@@ -97,16 +97,16 @@ sub _syncApacheCtl {
         }
         close( FH );
         $lastPos = $pos;
-        
+
         ( $seconds, $microseconds ) = gettimeofday;
         my $delta = $seconds + 0.000001 * $microseconds - $until;
-        
+
         if( $written =~ /resuming normal operations/ ) {
             sleep( 2 ); # two more seconds
-            debug( 'Detected Apache restart after ', $delta + $max, 'seconds' );
+            trace( 'Detected Apache restart after ', $delta + $max, 'seconds' );
             return 0;
         }
-        
+
         if( $delta >= $max ) {
             warning( 'Apache command', $command, 'not finished within', $max, 'seconds' );
             return 1;
@@ -117,7 +117,7 @@ sub _syncApacheCtl {
 ##
 # Make the changes to Apache configuration files are in place that are needed by UBOS.
 sub ensureConfigFiles {
-    debug( 'Apache2::ensureConfigFiles' );
+    trace( 'Apache2::ensureConfigFiles' );
 
     activateApacheModules( @minimumApacheModules );
 
@@ -127,16 +127,18 @@ sub ensureConfigFiles {
     my $crtFile = "$sslDir/server.crt";
     my $keyFile = "$sslDir/server.key";
     my $csrFile = "$sslDir/server.csr";
-    
+
     my $uid = 0;  # avoid overwrite by http
     my $gid = UBOS::Utils::getGid( 'http' );
 
     unless( -f $keyFile ) {
+        debugAndSuspend( 'Generate default Apache TLS key' );
         UBOS::Utils::myexec( "openssl genrsa -out '$keyFile' 1024" );
         chmod 0040, $keyFile;
         chown $uid, $gid, $keyFile;
     }
     unless( -f $crtFile ) {
+        debugAndSuspend( 'Generate default Apache TLS certificate' );
         UBOS::Utils::myexec(
                 "openssl req -new -key '$keyFile' -out '$csrFile'"
                 . ' -subj "/CN=localhost.localdomain"' );
@@ -162,8 +164,9 @@ sub activateApacheModules {
             warning( 'Cannot find Apache2 module, not activating:', $module );
             next;
         }
-        debug( 'Activating Apache2 module:', $module );
+        trace( 'Activating Apache2 module:', $module );
 
+        debugAndSuspend( 'Activate Apache2 module', $module );
         UBOS::Utils::symlink( "$modsAvailableDir/$module.load", "$modsEnabledDir/$module.load" );
         ++$ret;
     }
@@ -186,8 +189,9 @@ sub activatePhpModules {
             warning( 'Cannot find PHP module, not activating:', $module );
             next;
         }
-        debug( 'Activating PHP module:', $module );
+        trace( 'Activating PHP module:', $module );
 
+        debugAndSuspend( 'Activate Apache2/PHP module', $module );
         UBOS::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
 extension=$module.so
 END

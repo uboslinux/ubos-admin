@@ -37,7 +37,7 @@ my $pidFile = "$pidDir/pidfile";
 sub _ensureTor {
     my $command = shift;
 
-    debug( 'Tor::_ensureTor', $command );
+    trace( 'Tor::_ensureTor', $command );
 
     if( $running ) {
         return 1;
@@ -49,6 +49,7 @@ sub _ensureTor {
 
     my $out;
     my $err;
+    debugAndSuspend( 'Check that ubos-tor.service is running' );
     UBOS::Utils::myexec( 'systemctl enable ubos-tor',   undef, \$out, \$err );
     UBOS::Utils::myexec( "systemctl $command ubos-tor", undef, \$out, \$err );
 
@@ -61,7 +62,7 @@ sub _ensureTor {
     while( 1 ) {
         if( -e $pidFile ) {
             sleep( 2 ); # two more seconds
-            debug( 'Detected Tor restart' );
+            trace( 'Detected Tor restart' );
             last;
         }
         unless( -d $pidDir ) {
@@ -72,13 +73,13 @@ sub _ensureTor {
 
         ( $seconds, $microseconds ) = gettimeofday;
         my $delta = $seconds + 0.000001 * $microseconds - $until;
-        
+
         if( $delta >= $max ) {
             warning( 'Tor restart not finished within', $max, 'seconds' );
             return 1;
         }
 
-        select( undef, undef, undef, $poll ); # apparently a tricky way of sleeping for $poll seconds that works with fractions        
+        select( undef, undef, undef, $poll ); # apparently a tricky way of sleeping for $poll seconds that works with fractions
     }
 
     $running = 1;

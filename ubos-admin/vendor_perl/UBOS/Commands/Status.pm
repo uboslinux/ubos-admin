@@ -43,6 +43,7 @@ sub run {
 
     my $verbose         = 0;
     my $logConfigFile   = undef;
+    my $debug           = undef;
     my $showJson        = 0;
     my $showAll         = 0;
     my $showPacnew      = 0;
@@ -55,6 +56,7 @@ sub run {
             \@args,
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
+            'debug'        => \$debug,
             'json'         => \$showJson,
             'all'          => \$showAll,
             'pacnew'       => \$showPacnew,
@@ -63,7 +65,7 @@ sub run {
             'uptime'       => \$showUptime,
             'lastupdated'  => \$showLastUpdated );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || ( $showAll && ($showPacnew || $showDisks || $showMemory || $showUptime )) || @args || ( $verbose && $logConfigFile )) {
@@ -84,9 +86,10 @@ sub run {
     my $json = $showJson ? {} : undef;
 
     if( $showDisks ) {
-        debug( 'Checking disks' );
+        trace( 'Checking disks' );
 
         my $out;
+        debugAndSuspend( 'Executing lsblk' );
         UBOS::Utils::myexec( "lsblk --json --output-all --paths", undef, \$out );
         if( $out ) {
             my $newJson = UBOS::Utils::readJsonFromString( $out );
@@ -162,9 +165,10 @@ MSG
     }
 
     if( $showMemory ) {
-        debug( 'Checking memory' );
+        trace( 'Checking memory' );
 
         my $out;
+        debugAndSuspend( 'Executing free' );
         UBOS::Utils::myexec( "free -lht", undef, \$out );
 
         if( $json ) {
@@ -201,9 +205,10 @@ MSG
     }
 
     if( $showUptime ) {
-        debug( 'Checking uptime' );
+        trace( 'Checking uptime' );
 
         my $out;
+        debugAndSuspend( 'Executing w' );
         UBOS::Utils::myexec( "w -f -u", undef, \$out );
 
         if( $json ) {
@@ -256,7 +261,7 @@ MSG
     }
 
     if( $showLastUpdated ) {
-        debug( 'Determining when last updated' );
+        trace( 'Determining when last updated' );
 
         my $lastUpdated = UBOS::Host::lastUpdated();
         if( $json ) {
@@ -271,9 +276,10 @@ MSG
     }
 
     if( $showPacnew ) {
-        debug( 'Looking for .pacnew files' );
+        trace( 'Looking for .pacnew files' );
 
         my $out;
+        debugAndSuspend( 'Executing find for .pacnew files' );
         UBOS::Utils::myexec( "find /boot /etc /usr -name '*.pacnew' -print", undef, \$out );
 
         if( $out ) {

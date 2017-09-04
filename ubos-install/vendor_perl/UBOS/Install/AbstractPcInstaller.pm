@@ -1,6 +1,6 @@
-# 
+#
 # Abstract superclass for PC installers.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -52,7 +52,7 @@ sub installGrub {
     my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
 
     # Ramdisk
-    debug( "Generating ramdisk" );
+    trace( "Generating ramdisk" );
 
     # The optimized ramdisk doesn't always boot, so we always skip the optimization step
     UBOS::Utils::saveFile( "$target/etc/mkinitcpio.d/linux$kernelPostfix.preset", <<END, 0644, 'root', 'root' );

@@ -42,31 +42,33 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
+    my $verbose       = 0;
+    my $logConfigFile = undef;
+    my $debug         = undef;
     my $askAll        = 0;
     my $tls           = 0;
     my $selfSigned    = 0;
     my $letsEncrypt   = 0;
     my $out           = undef;
-    my $verbose       = 0;
     my $tor           = 0;
     my $quiet         = 0;
-    my $logConfigFile = undef;
     my $dryRun;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'verbose+'                     => \$verbose,
+            'logConfig=s'                  => \$logConfigFile,
+            'debug'                        => \$debug,
             'askForAllCustomizationPoints' => \$askAll,
             'tls'                          => \$tls,
             'selfsigned'                   => \$selfSigned,
             'letsencrypt'                  => \$letsEncrypt,
             'tor'                          => \$tor,
             'out=s',                       => \$out,
-            'verbose+'                     => \$verbose,
             'quiet',                       => \$quiet,
-            'logConfig=s'                  => \$logConfigFile,
             'dry-run|n'                    => \$dryRun );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
@@ -192,15 +194,18 @@ sub run {
             if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
                 fatal( 'openssl genrsa failed', $err );
             }
+            debugAndSuspend( 'Keys generated, CSR is next' );
             if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch -subj '/CN=$hostname'", undef, undef, \$err )) {
                 fatal( 'openssl req failed', $err );
             }
+            debugAndSuspend( 'CRT generated, CRT is next' );
             if( UBOS::Utils::myexec( "openssl x509 -req -days 3650 -in '$dir/csr' -signkey '$dir/key' -out '$dir/crt'", undef, undef, \$err )) {
                 fatal( 'openssl x509 failed', $err );
             }
             $tlsKey = UBOS::Utils::slurpFile( "$dir/key" );
             $tlsCrt = UBOS::Utils::slurpFile( "$dir/crt" );
 
+            debugAndSuspend( 'CRT generated, cleaning up' );
             UBOS::Utils::deleteFile( "$dir/key", "$dir/csr", "$dir/crt" );
 
         } else {
@@ -516,11 +521,15 @@ sub run {
         info( 'Setting up placeholder sites' );
 
         my $suspendTriggers = {};
+        debugAndSuspend( 'Setting up placeholder for site', $newSite->siteId() );
         $ret &= $newSite->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+
+        debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
         UBOS::Host::executeTriggers( $suspendTriggers );
 
         if( $newSite->hasLetsEncryptTls() && !$newSite->hasLetsEncryptCerts()) {
             info( 'Obtaining letsencrypt certificate' );
+            debugAndSuspend();
 
             my $success = $newSite->obtainLetsEncryptCertificate();
             unless( $success ) {
@@ -531,7 +540,10 @@ sub run {
         }
 
         my $deployUndeployTriggers = {};
+        debugAndSuspend( 'Deploy site', $newite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
+
+        debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
         if( $tor ) {
@@ -541,7 +553,9 @@ sub run {
         info( 'Resuming sites' );
 
         my $resumeTriggers = {};
+        debugAndSuspend( 'Resume site', $newite->siteId() );
         $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
         UBOS::Host::executeTriggers( $resumeTriggers );
 
         info( 'Running installers' );

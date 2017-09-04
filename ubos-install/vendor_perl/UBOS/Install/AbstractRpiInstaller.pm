@@ -289,7 +289,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 

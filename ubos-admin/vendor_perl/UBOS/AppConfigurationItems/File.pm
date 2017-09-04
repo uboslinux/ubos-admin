@@ -77,7 +77,7 @@ sub deployOrCheck {
         $sourceOrTemplate = $self->{json}->{source};
     }
 
-    debug( 'File::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $sourceOrTemplate, @$names );
+    trace( 'File::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $sourceOrTemplate, @$names );
 
     my $templateLang = $self->{json}->{templatelang};
     my $permissions  = $config->replaceVariables( $self->{json}->{permissions} );
@@ -144,7 +144,7 @@ sub undeployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'File::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+    trace( 'File::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
 
     foreach my $name ( reverse @$names ) {
         my $toName = $name;
@@ -179,7 +179,7 @@ sub backup {
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
-    debug( 'File::backup', $bucket, @$names );
+    trace( 'File::backup', $bucket, @$names );
 
     if( @$names != 1 ) {
         error( 'File::backup: cannot backup item with more than one name:', @$names );
@@ -212,7 +212,7 @@ sub restore {
     unless( $names ) {
         $names = [ $self->{json}->{name} ];
     }
-    debug( 'File::restore', $bucket, $names );
+    trace( 'File::restore', $bucket, $names );
 
     if( @$names != 1 ) {
         error( 'File::restore: cannot restore item with more than one name:', @$names );

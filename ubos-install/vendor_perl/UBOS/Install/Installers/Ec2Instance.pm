@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for Amazon EC2
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -122,7 +122,7 @@ sub createDiskLayout {
         error( 'Must specify at least than one file or image for deviceclass=ec2-instance' );
         $ret = undef;
     }
-    
+
     return $ret;
 }
 
@@ -147,7 +147,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only cloud\n";
 

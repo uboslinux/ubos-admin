@@ -1,7 +1,7 @@
 #
 # A DiskImage disk layout. Contains at least one partition. May contain
 # boot sector.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -47,7 +47,7 @@ sub new {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $devicetable );
-    
+
     $self->{image} = $image;
 
     return $self;
@@ -112,7 +112,7 @@ END
     my $out;
     my $err;
 
-    debug( 'fdisk script:', $fdiskScript );
+    trace( 'fdisk script:', $fdiskScript );
 
     if( UBOS::Utils::myexec( "fdisk '" . $self->{image} . "'", $fdiskScript, \$out, \$err )) {
         error( 'fdisk failed', $out, $err );
@@ -128,7 +128,7 @@ END
 sub createLoopDevices {
     my $self = shift;
 
-    debug( "Creating loop devices" );
+    trace( "Creating loop devices" );
 
     my $errors = 0;
 
@@ -146,7 +146,7 @@ sub createLoopDevices {
     my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
     foreach my $mountPath ( @mountPathIndexSequence ) {
         my $data = $self->{devicetable}->{$mountPath};
-        
+
         $data->{devices} = [ $partitionLoopDeviceRoot . 'p' . $data->{index} ]; # augment $self->{devicetable}
     }
 
@@ -159,7 +159,7 @@ sub createLoopDevices {
 sub deleteLoopDevices {
     my $self = shift;
 
-    debug( "Deleting loop devices" );
+    trace( "Deleting loop devices" );
 
     my $errors = 0;
 
@@ -168,7 +168,7 @@ sub deleteLoopDevices {
         error( "losetup -d error:", $out );
         ++$errors;
     }
-    
+
     return $errors;
 }
 

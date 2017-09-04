@@ -65,7 +65,7 @@ sub addFile {
     my $fileToAdd = shift;
     my $bucket    = shift;
 
-    debug( 'ZipFileBackupContext::addFile', $fileToAdd, $bucket );
+    trace( 'ZipFileBackupContext::addFile', $fileToAdd, $bucket );
 
     if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket )) {
         return 1;
@@ -83,7 +83,7 @@ sub addDirectoryHierarchy {
     my $dirToAdd = shift;
     my $bucket   = shift;
 
-    debug( 'ZipFileBackupContext::addDirectoryHierarchy', $dirToAdd, $bucket );
+    trace( 'ZipFileBackupContext::addDirectoryHierarchy', $dirToAdd, $bucket );
 
     return $self->_addRecursive( $dirToAdd, $self->{contextPathInBackup} . $bucket );
 }
@@ -98,7 +98,7 @@ sub restore {
     my $bucket   = shift;
     my $fileName = shift;
 
-    debug( 'ZipFileBackupContext::restore', $bucket, $fileName );
+    trace( 'ZipFileBackupContext::restore', $bucket, $fileName );
 
     my $member = $self->{backup}->{zip}->memberNamed( $self->{contextPathInBackup} . $bucket );
     unless( $member ) {
@@ -120,7 +120,7 @@ sub restoreRecursive {
     my $bucket  = shift;
     my $dirName = shift;
 
-    debug( 'ZipFileBackupContext::restoreRecursive', $bucket, $dirName, $self->{contextPathInBackup} );
+    trace( 'ZipFileBackupContext::restoreRecursive', $bucket, $dirName, $self->{contextPathInBackup} );
 
     # Contrary to the docs, trailing slashes are required, otherwise
     # restoring /foo will also restore /foobar

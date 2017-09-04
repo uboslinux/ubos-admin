@@ -52,6 +52,7 @@ sub run {
 
     my $verbose         = 0;
     my $logConfigFile   = undef;
+    my $debug         = undef;
     my $showIds         = 0;
     my $noTls           = 0;
     my $noTor           = 0;
@@ -78,6 +79,7 @@ sub run {
             \@args,
             'verbose+'         => \$verbose,
             'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
             'showids'          => \$showIds,
             'notls'            => \$noTls,
             'notor'            => \$noTor,
@@ -98,7 +100,7 @@ sub run {
             'migrateto=s'      => \@migrateTo,
             'quiet'            => \$quiet );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     my $nSites   = scalar( @siteIds )   + scalar( @hostnames );
@@ -352,8 +354,10 @@ sub restoreAppConfigs {
 
     my $suspendTriggers = {};
     foreach my $toSite ( @toSites ) {
+        debugAndSuspend( 'Suspending site', $toSite->siteId );
         $ret &= $toSite->suspend( $suspendTriggers ); # replace with "in progress page"
     }
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
     info( 'Updating site(s)' );
@@ -377,11 +381,13 @@ sub restoreAppConfigs {
             }
             my $newAppConfig = UBOS::AppConfiguration->new( $appConfigJsonNew, $site );
 
+            debugAndSuspend( 'Adding and deploying appconfig', $newAppConfig->appConfigId );
             $site->addDeployAppConfiguration( $newAppConfig, $deployUndeployTriggers );
 
             $newAppConfigs{$newAppConfigId} = $newAppConfig;
         }
     }
+    debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
     info( 'Restoring data' );
@@ -391,6 +397,7 @@ sub restoreAppConfigs {
         my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
         my $siteId         = $toSites[$i];
 
+        debugAndSuspend( 'Restoring appconfig', $oldAppConfigId, 'to', $newAppConfigId, 'at site', $siteId );
         $ret &= $backup->restoreAppConfiguration(
                 $siteId,
                 $siteId,
@@ -403,8 +410,10 @@ sub restoreAppConfigs {
 
     my $resumeTriggers = {};
     foreach my $toSite ( @toSites ) {
+        debugAndSuspend( 'Resuming site', $toSite->siteId );
         $ret &= $toSite->resume( $resumeTriggers );
     }
+    debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     info( 'Running upgraders' );
@@ -412,6 +421,7 @@ sub restoreAppConfigs {
     foreach my $newAppConfigId ( @appConfigIdsToRestore ) {
         my $appConfig = $newAppConfigs{$newAppConfigId};
 
+        debugAndSuspend( 'Running upgrader at appconfig', $appConfig->appConfigId );
         $ret &= $appConfig->runUpgrader();
     }
 
@@ -474,7 +484,7 @@ sub restoreSites {
         @oldSiteIds = keys %$sitesInBackup;
     }
 
-    debug( 'Backup siteids to restore:', @oldSiteIds );
+    trace( 'Backup siteids to restore:', @oldSiteIds );
 
     for( my $i=0 ; $i<@oldSiteIds ; ++$i ) {
         my $oldSiteId = $oldSiteIds[$i];
@@ -525,7 +535,7 @@ sub restoreSites {
             push @{$siteIdsToAppConfigIds{$newSiteId}}, $newAppConfigId;
         }
     }
-    debug( 'Host siteids to restore to:', @siteIdsToRestore );
+    trace( 'Host siteids to restore to:', @siteIdsToRestore );
 
     info( 'Constructing new version of sites' );
 
@@ -603,11 +613,13 @@ sub restoreSites {
 
     my $suspendTriggers = {};
     foreach my $siteNew ( @sitesNew ) {
+        debugAndSuspend( 'Setting up placeholder for site', $siteNew->siteId );
         $ret &= $siteNew->setupPlaceholder( $suspendTriggers ); # show "coming soon"
 
         if( $siteNew->hasLetsEncryptTls() && !$siteNew->hasLetsEncryptCerts()) {
             info( 'Obtaining letsencrypt certificate for site', $siteNew->hostname, '(', $siteNew->siteId, ')' );
 
+            debugAndSuspend( 'Obtaining letsencrypt certificate for site', $siteNew->siteId );
             my $success = $siteNew->obtainLetsEncryptCertificate();
             unless( $success ) {
                 warning( 'Failed to obtain letsencrypt certificate for site', $siteNew->hostname, '(', $siteNew->siteId, '). Deploying site without TLS.' );
@@ -616,14 +628,17 @@ sub restoreSites {
             $ret &= $success;
         }
     }
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
     info( 'Deploying new version of sites' );
 
     my $deployUndeployTriggers = {};
     foreach my $siteNew ( @sitesNew ) {
+        debugAndSuspend( 'Deploy site', $siteNew->siteId );
         $ret &= $siteNew->deploy( $deployUndeployTriggers );
     }
+    debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
     info( 'Restoring data' );
@@ -633,6 +648,7 @@ sub restoreSites {
             my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
             my $oldAppConfig   = $appConfigsInBackup->{$oldAppConfigId};
 
+            debugAndSuspend( 'Restore appconfig', $oldApopConfigId, 'to' $newAppConfigId, 'for site', $newSiteId );
             $ret &= $backup->restoreAppConfiguration(
                     $siteIdTranslation{$newSiteId},
                     $newSiteId,
@@ -646,14 +662,17 @@ sub restoreSites {
 
     my $resumeTriggers = {};
     foreach my $siteNew ( @sitesNew ) {
+        debugAndSuspend( 'Resume site', $siteNew->siteId );
         $ret &= $siteNew->resume( $resumeTriggers );
     }
+    debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     info( 'Running upgraders' );
 
     foreach my $newAppConfigId ( sort keys %appConfigIdTranslation ) {
         my $newAppConfig = UBOS::Host::findAppConfigurationById( $newAppConfigId );
+        debugAndSuspend( 'Run upgrader for appconfig', $newAppConfig->appConfigId );
         $ret &= $newAppConfig->runUpgrader();
     }
 
@@ -667,7 +686,6 @@ sub restoreSites {
     }
     return $ret;
 }
-
 
 ##
 # Given partial siteIds, find the corresponding sites in the backup

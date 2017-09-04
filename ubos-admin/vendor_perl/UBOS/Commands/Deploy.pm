@@ -45,6 +45,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $useAsTemplate = undef;
     my @files         = ();
     my $stdin         = 0;
@@ -53,18 +54,19 @@ sub run {
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
+            'debug'       => \$debug,
             'template'    => \$useAsTemplate,
             'files=s'     => \@files,
             'stdin'       => \$stdin );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || ( @files && $stdin ) || ( !@files && !$stdin ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    debug( 'Parsing site JSON and checking' );
+    trace( 'Parsing site JSON and checking' );
 
     my %jsons; # hash from filename to parsed JSON content
     if( @files ) {
@@ -210,7 +212,7 @@ sub run {
         fatal( $@ );
     }
 
-    debug( 'Checking context paths and customization points', $ret );
+    trace( 'Checking context paths and customization points', $ret );
 
     foreach my $newSite ( @newSites ) {
         my %contexts = ();
@@ -246,11 +248,14 @@ sub run {
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
+            debugAndSuspend( 'Suspend site', $oldSite->siteId() );
             $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
         } else {
+            debugAndSuspend( 'Setup placeholder for site', $site->siteId() );
             $ret &= $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
         }
     }
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
     my @letsEncryptCertsNeededSites = grep { $_->hasLetsEncryptTls() && !$_->hasLetsEncryptCerts() } @newSites;
@@ -261,6 +266,7 @@ sub run {
             info( 'Obtaining letsencrypt certificate' );
         }
         foreach my $site ( @letsEncryptCertsNeededSites ) {
+            debugAndSuspend( 'Obtain letsencrypt certificate for site', $site->siteId() );
             my $success = $site->obtainLetsEncryptCertificate();
             unless( $success ) {
                 warning( 'Failed to obtain letsencrypt certificate for site', $site->hostname, '(', $site->siteId, '). Deploying site without TLS.' );
@@ -277,26 +283,35 @@ sub run {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             my $backup = UBOS::UpdateBackup->new();
+            debugAndSuspend( 'Creating UpdateBackup for site', $site->siteId() );
             $ret &= $backup->create( { $site->siteId => $oldSite } );
+
+            debugAndSuspend( 'Undeploying site', $oldSite->siteId() );
             $ret &= $oldSite->undeploy( $deployUndeployTriggers );
 
+            debugAndSuspend( 'Deploying site', $site->siteId() );
             $ret &= $site->deploy( $deployUndeployTriggers );
+            debugAndSuspend( 'Restoring from UpdateBackup for site', $site->siteId() );
             $ret &= $backup->restoreSite( $site );
 
             $backup->delete();
 
         } else {
+            debugAndSuspend( 'Deploying site', $site->siteId() );
             $ret &= $site->deploy( $deployUndeployTriggers );
         }
     }
+    debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 
     info( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( @newSites ) {
+        debugAndSuspend( 'Resuming site', $site->siteId() );
         $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
     }
+    debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     info( 'Running installers/upgraders' );
@@ -306,13 +321,16 @@ sub run {
         if( $oldSite ) {
             foreach my $appConfig ( @{$site->appConfigs} ) {
                 if( $oldSite->appConfig( $appConfig->appConfigId() )) {
+                    debugAndSuspend( 'Running upgrader for appconfig', $appConfig->appConfigId );
                     $ret &= $appConfig->runUpgrader();
                 } else {
+                    debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
                     $ret &= $appConfig->runInstaller();
                 }
             }
         } else {
             foreach my $appConfig ( @{$site->appConfigs} ) {
+                debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
                 $ret &= $appConfig->runInstaller();
             }
         }

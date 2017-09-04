@@ -46,6 +46,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $device        = undef;
     my $add           = 0; # default is replace
 
@@ -53,12 +54,13 @@ sub run {
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
+            'debug'       => \$debug,
             'add'         => \$add );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $add && @args == 0 ) || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || ( $add && @args == 0 ) || ( $verbose && $logConfigFile, $debug )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 

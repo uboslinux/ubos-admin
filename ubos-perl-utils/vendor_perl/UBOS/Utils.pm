@@ -206,7 +206,7 @@ sub myexec {
     my $outFile;
     my $errFile;
 
-    debug( 'Exec:', $cmd );
+    trace( 'Exec:', $cmd );
 
     $cmd = "( $cmd )"; # in case it is several commands
 
@@ -263,7 +263,7 @@ sub myexec {
 sub slurpFile {
     my $filename = shift;
 
-    debug( 'slurpFile(', $filename, ')' );
+    trace( 'slurpFile(', $filename, ')' );
 
     local $/;
     if( open( my $fh, '<', $filename )) {
@@ -305,13 +305,13 @@ sub saveFile {
     unless( defined( $mask )) {
         $mask = 0644;
     }
-    # more efficient if debug isn't on
+    # more efficient if trace isn't on
 
     my $ret;
     if( $< == 0 || ( $uid == $< && $gid == $( )) {
         # This is faster -- for root, or for creating one's own files
 
-        debug( sub { ( 'saveFile-as-root-or-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
+        trace( sub { ( 'saveFile-as-root-or-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
         unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
             error( "Could not write to file $filename:", $! );
             return 0;
@@ -330,7 +330,7 @@ sub saveFile {
     } else {
         # Write to a temp file, and them move it in place as root
 
-        debug( sub { ( 'saveFile-as-non-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
+        trace( sub { ( 'saveFile-as-non-owner(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' ) } );
         my $temp = File::Temp->new( UNLINK => 1 );
         print $temp $content;
         close $temp;
@@ -358,7 +358,7 @@ sub saveFile {
 sub deleteFile {
     my @files = @_;
 
-    debug( 'deleteFile(', @files, ')' );
+    trace( 'deleteFile(', @files, ')' );
 
     my $ret = 1;
     foreach my $f ( @files ) {
@@ -404,7 +404,7 @@ sub mkdir {
         return 0;
     }
 
-    debug( 'Creating directory', $filename );
+    trace( 'Creating directory', $filename );
 
     my $ret = CORE::mkdir $filename;
     unless( $ret ) {
@@ -459,7 +459,7 @@ sub mkdirDashP {
         }
         $soFar .= $component;
         unless( -d $soFar ) {
-            debug( 'Creating directory', $soFar );
+            trace( 'Creating directory', $soFar );
 
             my $ret = CORE::mkdir $soFar;
             unless( $ret ) {
@@ -489,7 +489,7 @@ sub symlink {
     my $uid     = getUid( shift );
     my $gid     = getGid( shift );
 
-    debug( 'Symlink', $oldfile, $newfile );
+    trace( 'Symlink', $oldfile, $newfile );
 
     my $ret = symlink $oldfile, $newfile;
     if( $ret ) {
@@ -509,7 +509,7 @@ sub symlink {
 sub rmdir {
     my @dirs = @_;
 
-    debug( 'Delete directories:', @dirs );
+    trace( 'Delete directories:', @dirs );
 
     my $ret = 1;
     foreach my $d ( @dirs ) {
@@ -537,7 +537,7 @@ sub deleteRecursively {
 
     my $ret = 1;
     if( @files ) {
-        debug( 'Recursively delete files:', @files );
+        trace( 'Recursively delete files:', @files );
 
         if( myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ))) {
             $ret = 0;
@@ -722,7 +722,7 @@ sub invokeCallbacks {
     my $method = shift;
     my @args   = @_;
 
-    debug( 'invokeCallbacks(', $dir, $method, @args, ')' );
+    trace( 'invokeCallbacks(', $dir, $method, @args, ')' );
 
     my @files            = <$dir/*>;
     my $content          = join( "\n", map { slurpFile( $_ ) } @files );

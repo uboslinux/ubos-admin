@@ -4,8 +4,8 @@ pkgrel=1
 pkgdesc="UBOS Perl utilities"
 arch=('any')
 url="http://ubos.net/"
-developer=$url
-maintainer=$url
+developer=${url}
+maintainer=${url}
 license=('GPL')
 depends=('perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'perl-log-journald')
 backup=(
@@ -14,22 +14,17 @@ backup=(
     'etc/ubos/log-default-v2.conf'
     'etc/ubos/log-system.conf'
 )
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
 options=('!strip')
 
 package() {
-    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/UBOS
-    for f in $startdir/vendor_perl/UBOS/*.pm; do
-        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/
+    for f in ${startdir}/vendor_perl/UBOS/*.pm; do
+        install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/
     done
 
     # (hopefully) temporary patch to Perl's Archive::Zip
-    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip
-    install $startdir/vendor_perl/Archive/Zip/Member.pm $pkgdir/usr/lib/perl5/vendor_perl/Archive/Zip/
+    install -D -m644 ${startdir}/vendor_perl/Archive/Zip/Member.pm -t ${pkgdir}${_vendor_perl}/Archive/Zip/
 
 # Config files
-    mkdir -p $pkgdir/etc/ubos
-    install -m644 $startdir/etc/ubos/log-default.conf $pkgdir/etc/ubos/
-    install -m644 $startdir/etc/ubos/log-default-v1.conf $pkgdir/etc/ubos/
-    install -m644 $startdir/etc/ubos/log-default-v2.conf $pkgdir/etc/ubos/
-    install -m644 $startdir/etc/ubos/log-system.conf $pkgdir/etc/ubos/
+    install -D -m644 ${startdir}/etc/ubos/log-*.conf -t ${pkgdir}/etc/ubos/
 }

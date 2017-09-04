@@ -44,6 +44,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my @siteIds       = ();
     my @hosts         = ();
     my $all           = 0;
@@ -53,12 +54,13 @@ sub run {
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
+            'debug'       => \$debug,
             'siteid=s'    => \@siteIds,
             'hostname=s'  => \@hosts,
             'all'         => \$all,
             'file=s'      => \$file );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || ( !@siteIds && !@hosts && !$all && !$file )
@@ -71,7 +73,7 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    debug( 'Looking for site(s)' );
+    trace( 'Looking for site(s)' );
 
     my $oldSites = {};
     if( @hosts ) {
@@ -129,26 +131,31 @@ sub run {
     UBOS::Host::preventInterruptions();
     my $ret = 1;
 
-    debug( 'Suspending site(s)' );
+    trace( 'Suspending site(s)' );
 
     my $suspendTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
+        debugAndSuspend( 'Suspend site', $oldSite->siteId );
         $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
     }
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    debug( 'Disabling site(s)' );
+    trace( 'Disabling site(s)' );
 
     my $disableTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
+        debugAndSuspend( 'Disable site', $oldSite->siteId );
         $ret &= $oldSite->disable( $disableTriggers ); # replace with "404 page"
     }
+    debugAndSuspend( 'Execute triggers', keys %$disableTriggers );
     UBOS::Host::executeTriggers( $disableTriggers );
 
     info( 'Undeploying' );
 
     my $undeployTriggers = {};
     foreach my $oldSite ( values %$oldSites ) {
+        debugAndSuspend( 'Undeploy site', $oldSite->siteId );
         $ret &= $oldSite->undeploy( $undeployTriggers );
 
         if( $oldSite->hasLetsEncryptTls()) {
@@ -156,6 +163,7 @@ sub run {
             $ret &= $oldSite->removeLetsEncryptCertificate();
         }
     }
+    debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
     UBOS::Host::executeTriggers( $undeployTriggers );
 
     unless( $ret ) {

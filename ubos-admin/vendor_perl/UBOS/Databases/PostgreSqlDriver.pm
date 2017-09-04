@@ -40,7 +40,7 @@ my $running = 0;
 # Ensure that postgresql is configured correctly and running
 sub ensureRunning {
 
-    debug( 'PostgreSqlDriver::ensureRunning', $running );
+    trace( 'PostgreSqlDriver::ensureRunning', $running );
     if( $running ) {
         return 1;
     }
@@ -48,7 +48,7 @@ sub ensureRunning {
     if( UBOS::Host::ensurePackages( 'postgresql' ) < 0 ) {
         warning( $@ );
     }
-    
+
     my $dataDir = '/var/lib/postgres/data';
 
     unless( -d $dataDir ) {
@@ -58,11 +58,13 @@ sub ensureRunning {
     $running = 1; # need to set this here, so executeCmdAsAdmin can be done
 
     if( UBOS::Utils::isDirEmpty( $dataDir )) {
+        debugAndSuspend( 'Init postgres database' );
         executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D \"$dataDir\"" );
 
         my $out;
         my $err;
 
+        debugAndSuspend( 'Check that postgresql.service is running' );
         UBOS::Utils::myexec( 'systemctl is-enabled postgresql > /dev/null || systemctl enable postgresql', undef, \$out, \$err );
         UBOS::Utils::myexec( 'systemctl is-active  postgresql > /dev/null || systemctl start  postgresql', undef, \$out, \$err );
 
@@ -80,10 +82,10 @@ sub ensureRunning {
 sub executeCmdAsAdmin {
     my $cmd   = shift;
     my $stdin = shift;
-    
+
     ensureRunning();
 
-    debug( 'PostgreSqlDriver::executeCmdAsAdmin', $cmd, $stdin );
+    trace( 'PostgreSqlDriver::executeCmdAsAdmin', $cmd, $stdin );
 
     my $out;
     my $err;
@@ -103,10 +105,10 @@ sub executeCmdPipeAsAdmin {
     my $cmd        = shift;
     my $stdinFile  = shift;
     my $stdoutFile = shift;
-    
+
     ensureRunning();
 
-    debug( 'PostgreSqlDriver::executeCmdPipeAsAdmin', $cmd, $stdinFile, $stdoutFile );
+    trace( 'PostgreSqlDriver::executeCmdPipeAsAdmin', $cmd, $stdinFile, $stdoutFile );
 
     my $fullCommand = "su - postgres -c '$cmd'";
     if( $stdinFile ) {
@@ -150,7 +152,7 @@ sub new {
 # return: default port
 sub defaultPort {
     my $self = shift;
-    
+
     return 5432;
 }
 
@@ -174,7 +176,7 @@ sub provisionLocalDatabase {
     my $charset             = shift || 'UNICODE';
     my $collate             = shift;
 
-    debug( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
+    trace( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
     my $ret = 1;
     if( $collate ) {
@@ -201,7 +203,7 @@ sub unprovisionLocalDatabase {
     my $dbName              = shift;
     my $dbUserLid           = shift;
 
-    debug( 'PostgreSqlDriver::unprovisionLocalDatabase', $dbName, $dbUserLid );
+    trace( 'PostgreSqlDriver::unprovisionLocalDatabase', $dbName, $dbUserLid );
 
     my $ret = executeCmdAsAdmin( "dropdb \"$dbName\"" );
 
@@ -222,7 +224,7 @@ sub exportLocalDatabase {
     my $dbName   = shift;
     my $fileName = shift;
 
-    debug( 'PostgreSqlDriver::exportLocalDatabase', $dbName );
+    trace( 'PostgreSqlDriver::exportLocalDatabase', $dbName );
 
     # --clean will drop the schema, which means we lose GRANTs on it
     my $ret = executeCmdPipeAsAdmin( "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"", undef, $fileName );
@@ -246,7 +248,7 @@ sub importLocalDatabase {
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
 
-    debug( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
+    trace( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
 
     my $ret = executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef );
 
@@ -274,7 +276,7 @@ sub runBulkSql {
     my $dbUserLidCredType   = shift;
     my $sql                 = shift;
 
-    debug( sub {
+    trace( sub {
         ( 'PostgreSqlDriver::runBulkSql', $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, 'SQL (' . length( $sql ) . ') bytes' ) } );
 
     # from the command-line; that way we don't have to deal with messy statement splitting
@@ -302,7 +304,7 @@ sub runBulkSqlAsAdmin {
     my $sql                 = shift;
     my $delimiter           = shift;
 
-    debug( sub {
+    trace( sub {
         ( 'PostgreSqlDriver::runBulkSqlAsAdmin', $dbName, $dbHost, $dbPort, 'SQL (' . length( $sql ) . ') bytes' ) } );
 
     # from the command-line; that way we don't have to deal with messy statement splitting

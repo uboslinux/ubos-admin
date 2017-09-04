@@ -71,7 +71,7 @@ sub deployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'Directory::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+    trace( 'Directory::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
 
     my $dirpermissions = $config->replaceVariables( $self->{json}->{dirpermissions} || $self->{json}->{permissions} ); # upward compatible
     my $uname          = $config->replaceVariables( $self->{json}->{uname} );
@@ -123,7 +123,7 @@ sub undeployOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'Directory::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
+    trace( 'Directory::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, @$names );
 
     foreach my $name ( reverse @$names ) {
         my $fullName = $name;
@@ -162,7 +162,7 @@ sub backup {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'Directory::backup', $bucket, @$names );
+    trace( 'Directory::backup', $bucket, @$names );
 
     if( @$names != 1 ) {
         error( 'Directory::backup: cannot backup item with more than one name:', @$names );
@@ -195,7 +195,7 @@ sub restore {
         $names = [ $self->{json}->{name} ];
     }
 
-    debug( 'Directory::restore', $bucket, $names );
+    trace( 'Directory::restore', $bucket, $names );
 
     if( @$names != 1 ) {
         error( 'Directory::restore: cannot restore item with more than one name:', @$names );

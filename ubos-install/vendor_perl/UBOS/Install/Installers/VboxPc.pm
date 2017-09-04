@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for a 64-bit PC emulated in VirtualBox.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -139,7 +139,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 

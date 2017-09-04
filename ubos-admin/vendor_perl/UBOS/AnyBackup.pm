@@ -40,7 +40,7 @@ sub readArchive {
     my $self    = shift;
     my $archive = shift;
 
-    debug( 'AnyBackup::readArchive', $archive );
+    trace( 'AnyBackup::readArchive', $archive );
 
     my $ret = undef;
     foreach my $backupType ( sort values %$backupTypes ) {
@@ -62,7 +62,6 @@ sub readArchive {
     return $ret;
 }
 
-
 ##
 # Return an error message if the provided file cannot be parsed by any
 # known Backup parser.
@@ -82,7 +81,5 @@ sub cannotParseArchiveErrorMessage {
 
     return $ret;
 }
-
-
 
 1;

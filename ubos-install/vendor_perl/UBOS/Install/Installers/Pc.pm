@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for a PC.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -232,7 +232,7 @@ sub createDiskLayout {
                     $bootloaderdevice,
                     $devicetable );
         }
-            
+
     } else {
         # Option 1 or 2
         if( @$argvp ) {
@@ -306,7 +306,7 @@ sub createDiskLayout {
             $ret = undef;
         }
     }
-    
+
     return $ret;
 }
 
@@ -331,7 +331,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 

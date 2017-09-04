@@ -91,7 +91,7 @@ if( $checkSignatures ne 'never' && $checkSignatures ne 'optional' && $checkSigna
 
 # Just invoking help doesn't trigger this check
 if ( $< != 0 ) {
-    fatal( "This command must be run as root" ); 
+    fatal( "This command must be run as root" );
 }
 
 if( $target && ! -d $target ) {
@@ -170,7 +170,7 @@ if( @addKernelParameter ) {
 }
 $installer->setCheckSignatures( $checkSignatures );
 
-debug( 'Using installer', ref( $installer ));
+trace( 'Using installer', ref( $installer ));
 
 my $diskLayout = $installer->createDiskLayout( \@ARGV );
 unless( $diskLayout ) {
@@ -250,7 +250,7 @@ END
         WARNING: THIS WILL FORMAT <device>. ALL YOUR DATA ON IT WILL BE LOST.
 END
     }
-        
+
     print "    $0 [ --bootpartition <part> ][ --varpartition <part> ][ --bootloaderdevice <dev>] --rootpartition <part>\n";
     if( $long ) {
         print <<END;

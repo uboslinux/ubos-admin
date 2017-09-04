@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS on an SD Card for a Beagle Bone Black.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -104,7 +104,7 @@ sub createDiskLayout {
 
     # Option 1: a single image file
     # ubos-install ... image.img
-    
+
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
@@ -231,7 +231,7 @@ sub createDiskLayout {
                         }
                     } );
         }
-            
+
     } else {
         # Option 1 or 2
         if( @$argvp == 1 ) {
@@ -290,7 +290,7 @@ sub createDiskLayout {
             $ret = undef;
         }
     }
-    
+
     return $ret;
 }
 
@@ -317,7 +317,7 @@ sub installBootLoader {
         }
     }
 
-    # Also need to append kernel arguments 
+    # Also need to append kernel arguments
     my $uEnv = UBOS::Utils::slurpFile( "$target/bootpart/uEnv.txt" );
     $uEnv .= <<'TXT';
 mmcargs=setenv bootargs console=${console} ${optargs} root=/dev/mmcblk0p3 rootfstype=btrfs
@@ -338,7 +338,7 @@ sub saveOther {
     # Use hardware random generator by default
 
     UBOS::Utils::saveFile( "$target/etc/conf.d/rngd", <<CONTENT );
-# Changed for UBOS 
+# Changed for UBOS
 RNGD_OPTS="-o /dev/random -r /dev/hwrng"
 CONTENT
 
@@ -353,7 +353,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 

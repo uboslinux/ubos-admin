@@ -91,7 +91,7 @@ sub deployOrCheck {
 
     my $roleName = $self->name();
 
-    debug( 'apache2::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+    trace( 'apache2::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
@@ -126,14 +126,14 @@ sub setupSiteOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'apache2::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
+    trace( 'apache2::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
     my $siteDocumentDir     = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
     my $siteTorDir          = $site->config->getResolve( 'site.apache2.sitetordir' );
     my $siteTorFragmentFile = $site->config->getResolve( 'site.apache2.sitetorfragmentfile' );
 
     if( $doIt ) {
-        debug( 'apache2::_setupSite', $self->name(), $site->siteId );
+        trace( 'apache2::_setupSite', $self->name(), $site->siteId );
 
         unless( -d $siteDocumentDir ) {
             UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
@@ -148,7 +148,7 @@ sub setupSiteOrCheck {
         my $appConfigFilesDir = "$appConfigsDir/$siteId";
         my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
 
-        debug( 'apache2::setupSite', $siteId );
+        trace( 'apache2::setupSite', $siteId );
 
         unless( -d $siteWellKnownDir ) {
             UBOS::Utils::mkdir( $siteWellKnownDir );
@@ -210,7 +210,7 @@ sub setupPlaceholderSite {
     my $placeholderName = shift;
     my $triggers        = shift;
 
-    debug( 'apache2::setupPlaceholderSite', $self->name(), $site->siteId );
+    trace( 'apache2::setupPlaceholderSite', $self->name(), $site->siteId );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -261,7 +261,7 @@ sub resumeSite {
     my $site     = shift;
     my $triggers = shift;
 
-    debug( 'apache2::resumeSite', $self->name(), $site->siteId );
+    trace( 'apache2::resumeSite', $self->name(), $site->siteId );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -461,7 +461,7 @@ sub removeSite {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
+    trace( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
 
     my $siteDocumentDir     = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
     my $siteTorDir          = $site->config->getResolve( 'site.apache2.sitetordir' );
@@ -474,7 +474,7 @@ sub removeSite {
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
     my $sslDir            = $site->config->getResolve( 'apache2.ssldir' );
 
-    debug( 'apache2::removeSite', $siteId, $doIt );
+    trace( 'apache2::removeSite', $siteId, $doIt );
 
     if( $doIt ) {
         UBOS::Utils::deleteFile( $siteFile );
@@ -563,7 +563,7 @@ sub obtainLetsEncryptCertificate {
             \$err );
 
     if( $ret ) {
-        debug( 'Letsencrypt said:', $err ); # strange formatting in stdout, let's not use this
+        trace( 'Letsencrypt said:', $err ); # strange formatting in stdout, let's not use this
         warning( "Obtaining certificate from letsencrypt failed. proceeding without certificate or TLS/SSL.\n"
                  . "Make sure you are not running this behind a firewall, and that DNS is set up properly." );
         return 0;
@@ -590,7 +590,7 @@ sub removeLetsEncryptCertificate {
             \$out );
 
     if( $ret ) {
-        debug( 'Letsencrypt said:', $out );
+        trace( 'Letsencrypt said:', $out );
         return 0;
     }
     return 1;

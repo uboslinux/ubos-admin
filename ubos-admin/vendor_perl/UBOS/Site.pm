@@ -101,7 +101,8 @@ sub siteJsonWithoutTls {
 }
 
 ##
-# Helper method to return subsets of the Site JSON
+# Helper method to return subsets of the Site JSON. Also, do not return
+# values for customization points marked as private.
 # $noTls: if 1, do not return TLS info
 # $noAdminCredential: if 1, do not return site admin credential
 sub _siteJsonWithout {
@@ -126,7 +127,6 @@ sub _siteJsonWithout {
         $ret->{tls} = $json->{tls}; # by reference is fine
     }
 
-    # leave out ssl/tls section entirely
     if( exists( $json->{wellknown} )) {
         $ret->{wellknown} = $json->{wellknown}; # by reference is fine
     }
@@ -405,7 +405,7 @@ sub robotsTxt {
 
     if( exists( $json->{wellknown} )) {
         if( exists( $json->{wellknown}->{robotstxt} )) {
-            debug( 'Have robots.txt in site json for', $self->siteId );
+            trace( 'Have robots.txt in site json for', $self->siteId );
             return $json->{wellknown}->{robotstxt};
         }
         if( exists( $json->{wellknown}->{robotstxtprefix} )) {
@@ -427,7 +427,7 @@ sub robotsTxt {
         }
     }
     if( $robotsTxt ) {
-        debug( 'Constructed robots.txt for site', $self->siteId );
+        trace( 'Constructed robots.txt for site', $self->siteId );
         return $robotsTxt;
     } else {
         return undef;
@@ -691,7 +691,7 @@ sub deploy {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site', $self->siteId, '->deploy' );
+    trace( 'Site', $self->siteId, '->deploy' );
 
     return $self->_deployOrCheck( 1, $triggers );
 }
@@ -708,7 +708,7 @@ sub _deployOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'Site::_deployOrCheck', $doIt, $self->siteId );
+    trace( 'Site::_deployOrCheck', $doIt, $self->siteId );
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
@@ -779,7 +779,7 @@ sub _undeployOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'Site::_undeployOrCheck', $doIt, $self->siteId );
+    trace( 'Site::_undeployOrCheck', $doIt, $self->siteId );
 
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
@@ -790,7 +790,7 @@ sub _undeployOrCheck {
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
             if( $doIt ) {
-                debug( '_undeployOrCheck', $self->siteId, $role->name );
+                trace( '_undeployOrCheck', $self->siteId, $role->name );
             }
             $ret &= $role->removeSite( $self, $doIt, $triggers );
         }
@@ -811,7 +811,7 @@ sub setupPlaceholder {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site::setupPlaceholder', $self->siteId );
+    trace( 'Site::setupPlaceholder', $self->siteId );
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
@@ -831,7 +831,7 @@ sub suspend {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site::suspend', $self->siteId );
+    trace( 'Site::suspend', $self->siteId );
 
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
@@ -855,7 +855,7 @@ sub resume {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site::resume', $self->siteId );
+    trace( 'Site::resume', $self->siteId );
 
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
@@ -878,7 +878,7 @@ sub disable {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'Site::disable', $self->siteId );
+    trace( 'Site::disable', $self->siteId );
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
@@ -900,7 +900,7 @@ sub addDeployAppConfiguration {
     my $appConfig = shift;
     my $triggers  = shift;
 
-    debug( 'Site::addDeployAppConfiguration', $appConfig->appConfigId, $self->siteId );
+    trace( 'Site::addDeployAppConfiguration', $appConfig->appConfigId, $self->siteId );
 
     push @{$self->appConfigs},           $appConfig;
     push @{$self->{json}->{appconfigs}}, $appConfig->appConfigurationJson;

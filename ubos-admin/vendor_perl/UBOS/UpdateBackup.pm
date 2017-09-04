@@ -60,7 +60,7 @@ MSG
 # Constructor.
 sub new {
     my $self = shift;
-    
+
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
@@ -76,7 +76,7 @@ sub create {
     my $self  = shift;
     my $sites = shift;
 
-    debug( 'UpdateBackup::create', keys %$sites );
+    trace( 'UpdateBackup::create', keys %$sites );
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{sites}      = $sites;
@@ -111,7 +111,7 @@ sub create {
                         my $appConfigPathInBackup = "$updateBackupDir/$appConfigId/$packageName/$roleName";
 
                         UBOS::Utils::mkdir( $appConfigPathInBackup, 0700 );
-                        
+
                         my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                         my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
@@ -149,7 +149,7 @@ sub create {
 sub read {
     my $self = shift;
 
-    debug( 'UpdateBackup::read' );
+    trace( 'UpdateBackup::read' );
 
     $self->{sites} = {};
 
@@ -183,7 +183,7 @@ sub restoreAppConfiguration {
     my $ret                 = 1;
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
 
-    debug( 'UpdateBackup::restoreAppConfiguration', $appConfigIdInBackup );
+    trace( 'UpdateBackup::restoreAppConfiguration', $appConfigIdInBackup );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
     foreach my $installable ( $appConfigInBackup->installables ) {
@@ -233,7 +233,7 @@ sub restoreAppConfiguration {
 sub delete {
     my $self = shift;
 
-    debug( 'UpdateBackup::delete' );
+    trace( 'UpdateBackup::delete' );
 
     UBOS::Utils::deleteRecursively( <$updateBackupDir/*> );
 }

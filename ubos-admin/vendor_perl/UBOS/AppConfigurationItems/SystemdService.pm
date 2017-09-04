@@ -67,7 +67,7 @@ sub suspend {
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
-    debug( 'SystemdService::suspend', $defaultFromDir, $defaultToDir, $name );
+    trace( 'SystemdService::suspend', $defaultFromDir, $defaultToDir, $name );
 
     $name = $config->replaceVariables( $name );
 
@@ -101,7 +101,7 @@ sub resume {
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
-    debug( 'SystemdService::resume', $defaultFromDir, $defaultToDir, $name );
+    trace( 'SystemdService::resume', $defaultFromDir, $defaultToDir, $name );
 
     $name = $config->replaceVariables( $name );
 

@@ -46,6 +46,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $target        = undef;
     my $device        = undef;
 
@@ -53,9 +54,10 @@ sub run {
             \@args,
             'target=s'    => \$target,
             'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile );
+            'logConfig=s' => \$logConfigFile,
+            'debug'       => \$debug )
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args > 1 || ( @args && $target ) || ( $verbose && $logConfigFile )) {
@@ -72,30 +74,35 @@ sub run {
     } else {
         if( @args ) {
             $device = shift @args;
+            debugAndSuspend( 'Checking configuration device', $device );
             $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
             unless( $device ) {
                 fatal( $@ );
             }
 
         } else {
+            debugAndSuspend( 'Guessing configuration device' );
             $device = UBOS::ConfigurationManager::guessConfigurationDevice();
             unless( $device ) {
                 fatal( 'Cannot determine UBOS staff device' );
             }
         }
-        debug( 'Configuration device:', $device );
+        trace( 'Configuration device:', $device );
 
         my $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
-           $target     = $targetFile->dirname;
+        $target        = $targetFile->dirname;
 
+        debugAndSuspend( 'Mounting configuration device', $device, 'to', $target );
         if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
             ++$errors;
         }
     }
 
+    debugAndSuspend( 'Loading from mounted configuration device at', $target );
     $errors += UBOS::ConfigurationManager::loadCurrentConfiguration( $target );
 
     if( $device ) {
+        debugAndSuspend( 'Unmounting configuration device' );
         if( UBOS::Utils::myexec( "umount '$target'" )) {
             ++$errors;
         }

@@ -358,7 +358,7 @@ sub checkManifest {
     my $type                 = shift;
     my $skipFilesystemChecks = shift;
 
-    debug( 'Checking manifest for', $self->packageName );
+    trace( 'Checking manifest for', $self->packageName );
 
     $self->checkManifestStructure( $skipFilesystemChecks );
 

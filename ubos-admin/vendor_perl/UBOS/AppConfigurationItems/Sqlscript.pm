@@ -69,7 +69,7 @@ sub deployOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    debug( 'Sqlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
+    trace( 'Sqlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
 
     return $self->_runIt( $doIt, $defaultFromDir, $defaultToDir, $config );
 }
@@ -90,7 +90,7 @@ sub undeployOrCheck {
 
     # do nothing
 
-    debug( 'Sqlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
+    trace( 'Sqlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
 
     return 1;
 }
@@ -120,7 +120,7 @@ sub _runIt {
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
-    
+
     my $ret              = 1;
     my $sourceOrTemplate = $self->{json}->{template};
     unless( $sourceOrTemplate ) {

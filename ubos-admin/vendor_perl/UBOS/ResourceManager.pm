@@ -63,7 +63,7 @@ sub findProvisionedDatabaseFor {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( 'ResourceManager::findProvisionedDatabaseFor', $dbType, $appConfigId, $installableId, $itemName );
+    trace( 'ResourceManager::findProvisionedDatabaseFor', $dbType, $appConfigId, $installableId, $itemName );
 
     _readCachesIfNeeded();
 
@@ -96,7 +96,7 @@ sub provisionLocalDatabase {
     my $charset       = shift;
     my $collate       = shift;
 
-    debug( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges, $charset, $collate );
+    trace( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges, $charset, $collate );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, 'localhost' );
     unless( $dbDriver ) {
@@ -170,7 +170,7 @@ sub unprovisionLocalDatabase {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( 'ResourceManager::unprovisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName );
+    trace( 'ResourceManager::unprovisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName );
 
     _readCachesIfNeeded();
 
@@ -220,7 +220,7 @@ sub findProvisionedPortFor {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( 'ResourceManager::findProvisionedPortFor', $portType, $appConfigId, $installableId, $itemName );
+    trace( 'ResourceManager::findProvisionedPortFor', $portType, $appConfigId, $installableId, $itemName );
 
     _readCachesIfNeeded();
 
@@ -247,7 +247,7 @@ sub provisionPort {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( 'ResourceManager::provisionPort', $portType, $appConfigId, $installableId, $itemName );
+    trace( 'ResourceManager::provisionPort', $portType, $appConfigId, $installableId, $itemName );
 
     _readCachesIfNeeded();
 
@@ -285,7 +285,7 @@ sub unprovisionPort {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( 'ResourceManager::unprovisionPort', $portType, $appConfigId, $installableId, $itemName );
+    trace( 'ResourceManager::unprovisionPort', $portType, $appConfigId, $installableId, $itemName );
 
     _readCachesIfNeeded();
 
@@ -312,7 +312,7 @@ sub _constructKey {
     my $ret = $appConfigId . '_' . $installableId . '_' . $itemType . '_' . $itemName;
     # Note: for historical reasons, this is a different sequence than the sequence of arguments.
 
-    debug( 'ResourceManager::_constructKey returns', $ret );
+    trace( 'ResourceManager::_constructKey returns', $ret );
 
     return $ret;
 }
@@ -325,7 +325,7 @@ sub _readCachesIfNeeded {
         return 0;
     }
 
-    debug( 'ResourceManager::_readCachesIfNeeded' );
+    trace( 'ResourceManager::_readCachesIfNeeded' );
 
     $resourcesCache = {};
     if( opendir( DIR, $RESOURCES_DIR )) {
@@ -369,7 +369,7 @@ sub _updateResourcesCacheEntry {
     my $key  = shift;
     my $json = shift;
 
-    debug( 'ResourceManager::_updateResourcesCacheEntry', $key );
+    trace( 'ResourceManager::_updateResourcesCacheEntry', $key );
 
     my $file = $RESOURCES_DIR . '/' . $key . '.json';
     UBOS::Utils::writeJsonToFile( $file, $json, 0600 );
@@ -383,7 +383,7 @@ sub _updateResourcesCacheEntry {
 sub _deleteResourcesCacheEntry {
     my $key = shift;
 
-    debug( 'ResourceManager::_deleteResourcesCacheEntry', $key );
+    trace( 'ResourceManager::_deleteResourcesCacheEntry', $key );
 
     my $file = $RESOURCES_DIR . '/' . $key . '.json';
     UBOS::Utils::deleteFile( $file );
@@ -398,7 +398,7 @@ sub _deleteResourcesCacheEntry {
 sub _findUnusedPort {
     my $portType = shift;
 
-    debug( 'ResourceManager::_findUnusedPort', $portType );
+    trace( 'ResourceManager::_findUnusedPort', $portType );
 
     my $ret = 5001;
 

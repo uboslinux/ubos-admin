@@ -3,7 +3,7 @@
 # Logging facilities.
 #
 # This file is part of ubos-perl-utils.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-perl-utils is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,8 +29,9 @@ use Exporter qw( import );
 use Log::Log4perl qw( :easy );
 use Log::Log4perl::Level;
 
-our @EXPORT = qw( debug info notice warning error fatal );
-my $log;
+our @EXPORT = qw( debugAndSuspend trace info notice warning error fatal );
+my $LOG;
+my $DEBUG;
 
 # Initialize with something in case there's an error before logging is initialized
 BEGIN {
@@ -46,7 +47,7 @@ log4perl.appender.CONSOLE.layout=PatternLayout
 log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
 );
         Log::Log4perl->init( \$config );
-        $log = Log::Log4perl->get_logger( $0);
+        $LOG = Log::Log4perl->get_logger( $0 );
     }
 }
 
@@ -57,6 +58,7 @@ sub initialize {
     my $scriptName  = shift || $moduleName;
     my $verbosity   = shift || 0;
     my $logConfFile = shift;
+    my $debug       = shift;
 
     if( $verbosity ) {
         if( $logConfFile ) {
@@ -75,25 +77,27 @@ sub initialize {
     Log::Log4perl->init( $logConfFile );
 
     Log::Log4perl::MDC->put( 'SYSLOG_IDENTIFIER', $moduleName );
-    $log = Log::Log4perl->get_logger( $scriptName );
+    $LOG = Log::Log4perl->get_logger( $scriptName );
+
+    $DEBUG = $debug;
 }
 
 ##
-# Emit a debug message.
+# Emit a trace message.
 # @msg: the message or message components
-sub debug {
+sub trace {
     my @msg = @_;
 
-    if( $log->is_debug()) {
-        $log->debug( _constructMsg( @msg ));
+    if( $LOG->is_debug()) {
+        $LOG->trace( _constructMsg( @msg ));
     }
 }
 
 ##
-# Is debug logging on?
+# Is trace logging on?
 # return: 1 or 0
-sub isDebugActive {
-    return $log->is_debug();
+sub isTraceActive {
+    return $LOG->is_debug();
 }
 
 ##
@@ -102,8 +106,8 @@ sub isDebugActive {
 sub info {
     my @msg = @_;
 
-    if( $log->is_info()) {
-        $log->info( _constructMsg( @msg ));
+    if( $LOG->is_info()) {
+        $LOG->info( _constructMsg( @msg ));
     }
 }
 
@@ -111,7 +115,7 @@ sub info {
 # Is info logging on?
 # return: 1 or 0
 sub isInfoActive {
-    return $log->is_info();
+    return $LOG->is_info();
 }
 
 ##
@@ -120,8 +124,30 @@ sub isInfoActive {
 sub notice {
     my @msg = @_;
 
-    if( $log->is_notice()) {
-        $log->notice( _constructMsg( @msg ));
+    if( $LOG->is_notice()) {
+        $LOG->notice( _constructMsg( @msg ));
+    }
+}
+
+##
+# Is debug logging and suspending on?
+# return: 1 or 0
+sub isDebugAndSuspendActive {
+    return $DEBUG;
+}
+
+##
+# Emit a debug message, and then wait for keyboard input to continue.
+# @msg: the message or message components; may be empty
+sub debugAndSuspend {
+    my @msg = @_;
+
+    if( $DEBUG ) {
+        if( @msg ) {
+            print STDERR _constructMsg( @msg ) ."\n";
+        }
+        print STDERR "** Hit return to continue.\n";
+        getc();
     }
 }
 
@@ -129,7 +155,7 @@ sub notice {
 # Is notice logging on?
 # return: 1 or 0
 sub isNoticeActive {
-    return $log->is_notice();
+    return $LOG->is_notice();
 }
 
 ##
@@ -139,8 +165,8 @@ sub isNoticeActive {
 sub warning {
     my @msg = @_;
 
-    if( $log->is_warn()) {
-        $log->warn( _constructMsg( @msg ));
+    if( $LOG->is_warn()) {
+        $LOG->warn( _constructMsg( @msg ));
     }
 }
 
@@ -148,7 +174,7 @@ sub warning {
 # Is warning logging on?
 # return: 1 or 0
 sub isWarningActive {
-    return $log->is_warn();
+    return $LOG->is_warn();
 }
 
 
@@ -158,8 +184,8 @@ sub isWarningActive {
 sub error {
     my @msg = @_;
 
-    if( $log->is_error()) {
-        $log->error( _constructMsg( @msg ));
+    if( $LOG->is_error()) {
+        $LOG->error( _constructMsg( @msg ));
     }
 }
 
@@ -167,7 +193,7 @@ sub error {
 # Is error logging on?
 # return: 1 or 0
 sub isErrorActive {
-    return $log->is_error();
+    return $LOG->is_error();
 }
 
 ##
@@ -178,12 +204,12 @@ sub fatal {
 
     if( @msg ) {
         # print stack trace when debug is on
-        if( $log->is_debug()) {
+        if( $LOG->is_debug()) {
             use Carp qw( confess );
             confess( _constructMsg( @msg ));
 
         } elsif( $log->is_error()) {
-            $log->error( _constructMsg( @msg ));
+            $LOG->error( _constructMsg( @msg ));
         }
     }
     exit 1;
@@ -193,7 +219,7 @@ sub fatal {
 # Is fatal logging on?
 # return: 1 or 0
 sub isFatalActive {
-    return $log->is_error();
+    return $LOG->is_error();
 }
 
 ##

@@ -42,7 +42,7 @@ my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 # Ensure that the mysql installation on this host is present and has a root password.
 sub ensureRunning {
 
-    debug( 'MySqlDriver::ensureRunning', $running );
+    trace( 'MySqlDriver::ensureRunning', $running );
     if( $running ) {
         return 1;
     }
@@ -53,6 +53,7 @@ sub ensureRunning {
 
     my $out;
     my $err;
+    debugAndSuspend( 'Check that ubos-mysqld.service is running' );
     UBOS::Utils::myexec( 'systemctl is-enabled ubos-mysqld > /dev/null || systemctl enable ubos-mysqld', undef, \$out, \$err );
     UBOS::Utils::myexec( 'systemctl is-active  ubos-mysqld > /dev/null || systemctl start  ubos-mysqld', undef, \$out, \$err );
 
@@ -64,6 +65,7 @@ sub ensureRunning {
             # can connect to database without a password
             my $password = UBOS::Utils::randomPassword( 16 );
 
+            debugAndSuspend( 'Save', $rootConfiguration );
             my $cnf = <<END;
 [client]
 host     = localhost
@@ -73,6 +75,7 @@ socket   = /run/mysqld/mysqld.sock
 END
             UBOS::Utils::saveFile( $rootConfiguration, $cnf, 0600 );
 
+            debugAndSuspend( 'Set root password' );
             my $sth = $dbh->prepare( <<SQL );
 UPDATE mysql.user SET Password=PASSWORD( '$password' ) WHERE User='root';
 SQL
@@ -110,7 +113,7 @@ sub dbConnect {
     $connectString .= "host=$host;";
     $connectString .= "port=$port;";
 
-    debug( 'MySqlDriver::dbConnect as user', $user, 'with', $connectString );
+    trace( 'MySqlDriver::dbConnect as user', $user, 'with', $connectString );
 
     my $dbh = DBI->connect( "DBI:mysql:${connectString}",
                             $user,
@@ -147,7 +150,7 @@ sub sqlPrepare {
     my $dbh  = shift;
     my $sql  = shift;
 
-    debug( sub {
+    trace( sub {
         ( 'Preparing SQL:', ( length( $sql ) > 400 ? ( substr( $sql, 0, 400 ) . '...(truncated)' ) : $sql ))
     } );
 
@@ -164,7 +167,7 @@ sub sqlExecute {
     my $sth  = shift;
     my @args = @_;
 
-    debug( 'MySqlDriver::sqlExecute ', @args );
+    trace( 'MySqlDriver::sqlExecute ', @args );
 
     $sth->execute( @args );
     return $sth;
@@ -253,7 +256,7 @@ sub new {
 # return: default port
 sub defaultPort {
     my $self = shift;
-    
+
     return 3306;
 }
 
@@ -277,7 +280,7 @@ sub provisionLocalDatabase {
     my $charset             = shift || 'utf8';
     my $collate             = shift;
 
-    debug( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
+    trace( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
     my $dbh = dbConnectAsRoot( undef );
 
@@ -321,7 +324,7 @@ sub unprovisionLocalDatabase {
     my $dbName              = shift;
     my $dbUserLid           = shift;
 
-    debug( 'MySqlDriver::unprovisionLocalDatabase', $dbName, $dbUserLid );
+    trace( 'MySqlDriver::unprovisionLocalDatabase', $dbName, $dbUserLid );
 
     my $dbh = dbConnectAsRoot( undef );
 
@@ -350,7 +353,7 @@ sub exportLocalDatabase {
     my $dbName   = shift;
     my $fileName = shift;
 
-    debug( 'MySqlDriver::exportLocalDatabase', $dbName );
+    trace( 'MySqlDriver::exportLocalDatabase', $dbName );
 
     my( $rootUser, $rootPass ) = findRootUserPass();
     unless( $rootUser ) {
@@ -379,8 +382,8 @@ sub importLocalDatabase {
     my $dbUserLid           = shift;
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
-    
-    debug( 'MySqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
+
+    trace( 'MySqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
 
     my( $rootUser, $rootPass ) = findRootUserPass();
 
@@ -412,7 +415,7 @@ sub runBulkSql {
     my $sql                 = shift;
     my $delimiter           = shift;
 
-    debug( sub {
+    trace( sub {
         ( 'MySqlDriver::runBulkSql', $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, 'SQL (' . length( $sql ) . ') bytes', $delimiter ) } );
 
     # from the command-line; that way we don't have to deal with messy statement splitting

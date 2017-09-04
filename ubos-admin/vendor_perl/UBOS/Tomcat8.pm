@@ -35,7 +35,7 @@ my $running = 0;
 # Ensure that Tomcat8 is running.
 sub ensureRunning {
 
-    debug( 'Tomcat8::ensureRunning' );
+    trace( 'Tomcat8::ensureRunning' );
 
     if( $running ) {
         return 1;
@@ -47,6 +47,7 @@ sub ensureRunning {
 
     my $out;
     my $err;
+    debugAndSuspend( 'Check that tomcat8.service is running' );
     UBOS::Utils::myexec( 'systemctl enable tomcat8',  undef, \$out, \$err );
     UBOS::Utils::myexec( 'systemctl restart tomcat8', undef, \$out, \$err );
 
@@ -60,6 +61,7 @@ sub ensureRunning {
 sub reload {
     ensureRunning();
 
+    debugAndSuspend( 'Reload or restart tomcat8' );
     UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat8' );
 
     1;
@@ -70,6 +72,7 @@ sub reload {
 sub restart {
     ensureRunning();
 
+    debugAndSuspend( 'Reload or restart tomcat8' );
     UBOS::Utils::myexec( 'systemctl reload-or-restart tomcat8' );
 
     1;
@@ -80,7 +83,7 @@ sub restart {
 # $hostsSection: the section describing the Tomcat virtual hosts
 sub updateServerXmlFile {
     my $hostsSection = shift;
-    
+
     ensureRunning();
 
     my $content = UBOS::Utils::slurpFile( $ourServerXmlTemplate );

@@ -396,7 +396,7 @@ sub deployOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'AppConfiguration::deployOrCheck', $doIt, $self->appConfigId );
+    trace( 'AppConfiguration::deployOrCheck', $doIt, $self->appConfigId );
 
     $self->_initialize();
 
@@ -463,7 +463,7 @@ sub undeployOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'AppConfiguration::undeployOrCheck', $doIt, $self->appConfigId );
+    trace( 'AppConfiguration::undeployOrCheck', $doIt, $self->appConfigId );
 
     $self->_initialize();
 
@@ -505,7 +505,7 @@ sub suspend {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'AppConfiguration::suspend', $self->appConfigId );
+    trace( 'AppConfiguration::suspend', $self->appConfigId );
 
     $self->_initialize();
 
@@ -542,7 +542,7 @@ sub resume {
     my $self     = shift;
     my $triggers = shift;
 
-    debug( 'AppConfiguration::resume', $self->appConfigId );
+    trace( 'AppConfiguration::resume', $self->appConfigId );
 
     $self->_initialize();
 
@@ -600,7 +600,7 @@ sub _runPostDeploy {
     my $jsonSection = shift;
     my $methodName  = shift;
 
-    debug( 'AppConfiguration', $self->{json}->{appconfigid}, '->_runPostDeploy', $methodName );
+    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->_runPostDeploy', $methodName );
 
     unless( $self->{site} ) {
         fatal( 'Cannot _runPostDeploy AppConfiguration without site' );
@@ -632,12 +632,21 @@ sub _runPostDeploy {
                 my $codeDir = $config->getResolve( 'package.codedir' );
                 my $dir     = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
+                my $itemCount = 0;
                 foreach my $itemJson ( @$itemsJson ) {
                     my $item = $role->instantiateAppConfigurationItem( $itemJson, $self, $installable );
 
                     if( $item ) {
+                        debugAndSuspend(
+                                'Run post-deploy script', $itemCount,
+                                'method',                 $methodName,
+                                'in',                     $jsonSection,
+                                'with role',              $role,
+                                'of installable',         $installable,
+                                'at appconfig',           $appConfigId );
                         $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $config );
                     }
+                    ++$itemCount;
                 }
             }
         }

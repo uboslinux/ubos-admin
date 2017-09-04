@@ -71,7 +71,7 @@ sub deployOrCheck {
     my $name   = $self->{json}->{name};
     my $dbType = $self->{role}->name();
 
-    debug( 'Database::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $dbType, $name );
+    trace( 'Database::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $dbType, $name );
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = UBOS::ResourceManager::findProvisionedDatabaseFor(
@@ -127,7 +127,7 @@ sub undeployOrCheck {
     my $name   = $self->{json}->{name};
     my $dbType = $self->{role}->name();
 
-    debug( 'Database::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $dbType, $name );
+    trace( 'Database::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $dbType, $name );
 
     if( $doIt ) {
         return UBOS::ResourceManager::unprovisionLocalDatabase(
@@ -157,7 +157,7 @@ sub backup {
     my $name   = $self->{json}->{name};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
-    debug( 'Database::backup', $bucket, $name );
+    trace( 'Database::backup', $bucket, $name );
 
     my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
 
@@ -191,7 +191,7 @@ sub restore {
     my $name   = $self->{json}->{name};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
-    debug( 'Database::restore', $bucket, $name );
+    trace( 'Database::restore', $bucket, $name );
 
     my $ret = 1;
     my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );

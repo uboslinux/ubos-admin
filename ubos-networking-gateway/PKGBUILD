@@ -1,23 +1,23 @@
 pkgname=$(basename $(pwd))
-pkgver=0.10
+pkgver=0.11
 pkgrel=1
 pkgdesc="UBOS Network management tools (gateway)"
 arch=('any')
 url="http://ubos.net/"
-developer=$url
-maintainer=$url
+developer=${url}
+maintainer=${url}
 license=('GPL')
 depends=('ubos-networking' 'dnsmasq')
 options=('!strip')
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
 
 package() {
 # Code
     for d in Networking Networking/NetConfigs; do
-		mkdir -p -m755 ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
-		for f in ${startdir}/vendor_perl/UBOS/$d/*.pm; do
-			if [ -r "$f" ]; then
-				install -m755 $f ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
-			fi
-		done
-	done
+        for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
+            if [ -r "$f" ]; then
+                install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/${d}/
+            fi
+        done
+    done
 }

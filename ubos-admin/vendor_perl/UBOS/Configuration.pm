@@ -136,5 +136,4 @@ sub _flatten {
     return $ret;
 }
 
-
 1;

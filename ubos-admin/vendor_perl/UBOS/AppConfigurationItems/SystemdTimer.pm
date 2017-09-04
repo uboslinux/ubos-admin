@@ -67,7 +67,7 @@ sub suspend {
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
-    debug( 'SystemdTimer::suspend', $defaultFromDir, $defaultToDir, $name );
+    trace( 'SystemdTimer::suspend', $defaultFromDir, $defaultToDir, $name );
 
     $name = $config->replaceVariables( $name );
 
@@ -101,7 +101,7 @@ sub resume {
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
-    debug( 'SystemdTimer::resume', $defaultFromDir, $defaultToDir, $name );
+    trace( 'SystemdTimer::resume', $defaultFromDir, $defaultToDir, $name );
 
     $name = $config->replaceVariables( $name );
 

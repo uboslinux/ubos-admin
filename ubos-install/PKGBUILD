@@ -1,6 +1,6 @@
 developer="http://indiecomputing.com/"
 url="http://ubos.net/"
-maintainer=$developer
+maintainer=${developer}
 pkgname=$(basename $(pwd))
 pkgver=0.92
 pkgrel=1
@@ -13,20 +13,19 @@ depends=(
     'parted'
     'ubos-keyring'
     'ubos-perl-utils' )
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
 options=('!strip')
 
 package() {
 # Code
-    mkdir -p ${pkgdir}/usr/bin
-    install -m755 ${startdir}/bin/ubos-install ${pkgdir}/usr/bin/
+    install -D -m755 ${startdir}/bin/ubos-install -t ${pkgdir}/usr/bin/
 
     for d in DiskLayouts Installers; do
-        mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/UBOS/Install/$d
-        for f in $startdir/vendor_perl/UBOS/Install/$d/*.pm; do
-            install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/Install/$d/
+        for f in ${startdir}/vendor_perl/UBOS/Install/${d}/*.pm; do
+            install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/Install/${d}/
         done
     done
-    for f in $startdir/vendor_perl/UBOS/Install/*.pm; do
-        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/UBOS/Install/
+    for f in ${startdir}/vendor_perl/UBOS/Install/*.pm; do
+        install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/Install/
     done
 }

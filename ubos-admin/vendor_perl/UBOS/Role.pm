@@ -92,7 +92,7 @@ sub deployOrCheck {
     my $ret      = 1;
     my $roleName = $self->name();
 
-    debug( 'Role::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+    trace( 'Role::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
 
     if( ref( $installable ) =~ m!App! ) {
         my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
@@ -113,10 +113,17 @@ sub deployOrCheck {
             my $itemIndex = 0;
             foreach my $appConfigItem ( @$appConfigItems ) {
                 if( $doIt ) {
-                    debug( 'Role::deployOrCheck', $appConfig->appConfigId, $itemIndex );
+                    trace( 'Role::deployOrCheck', $appConfig->appConfigId, $itemIndex );
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
+					if( $doIt ) {
+						debugAndSuspend(
+								'Deploy',         $itemIndex,
+								'with role',      $roleName,
+								'of installable', $installable->packageName,
+								'at appconfig',   $appConfig->appConfigId );
+            		}
                     $ret &= $item->deployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
                 ++$itemIndex;
@@ -145,7 +152,7 @@ sub undeployOrCheck {
     my $ret      = 1;
     my $roleName = $self->name();
 
-    debug( 'Role::undeployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+    trace( 'Role::undeployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
 
@@ -158,10 +165,17 @@ sub undeployOrCheck {
             my $itemIndex = @$appConfigItems-1;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
                 if( $doIt ) {
-                    debug( 'Role::undeployOrCheck', $appConfig->appConfigId, $itemIndex );
+                    trace( 'Role::undeployOrCheck', $appConfig->appConfigId, $itemIndex );
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
+					if( $doIt ) {
+						debugAndSuspend(
+								'Undeploy',       $itemIndex,
+								'with role',      $roleName,
+								'of installable', $installable->packageName,
+								'at appconfig',   $appConfig->appConfigId );
+            		}
                     $ret &= $item->undeployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
                 --$itemIndex;
@@ -195,7 +209,7 @@ sub suspend {
     my $ret      = 1;
     my $roleName = $self->name();
 
-    debug( 'Role::suspend', $roleName, $appConfig->appConfigId, $installable->packageName );
+    trace( 'Role::suspend', $roleName, $appConfig->appConfigId, $installable->packageName );
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
@@ -205,10 +219,17 @@ sub suspend {
             my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             my $itemIndex = 0;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
-                debug( 'Role::suspend', $appConfig->appConfigId, $itemIndex );
+                trace( 'Role::suspend', $appConfig->appConfigId, $itemIndex );
 
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
+					if( $doIt ) {
+						debugAndSuspend(
+								'Suspend',        $itemIndex,
+								'with role',      $roleName,
+								'of installable', $installable->packageName,
+								'at appconfig',   $appConfig->appConfigId );
+            		}
                     $ret &= $item->suspend( $codeDir, $dir, $config );
                 }
                 ++$itemIndex;
@@ -232,7 +253,7 @@ sub resume {
     my $ret      = 1;
     my $roleName = $self->name();
 
-    debug( 'Role::resume', $roleName, $appConfig->appConfigId, $installable->packageName );
+    trace( 'Role::resume', $roleName, $appConfig->appConfigId, $installable->packageName );
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
     if( $installableRoleJson ) {
@@ -242,10 +263,17 @@ sub resume {
             my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             my $itemIndex = 0;
             foreach my $appConfigItem ( @$appConfigItems ) {
-                debug( 'Role::resume', $appConfig->appConfigId, $itemIndex );
+                trace( 'Role::resume', $appConfig->appConfigId, $itemIndex );
 
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
+					if( $doIt ) {
+						debugAndSuspend(
+								'Resume',        $itemIndex,
+								'with role',      $roleName,
+								'of installable', $installable->packageName,
+								'at appconfig',   $appConfig->appConfigId );
+            		}
                     $ret &= $item->resume( $codeDir, $dir, $config );
                 }
                 ++$itemIndex;

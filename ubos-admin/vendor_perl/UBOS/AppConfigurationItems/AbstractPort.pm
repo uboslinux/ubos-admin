@@ -74,7 +74,7 @@ sub deployOrCheck {
     my $name   = $self->{json}->{name};
     my $scope  = $self->{json}->{scope};
 
-    debug( 'AbstractPort::deployOrCheck', $self->{portType}, $name, $scope );
+    trace( 'AbstractPort::deployOrCheck', $self->{portType}, $name, $scope );
 
     my $port = UBOS::ResourceManager::findProvisionedPortFor(
             $self->{portType},
@@ -123,7 +123,7 @@ sub undeployOrCheck {
     my $name   = $self->{json}->{name};
     my $scope  = $self->{json}->{scope};
 
-    debug( 'AbstractPort::undeployOrCheck', $self->{portType}, $name, $scope );
+    trace( 'AbstractPort::undeployOrCheck', $self->{portType}, $name, $scope );
 
     if( $doIt ) {
         return UBOS::ResourceManager::unprovisionPort(

@@ -222,6 +222,7 @@ sub restoreSite {
     my $siteId = $site->siteId();
     my $ret = 1;
     foreach my $appConfig ( @{$site->appConfigs} ) {
+        debugAndSuspend( 'AppConfiguration', $appConfig, 'of site', $siteId );
         $ret &= $self->restoreAppConfiguration( $siteId, $siteId, $appConfig, $appConfig );
     }
 

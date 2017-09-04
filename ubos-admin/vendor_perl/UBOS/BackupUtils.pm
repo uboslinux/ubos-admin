@@ -79,7 +79,7 @@ sub performBackup {
     }
     foreach my $site ( values %$sites ) {
         my $appConfigsAtSite = $site->appConfigs;
-        
+
         foreach my $appConfig ( @$appConfigsAtSite ) {
             if( exists( $appConfigs->{$appConfig->appConfigId} )) {
                 fatal( 'App config id', $appConfig->appConfigId . 'is also part of site:', $site->siteId );
@@ -106,8 +106,11 @@ sub performBackup {
 
     my $suspendTriggers = {};
     foreach my $site ( values %$sitesToSuspendResume ) {
+        debugAndSuspend( 'Site', $site->siteId() );
         $ret &= $site->suspend( $suspendTriggers );
     }
+
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
     info( 'Creating and exporting backup' );
@@ -118,8 +121,10 @@ sub performBackup {
 
     my $resumeTriggers = {};
     foreach my $site ( values %$sitesToSuspendResume ) {
+        debugAndSuspend( 'Site', $site->siteId() );
         $ret &= $site->resume( $resumeTriggers );
     }
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     unless( $ret ) {

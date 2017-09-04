@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for EspressoBIN
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2017 Indie Computing Corp.
 #
@@ -76,7 +76,7 @@ sub createDiskLayout {
 
     # Option 1: a single image file
     # ubos-install ... image.img
-    
+
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
@@ -161,7 +161,7 @@ sub createDiskLayout {
             $ret = undef;
         }
     }
-    
+
     return $ret;
 }
 
@@ -189,7 +189,7 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 

@@ -76,14 +76,14 @@ sub setupSiteOrCheck {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'tomcat8::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
+    trace( 'tomcat8::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
     my $siteDocumentDir = $site->config->getResolve( 'site.tomcat8.sitedocumentdir' );
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
 
-        debug( 'tomcat8::_setupSite', $self->name(), $site->siteId );
+        trace( 'tomcat8::_setupSite', $self->name(), $site->siteId );
 
         if( UBOS::Host::ensurePackages( 'tomcat8' ) < 0 ) {
             warning( $@ );
@@ -97,7 +97,7 @@ sub setupSiteOrCheck {
         my $tomcatUser      = $site->config->getResolve( 'tomcat8.uname' );
         my $tomcatGroup     = $site->config->getResolve( 'tomcat8.gname' );
 
-        debug( 'tomcat8::setupSite', $siteId );
+        trace( 'tomcat8::setupSite', $siteId );
 
         unless( -d $siteContextDir ) {
             UBOS::Utils::mkdir( $siteContextDir );
@@ -141,7 +141,7 @@ sub resumeSite {
     my $site     = shift;
     my $triggers = shift;
 
-    debug( 'tomcat8::resumeSite', $self->name(), $site->siteId );
+    trace( 'tomcat8::resumeSite', $self->name(), $site->siteId );
 
     $self->sitesUpdated();
 
@@ -161,7 +161,7 @@ sub removeSite {
     my $doIt     = shift;
     my $triggers = shift;
 
-    debug( 'tomcat8::removeSite', $self->name(), $doIt, $site->siteId );
+    trace( 'tomcat8::removeSite', $self->name(), $doIt, $site->siteId );
 
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostnameorwildcard;
@@ -169,7 +169,7 @@ sub removeSite {
     my $webappsDir      = "$sitesAppsDir/$siteId";
     my $siteDocumentDir = "$sitesDir/$siteId";
 
-    debug( 'tomcat8::removeSite', $siteId, $doIt );
+    trace( 'tomcat8::removeSite', $siteId, $doIt );
 
     if( $doIt ) {
         UBOS::Utils::rmdir( $siteDocumentDir );
@@ -223,6 +223,7 @@ END
 <!-- End hosts section -->
 END
 
+    debugAndSuspend( 'Update tomcat8 server.xml file' );
     UBOS::Tomcat8::updateServerXmlFile( $hostsSection );
 }
 

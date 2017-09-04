@@ -40,7 +40,7 @@ sub run {
     my @args = @_;
 
     if ( $< != 0 ) {
-        fatal( "This command must be run as root" ); 
+        fatal( "This command must be run as root" );
     }
 
     # May not be interrupted, bad things may happen if it is
@@ -48,17 +48,19 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $stage1exit    = 0;
     my $snapNumber    = undef;
-    
+
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
+            'debug'        => \$debug,
             'stage1exit=s' => \$stage1exit,
             'snapNumber=s' => \$snapNumber );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args || ( $verbose && $logConfigFile ) ) {
@@ -96,13 +98,16 @@ sub finishUpdate {
 
         my $deployTriggers = {};
         foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Deploy site', $site->siteId );
             $ret &= $site->deploy( $deployTriggers );
 
+            debugAndSuspend( 'Restore site', $site->siteId );
             $ret &= $backup->restoreSite( $site );
 
             UBOS::Host::siteDeployed( $site );
         }
         if( $restartServices ) {
+            debugAndSuspend( 'Execute triggers', keys %$deployTriggers );
             UBOS::Host::executeTriggers( $deployTriggers );
         }
 
@@ -110,9 +115,11 @@ sub finishUpdate {
 
         my $resumeTriggers = {};
         foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Resume site', $site->siteId );
             $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
         }
         if( $restartServices ) {
+            debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
             UBOS::Host::executeTriggers( $resumeTriggers );
         }
 
@@ -120,19 +127,23 @@ sub finishUpdate {
 
         foreach my $site ( values %$oldSites ) {
             foreach my $appConfig ( @{$site->appConfigs} ) {
+                debugAndSuspend( 'Run upgrader for appconfig', $appConfig->appConfigId );
                 $ret &= $appConfig->runUpgrader();
             }
         }
     }
 
-    debug( 'Deleting update backup' );
+    trace( 'Deleting update backup' );
+    debugAndSuspend( 'Delete update backup' );
     $backup->delete();
 
-    debug( 'Purging cache' );
+    trace( 'Purging cache' );
 
+    debugAndSuspend( 'Purge cache' );
     UBOS::Host::purgeCache( 1 );
 
     if( defined( $snapNumber ) && UBOS::Host::config()->get( 'host.snapshotonupgrade', 0 )) {
+        debugAndSuspend( 'Create filesystem snapshot' );
          UBOS::Host::postSnapshot( $snapNumber );
     }
 

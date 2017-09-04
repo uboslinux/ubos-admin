@@ -1,6 +1,6 @@
-# 
+#
 # Abstract superclass for disk layouts for an installation.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -41,7 +41,7 @@ sub new {
 
     $self->{devicetable} = $devicetable;
 
-    debug( 'Using disk layout', ref( $self ));
+    trace( 'Using disk layout', ref( $self ));
 
     return $self;
 }
@@ -62,7 +62,7 @@ sub formatDisks {
 
     my $errors = 0;
 
-    debug( 'Formatting file systems' );
+    trace( 'Formatting file systems' );
 
     foreach my $mountPath ( keys %{$self->{devicetable}} ) {
         my $data = $self->{devicetable}->{$mountPath};
@@ -141,7 +141,7 @@ sub mountDisks {
     my $self   = shift;
     my $target = shift;
 
-    debug( 'Mounting disks' );
+    trace( 'Mounting disks' );
 
     my $errors = 0;
     # shortest first
@@ -187,7 +187,7 @@ sub umountDisks {
     my $self   = shift;
     my $target = shift;
 
-    debug( 'Unmounting disks' );
+    trace( 'Unmounting disks' );
 
     my $errors = 0;
     # longest first
@@ -244,7 +244,7 @@ $code
 END
             }
         }
-            
+
     }
     return $script;
 }
@@ -273,7 +273,7 @@ sub createSubvols {
     } else {
         UBOS::Utils::mkdirDashP( "$target/var/log" );
     }
-            
+
     return $errors;
 }
 ##
@@ -285,12 +285,12 @@ sub createSubvols {
 sub saveFstab {
     my $self   = shift;
     my $target = shift;
-    
+
     my $fsTab = <<FSTAB;
 #
 # /etc/fstab: static file system information
 #
-# <file system> <dir>	<type>	<options>	<dump>	<pass>
+# <file system> <dir>   <type>  <options>   <dump>  <pass>
 
 FSTAB
 
@@ -311,7 +311,7 @@ FSTAB
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
-                debug( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
+                trace( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
@@ -330,7 +330,7 @@ FSTAB
                     $uuid =~ s!^\s+!!g;
                     $uuid =~ s!\s+$!!g;
 
-                    debug( 'uuid of swap device', $device, 'is', $uuid );
+                    trace( 'uuid of swap device', $device, 'is', $uuid );
 
                     $fsTab .= "UUID=$uuid none swap defaults 0 0\n";
                 }
@@ -343,7 +343,7 @@ FSTAB
                 $uuid =~ s!^\s+!!g;
                 $uuid =~ s!\s+$!!g;
 
-                debug( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
+                trace( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
 
                 my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 

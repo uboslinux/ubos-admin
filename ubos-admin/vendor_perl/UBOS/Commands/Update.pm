@@ -49,6 +49,7 @@ sub run {
 
     my $verbose          = 0;
     my $logConfigFile    = undef;
+    my $debug         = undef;
     my $restIsPackages   = 0;
     my @packageFiles     = ();
     my $reboot           = 0;
@@ -63,6 +64,7 @@ sub run {
             \@args,
             'verbose+'         => \$verbose,
             'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
             'pkgFiles'         => \$restIsPackages,
             'reboot'           => \$reboot,
             'noreboot'         => \$noreboot,
@@ -72,7 +74,7 @@ sub run {
             'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
             'stage1Only'       => \$stage1Only ); # This option is not public
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( $restIsPackages ) {
@@ -87,9 +89,11 @@ sub run {
     # Need to keep a copy of the logConfigFile, new package may not have it any more
     my $stage2LogConfigFile;
     if( $logConfigFile ) {
-         my $tmp = File::Temp->new( UNLINK => 0, SUFFIX => '.conf' );
-         $stage2LogConfigFile = $tmp->filename;
-         UBOS::Utils::myexec( "cp '$logConfigFile' '$stage2LogConfigFile'" );
+        my $tmp = File::Temp->new( UNLINK => 0, SUFFIX => '.conf' );
+        $stage2LogConfigFile = $tmp->filename;
+
+        debugAndSuspend( 'Copy log config file to', $stage2LogConfigFile );
+        UBOS::Utils::myexec( "cp '$logConfigFile' '$stage2LogConfigFile'" );
     }
 
     my $oldSites = UBOS::Host::sites();
@@ -106,6 +110,7 @@ sub run {
 
     my $snapNumber = undef;
     if( !$noSnap && UBOS::Host::config()->get( 'host.snapshotonupgrade', 0 )) {
+        debugAndSuspend( 'Create filesystem snapshot' );
         $snapNumber = UBOS::Host::preSnapshot()
     }
 
@@ -116,13 +121,16 @@ sub run {
 
         my $suspendTriggers = {};
         foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Suspend site', $site->siteId );
             $ret &= $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
         }
+        debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
         UBOS::Host::executeTriggers( $suspendTriggers );
 
         info( 'Backing up' );
 
         my $backup = UBOS::UpdateBackup->new();
+        debugAndSuspend( 'Backup old sites', map { $_->siteId } keys %$sites );
         $ret &= $backup->create( $oldSites );
 
         info( 'Undeploying' );
@@ -130,14 +138,18 @@ sub run {
         my $adminBackups = {};
         my $undeployTriggers = {};
         foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Undeploy site', $site->siteId );
             $ret &= $site->undeploy( $undeployTriggers );
         }
+        debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
         UBOS::Host::executeTriggers( $undeployTriggers );
     } else {
         info( 'No need to suspend sites, none deployed' );
     }
 
+    debugAndSuspend( 'Regenerate pacman.conf' );
     UBOS::Utils::regeneratePacmanConf();
+    debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/ubos/mods-enabled' );
     UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
 
     my $stage2Cmd = 'ubos-admin update-stage2';
@@ -183,7 +195,7 @@ sub run {
     } elsif( $rebootHeuristics ) {
         if( $noreboot ) {
             info( 'Reboot recommended, but --noreboot was specified. Not rebooting.' );
-            debug( 'Handing over to update-stage2:', $stage2Cmd );
+            trace( 'Handing over to update-stage2:', $stage2Cmd );
             $doReboot = 0;
 
         } else {
@@ -192,7 +204,7 @@ sub run {
         }
 
     } else {
-        debug( 'Handing over to update-stage2:', $stage2Cmd );
+        trace( 'Handing over to update-stage2:', $stage2Cmd );
         $doReboot = 0;
     }
 
@@ -205,13 +217,18 @@ sub run {
         }
         $afterBoot .= ' );';
 
+        debugAndSuspend( 'Add after-boot commands', $afterBoot );
         UBOS::Host::addAfterBootCommands( $afterBoot );
+
+        debugAndSuspend( 'Reboot now' );
         exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
 
     } else {
         # Reload systemd first, as .service files might have been updated
+        debugAndSuspend( 'systemctl daemon-reload' );
         UBOS::Utils::myexec( 'systemctl daemon-reload' );
 
+        debugAndSuspend( 'Hand over to stage2' );
         exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
     }
     # Never gets here

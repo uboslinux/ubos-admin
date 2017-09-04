@@ -1,6 +1,6 @@
 #
 # A disk layout using full disks. May contain boot sector.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -42,7 +42,7 @@ sub new {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $devicetable );
-    
+
     $self->{disks} = $disksp;
 
     return $self;
@@ -108,7 +108,7 @@ END
 w
 END
 
-    debug( 'fdisk script:', $fdiskScript );
+    trace( 'fdisk script:', $fdiskScript );
 
     foreach my $disk ( @{$self->{disks}} ) {
         my $out;
@@ -119,7 +119,7 @@ END
             ++$errors;
         }
         # Reread partition table
-        UBOS::Utils::myexec( "partprobe '$disk'" ); 
+        UBOS::Utils::myexec( "partprobe '$disk'" );
 
     }
     return $errors;

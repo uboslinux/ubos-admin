@@ -1,6 +1,6 @@
-# 
+#
 # Abstract superclass for container installers.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -23,7 +23,7 @@
 
 use strict;
 use warnings;
-                                                  
+
 package UBOS::Install::AbstractContainerInstaller;
 
 use base qw( UBOS::Install::AbstractInstaller );
@@ -53,7 +53,7 @@ sub new {
     }
     $self->{kernelpackage} = undef; # no kernel
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-nspawn-container ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-container ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [];
@@ -140,7 +140,7 @@ sub createDiskLayout {
             $ret = undef;
         }
     }
-    
+
     return $ret;
 }
 
@@ -165,9 +165,9 @@ sub addConfigureNetworkingToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
 
-    debug( "Executing addConfigureNetworkingToScript" );
+    trace( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only nspawn-container\n";
+    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only container\n";
 
     return 0;
 }

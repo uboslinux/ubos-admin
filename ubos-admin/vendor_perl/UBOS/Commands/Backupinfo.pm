@@ -42,6 +42,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $in            = undef;
     my $url           = undef;
     my $json          = 0;
@@ -49,14 +50,15 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'      => \$verbose,
-            'logConfig=s'   => \$logConfigFile,
-            'in=s'          => \$in,
-            'url=s'         => \$url,
-            'json'          => \$json,
-            'brief'         => \$brief );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'debug'       => \$debug,
+            'in=s'        => \$in,
+            'url=s'       => \$url,
+            'json'        => \$json,
+            'brief'       => \$brief );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk

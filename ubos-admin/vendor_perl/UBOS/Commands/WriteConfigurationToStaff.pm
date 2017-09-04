@@ -46,14 +46,16 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $device        = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'     => \$verbose,
-            'logConfig=s'  => \$logConfigFile );
+            'logConfig=s'  => \$logConfigFile,
+            'debug'        => \$debug );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if( !$parseOk || @args > 1 || ( $verbose && $logConfigFile )) {
@@ -62,12 +64,14 @@ sub run {
 
     if( @args ) {
         $device = shift @args;
+        debugAndSuspend( 'Check configuration device', $device );
         $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
         unless( -b $device ) {
             fatal( 'Not a valid UBOS staff device:', $device );
         }
 
     } else {
+        debugAndSuspend( 'Guess configuration device' );
         $device = UBOS::ConfigurationManager::guessConfigurationDevice();
         unless( $device ) {
             fatal( 'Cannot determine UBOS staff device' );
@@ -78,12 +82,15 @@ sub run {
     my $target     = $targetFile->dirname;
     my $errors     = 0;
 
+    debugAndSuspend( 'Mount configuration device', $device, 'to', $target );
     if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
         ++$errors;
     }
 
+    debugAndSuspend( 'Save configuration to', $target );
     $errors += UBOS::ConfigurationManager::saveCurrentConfiguration( $target );
 
+    debugAndSuspend( 'Unmount', $target );
     if( UBOS::Utils::myexec( "umount '$target'" )) {
         ++$errors;
     }

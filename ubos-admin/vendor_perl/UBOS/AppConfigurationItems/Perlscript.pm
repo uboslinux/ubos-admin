@@ -68,7 +68,7 @@ sub deployOrCheck {
 
     my $source = $self->{json}->{source};
 
-    debug( 'Perlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
+    trace( 'Perlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
 
     my $script = $source;
     unless( $script =~ m#^/# ) {
@@ -84,7 +84,7 @@ sub deployOrCheck {
         my $scriptcontent = slurpFile( $script );
         my $operation = 'deploy';
 
-        debug( 'Perlscript::deployOrCheck: running eval', $script, $operation );
+        trace( 'Perlscript::deployOrCheck: running eval', $script, $operation );
 
         unless( eval $scriptcontent ) {
             error( 'Perlscript::deployOrCheck: running eval', $script, $operation, 'failed:', $@ );
@@ -110,7 +110,7 @@ sub undeployOrCheck {
 
     my $source = $self->{json}->{source};
 
-    debug( 'Perlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
+    trace( 'Perlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
 
     my $script = $source;
     $script = $config->replaceVariables( $script );
@@ -128,7 +128,7 @@ sub undeployOrCheck {
         my $scriptcontent = slurpFile( $script );
         my $operation = 'undeploy';
 
-        debug( 'Perlscript::undeployOrCheck: running eval', $script, $operation );
+        trace( 'Perlscript::undeployOrCheck: running eval', $script, $operation );
 
         unless( eval $scriptcontent ) {
             error( 'Perlscript::undeployOrCheck: running eval', $script, $operation, 'failed:', $@ );
@@ -167,7 +167,7 @@ sub runPostDeployScript {
     my $scriptcontent = slurpFile( $script );
     my $operation     = $methodName;
 
-    debug( 'Perlscript::runPostDeployScript: running eval', $script, $operation );
+    trace( 'Perlscript::runPostDeployScript: running eval', $script, $operation );
 
     unless( eval $scriptcontent ) {
         error( 'Perlscript::runPostDeployScript: running eval', $script, $operation, 'failed:', $@ );

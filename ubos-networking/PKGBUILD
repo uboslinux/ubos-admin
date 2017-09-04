@@ -1,34 +1,29 @@
 pkgname=$(basename $(pwd))
-pkgver=0.39
+pkgver=0.40
 pkgrel=1
 pkgdesc="UBOS Network management tools"
 arch=('any')
 url="http://ubos.net/"
-developer=$url
-maintainer=$url
+developer=${url}
+maintainer=${url}
 license=('GPL')
 depends=('ubos-admin' 'avahi' 'iptables' 'perl-net-ip' 'nss-mdns')
 options=('!strip')
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
 
 package() {
-# dnsmasq directory
-#    mkdir -p -m755 ${pkgdir}/etc/dnsmasq.d
-
 # Avahi
-    mkdir -p m755 ${pkgdir}/etc/avahi/services
-    install -m 644 ${startdir}/avahi/{http,https}.service ${pkgdir}/etc/avahi/services/
+    install -D -m 644 ${startdir}/avahi/{http,https}.service -t ${pkgdir}/etc/avahi/services/
 
 # Code
     for d in Commands HostnameCallbacks Networking Networking/NetConfigs; do
-        mkdir -p -m755 ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
-        for f in ${startdir}/vendor_perl/UBOS/$d/*.pm; do
+        for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
             if [ -r "$f" ]; then
-                install -m755 $f ${pkgdir}/usr/lib/perl5/vendor_perl/UBOS/$d/
+                install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/${d}/
             fi
         done
     done
     
 # Systemd
-    mkdir -p -m 755 ${pkgdir}/etc/systemd/system/
-    install -m 644 ${startdir}/systemd/avahi-daemon.service  ${pkgdir}/etc/systemd/system/
+    install -D -m 644 ${startdir}/systemd/avahi-daemon.service -t ${pkgdir}/etc/systemd/system/
 }

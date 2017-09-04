@@ -47,7 +47,7 @@ my $zipFileAppConfigsEntry   = 'appconfigs';
 # Constructor.
 sub new {
     my $self = shift;
-    
+
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
@@ -100,7 +100,7 @@ sub create {
 
     my $ret = 1;
 
-    debug( 'ZipFileBackup::create', $outFile );
+    trace( 'ZipFileBackup::create', $outFile );
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{zip}        = Archive::Zip->new();
@@ -157,7 +157,7 @@ sub create {
     $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/" ) ? 1 : 0 );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
-    
+
     foreach my $appConfig ( @$appConfigs ) {
         my $appConfigId = $appConfig->appConfigId;
         $ret &= ( $zip->addString( writeJsonToString( $appConfig->appConfigurationJson()), "$zipFileAppConfigsEntry/$appConfigId.json" ) ? 1 : 0 );
@@ -183,15 +183,18 @@ sub create {
                     if( $appConfigItems ) {
                         my $backupContext = UBOS::Backup::ZipFileBackupContext->new( $self, $appConfigPathInZip );
 
+                        my $itemCount = 0;
                         foreach my $appConfigItem ( @$appConfigItems ) {
-                            if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
+                            if( defined( $appConfigItem->{retentionpolicy} ) && $appConfigItem->{retentionpolicy} ) {
                                 # for now, we don't care what value this field has as long as it is non-empty
-                                next;
+
+                                my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
+                                if( $item ) {
+                                    debugAndSuspend( 'Backup item', $itemCount, 'role', $roleName, 'installable', $packageName, 'appConfig', $appConfigId );
+                                    $ret &= $item->backup( $dir, $config, $backupContext, \@filesToDelete );
+                                }
                             }
-                            my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
-                            if( $item ) {
-                                $ret &= $item->backup( $dir, $config, $backupContext, \@filesToDelete );
-                            }
+                            ++$itemCount;
                         }
                     }
                 }
@@ -220,7 +223,7 @@ sub read {
     my $archive = shift;
     my $zip     = shift;
 
-    debug( 'ZipFileBackup::read', $archive, $zip );
+    trace( 'ZipFileBackup::read', $archive, $zip );
 
     my $foundFileType = $zip->contents( $zipFileTypeEntry );
     if( $foundFileType ) {
@@ -246,7 +249,7 @@ sub read {
     $self->{startTime} =~ s!\s+$!!;
 
     my $ret = $self;
-    
+
     foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
@@ -297,7 +300,7 @@ sub restoreAppConfiguration {
     my $zip                 = $self->{zip};
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
 
-    debug( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigOnHost->appConfigId );
+    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigOnHost->appConfigId );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
@@ -331,15 +334,18 @@ sub restoreAppConfiguration {
 
                     my $backupContext = UBOS::Backup::ZipFileBackupContext->new( $self, $appConfigPathInZip );
 
+                    my $itemCount = 0;
                     foreach my $appConfigItem ( @$appConfigItems ) {
-                        if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
+                        if( defined( $appConfigItem->{retentionpolicy} ) && $appConfigItem->{retentionpolicy} ) {
                             # for now, we don't care what value this field has as long as it is non-empty
-                            next;
+
+                            my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installableOnHost );
+                            if( $item ) {
+                                debugAndSuspend( 'Restore item', $itemCount, 'role', $roleName, 'installable', $packageName, 'appConfig', $appConfigId );
+                                $ret &= $item->restore( $dir, $config, $backupContext );
+                            }
                         }
-                        my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installableOnHost );
-                        if( $item ) {
-                            $ret &= $item->restore( $dir, $config, $backupContext );
-                        }
+                        ++$itemCount;
                     }
                 }
             }

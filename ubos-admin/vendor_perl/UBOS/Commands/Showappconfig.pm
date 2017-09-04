@@ -39,6 +39,7 @@ sub run {
 
     my $verbose       = 0;
     my $logConfigFile = undef;
+    my $debug         = undef;
     my $json          = 0;
     my $brief         = 0;
     my $siteId;
@@ -51,6 +52,7 @@ sub run {
             \@args,
             'verbose+'      => \$verbose,
             'logConfig=s'   => \$logConfigFile,
+            'debug'         => \$debug,
             'json'          => \$json,
             'brief'         => \$brief,
             'siteid=s'      => \$siteId,
@@ -59,7 +61,7 @@ sub run {
             'context=s'     => \$context,
             'url=s'         => \$url );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
