@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.6
+pkgver=0.7
 pkgrel=1
 pkgdesc="UBOS Network management tools (system-nspawn container)"
 arch=('any')
