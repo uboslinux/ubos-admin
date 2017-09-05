@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #
-# Logging facilities.
+# Logging facilities. Note: we do not use the debug level in log4perl, so
+# we can use the term debug for actual debugging functionality.
 #
 # This file is part of ubos-perl-utils.
 # (C) 2012-2017 Indie Computing Corp.
@@ -88,7 +89,7 @@ sub initialize {
 sub trace {
     my @msg = @_;
 
-    if( $LOG->is_debug()) {
+    if( $LOG->is_trace()) {
         $LOG->trace( _constructMsg( @msg ));
     }
 }
@@ -97,7 +98,7 @@ sub trace {
 # Is trace logging on?
 # return: 1 or 0
 sub isTraceActive {
-    return $LOG->is_debug();
+    return $LOG->is_trace();
 }
 
 ##
@@ -126,28 +127,6 @@ sub notice {
 
     if( $LOG->is_notice()) {
         $LOG->notice( _constructMsg( @msg ));
-    }
-}
-
-##
-# Is debug logging and suspending on?
-# return: 1 or 0
-sub isDebugAndSuspendActive {
-    return $DEBUG;
-}
-
-##
-# Emit a debug message, and then wait for keyboard input to continue.
-# @msg: the message or message components; may be empty
-sub debugAndSuspend {
-    my @msg = @_;
-
-    if( $DEBUG ) {
-        if( @msg ) {
-            print STDERR _constructMsg( @msg ) ."\n";
-        }
-        print STDERR "** Hit return to continue.\n";
-        getc();
     }
 }
 
@@ -219,7 +198,29 @@ sub fatal {
 # Is fatal logging on?
 # return: 1 or 0
 sub isFatalActive {
-    return $LOG->is_error();
+    return $LOG->is_fatal();
+}
+
+##
+# Is debug logging and suspending on?
+# return: 1 or 0
+sub isDebugAndSuspendActive {
+    return $DEBUG;
+}
+
+##
+# Emit a debug message, and then wait for keyboard input to continue.
+# @msg: the message or message components; may be empty
+sub debugAndSuspend {
+    my @msg = @_;
+
+    if( $DEBUG ) {
+        if( @msg ) {
+            print STDERR _constructMsg( @msg ) ."\n";
+        }
+        print STDERR "** Hit return to continue.\n";
+        getc();
+    }
 }
 
 ##
