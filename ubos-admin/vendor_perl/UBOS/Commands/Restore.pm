@@ -648,7 +648,7 @@ sub restoreSites {
             my $oldAppConfigId = $appConfigIdTranslation{$newAppConfigId};
             my $oldAppConfig   = $appConfigsInBackup->{$oldAppConfigId};
 
-            debugAndSuspend( 'Restore appconfig', $oldApopConfigId, 'to' $newAppConfigId, 'for site', $newSiteId );
+            debugAndSuspend( 'Restore appconfig', $oldAppConfigId, 'to', $newAppConfigId, 'for site', $newSiteId );
             $ret &= $backup->restoreAppConfiguration(
                     $siteIdTranslation{$newSiteId},
                     $newSiteId,

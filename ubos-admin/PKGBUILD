@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.224
+pkgver=0.225
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -98,8 +98,10 @@ package() {
     install -D -m755 ${startdir}/cgi-bin/{show-apps,render-appicon}.pl -t ${pkgdir}/usr/share/ubos/cgi-bin/
 
 # Tomcat
+    mkdir -p -m775 ${pkgdir}/etc/tomcat8
     mkdir -p -m755 ${pkgdir}/etc/tomcat8/ubos/sites-apps
     install -D -m644 ${startdir}/etc/tomcat8/server-ubos.xml.tmpl -t ${pkgdir}/etc/tomcat8/
+    mkdir -p -m775 ${pkgdir}/var/lib/tomcat8
     mkdir -p -m755 ${pkgdir}/var/lib/tomcat8/sites
 
 # Mysql

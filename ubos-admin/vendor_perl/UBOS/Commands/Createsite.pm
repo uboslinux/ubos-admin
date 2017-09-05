@@ -540,7 +540,7 @@ sub run {
         }
 
         my $deployUndeployTriggers = {};
-        debugAndSuspend( 'Deploy site', $newite->siteId() );
+        debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
 
         debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
@@ -553,7 +553,7 @@ sub run {
         info( 'Resuming sites' );
 
         my $resumeTriggers = {};
-        debugAndSuspend( 'Resume site', $newite->siteId() );
+        debugAndSuspend( 'Resume site', $newSite->siteId() );
         $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
         debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
         UBOS::Host::executeTriggers( $resumeTriggers );

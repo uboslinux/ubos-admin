@@ -130,7 +130,7 @@ sub run {
         info( 'Backing up' );
 
         my $backup = UBOS::UpdateBackup->new();
-        debugAndSuspend( 'Backup old sites', map { $_->siteId } keys %$sites );
+        debugAndSuspend( 'Backup old sites', map { $_->siteId } keys %$oldSites );
         $ret &= $backup->create( $oldSites );
 
         info( 'Undeploying' );

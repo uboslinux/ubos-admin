@@ -299,8 +299,9 @@ sub restoreAppConfiguration {
     my $ret                 = 1;
     my $zip                 = $self->{zip};
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
+    my $appConfigIdOnHost   = $appConfigOnHost->appConfigId;
 
-    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigOnHost->appConfigId );
+    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigIdOnHost );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
@@ -341,7 +342,11 @@ sub restoreAppConfiguration {
 
                             my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installableOnHost );
                             if( $item ) {
-                                debugAndSuspend( 'Restore item', $itemCount, 'role', $roleName, 'installable', $packageName, 'appConfig', $appConfigId );
+                                debugAndSuspend(
+                                        'Restore item', $itemCount,
+                                        'role',         $roleName,
+                                        'installable',  $packageNameInBackup, '=>', $packageNameOnHost,
+                                        'appConfig',    $appConfigIdInBackup, '=>', $appConfigIdOnHost );
                                 $ret &= $item->restore( $dir, $config, $backupContext );
                             }
                         }

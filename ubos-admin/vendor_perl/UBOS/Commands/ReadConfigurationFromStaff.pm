@@ -55,7 +55,7 @@ sub run {
             'target=s'    => \$target,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
-            'debug'       => \$debug )
+            'debug'       => \$debug );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );

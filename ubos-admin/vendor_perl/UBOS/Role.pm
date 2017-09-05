@@ -223,13 +223,12 @@ sub suspend {
 
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
-					if( $doIt ) {
-						debugAndSuspend(
-								'Suspend',        $itemIndex,
-								'with role',      $roleName,
-								'of installable', $installable->packageName,
-								'at appconfig',   $appConfig->appConfigId );
-            		}
+                    debugAndSuspend(
+                            'Suspend',        $itemIndex,
+                            'with role',      $roleName,
+                            'of installable', $installable->packageName,
+                            'at appconfig',   $appConfig->appConfigId );
+
                     $ret &= $item->suspend( $codeDir, $dir, $config );
                 }
                 ++$itemIndex;
@@ -267,13 +266,12 @@ sub resume {
 
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
-					if( $doIt ) {
-						debugAndSuspend(
-								'Resume',        $itemIndex,
-								'with role',      $roleName,
-								'of installable', $installable->packageName,
-								'at appconfig',   $appConfig->appConfigId );
-            		}
+                    debugAndSuspend(
+                            'Resume',        $itemIndex,
+                            'with role',      $roleName,
+                            'of installable', $installable->packageName,
+                            'at appconfig',   $appConfig->appConfigId );
+
                     $ret &= $item->resume( $codeDir, $dir, $config );
                 }
                 ++$itemIndex;

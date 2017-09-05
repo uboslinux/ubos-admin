@@ -57,10 +57,10 @@ sub run {
             'debug'       => \$debug,
             'add'         => \$add );
 
-    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
+    UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $add && @args == 0 ) || ( $verbose && $logConfigFile, $debug )) {
+    if( !$parseOk || ( $add && @args == 0 ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
