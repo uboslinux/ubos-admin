@@ -1,7 +1,7 @@
 pkgname=$(basename $(pwd))
 pkgver=0.7
-pkgrel=1
-pkgdesc="UBOS Network management tools (system-nspawn container)"
+pkgrel=2
+pkgdesc="UBOS Network management tools (Linux container)"
 arch=('any')
 url="http://ubos.net/"
 developer=${url}
