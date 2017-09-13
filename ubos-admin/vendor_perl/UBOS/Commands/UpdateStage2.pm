@@ -127,8 +127,8 @@ sub finishUpdate {
 
         foreach my $site ( values %$oldSites ) {
             foreach my $appConfig ( @{$site->appConfigs} ) {
-                debugAndSuspend( 'Run upgrader for appconfig', $appConfig->appConfigId );
-                $ret &= $appConfig->runUpgrader();
+                debugAndSuspend( 'Run upgraders for appconfig', $appConfig->appConfigId );
+                $ret &= $appConfig->runUpgraders();
             }
         }
     }

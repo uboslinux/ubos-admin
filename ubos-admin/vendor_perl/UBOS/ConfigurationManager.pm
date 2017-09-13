@@ -287,7 +287,7 @@ sub setupUpdateShepherd {
     my $add  = shift;
     my @keys = @_;
 
-    if( UBOS::Host::ensureOsUser( 'shepherd', undef, '/var/shepherd' )) {
+    if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', '/var/shepherd' )) {
         my $authKeyFile = '/var/shepherd/.ssh/authorized_keys';
         unless( -d '/var/shepherd/.ssh' ) {
             UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );

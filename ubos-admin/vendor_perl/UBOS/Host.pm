@@ -930,47 +930,6 @@ sub gpgHostKeyFingerprint {
 }
 
 ##
-# Make sure an OS user with the provided userId exists.
-# If not, create the user with the specified group(s).
-# $userId: user id
-# $groupIds: zero or more groups
-# $homeDir: desired location of home directory
-# return: success or fail
-sub ensureOsUser {
-    my $userId   = shift;
-    my $groupIds = shift;
-    my $homeDir  = shift || "/home/$userId";
-
-    my $out;
-    my $err;
-    if( myexec( "getent passwd $userId", undef, \$out, \$err )) {
-
-        trace( 'Creating user', $userId );
-
-        debugAndSuspend( 'Creating user', $userId );
-        if( myexec( "sudo useradd -e '' -m -U $userId -d $homeDir", undef, undef, \$err )) {
-            error( 'Failed to create user', $userId, ', error:', $err );
-            return 0;
-        }
-
-        if( defined( $groupIds ) && @$groupIds ) {
-            trace( 'Adding user to groups:', $userId, @$groupIds );
-
-            debugAndSuspend( 'Adding groups', @$groupIds );
-            if( myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
-                error( 'Failed to add user to groups:', $userId, @$groupIds, 'error:', $err );
-                return 0;
-            }
-        }
-        if( myexec( "sudo chown -R $userId $homeDir" )) {
-            error( 'Failed to chown home dir of user', $userId, $homeDir );
-            return 0;
-        }
-    }
-    return 1;
-}
-
-##
 # Add a command to run after the next boot. The command must be of the
 # form "<tag>:<command>" where <tag> is either "bash" or "perleval".
 # The bash commands must be bash-executable and will run as root.

@@ -575,7 +575,7 @@ sub resume {
 ##
 # Run the installer(s) for the app at this AppConfiguration
 # return: success or fail
-sub runInstaller {
+sub runInstallers {
     my $self = shift;
 
     return $self->_runPostDeploy( 'installers', 'install' );
@@ -584,7 +584,7 @@ sub runInstaller {
 ##
 # Run the upgrader(s) for the app at this AppConfiguration
 # return: success or fail
-sub runUpgrader {
+sub runUpgraders {
     my $self = shift;
 
     return $self->_runPostDeploy( 'upgraders', 'upgrade' );

@@ -421,8 +421,8 @@ sub restoreAppConfigs {
     foreach my $newAppConfigId ( @appConfigIdsToRestore ) {
         my $appConfig = $newAppConfigs{$newAppConfigId};
 
-        debugAndSuspend( 'Running upgrader at appconfig', $appConfig->appConfigId );
-        $ret &= $appConfig->runUpgrader();
+        debugAndSuspend( 'Running upgraders at appconfig', $appConfig->appConfigId );
+        $ret &= $appConfig->runUpgraders();
     }
 
     if( $showIds ) {
@@ -672,8 +672,8 @@ sub restoreSites {
 
     foreach my $newAppConfigId ( sort keys %appConfigIdTranslation ) {
         my $newAppConfig = UBOS::Host::findAppConfigurationById( $newAppConfigId );
-        debugAndSuspend( 'Run upgrader for appconfig', $newAppConfig->appConfigId );
-        $ret &= $newAppConfig->runUpgrader();
+        debugAndSuspend( 'Run upgraders for appconfig', $newAppConfig->appConfigId );
+        $ret &= $newAppConfig->runUpgraders();
     }
 
     if( $showIds ) {

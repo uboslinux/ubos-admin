@@ -562,7 +562,7 @@ sub run {
         # no need to run any upgraders
 
         foreach my $appConfig ( @{$newSite->appConfigs} ) {
-            $ret &= $appConfig->runInstaller();
+            $ret &= $appConfig->runInstallers();
         }
 
         if( $out ) {

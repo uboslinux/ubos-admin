@@ -322,16 +322,16 @@ sub run {
             foreach my $appConfig ( @{$site->appConfigs} ) {
                 if( $oldSite->appConfig( $appConfig->appConfigId() )) {
                     debugAndSuspend( 'Running upgrader for appconfig', $appConfig->appConfigId );
-                    $ret &= $appConfig->runUpgrader();
+                    $ret &= $appConfig->runUpgraders();
                 } else {
                     debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-                    $ret &= $appConfig->runInstaller();
+                    $ret &= $appConfig->runInstallers();
                 }
             }
         } else {
             foreach my $appConfig ( @{$site->appConfigs} ) {
                 debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-                $ret &= $appConfig->runInstaller();
+                $ret &= $appConfig->runInstallers();
             }
         }
     }
