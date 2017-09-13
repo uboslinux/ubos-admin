@@ -853,7 +853,7 @@ sub ensureOsUser {
         trace( 'Creating user', $userId );
 
         debugAndSuspend( 'Creating user', $userId );
-        if( myexec( "sudo useradd -e '$comment' -m -U $userId -d $homeDir", undef, undef, \$err )) {
+        if( myexec( "sudo useradd -e '' -c '$comment' -m -U $userId -d $homeDir", undef, undef, \$err )) {
             error( 'Failed to create user', $userId, ', error:', $err );
             return 0;
         }
