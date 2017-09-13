@@ -282,11 +282,11 @@ sub createDiskLayout {
             }
         } elsif( @$argvp > 1 ) {
             # Don't do RAID here
-            error( 'Do not specify more than one file or image for deviceclass=rpi' );
+            error( 'Do not specify more than one file or image for deviceclass=bbb' );
             $ret = undef;
         } else {
             # Need at least one disk
-            error( 'Must specify at least than one file or image for deviceclass=rpi' );
+            error( 'Must specify at least than one file or image for deviceclass=bbb' );
             $ret = undef;
         }
     }

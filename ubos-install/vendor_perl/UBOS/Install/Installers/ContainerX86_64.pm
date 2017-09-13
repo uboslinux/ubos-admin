@@ -1,5 +1,5 @@
 # 
-# Install UBOS for a Linux container running on a PC.
+# Install UBOS for a Linux container running on x86_64.
 # 
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
                                                   
-package UBOS::Install::Installers::ContainerPc;
+package UBOS::Install::Installers::ContainerX86_64;
 
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
@@ -38,7 +38,7 @@ sub arch {
 ##
 # Help text
 sub help {
-    return 'Linux container on PC (x86_64)';
+    return 'Linux container on x86_64';
 }
 
 1;

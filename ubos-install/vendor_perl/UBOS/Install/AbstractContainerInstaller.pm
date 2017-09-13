@@ -109,35 +109,39 @@ sub createDiskLayout {
         if( @$argvp > 1 ) {
             error( 'Do not specify more than one image file or device.' );
             $ret = undef;
-        }
-        my $first = $argvp->[0];
-        if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
-            # Option 1
-            $ret = UBOS::Install::DiskLayouts::DiskImage->new(
-                    $first,
-                    {   '/' => {
-                            'index' => 1,
-                            'fs'    => 'btrfs'
-                        },
-                    } );
-        } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
-            # Option 2
-            $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
-                    $argvp,
-                    {   '/' => {
-                            'index' => 1,
-                            'fs'    => 'btrfs'
-                        },
-                    } );
-
-        } elsif( $ret ) {
-            error( 'Must be file or disk:', $first );
+        } elsif( @$argvp == 0 ) {
+            error( 'Must specify at one image file or device' );
             $ret = undef;
-
         } else {
-            # Need at least one disk
-            error( 'Must specify at least than one file or image for deviceclass=container' );
-            $ret = undef;
+            my $first = $argvp->[0];
+            if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
+                # Option 1
+                $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                        $first,
+                        {   '/' => {
+                                'index' => 1,
+                                'fs'    => 'btrfs'
+                            },
+                        } );
+            } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
+                # Option 2
+                $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                        $argvp,
+                        {   '/' => {
+                                'index' => 1,
+                                'fs'    => 'btrfs'
+                            },
+                        } );
+
+            } elsif( $ret ) {
+                error( 'Must be file or disk:', $first );
+                $ret = undef;
+
+            } else {
+                # Need at least one disk
+                error( 'Must specify at least than one file or image for deviceclass=container' );
+                $ret = undef;
+            }
         }
     }
 
