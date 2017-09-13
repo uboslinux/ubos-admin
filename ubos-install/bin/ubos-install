@@ -99,36 +99,10 @@ if( $target && ! -d $target ) {
 }
 # Use current device class if not given as parameter
 unless( $deviceclassname ) {
-    # see also UBOS::Host::deviceClass
-    if( -e '/etc/os-release' ) {
-        my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
-        while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9]+)\"!mg ) {
-            if( $1 eq 'UBOS_DEVICECLASS' ) {
-                $deviceclassname = $2;
-                last;
-            }
-        }
-    }
+    $deviceclassname = UBOS::Utils::deviceClass();
 }
 unless( $deviceclassname ) {
-    # now we guess
-    my $out;
-    UBOS::Utils::myexec( 'uname -a', undef, \$out, undef );
-    if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
-        $deviceclassname = 'rpi';
-    } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
-        $deviceclassname = 'rpi2';
-    } elsif( $out =~ m!bone.*armv7l! ) {
-        $deviceclassname = 'bbb';
-    } elsif( $out =~ m!pcduino3.*armv7l! ) {
-        $deviceclassname = 'pcduino3';
-    } elsif( $out =~ m!espressobin.*aarch64! ) {
-        $deviceclassname = 'espressobin';
-    } elsif( $out =~ m!pc! ) {
-        $deviceclassname = 'pc';
-    } else {
-        fatal( 'Cannot automatically determine --deviceclass. Need to specify as argument.' );
-    }
+    fatal( 'Cannot automatically determine --deviceclass. Need to specify as argument.' );
 }
 
 my $installer = findInstaller( $deviceclassname );
