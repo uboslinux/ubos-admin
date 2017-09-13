@@ -3,7 +3,7 @@
 # Collection of utility methods.
 #
 # This file is part of ubos-perl-utils.
-# (C) 2012-2014 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-perl-utils is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,7 +41,8 @@ my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERW
 my $CHANNEL_FILE    = '/etc/ubos/channel';
 my @VALID_CHANNELS  = qw( dev red yellow green );
 
-my $_now = time(); # Time the script(s) started running, use now() to access
+my $_now         = time(); # Time the script(s) started running, use now() to access
+my $_deviceClass = undef;  # Allocated as needed
 
 ##
 # Obtain the UNIX system time when the script(s) started running.
@@ -831,6 +832,54 @@ sub getGname {
 }
 
 ##
+# Make sure an OS user with the provided userId exists.
+# If not, create the user with the specified group(s).
+# Disable password-based login
+# $userId: user id
+# $groupIds: zero or more groups
+# $comment: the comment for the /etc/passwd file
+# $homeDir: desired location of home directory
+# return: success or fail
+sub ensureOsUser {
+    my $userId   = shift;
+    my $groupIds = shift;
+    my $comment  = shift;
+    my $homeDir  = shift || "/home/$userId";
+
+    my $out;
+    my $err;
+    if( myexec( "getent passwd $userId", undef, \$out, \$err )) {
+
+        trace( 'Creating user', $userId );
+
+        debugAndSuspend( 'Creating user', $userId );
+        if( myexec( "sudo useradd -e '$comment' -m -U $userId -d $homeDir", undef, undef, \$err )) {
+            error( 'Failed to create user', $userId, ', error:', $err );
+            return 0;
+        }
+
+        if( defined( $groupIds ) && @$groupIds ) {
+            trace( 'Adding user to groups:', $userId, @$groupIds );
+
+            debugAndSuspend( 'Adding groups', @$groupIds );
+            if( myexec( "sudo usermod -a -G " . join(',', @$groupIds ) . " $userId", undef, undef, \$err )) {
+                error( 'Failed to add user to groups:', $userId, @$groupIds, 'error:', $err );
+                return 0;
+            }
+        }
+        if( myexec( "sudo chown -R $userId $homeDir" )) {
+            error( 'Failed to chown home dir of user', $userId, $homeDir );
+            return 0;
+        }
+        # lock the account by setting an impossible password
+        if( myexec( "sudo passwd -l $userId", \$out, \$out )) {
+            error( 'Failed to disable login for', $userId, ':', $out );
+        }
+    }
+    return 1;
+}
+
+##
 # Generate a random identifier
 # $length: length of identifier
 # return: identifier
@@ -1036,6 +1085,63 @@ sub isValidChannel {
         }
     }
     return undef;
+}
+
+##
+# Determine the arch of this system
+sub arch {
+
+    my $ret;
+    UBOS::Utils::myexec( 'uname -m', undef, \$ret );
+    $ret =~ s!^\s+!!;
+    $ret =~ s!\s+$!!;
+    $ret =~ s!(armv[67])l!$1h!;
+
+    return $ret;
+}
+
+##
+# Determine the device class of this system. Works on UBOS and non-UBOS
+# systems. See also UBOS::Host::deviceClass()
+sub deviceClass {
+    if( $_deviceClass ) {
+        return $_deviceClass;
+    }
+
+    if( -e '/etc/os-release' ) {
+        my $osRelease = slurpFile( '/etc/os-release' );
+        while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9]+)\"!mg ) {
+            if( $1 eq 'UBOS_DEVICECLASS' ) {
+                $_deviceClass = $2;
+                last;
+            }
+        }
+    }
+    unless( $_deviceClass ) {
+        # now we guess
+        my $out;
+        myexec( 'uname -a', undef, \$out, undef );
+        if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
+            $_deviceClass = 'rpi';
+        } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
+            $_deviceClass = 'rpi2';
+        } elsif( $out =~ m!bone.*armv7l! ) {
+            $_deviceClass = 'bbb';
+        } elsif( $out =~ m!pcduino3.*armv7l! ) {
+            $_deviceClass = 'pcduino3';
+        } elsif( $out =~ m!espressobin.*aarch64! ) {
+            $_deviceClass = 'espressobin';
+        } elsif( $out =~ m!x86_64! ) {
+            if( myexec( 'pacman -Qs virtualbox' ) == 0 ) {
+                $_deviceClass = 'vbox';
+            } elsif( myexec( 'pacman -Qs linux-ec2' ) == 0 ) {
+                $_deviceClass = 'ec2-instance';
+            } else {
+                $_deviceClass = 'pc';
+            }
+        }
+    }
+    return $_deviceClass;
 }
 
 ##

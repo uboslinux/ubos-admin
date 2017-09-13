@@ -218,7 +218,7 @@ sub debugAndSuspend {
         if( @msg ) {
             print STDERR _constructMsg( @msg ) ."\n";
         }
-        print STDERR "** Hit return to continue.\n";
+        print STDERR "** Hit return to continue. ***\n";
         getc();
     }
 }
