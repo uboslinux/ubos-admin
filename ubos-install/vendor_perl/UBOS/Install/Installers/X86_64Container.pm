@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for a Linux container running on x86_64.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -20,8 +20,8 @@
 
 use strict;
 use warnings;
-                                                  
-package UBOS::Install::Installers::ContainerX86_64;
+
+package UBOS::Install::Installers::X86_64Container;
 
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
@@ -33,6 +33,14 @@ sub arch {
     my $self = shift;
 
     return 'x86_64';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'container';
 }
 
 ##

@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS on an SD Card for a Raspberry Pi 2.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Rpi2;
+package UBOS::Install::Installers::Armv7hRpi2;
 
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
@@ -69,7 +69,7 @@ sub installBootLoader {
     if( defined( $self->{additionalkernelparameters} )) {
         map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
     }
-    
+
     UBOS::Utils::saveFile( $self->{target} . '/boot/cmdline.txt', <<CONTENT, 0644, 'root', 'root' );
 root=/dev/mmcblk0p2 rw rootwait console=ttyAMA0,115200 console=tty1 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 kgdboc=ttyAMA0,115200 elevator=noop$addParString
 CONTENT
@@ -275,13 +275,13 @@ sub arch {
 sub deviceClass {
     my $self = shift;
 
-    return 'raspberry-pi2';
+    return 'rpi2';
 }
 
 ##
 # Help text
 sub help {
-    return 'Raspberry Pi 2';
+    return 'SD card for Raspberry Pi 2 or 3';
 }
 
 1;

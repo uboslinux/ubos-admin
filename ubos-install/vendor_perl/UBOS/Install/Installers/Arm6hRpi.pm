@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS on an SD Card for a Raspberry Pi.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Rpi;
+package UBOS::Install::Installers::Arm6hRpi;
 
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
@@ -65,7 +65,7 @@ sub installBootLoader {
     info( 'Installing boot loader' );
 
     # Copied from the ArmLinuxARM Raspberry Pi image
-    
+
     my $addParString = '';
     if( defined( $self->{additionalkernelparameters} )) {
         map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
@@ -172,13 +172,13 @@ sub arch {
 sub deviceClass {
     my $self = shift;
 
-    return 'raspberry-pi';
+    return 'rpi';
 }
 
 ##
 # Help text
 sub help {
-    return 'Raspberry Pi 1 or Zero';
+    return 'SD card for Raspberry Pi 1 or Zero';
 }
 
 1;

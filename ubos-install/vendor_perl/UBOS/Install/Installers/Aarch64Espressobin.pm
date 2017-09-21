@@ -24,7 +24,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Espressobin;
+package UBOS::Install::Installers::Aarch64Espressobin;
 
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
@@ -50,7 +50,7 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
-    $self->{kernelpackage} = 'linux-' . $self->deviceClass();
+    $self->{kernelpackage} = 'linux-espressobin';
 
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-gateway
@@ -216,7 +216,7 @@ sub deviceClass {
 ##
 # Help text
 sub help {
-    return 'espressobin';
+    return 'Boot disk for EspressoBIN';
 }
 
 1;

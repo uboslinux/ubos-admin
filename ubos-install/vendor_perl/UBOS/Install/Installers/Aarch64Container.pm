@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for a Linux container running on an aarch64 device.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2017 Indie Computing Corp.
 #
@@ -20,8 +20,8 @@
 
 use strict;
 use warnings;
-                                                  
-package UBOS::Install::Installers::ContainerAarch64;
+
+package UBOS::Install::Installers::Aarch64Container;
 
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
@@ -50,6 +50,14 @@ sub arch {
     my $self = shift;
 
     return 'aarch64';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'container';
 }
 
 ##

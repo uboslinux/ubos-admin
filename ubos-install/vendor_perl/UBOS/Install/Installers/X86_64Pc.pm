@@ -24,7 +24,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Pc;
+package UBOS::Install::Installers::X86_64Pc;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
@@ -339,6 +339,15 @@ sub addConfigureNetworkingToScript {
 }
 
 ##
+# Returns the arch for this device.
+# return: the arch
+sub arch {
+    my $self = shift;
+
+    return 'x86_64';
+}
+
+##
 # Returns the device class
 sub deviceClass {
     my $self = shift;
@@ -349,6 +358,6 @@ sub deviceClass {
 ##
 # Help text
 sub help {
-    return 'PC (x86_64)';
+    return 'Root disk for PC (x86_64)';
 }
 1;

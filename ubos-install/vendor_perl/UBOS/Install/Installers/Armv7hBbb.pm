@@ -2,7 +2,7 @@
 # Install UBOS on an SD Card for a Beagle Bone Black.
 #
 # This file is part of ubos-install.
-# (C) 2012-2015 Indie Computing Corp.
+# (C) 2012-2017 Indie Computing Corp.
 #
 # ubos-install is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Bbb;
+package UBOS::Install::Installers::Armv7hBbb;
 
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
@@ -380,7 +380,7 @@ sub deviceClass {
 ##
 # Help text
 sub help {
-    return 'SD Card for a Beagle Bone Black';
+    return 'SD card for Beagle Bone Black';
 }
 
 1;

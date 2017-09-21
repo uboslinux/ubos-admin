@@ -1,6 +1,6 @@
-# 
+#
 # Install UBOS for a Linux container running on an ARMv7 device.
-# 
+#
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
 #
@@ -20,8 +20,8 @@
 
 use strict;
 use warnings;
-                                                  
-package UBOS::Install::Installers::ContainerArmv7h;
+
+package UBOS::Install::Installers::Armv7hContainer;
 
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
@@ -50,6 +50,14 @@ sub arch {
     my $self = shift;
 
     return 'armv7h';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'container';
 }
 
 ##

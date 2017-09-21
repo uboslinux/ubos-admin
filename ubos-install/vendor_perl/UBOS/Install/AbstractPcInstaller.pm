@@ -115,14 +115,5 @@ END
     return $errors;
 }
 
-##
-# Returns the arch for this device.
-# return: the arch
-sub arch {
-    my $self = shift;
-
-    return 'x86_64';
-}
-
 1;
 

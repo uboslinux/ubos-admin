@@ -1,5 +1,5 @@
 #
-# Install UBOS for a 64-bit PC emulated in VirtualBox.
+# Install UBOS for Amazon EC2
 #
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -19,14 +19,15 @@
 #
 
 # Device-specific notes:
-# * random number generator: haveged for artificial entropy. VirtualBox does not
-#   currently have any support for (virtual) hardware random devices:
-#   https://www.virtualbox.org/pipermail/vbox-dev/2015-March/012909.html
+# * random number generator: haveged for artificial entropy.
+# * cloud-init for ssh keys
+# * we use linux-ec2 as the name for the kernel, but we do not use
+#   mkinitcpio's linux-ec2.preset but plain linux.preset instead
 
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::VboxPc;
+package UBOS::Install::Installers::X86_64Ec2;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
@@ -35,8 +36,6 @@ use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::DiskBlockDevices;
 use UBOS::Install::DiskLayouts::DiskImage;
-use UBOS::Install::DiskLayouts::PartitionBlockDevices;
-use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -52,16 +51,25 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->deviceClass();
     }
-    $self->{kernelpackage} = 'linux';
+    $self->{kernelpackage} = 'linux-ec2';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client mkinitcpio grub virtualbox-guest ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio grub ec2-keyring ) ];
     }
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged.service vboxservice.service systemd-timesyncd.service ) ];
+        $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];
     }
-    $self->SUPER::new( @args );
+    unless( $self->{additionalkernelparameters} ) {
+        $self->{additionalkernelparameters} = [
+                'ro',
+                'rootwait',
+                # 'rootfstype=btrfs', --not sure this is needed
+                'nomodeset',
+                'console=hvc0',
+                'earlyprintk=xen,verbose',
+                'loglevel=7' ];
+    }
 
-    push @{$self->{packagedbs}}, 'virt';
+    $self->SUPER::new( @args );
 
     return $self;
 }
@@ -128,7 +136,7 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    return $self->installGrub( $pacmanConfigFile, $diskLayout, '' );
+    return $self->installGrub( $pacmanConfigFile, $diskLayout, '-ec2' );
 }
 
 ##
@@ -141,9 +149,18 @@ sub addConfigureNetworkingToScript {
 
     trace( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
+    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only cloud\n";
 
     return 0;
+}
+
+##
+# Returns the arch for this device.
+# return: the arch
+sub arch {
+    my $self = shift;
+
+    return 'x86_64';
 }
 
 ##
@@ -151,13 +168,13 @@ sub addConfigureNetworkingToScript {
 sub deviceClass {
     my $self = shift;
 
-    return 'vbox-pc';
+    return 'ec2';
 }
 
 ##
 # Help text
 sub help {
-    return 'VirtualBox';
+    return 'Amazon EC2 disk image (needs additional conversion to AMI)';
 }
 
 1;

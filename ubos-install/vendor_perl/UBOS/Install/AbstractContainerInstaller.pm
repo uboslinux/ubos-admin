@@ -176,12 +176,4 @@ sub addConfigureNetworkingToScript {
     return 0;
 }
 
-##
-# Returns the device class
-sub deviceClass {
-    my $self = shift;
-
-    return 'container-' . $self->arch;
-}
-
 1;

@@ -44,6 +44,7 @@ my $list               = 0;
 my $ret                = 0;
 my $channel            = undef;
 my $hostname           = undef;
+my $archname           = undef;
 my $deviceclassname    = undef;
 my $target             = undef;
 my $repo               = undef;
@@ -58,9 +59,10 @@ my $help               = 0;
 my $parseOk = GetOptions(
         'verbose+'             => \$verbose,
         'logConfig=s'          => \$logConfigFile,
-        'list'                 => \$list,
+        'listdeviceclasses'    => \$list,
         'channel=s'            => \$channel,
         'hostname=s'           => \$hostname,
+        'arch=s'               => \$archname,
         'deviceclass=s'        => \$deviceclassname,
         'target=s'             => \$target,
         'repository=s'         => \$repo,
@@ -97,6 +99,16 @@ if ( $< != 0 ) {
 if( $target && ! -d $target ) {
     fatal( 'Target is not a directory:', $target );
 }
+my $arch = UBOS::Utils::arch();
+if( $archname ) {
+    if( $arch ne $archname ) {
+        warning( 'Unsupported specified arch', $archname, 'is different from the system arch', $arch );
+    }
+} else {
+    # Use current arch if not given as parameter
+    $archname = $arch;
+}
+
 # Use current device class if not given as parameter
 unless( $deviceclassname ) {
     $deviceclassname = UBOS::Utils::deviceClass();
@@ -105,7 +117,7 @@ unless( $deviceclassname ) {
     fatal( 'Cannot automatically determine --deviceclass. Need to specify as argument.' );
 }
 
-my $installer = findInstaller( $deviceclassname );
+my $installer = findInstaller( $archname, $deviceclassname );
 unless( $installer ) {
     fatal( 'Cannot find installer for device class', $deviceclassname );
 }
@@ -162,10 +174,15 @@ exit( $ret );
 ##
 # Find the right installer for this device class
 sub findInstaller {
-    my $className = shift;
+    my $archName        = shift;
+    my $deviceClassName = shift;
 
+    my $className = $archName . '-' . $deviceClassName;
     my $installers = getInstallers();
     my $installer  = $installers->{$className};
+
+print "Looking for className $className\n";
+print join( ' ', sort keys %$installers ) . "\n";
 
     unless( $installer ) {
         return undef;
@@ -190,14 +207,43 @@ sub getInstallers {
 sub listInstallersQuit {
     my $installers = getInstallers();
 
-    print UBOS::Utils::hashAsColumns(
-            $installers,
-            sub {
-                my $installer = shift;
-                UBOS::Utils::invokeMethod( $installer . '::help' );
-            } );
+    my @rows;
+    my @colLengths = ( 0, 0, 0 );
+    foreach my $key ( keys %$installers ) {
+        my $installer = $installers->{$key};
+        my $newRow = [
+                UBOS::Utils::invokeMethod( $installer . '::arch' ),
+                UBOS::Utils::invokeMethod( $installer . '::deviceClass' ),
+                UBOS::Utils::invokeMethod( $installer . '::help' )
+        ];
+        $colLengths[0] = _max( $colLengths[0], length( $newRow->[0] ));
+        $colLengths[1] = _max( $colLengths[1], length( $newRow->[1] ));
+        $colLengths[2] = _max( $colLengths[2], length( $newRow->[2] ));
+        push @rows, $newRow;
+    }
+    @rows = sort { ($a->[0] cmp $b->[0]) || ($a->[1] cmp $b->[1]) } @rows;
 
-    return 1;
+    printf( "%-" . $colLengths[0] . "s  %-" . $colLengths[1] . "s  %s\n", 'arch', 'deviceclass', 'description' );
+    printf( '=' x ( $colLengths[0] + $colLengths[1] + $colLengths[2] + 4 ) . "\n" );
+
+    foreach my $row ( @rows ) {
+        printf( "%-" . $colLengths[0] . "s  %-" . $colLengths[1] . "s  %s\n", @$row );
+    }
+
+    exit( 0 );
+}
+
+#####
+# Max value
+sub _max {
+    my $a = shift;
+    my $b = shift;
+
+    if( $a > $b ) {
+        return $a;
+    } else {
+        return $b;
+    }
 }
 
 #####
@@ -234,6 +280,12 @@ END
         However, it will not change the partition table, nor will it touch other partitions.
 END
     }
+    print "    $0 --listdeviceclasses\n";
+    if( $long ) {
+        print <<END;
+        Show the device classes that can be specified.
+END
+    }
     print "    $0 --help\n";
     if( $long ) {
         print <<END;
@@ -245,49 +297,53 @@ END
 
         print <<END;
 Optional arguments:
-        --verbose:
+        --verbose
               Increase amount of status output.
-        --logConfFile <log4perlconf>:
+        --logConfFile <log4perlconf>
               Alternate logging configuration file (not common).
-        --channel <channel>:
+        --channel <channel>
               The UBOS release channel; defaults to the release channel of the system on which
               the command is run.
-        --hostname <hostname>:
+        --hostname <hostname>
               The hostname to set; defaults to a deviceclass-specific name.
-        --repository <path>:
+        --repository <path>
               Use this local UBOS repository for installation instead of http://depot.ubos.net/
-        --depotroot <url>:
+        --depotroot <url>
               Use this URL for the root of the update repository instead of http://depot.ubos.net
-        --target <path>:
+        --target <path>
               The directory to which the new system will be mounted temporarily during assembly.
               Defaults to a temp directoy in the current working directory. Make sure there
               is enough disk space for the entire system
-        --deviceclass <class>:
-              The device class, e.g. rpi (Raspberry Pi), pc (x86_64 PC). The host on which $0
-              is run, and deviceclass must be compatible (e.g. don't specify rpi on a PC).
+        --arch <arch>
+              The computer architecture, e.g. x86_64 or aarch. The architecture of the host on
+              which $0 is run and the specified march must be the same, or results will be
+              unpredictable.
+        --deviceclass <class>
+              The device class, e.g. rpi (Raspberry Pi), pc (x86_64 PC). The deviceclass must
+              exist for the arch.
         --checksignatures <never|optional|required>
               Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
-        --bootpartition <part>:
+        --bootpartition <part>
               Use this block device as boot partition. If not provided, there will be no
               separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
               boot from a btrfs filesystem, and thus require that you specify a separate
               boot partition that can be formatted as vfat.
-        --bootloaderdevice <dev>:
+        --bootloaderdevice <dev>
               Install the boot loader on this block device. This is only required for
               some systems (e.g. PC) where boot loaders are written to a special place
               on the hard disk.
-        --varpartition <part>:
+        --varpartition <part>
               Use a separate /var partition. If more than one var partition is given, mirror
               across at least two partitions (RAID1).
-        --swappartion <part>:
+        --swappartion <part>
               Create a swap partition, or several if more than one is given.
-        --addpackage <package>:
+        --addpackage <package>
               Name of an additional package to install beyond the default of the device class
-        --addservice <service>:
+        --addservice <service>
               Name of an additional systemd service to enable beyond the default of the device class
-        --addmodule <module>:
+        --addmodule <module>
               Name of an additional kernel module to load beyond the default of the device class
-        --addkernelparameter <parameter>:
+        --addkernelparameter <parameter>
               Verbatim string to be appended to the kernel boot parameter. This currently only
               works on some device classes.
 END
@@ -295,8 +351,8 @@ END
         print <<END;
 Optional arguments:
         [--verbose][--logConfFile <log4perlconf>]
-        [--channel <channel>][--hostname <hostname>][--repository <path>][--target <path>]
-        [--deviceclass <class>][--checksignatures <never|optional|required>]
+        [--channel <channel>][--hostname <hostname>][--repository <path>][--depotroot <url>][--target <path>]
+        [--arch <arch>][--deviceclass <class>][--checksignatures <never|optional|required>]
         [--bootpartition <part>][--bootloaderdevice <dev>][--varpartition <part>][--swappartition <part>]
         [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
 
