@@ -35,7 +35,7 @@ use fields qw( hostname
                basemodules  devicemodules  additionalmodules
                additionalkernelparameters
                checksignatures
-               packagedbs );
+               packagedbs disabledpackagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
@@ -77,6 +77,9 @@ sub new {
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = [ qw( os hl tools ) ];
+    }
+    unless( $self->{disabledpackagedbs} ) {
+        $self->{disabledpackagedbs} = [ qw( os hl tools toyapps ) ];
     }
 
     return $self;
@@ -238,7 +241,7 @@ sub install {
     $errors += $diskLayout->createSubvols( $self->{target} );
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
     unless( $errors ) {
-        $errors += $self->savePacmanConfigProduction( $self->{packagedbs} );
+        $errors += $self->savePacmanConfigProduction( $self->{packagedbs}, $self->{disabledpackagedbs} );
         $errors += $self->saveHostname();
         $errors += $self->saveChannel();
         $errors += $diskLayout->saveFstab( $self->{target} );
@@ -477,8 +480,9 @@ sub installPackages {
 ##
 # Generate and save the pacman config file for production
 sub savePacmanConfigProduction {
-    my $self = shift;
-    my $dbs  = shift;
+    my $self        = shift;
+    my $dbs         = shift;
+    my $disabledDbs = shift;
 
     trace( "Executing savePacmanConfigProduction" );
 
@@ -515,6 +519,15 @@ END
         unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
 [$db]
 Server = $depotRoot/\$channel/\$arch/$db
+END
+            # Note what is and isn't escaped here
+            ++$errors;
+        }
+    }
+    foreach my $db ( @$disabledDbs ) {
+        unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
+# [$db]
+# Server = $depotRoot/\$channel/\$arch/$db
 END
             # Note what is and isn't escaped here
             ++$errors;
