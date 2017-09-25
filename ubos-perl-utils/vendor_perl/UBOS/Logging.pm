@@ -211,6 +211,7 @@ sub isDebugAndSuspendActive {
 ##
 # Emit a debug message, and then wait for keyboard input to continue.
 # @msg: the message or message components; may be empty
+# return: 1 if debugAndSuspend is active
 sub debugAndSuspend {
     my @msg = @_;
 
@@ -221,6 +222,7 @@ sub debugAndSuspend {
         print STDERR "** Hit return to continue. ***\n";
         getc();
     }
+    return $DEBUG;
 }
 
 ##
