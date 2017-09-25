@@ -61,7 +61,7 @@ sub new {
     }
     $self->SUPER::new( @args );
 
-    $self->{packagedbs}->{'virt'} = '$depotRoot/$channel/$arch/virt';
+    $self->{packagedbs}->{'virt'} = '$depotRoot/$arch/virt';
 
     return $self;
 }
