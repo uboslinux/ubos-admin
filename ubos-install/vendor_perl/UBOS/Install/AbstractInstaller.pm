@@ -259,7 +259,11 @@ sub install {
 
     $self->check( $diskLayout ); # will exit if not valid
 
-    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs}, $self->{addpackagedbs} );
+    my $pacmanConfigInstall = $self->generatePacmanConfigTarget(
+            $self->{packagedbs},
+            $self->{addpackagedbs},
+            $self->{removepackagedbs},
+            $self->{disablepackagedbs} );
     my $errors = 0;
 
     $errors += $diskLayout->createDisks();
@@ -444,20 +448,22 @@ END
 # $dbs: array of package database names
 # return: File object of the generated temp file
 sub generatePacmanConfigTarget {
-    my $self   = shift;
-    my $dbs    = shift;
-    my $addDbs = shift;
+    my $self       = shift;
+    my $dbs        = shift;
+    my $addDbs     = shift;
+    my $removeDbs  = shift;
+    my $disableDbs = shift;
 
     trace( "Executing generatePacmanConfigTarget" );
 
     my $repo = $self->{repo};
     my $arch = $self->arch;
-    my $dbRoot;
+    my $depotRoot;
     if( $repo ) {
-        $dbRoot = "file://$repo/$arch";
+        $depotRoot = "file://$repo/$arch";
     } else {
         my $channel = $self->{channel};
-        $dbRoot = "http://depot.ubos.net/$channel/$arch";
+        $depotRoot = "http://depot.ubos.net/$channel/$arch";
     }
 
     my $levelString = $self->getSigLevelString();
@@ -475,13 +481,23 @@ LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
 END
 
-    my %bothDbs = ( %$dbs, %$addDbs );
-    foreach my $db ( sort keys %bothDbs ) {
-        print $file <<END;
 
-[$db]
-Server = $dbRoot/$db
-END
+    my %bothDbs = ( %$dbs, %$addDbs );
+    foreach my $dbKey ( sort keys %bothDbs ) {
+        if( exists( $removeDbs->{$dbKey} )) {
+            next;
+        }
+
+        my $dbValue = $bothDbs{$dbKey};
+
+        my $prefix = '';
+        if( $disableDbs->{$dbKey} ) {
+            $prefix = '# ';
+        }
+        my $dbFile  = $prefix . "[$dbKey]\n";
+        $dbFile    .= $prefix . "Server = $dbValue\n";
+
+        print $file $dbFile;
     }
     close $file;
     return $file;
@@ -578,7 +594,6 @@ END
 
         my $dbValue = $bothDbs{$dbKey};
         $dbValue =~ s!\$depotRoot!$depotRoot!g;
-        $dbValue =~ s!\$db!$dbKey!g;
 
         my $prefix = '';
         if( $disableDbs->{$dbKey} ) {
