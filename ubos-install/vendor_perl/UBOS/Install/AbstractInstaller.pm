@@ -77,9 +77,9 @@ sub new {
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = {
-            'os' =>    '$depotRoot/$channel/$arch/os',
-            'hl' =>    '$depotRoot/$channel/$arch/hl',
-            'tools' => '$depotRoot/$channel/$arch/tools' };
+            'os' =>    '$depotRoot/$arch/os',
+            'hl' =>    '$depotRoot/$arch/hl',
+            'tools' => '$depotRoot/$arch/tools' };
     }
     unless( $self->{addpackagedbs} ) {
         $self->{addpackagedbs} = {};
@@ -460,10 +460,10 @@ sub generatePacmanConfigTarget {
     my $arch = $self->arch;
     my $depotRoot;
     if( $repo ) {
-        $depotRoot = "file://$repo/$arch";
+        $depotRoot = "file://$repo";
     } else {
         my $channel = $self->{channel};
-        $depotRoot = "http://depot.ubos.net/$channel/$arch";
+        $depotRoot = "http://depot.ubos.net/$channel";
     }
 
     my $levelString = $self->getSigLevelString();
@@ -476,6 +476,8 @@ sub generatePacmanConfigTarget {
 #
 
 [options]
+Architecture = $arch
+
 SigLevel           = $levelString
 LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
@@ -489,6 +491,7 @@ END
         }
 
         my $dbValue = $bothDbs{$dbKey};
+        $dbValue =~ s!\$depotRoot!$depotRoot!g;
 
         my $prefix = '';
         if( $disableDbs->{$dbKey} ) {
