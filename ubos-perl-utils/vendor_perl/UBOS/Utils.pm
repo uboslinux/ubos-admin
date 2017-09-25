@@ -1132,9 +1132,10 @@ sub deviceClass {
         } elsif( $out =~ m!espressobin.*aarch64! ) {
             $_deviceClass = 'espressobin';
         } elsif( $out =~ m!x86_64! ) {
-            if( myexec( 'pacman -Qs virtualbox' ) == 0 ) {
+            my $out;
+            if( myexec( 'pacman -Qs virtualbox-guest', undef, \$out, \$out ) == 0 ) {
                 $_deviceClass = 'vbox';
-            } elsif( myexec( 'pacman -Qs linux-ec2' ) == 0 ) {
+            } elsif( myexec( 'pacman -Qs linux-ec2', undef, \$out, \$out ) == 0 ) {
                 $_deviceClass = 'ec2-instance';
             } else {
                 $_deviceClass = 'pc';
