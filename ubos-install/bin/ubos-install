@@ -349,7 +349,8 @@ Optional arguments:
     --repository <path>
           Use this local UBOS repository for installation instead of http://depot.ubos.net/
     --depotroot <url>
-          Use this URL for the root of the update repository instead of http://depot.ubos.net
+          Use this URL for the root of the update repository instead of
+          http://depot.ubos.net/<channel> where <channel> is the release channel
     --target <path>
           The directory to which the new system will be mounted temporarily during assembly.
           Defaults to a temp directoy in the current working directory. Make sure there
