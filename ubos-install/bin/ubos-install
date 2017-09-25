@@ -38,23 +38,26 @@ use Getopt::Long qw( :config pass_through );
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $verbose            = 0;
-my $logConfigFile      = undef;
-my $list               = 0;
-my $ret                = 0;
-my $channel            = undef;
-my $hostname           = undef;
-my $archname           = undef;
-my $deviceclassname    = undef;
-my $target             = undef;
-my $repo               = undef;
-my $depotRoot          = undef;
-my @additionalPackages = ();
-my @additionalServices = ();
-my @additionalModules  = ();
-my @addKernelParameter = ();
-my $checkSignatures    = 'required';
-my $help               = 0;
+my $verbose             = 0;
+my $logConfigFile       = undef;
+my $list                = 0;
+my $ret                 = 0;
+my $channel             = undef;
+my $hostname            = undef;
+my $archname            = undef;
+my $deviceclassname     = undef;
+my $target              = undef;
+my $repo                = undef;
+my $depotRoot           = undef;
+my %additionalPackages  = ();
+my %additionalServices  = ();
+my %additionalModules   = ();
+my @addKernelParameters = ();
+my %addPackageDbs       = ();
+my %removePackageDbs    = ();
+my %disablePackageDbs   = ();
+my $checkSignatures     = 'required';
+my $help                = 0;
 
 my $parseOk = GetOptions(
         'verbose+'             => \$verbose,
@@ -67,10 +70,13 @@ my $parseOk = GetOptions(
         'target=s'             => \$target,
         'repository=s'         => \$repo,
         'depotroot=s'          => \$depotRoot,
-        'addpackage=s'         => \@additionalPackages,
-        'addservice=s'         => \@additionalServices,
-        'addmodule=s'          => \@additionalModules,
-        'addkernelparameter=s' => \@addKernelParameter,
+        'addpackage=s'         => sub { _addCheck( \@_, \%additionalPackages ); },
+        'addservice=s'         => sub { _addCheck( \@_, \%additionalServices ); },
+        'addmodule=s'          => sub { _addCheck( \@_, \%additionalModules  ); },
+        'addkernelparameter=s' => \@addKernelParameters,
+        'addpackagedb=s'       => sub { _addCheck( \@_, \%addPackageDbs,     \%removePackageDbs, \%disablePackageDbs ); },
+        'removepackagedb=s'    => sub { _addCheck( \@_, \%removePackageDbs,  \%addPackageDbs,    \%disablePackageDbs ); },
+        'disablepackagedb=s'   => sub { _addCheck( \@_, \%disablePackageDbs, \%addPackageDbs,    \%removePackageDbs ); },
         'checksignatures=s'    => \$checkSignatures,
         'h|help'               => \$help );
 
@@ -102,7 +108,8 @@ if( $target && ! -d $target ) {
 my $arch = UBOS::Utils::arch();
 if( $archname ) {
     if( $arch ne $archname ) {
-        warning( 'Unsupported specified arch', $archname, 'is different from the system arch', $arch );
+        warning( 'Specified arch', $archname, 'is different from the system arch', $arch,
+                 '. This is unsupported and likely to fail.' );
     }
 } else {
     # Use current arch if not given as parameter
@@ -119,7 +126,7 @@ unless( $deviceclassname ) {
 
 my $installer = findInstaller( $archname, $deviceclassname );
 unless( $installer ) {
-    fatal( 'Cannot find installer for device class', $deviceclassname );
+    fatal( 'Cannot find installer for arch', $archname, 'deviceclass', $deviceclassname );
 }
 
 if( $target ) {
@@ -142,17 +149,26 @@ if( $repo ) {
 if( $depotRoot ) {
     $installer->setDepotRoot( $depotRoot );
 }
-if( @additionalPackages ) {
-    $installer->addPackages( @additionalPackages );
+if( %additionalPackages ) {
+    $installer->addPackages( keys %additionalPackages );
 }
-if( @additionalServices ) {
-    $installer->addServices( @additionalServices );
+if( %additionalServices ) {
+    $installer->addServices( keys %additionalServices );
 }
-if( @additionalModules ) {
-    $installer->addPackages( @additionalModules );
+if( %additionalModules ) {
+    $installer->addPackages( keys %additionalModules );
 }
-if( @addKernelParameter ) {
-    $installer->addKernelParameters( @addKernelParameter );
+if( @addKernelParameters ) {
+    $installer->addKernelParameters( @addKernelParameters );
+}
+if( %addPackageDbs ) {
+    $installer->addPackageDbs( keys %addPackageDbs );
+}
+if( %removePackageDbs ) {
+    $installer->removePackageDbs( \%removePackageDbs );
+}
+if( %disablePackageDbs ) {
+    $installer->disablePackageDbs( \%disablePackageDbs );
 }
 $installer->setCheckSignatures( $checkSignatures );
 
@@ -180,9 +196,6 @@ sub findInstaller {
     my $className = $archName . '-' . $deviceClassName;
     my $installers = getInstallers();
     my $installer  = $installers->{$className};
-
-print "Looking for className $className\n";
-print join( ' ', sort keys %$installers ) . "\n";
 
     unless( $installer ) {
         return undef;
@@ -244,6 +257,33 @@ sub _max {
     } else {
         return $b;
     }
+}
+
+##
+# Add a command-line argument to a hash set. If exists already, emit error.
+# Optionally, emit error if the same argument is already is one of several
+# other hash sets.
+# $name: name of the parameter. Only used for error messages
+# $value: value of the parameters. Needs to be added to %$addHere
+# $addHere: hash set of the values for this parameter
+# @notHere: array of hash set that cannot contain the value
+sub _addCheck {
+    my $name    = shift;
+    my $value   = shift;
+    my $addHere = shift;
+    my @notHere = @_;
+
+    if( exists( $addHere->{$value} )) {
+        fatal( 'Value of parameter', $name, 'set more than once:', $value );
+    }
+    foreach my $not ( @notHere ) {
+        if( exists( $not->{$value} )) {
+            fatal( 'Value of parameter', $name, 'cannot be both added and removed:', $value );
+        }
+    }
+    $addHere->{$value} = 1;
+
+    1;
 }
 
 #####
@@ -346,6 +386,15 @@ Optional arguments:
         --addkernelparameter <parameter>
               Verbatim string to be appended to the kernel boot parameter. This currently only
               works on some device classes.
+        --addpackagedb <name=server>
+              Add an additional pacman repository, where <name> is the section name for the
+              pacman configuration, and <server> is the URL where the packages can be found.
+        --removepackagedb <name>
+              Do not add one of the default UBOS repositories, where <name> is the section name
+              for the default UBOS repository.
+        --disablepackagedb <name>
+              Disable one of the default UBOS repositories, where <name> is the section name
+              for the default UBOS repository.
 END
     } else {
         print <<END;
@@ -355,7 +404,7 @@ Optional arguments:
         [--arch <arch>][--deviceclass <class>][--checksignatures <never|optional|required>]
         [--bootpartition <part>][--bootloaderdevice <dev>][--varpartition <part>][--swappartition <part>]
         [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
-
+        [--addpackagedb <name=server>][--removepackagedb <name>][--disablepackagedb <name>]
 END
     }
     exit 1;

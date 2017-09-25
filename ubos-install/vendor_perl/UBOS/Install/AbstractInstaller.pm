@@ -35,7 +35,7 @@ use fields qw( hostname
                basemodules  devicemodules  additionalmodules
                additionalkernelparameters
                checksignatures
-               packagedbs disabledpackagedbs );
+               packagedbs disablepackagedbs addpackagedbs removepackagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
@@ -76,10 +76,21 @@ sub new {
         $self->{basemodules} = [];
     }
     unless( $self->{packagedbs} ) {
-        $self->{packagedbs} = [ qw( os hl tools ) ];
+        $self->{packagedbs} = {
+            'os' =>    '$depotRoot/$channel/$arch/os',
+            'hl' =>    '$depotRoot/$channel/$arch/hl',
+            'tools' => '$depotRoot/$channel/$arch/tools' };
     }
-    unless( $self->{disabledpackagedbs} ) {
-        $self->{disabledpackagedbs} = [ qw( os hl tools toyapps ) ];
+    unless( $self->{addpackagedbs} ) {
+        $self->{addpackagedbs} = {};
+    }
+    unless( $self->{removepackagedbs} ) {
+        $self->{removepackagedbs} = {};
+    }
+    unless( $self->{disablepackagedbs} ) {
+        $self->{disablepackagedbs} = {
+            'toyapps' => 1
+        };
     }
 
     return $self;
@@ -186,6 +197,42 @@ sub addKernelParameters {
 }
 
 ##
+# Add non-standard package dbs
+# @packageDbs: array of key=value pairs
+sub addPackageDbs {
+    my $self       = shift;
+    my @packageDbs = shift;
+
+    $self->{addpackagedbs} = {};
+    foreach my $packageDb ( @packageDbs ) {
+        if( $packageDb =~ m!^(\w+)=(\w+://\S+$)! ) {
+            $self->{addpackagedbs}->{$1} = $2;
+        } else {
+            fatal( 'Not a valid package db, must be of form name=url :', $packageDb );
+        }
+    }
+}
+
+##
+# Remove standard package dbs
+# $packageDbs: hash of names to 1
+sub removePackageDbs {
+    my $self       = shift;
+    my $packageDbs = shift;
+
+    $self->{removepackagedbs} = $packageDbs;
+}
+
+## Disable standard package dbs
+# $packageDbs: hash of names to 1
+sub disablePackageDbs {
+    my $self       = shift;
+    my $packageDbs = shift;
+
+    $self->{disablepackagedbs} = $packageDbs;
+}
+
+##
 # Set whether package signatures should be checked. This applies to install
 # time and to run-time.
 # $check: never, optional or required
@@ -212,7 +259,7 @@ sub install {
 
     $self->check( $diskLayout ); # will exit if not valid
 
-    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs} );
+    my $pacmanConfigInstall = $self->generatePacmanConfigTarget( $self->{packagedbs}, $self->{addpackagedbs} );
     my $errors = 0;
 
     $errors += $diskLayout->createDisks();
@@ -241,7 +288,11 @@ sub install {
     $errors += $diskLayout->createSubvols( $self->{target} );
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
     unless( $errors ) {
-        $errors += $self->savePacmanConfigProduction( $self->{packagedbs}, $self->{disabledpackagedbs} );
+        $errors += $self->savePacmanConfigProduction(
+                $self->{packagedbs},
+                $self->{addpackagedbs},
+                $self->{removepackagedbs},
+                $self->{disablepackagedbs} );
         $errors += $self->saveHostname();
         $errors += $self->saveChannel();
         $errors += $diskLayout->saveFstab( $self->{target} );
@@ -393,8 +444,9 @@ END
 # $dbs: array of package database names
 # return: File object of the generated temp file
 sub generatePacmanConfigTarget {
-    my $self = shift;
-    my $dbs  = shift;
+    my $self   = shift;
+    my $dbs    = shift;
+    my $addDbs = shift;
 
     trace( "Executing generatePacmanConfigTarget" );
 
@@ -423,7 +475,8 @@ LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
 END
 
-    foreach my $db ( @$dbs ) {
+    my %bothDbs = ( %$dbs, %$addDbs );
+    foreach my $db ( sort keys %bothDbs ) {
         print $file <<END;
 
 [$db]
@@ -480,9 +533,11 @@ sub installPackages {
 ##
 # Generate and save the pacman config file for production
 sub savePacmanConfigProduction {
-    my $self        = shift;
-    my $dbs         = shift;
-    my $disabledDbs = shift;
+    my $self       = shift;
+    my $dbs        = shift;
+    my $addDbs     = shift;
+    my $removeDbs  = shift;
+    my $disableDbs = shift;
 
     trace( "Executing savePacmanConfigProduction" );
 
@@ -515,21 +570,24 @@ END
         UBOS::Utils::mkdir( "$target/etc/pacman.d/repositories.d" );
     }
 
-    foreach my $db ( @$dbs ) {
-        unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
-[$db]
-Server = $depotRoot/\$channel/\$arch/$db
-END
-            # Note what is and isn't escaped here
-            ++$errors;
+    my %bothDbs = ( %$dbs, %$addDbs );
+    foreach my $dbKey ( sort keys %bothDbs ) {
+        if( exists( $removeDbs->{$dbKey} )) {
+            next;
         }
-    }
-    foreach my $db ( @$disabledDbs ) {
-        unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$db", <<END, 0644 )) {
-# [$db]
-# Server = $depotRoot/\$channel/\$arch/$db
-END
-            # Note what is and isn't escaped here
+
+        my $dbValue = $bothDbs{$dbKey};
+        $dbValue =~ s!\$depotRoot!$depotRoot!g;
+        $dbValue =~ s!\$db!$dbKey!g;
+
+        my $prefix = '';
+        if( $disableDbs->{$dbKey} ) {
+            $prefix = '# ';
+        }
+        my $dbFile  = $prefix . "[$dbKey]\n";
+        $dbFile    .= $prefix . "Server = $dbValue\n";
+
+        unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$dbKey", $dbFile, 0644 )) {
             ++$errors;
         }
     }

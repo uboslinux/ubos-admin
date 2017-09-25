@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Arm6hRpi;
+package UBOS::Install::Installers::Armv6hRpi;
 
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
