@@ -158,7 +158,7 @@ if( %additionalServices ) {
 if( %additionalModules ) {
     $installer->addPackages( keys %additionalModules );
 }
-if( @addKernelParameters ) {
+if( @addKernelParameters ) {addPackageDbs
     $installer->addKernelParameters( @addKernelParameters );
 }
 if( %addPackageDbs ) {
@@ -263,15 +263,15 @@ sub _max {
 # Add a command-line argument to a hash set. If exists already, emit error.
 # Optionally, emit error if the same argument is already is one of several
 # other hash sets.
-# $name: name of the parameter. Only used for error messages
-# $value: value of the parameters. Needs to be added to %$addHere
+# $nameValue: array[2] consisting of $name and $value.
 # $addHere: hash set of the values for this parameter
 # @notHere: array of hash set that cannot contain the value
 sub _addCheck {
-    my $name    = shift;
-    my $value   = shift;
-    my $addHere = shift;
-    my @notHere = @_;
+    my $nameValue = shift;
+    my $addHere   = shift;
+    my @notHere   = @_;
+
+    my( $name, $value ) = @$nameValue;
 
     if( exists( $addHere->{$value} )) {
         fatal( 'Value of parameter', $name, 'set more than once:', $value );
