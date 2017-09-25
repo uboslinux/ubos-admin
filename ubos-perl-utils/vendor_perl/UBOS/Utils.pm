@@ -223,7 +223,8 @@ sub myexec {
     }
     if( $tee ) {
         $outFile = File::Temp->new();
-        $cmd .= " |& tee " . $outFile->filename;
+        $cmd = '( set -o pipefail; ' . $cmd . ' |& tee ' . $outFile->filename . ' )';
+        # Otherwise we get tee's status code.
 
     } else {
         if( defined( $outContentP )) {
