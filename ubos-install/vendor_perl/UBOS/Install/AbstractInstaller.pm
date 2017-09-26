@@ -599,11 +599,13 @@ END
         $dbValue =~ s!\$depotRoot!$depotRoot!g;
 
         my $prefix = '';
+        my $dbFile = '';
         if( $disableDbs->{$dbKey} ) {
             $prefix = '# ';
+            $dbFile .= $prefix . "Remove the # from the next two lines and run `ubos-admin update' to enable package db $dbKey\n";
         }
-        my $dbFile  = $prefix . "[$dbKey]\n";
-        $dbFile    .= $prefix . "Server = $dbValue\n";
+        $dbFile .= $prefix . "[$dbKey]\n";
+        $dbFile .= $prefix . "Server = $dbValue\n";
 
         unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$dbKey", $dbFile, 0644 )) {
             ++$errors;

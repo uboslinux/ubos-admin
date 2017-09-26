@@ -1053,8 +1053,9 @@ sub regeneratePacmanConf {
 
     foreach my $repoFile ( @repoFiles ) {
         my $toAdd = UBOS::Utils::slurpFile( $repoFile );
-        $toAdd =~ s!^\s+!!;
-        $toAdd =~ s!\s+$!!;
+        $toAdd =~ s!#.*$!!gm; # remove comments -- will confuse the user
+        $toAdd =~ s!^\s+!!gm; # leading white space
+        $toAdd =~ s!\s+$!!gm; # trailing white space
         $toAdd =~ s!\$channel!$channel!g;
 
         $pacmanConf .= "\n" . $toAdd . "\n";
