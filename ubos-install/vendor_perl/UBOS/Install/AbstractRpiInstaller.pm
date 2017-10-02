@@ -23,7 +23,6 @@
 #   configuration file during ubos-install, as long as Arch ARM hasn't updated the
 #   default configuration they ship, which is identical as the x86 one:
 #   http://archlinuxarm.org/forum/viewtopic.php?f=60&t=8571,
-#   see also Bbb
 
 use strict;
 use warnings;
