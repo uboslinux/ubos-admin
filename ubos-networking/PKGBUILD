@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.42
+pkgver=0.44
 pkgrel=1
 pkgdesc="UBOS Network management tools"
 arch=('any')
@@ -23,7 +23,7 @@ package() {
             fi
         done
     done
-    
+
 # Systemd
     install -D -m 644 ${startdir}/systemd/avahi-daemon.service -t ${pkgdir}/etc/systemd/system/
 }
