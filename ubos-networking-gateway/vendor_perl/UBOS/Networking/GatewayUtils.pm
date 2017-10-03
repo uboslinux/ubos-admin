@@ -166,7 +166,8 @@ sub activate {
     foreach my $nic ( keys %$upUnconfiguredNics ) {
         $conf->{$nic} = {
             'state' => 'switch'
-    };
+        };
+    }
 
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 
