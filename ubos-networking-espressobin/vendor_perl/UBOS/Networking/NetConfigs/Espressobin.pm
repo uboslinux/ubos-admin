@@ -1,33 +1,28 @@
 #!/usr/bin/perl
 #
-# A network configuration for a device that obtains an IP address via
-# DHCP from a switch ports called wan, creating a logic interface eth0,
-# and connects all lan* switch ports into a bridge call br0. Manages br0
-# local IP addresses issued by its DHCP server, with Network Address Translation,
-# on all others.
-# Does not allow any inbound connections from the upstream interface.
+# A network configuration for the EspressoBIN.
 #
-# This file is part of ubos-networking.
+# This file is part of ubos-networking-espressobin.
 # (C) 2012-2017 Indie Computing Corp.
 #
-# ubos-networking is free software: you can redistribute it and/or modify
+# ubos-networking-espressobin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# ubos-networking is distributed in the hope that it will be useful,
+# ubos-networking-espressobin is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with ubos-networking.  If not, see <http://www.gnu.org/licenses/>.
+# along with ubos-networking-espressobin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 use strict;
 use warnings;
 
-package UBOS::Networking::NetConfigs::WanLan;
+package UBOS::Networking::NetConfigs::Espressobin;
 
 use JSON;
 use UBOS::Logging;
@@ -36,11 +31,16 @@ use UBOS::Networking::NetConfigUtils;
 
 my $name = 'wan-lan';
 
-# Default candidates for gateway devices, in order, if none has been specified.
+# The gateway devices.
 # These are regexes.
 my @defaultGatewayNicPatterns = (
     'wan.*'
 );
+
+# the parent interface devices.
+my @defaultSwitchNicPatterns = (
+    'eth0'
+};
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -81,14 +81,15 @@ sub activate {
                 'ssh'          => JSON::true,
                 'sshratelimit' => JSON::true
             },
-            \@defaultGatewayNicPatterns );
+            \@defaultGatewayNicPatterns,
+            \@defaultSwitchNicPatterns );
 }
 
 ##
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Home router using a hardware switch (e.g. EspressoBin with an upstream connection and a local network. Apps on local network only.';
+    return 'Home router using a hardware switch (e.g. EspressoBIN with an upstream connection and a local network. Apps on local network only.';
 }
 
 1;

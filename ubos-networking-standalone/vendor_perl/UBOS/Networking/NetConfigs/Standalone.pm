@@ -67,14 +67,14 @@ sub activate {
     }
 
     my $appNic = undef;
-    foreach my $nic ( keys %$allNics ) {
+    foreach my $nic ( sort keys %$allNics ) {
         if( exists( $conf->{$nic} ) && exists( $conf->{$nic}->{appnic} ) && $conf->{$nic}->{appnic} ) {
             $appNic = $nic;
             last;
         }
     }
     unless( $appNic ) {
-        foreach my $nic ( keys %$allNics ) {
+        foreach my $nic ( sort keys %$allNics ) {
             if(    exists( $conf->{$nic} )
                 && exists( $conf->{$nic}->{address} )
                 && ( !exists( $conf->{$nic}->{appnic} ) || !$conf->{$nic}->{appnic} ))
@@ -85,7 +85,7 @@ sub activate {
         }
     }
 
-    foreach my $nic ( keys %$allNics ) {
+    foreach my $nic ( sort keys %$allNics ) {
         unless( exists( $conf->{$nic} )) {
             my( $ip, $prefixsize ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
             if( $ip ) {

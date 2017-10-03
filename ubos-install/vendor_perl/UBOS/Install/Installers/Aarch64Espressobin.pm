@@ -53,7 +53,7 @@ sub new {
     $self->{kernelpackage} = 'linux-espressobin';
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-gateway
+        $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-espressobin
                 ubos-networking-standalone uboot-tools archlinuxarm-keyring
                 espressobin-uboot-config
                 smartmontools wpa_supplicant crda ) ];
@@ -191,7 +191,7 @@ sub addConfigureNetworkingToScript {
 
     trace( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
+    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only espressobin\n";
 
     return 0;
 }

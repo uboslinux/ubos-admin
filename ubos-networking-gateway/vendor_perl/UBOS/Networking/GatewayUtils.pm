@@ -70,15 +70,28 @@ sub isPossible {
 # $force: do not read existing configuration, initialize netconfig from scratch
 # $upstreamConfig: parameters for the upstream interface
 # $lanConfig: parameters for the local network interfaces
+# $gatewayNicPatterns: use those, instead of the defaults
+# $upUnconfiguredNics: set those Nics to 'up', but do not otherwise configure (hash)
 sub activate {
-    my $name               = shift;
-    my $initOnly           = shift;
-    my $force              = shift;
-    my $upstreamConfig     = shift;
-    my $lanConfig          = shift;
-    my $gatewayNicPatterns = shift || \@defaultGatewayNicPatterns;
+    my $name                      = shift;
+    my $initOnly                  = shift;
+    my $force                     = shift;
+    my $upstreamConfig            = shift;
+    my $lanConfig                 = shift;
+    my $gatewayNicPatterns        = shift || \@defaultGatewayNicPatterns;
+    my $upUnconfiguredNicPatterns = shift || [];
 
-    my $allNics = UBOS::Host::nics();
+    my $allNics            = UBOS::Host::nics();
+    my $upUnconfiguredNics = {};
+    map {   my $nic = $_;
+            foreach my $pattern ( @$gatewayNicPatterns ) {
+                if( $nic =~ m!^$pattern$! ) {
+                    $upUnconfiguredNics->{$nic} = $allNics->{$nic};
+                    delete $allNics->{$nic};
+                    last;
+                }
+            }
+        } sort keys %$allNics;
 
     my $conf    = undef;
     my $error   = 0;
@@ -124,7 +137,7 @@ sub activate {
     }
     $conf->{$gateway}->{appnic} = JSON::true;
 
-    foreach my $nic ( keys %$allNics ) {
+    foreach my $nic ( sort keys %$allNics ) {
         unless( exists( $conf->{$nic} )) {
             my( $ip, $prefixsize ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
             if( $ip ) {
@@ -139,6 +152,10 @@ sub activate {
                 warning( 'Cannot find unallocated network for interface', $nic );
             }
         }
+    }
+
+    foreach my $nic ( keys %$upUnconfiguredNics ) {
+        $conf->{$nic}->{state} = 'on';
     }
 
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
