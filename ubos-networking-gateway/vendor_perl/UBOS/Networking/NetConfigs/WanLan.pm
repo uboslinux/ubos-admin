@@ -36,6 +36,12 @@ use UBOS::Networking::NetConfigUtils;
 
 my $name = 'wan-lan';
 
+# Default candidates for gateway devices, in order, if none has been specified.
+# These are regexes.
+my @defaultGatewayNicPatterns = (
+    'wan.*'
+);
+
 ##
 # Determine whether this network configuration could currently be activated.
 # This return false, if, for example, this network configuration requires two
@@ -43,7 +49,7 @@ my $name = 'wan-lan';
 # This will also return true if this configuration is currently active.
 # return: 1 or 0
 sub isPossible {
-    return 1; # Currently we don't know how we check for wan and lan[0-9]+
+    return UBOS::Networking::GatewayUtils::isPossible( \@defaultGatewayNicPatterns );
 }
 
 ##
@@ -74,14 +80,15 @@ sub activate {
                 'ports'        => JSON::true,
                 'ssh'          => JSON::true,
                 'sshratelimit' => JSON::true
-            } );
+            },
+            \@defaultGatewayNicPatterns );
 }
 
 ##
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Home router using a hardware switch (e.g. EspressoBin( with an upstream connection and a local network. Apps on local network only.';
+    return 'Home router using a hardware switch (e.g. EspressoBin with an upstream connection and a local network. Apps on local network only.';
 }
 
 1;

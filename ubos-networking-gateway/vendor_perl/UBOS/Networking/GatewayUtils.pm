@@ -30,9 +30,9 @@ use JSON;
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
 
-# Candidates for gateway devices, in order, if none has been specified.
-# These are regexes
-my @gatewayNicPatterns = (
+# Default candidates for gateway devices, in order, if none has been specified.
+# These are regexes.
+my @defaultGatewayNicPatterns = (
     'en.*',
     'eth.*',
     'wifi.*',
@@ -44,14 +44,17 @@ my @gatewayNicPatterns = (
 # This return false, if, for example, this network configuration requires two
 # ethernet interfaces, but the device has only one ethernet interface attached.
 # This will also return true if this configuration is currently active.
+# $gatewayNicPatterns: array of gateway device candidate regex, or default if undef
 # return: 1 or 0
 sub isPossible {
+    my $gatewayNicPatterns = shift || \@defaultGatewayNicPatterns;
+
     my $allNics = UBOS::Host::nics();
-    
+
     if( keys %$allNics < 2 ) { # not enough nics
         return 0;
     }
-    foreach my $gatewayNicPattern ( @gatewayNicPatterns ) {
+    foreach my $gatewayNicPattern ( @$gatewayNicPatterns ) {
         my @gateways = grep { m!$gatewayNicPattern! } keys %$allNics;
         if( @gateways ) {
             return 1;
@@ -68,11 +71,12 @@ sub isPossible {
 # $upstreamConfig: parameters for the upstream interface
 # $lanConfig: parameters for the local network interfaces
 sub activate {
-    my $name           = shift;
-    my $initOnly       = shift;
-    my $force          = shift;
-    my $upstreamConfig = shift;
-    my $lanConfig      = shift;
+    my $name               = shift;
+    my $initOnly           = shift;
+    my $force              = shift;
+    my $upstreamConfig     = shift;
+    my $lanConfig          = shift;
+    my $gatewayNicPatterns = shift || \@defaultGatewayNicPatterns;
 
     my $allNics = UBOS::Host::nics();
 
@@ -103,7 +107,7 @@ sub activate {
     }
     unless( $gateway ) {
         my @gateways;
-        foreach my $gatewayNicPattern ( @gatewayNicPatterns ) {
+        foreach my $gatewayNicPattern ( @$gatewayNicPatterns ) {
             @gateways = grep { m!$gatewayNicPattern! } sort UBOS::Networking::NetConfigUtils::compareNics keys %$allNics;
             if( @gateways ) {
                 last;
@@ -113,7 +117,7 @@ sub activate {
             error( 'Unable to find a suitable gateway interface' );
             return 0;
         }
-            
+
         $gateway = shift @gateways;
         $conf->{$gateway} = $upstreamConfig; # overwrite what might have been there before
         $updated = 1;
