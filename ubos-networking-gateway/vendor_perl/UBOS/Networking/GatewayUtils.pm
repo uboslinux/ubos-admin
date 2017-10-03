@@ -47,9 +47,20 @@ my @defaultGatewayNicPatterns = (
 # $gatewayNicPatterns: array of gateway device candidate regex, or default if undef
 # return: 1 or 0
 sub isPossible {
-    my $gatewayNicPatterns = shift || \@defaultGatewayNicPatterns;
+    my $gatewayNicPatterns        = shift || \@defaultGatewayNicPatterns;
+    my $upUnconfiguredNicPatterns = shift || [];
 
     my $allNics = UBOS::Host::nics();
+
+    my $allNics = UBOS::Host::nics();
+    map {   my $nic = $_;
+            foreach my $pattern ( @$upUnconfiguredNicPatterns ) {
+                if( $nic =~ m!^$pattern$! ) {
+                    delete $allNics->{$nic};
+                    last;
+                }
+            }
+        } sort keys %$allNics;
 
     if( keys %$allNics < 2 ) { # not enough nics
         return 0;
@@ -84,7 +95,7 @@ sub activate {
     my $allNics            = UBOS::Host::nics();
     my $upUnconfiguredNics = {};
     map {   my $nic = $_;
-            foreach my $pattern ( @$gatewayNicPatterns ) {
+            foreach my $pattern ( @$upUnconfiguredNicPatterns ) {
                 if( $nic =~ m!^$pattern$! ) {
                     $upUnconfiguredNics->{$nic} = $allNics->{$nic};
                     delete $allNics->{$nic};

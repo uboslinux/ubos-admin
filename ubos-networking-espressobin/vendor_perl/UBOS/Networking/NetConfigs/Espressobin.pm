@@ -29,7 +29,7 @@ use UBOS::Logging;
 use UBOS::Networking::GatewayUtils;
 use UBOS::Networking::NetConfigUtils;
 
-my $name = 'wan-lan';
+my $name = 'espressobin';
 
 # The gateway devices.
 # These are regexes.
@@ -40,7 +40,7 @@ my @defaultGatewayNicPatterns = (
 # the parent interface devices.
 my @defaultSwitchNicPatterns = (
     'eth0'
-};
+);
 
 ##
 # Determine whether this network configuration could currently be activated.
@@ -49,7 +49,9 @@ my @defaultSwitchNicPatterns = (
 # This will also return true if this configuration is currently active.
 # return: 1 or 0
 sub isPossible {
-    return UBOS::Networking::GatewayUtils::isPossible( \@defaultGatewayNicPatterns );
+    return UBOS::Networking::GatewayUtils::isPossible(
+            \@defaultGatewayNicPatterns,
+            \@defaultSwitchNicPatterns );
 }
 
 ##
