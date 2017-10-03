@@ -51,8 +51,6 @@ sub isPossible {
     my $upUnconfiguredNicPatterns = shift || [];
 
     my $allNics = UBOS::Host::nics();
-
-    my $allNics = UBOS::Host::nics();
     map {   my $nic = $_;
             foreach my $pattern ( @$upUnconfiguredNicPatterns ) {
                 if( $nic =~ m!^$pattern$! ) {
@@ -166,8 +164,9 @@ sub activate {
     }
 
     foreach my $nic ( keys %$upUnconfiguredNics ) {
-        $conf->{$nic}->{state} = 'on';
-    }
+        $conf->{$nic} = {
+            'state' => 'switch'
+    };
 
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
 

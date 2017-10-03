@@ -460,11 +460,13 @@ END
 :OPEN-PORTS - [0:0]
 END
 
-    # don't accept anything from nics that are off
+    # don't accept anything from nics that are off or switch
     foreach my $nic ( sort keys %$config ) {
         my $noWildNic = $nic;
         $noWildNic =~ s!\*!!g;
-        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+        if(    exists( $config->{$nic}->{state} )
+            && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' ))
+        {
             $iptablesContent .= <<END;
 :NIC-$noWildNic - [0:0]
 END
@@ -492,7 +494,9 @@ END
 
     # dispatch by nic
     foreach my $nic ( sort keys %$config ) {
-        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+        if(    exists( $config->{$nic}->{state} )
+            && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' ))
+        {
             my $noWildNic = $nic;
             my $wildNic   = $nic;
             $noWildNic =~ s!\*!!g;
@@ -508,7 +512,9 @@ END
 END
 
     foreach my $nic ( sort keys %$config ) {
-        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+        if(    exists( $config->{$nic}->{state} )
+            && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' ))
+        {
             # handled this already
         } else {
             my $noWildNic = $nic;
@@ -529,7 +535,8 @@ END
 END
 
     foreach my $nic ( sort keys %$config ) {
-        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+        if(    exists( $config->{$nic}->{state} )
+            && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' )) {
             # handled this already
         } else {
             my $noWildNic = $nic;
@@ -610,7 +617,9 @@ END
         my $noWildNic = $nic;
         $noWildNic =~ s!\*!!g;
 
-        if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+        if(    exists( $config->{$nic}->{state} )
+            && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' ))
+        {
             $iptablesContent .= <<END;
 -A NIC-$noWildNic -j DROP
 END
@@ -766,6 +775,7 @@ END
             UBOS::Utils::myexec( "ip addr flush $nic" );
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
+                # keep link up for state eq 'switch'
                 UBOS::Utils::myexec( "ip link set $nic down" );
 
             } else {
