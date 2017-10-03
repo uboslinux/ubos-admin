@@ -333,6 +333,7 @@ SCRIPT
         if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
             error( "chroot script failed", $err );
             ++$errors;
+            debugAndSuspend( 'Check what went wrong?' );
         }
         $errors += $self->cleanup();
     }
@@ -538,6 +539,8 @@ sub installPackages {
             . " --cachedir '$target/var/cache/pacman/pkg'"
             . " --noconfirm"
             . ' ' . join( ' ', @allPackages );
+
+    debugAndSuspend( 'Installing packages', @allPackages );
 
     my $out;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {

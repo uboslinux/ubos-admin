@@ -40,6 +40,7 @@ use UBOS::Utils;
 
 my $verbose             = 0;
 my $logConfigFile       = undef;
+my $debug               = undef;
 my $list                = 0;
 my $ret                 = 0;
 my $channel             = undef;
@@ -62,6 +63,7 @@ my $help                = 0;
 my $parseOk = GetOptions(
         'verbose+'             => \$verbose,
         'logConfig=s'          => \$logConfigFile,
+        'debug'                => \$debug,
         'listdeviceclasses'    => \$list,
         'channel=s'            => \$channel,
         'hostname=s'           => \$hostname,
@@ -80,7 +82,7 @@ my $parseOk = GetOptions(
         'checksignatures=s'    => \$checkSignatures,
         'h|help'               => \$help );
 
-UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile );
+UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
 
 if( !$parseOk ) {
     synopsisHelpQuit( 0 );

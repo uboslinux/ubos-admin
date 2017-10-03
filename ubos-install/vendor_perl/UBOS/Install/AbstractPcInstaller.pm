@@ -73,6 +73,8 @@ default_image="/boot/initramfs-linux$kernelPostfix.img"
 default_options="-S autodetect"
 END
 
+    debugAndSuspend( 'Invoking mkinitcpio in chroot:', $target );
+
     my $out;
     my $err;
     if( UBOS::Utils::myexec( "chroot '$target' mkinitcpio -p linux$kernelPostfix", undef, \$out, \$err ) ) {
@@ -106,6 +108,8 @@ END
         $chrootScript .= <<'END';
 grub-mkconfig -o /boot/grub/grub.cfg
 END
+
+        debugAndSuspend( 'Invoking bootloader script in chroot:', $target, "\n$chrootScript" );
 
         if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
             error( "bootloader chroot script failed:", $err, "\nwas", $chrootScript );

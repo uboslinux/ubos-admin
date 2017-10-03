@@ -68,6 +68,8 @@ sub formatDisks {
         my $data = $self->{devicetable}->{$mountPath};
         my $fs   = $data->{fs};
 
+        debugAndSuspend( 'Format file system', $mountPath, 'with', $fs );
+
         if( 'btrfs' eq $fs ) {
             my $cmd = 'mkfs.btrfs -f ';
             if( @{$data->{devices}} > 1 ) {
@@ -164,14 +166,18 @@ sub mountDisks {
         unless( -d "$target$mountPoint" ) {
             UBOS::Utils::mkdir( "$target$mountPoint" );
         }
+
         if( $fs eq 'swap' ) {
             foreach my $device ( @devices ) {
+                debugAndSuspend( 'Swapon device', $device );
                 if( UBOS::Utils::myexec( "swapon '$device'" )) {
                     ++$errors;
                 }
             }
         } else {
             my $firstDevice = $devices[0];
+
+            debugAndSuspend( 'Mount device', $firstDevice, 'at', $targetMountPoint, 'with', $fs );
             if( UBOS::Utils::myexec( "mount -t $fs '$firstDevice' '$target$mountPoint'" )) {
                 ++$errors;
             }
@@ -197,11 +203,13 @@ sub umountDisks {
 
         if( 'swap' eq $fs ) {
             foreach my $device ( @{$entry->{devices}} ) {
+                debugAndSuspend( 'Swapoff device', $device );
                 if( UBOS::Utils::myexec( "swapoff '$device'" )) {
                     ++$errors;
                 }
             }
         } else {
+            debugAndSuspend( 'Umount ', $mountPoint );
             if( UBOS::Utils::myexec( "umount '$target$mountPoint'" )) {
                 ++$errors;
             }
@@ -264,7 +272,10 @@ sub createSubvols {
         # create separate subvol for /var/log, so snapper does not roll back the logs
         unless( -d "$target/var" ) {
             UBOS::Utils::mkdirDashP( "$target/var" );
+
         }
+
+        debugAndSuspend( 'Create subvol ', "$target/var/log" );
         my $out;
         if( UBOS::Utils::myexec( "btrfs subvol create '$target/var/log'", undef, \$out, \$out )) {
             error( "Failed to create btrfs subvol for '$target/var/log':", $out );
@@ -352,6 +363,7 @@ FSTAB
             ++$i;
         }
     }
+    debugAndSuspend( 'Saving ', "$target/etc/fstab", ":\n$fsTab" );
 
     UBOS::Utils::saveFile( "$target/etc/fstab", $fsTab, 0644, 'root', 'root' );
 
