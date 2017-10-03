@@ -177,7 +177,7 @@ sub mountDisks {
         } else {
             my $firstDevice = $devices[0];
 
-            debugAndSuspend( 'Mount device', $firstDevice, 'at', $targetMountPoint, 'with', $fs );
+            debugAndSuspend( 'Mount device', $firstDevice, 'at', "$target$mountPoint", 'with', $fs );
             if( UBOS::Utils::myexec( "mount -t $fs '$firstDevice' '$target$mountPoint'" )) {
                 ++$errors;
             }
