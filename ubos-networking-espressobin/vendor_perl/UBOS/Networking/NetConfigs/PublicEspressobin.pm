@@ -22,14 +22,14 @@
 use strict;
 use warnings;
 
-package UBOS::Networking::NetConfigs::Espressobin;
+package UBOS::Networking::NetConfigs::PublicEspressobin;
 
 use JSON;
 use UBOS::Logging;
 use UBOS::Networking::GatewayUtils;
 use UBOS::Networking::NetConfigUtils;
 
-my $name = 'espressobin';
+my $name = 'public-espressobin';
 
 # The gateway devices.
 # These are regexes.
@@ -71,6 +71,7 @@ sub activate {
                 'dns'          => JSON::false, # do not listen to DNS queries from upstream
                 'forward'      => JSON::true,
                 'masquerade'   => JSON::true,
+                'ports'        => JSON::true,
                 'ssh'          => JSON::true,
                 'sshratelimit' => JSON::true
             },
@@ -91,7 +92,7 @@ sub activate {
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'EspressoBIN with as a home router. Apps on local network only.';
+    return 'EspressoBIN with as a home router. Apps accessible over the internet.';
 }
 
 1;

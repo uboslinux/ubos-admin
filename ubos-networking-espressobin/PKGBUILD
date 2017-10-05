@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.11
+pkgver=0.12
 pkgrel=1
 pkgdesc="UBOS Network management tools (EspressoBIN)"
 arch=('aarch64')
