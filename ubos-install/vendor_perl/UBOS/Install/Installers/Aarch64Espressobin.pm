@@ -191,7 +191,7 @@ sub addConfigureNetworkingToScript {
 
     trace( "Executing addConfigureNetworkingToScript" );
 
-    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only espressobin\n";
+    $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n"; # FIXME, not yet: espressobin\n";
 
     return 0;
 }
