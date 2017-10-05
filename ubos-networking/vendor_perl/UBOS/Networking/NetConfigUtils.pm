@@ -610,8 +610,10 @@ END
             }
         }
         $iptablesContent .= <<END;
+-A FORWARD -i ve-+ -j ACCEPT
 -A FORWARD -j REJECT --reject-with icmp-host-unreachable
 END
+            # always forward from containers
     }
     foreach my $nic ( sort keys %$config ) {
         my $noWildNic = $nic;
