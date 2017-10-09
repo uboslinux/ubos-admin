@@ -368,21 +368,21 @@ sub check {
         fatal( 'Target is not a directory:', $self->{target} );
     }
 
+    $self->{channel} = UBOS::Utils::isValidChannel( $self->{channel} );
+    unless( $self->{channel} ) {
+        fatal( 'No valid channel given' );
+    }
+
     if( $self->{repo} ) {
         # if not given, use default depot.ubos.net
         unless( -d $self->{repo} ) {
             fatal( 'Repo must be an existing directory, is not:', $self->{repo} );
         }
-        my $archRepo = $self->{repo} . '/' . $self->arch;
+        my $archRepo = $self->{repo} . '/' . $self->{channel} . '/' . $self->arch;
         my $osDb     = $archRepo . '/os/os.db';
         unless( -l $osDb ) {
             fatal( 'Not a valid repo, cannot find:', $osDb );
         }
-    }
-
-    $self->{channel} = UBOS::Utils::isValidChannel( $self->{channel} );
-    unless( $self->{channel} ) {
-        fatal( 'No valid channel given' );
     }
 
     # Would be nice to check that packages actually exist, but that's hard if
