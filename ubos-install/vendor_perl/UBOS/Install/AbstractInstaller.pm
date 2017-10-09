@@ -457,14 +457,14 @@ sub generatePacmanConfigTarget {
 
     trace( "Executing generatePacmanConfigTarget" );
 
-    my $repo = $self->{repo};
-    my $arch = $self->arch;
+    my $repo    = $self->{repo};
+    my $channel = $self->{channel};
+    my $arch    = $self->arch;
     my $depotRoot;
     if( $repo ) {
         $depotRoot = "file://$repo";
     } else {
-        my $channel = $self->{channel};
-        $depotRoot = "http://depot.ubos.net/$channel";
+        $depotRoot = "http://depot.ubos.net/";
     }
 
     my $levelString = $self->getSigLevelString();
@@ -493,6 +493,7 @@ END
 
         my $dbValue = $bothDbs{$dbKey};
         $dbValue =~ s!\$depotRoot!$depotRoot!g;
+        $dbValue =~ s!\$channel!$channel!g;
 
         my $prefix = '';
         if( $disableDbs->{$dbKey} ) {
