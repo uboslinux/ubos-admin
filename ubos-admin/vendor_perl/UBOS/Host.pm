@@ -79,7 +79,7 @@ sub _getOsReleaseInfo {
 
         if( -e '/etc/os-release' ) {
             my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
-            while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9])\"!mg ) {
+            while( $osRelease =~ m!^\s*([-_a-zA-Z0-9]+)\s*=\s*\"?([-_ ;:/\.a-zA-Z0-9]*)\"?\s*$!mg ) {
                 $_osReleaseInfo->{$1} = $2;
             }
         }

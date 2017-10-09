@@ -65,6 +65,7 @@ sub run {
     }
 
     my $errors = 0;
+    my $targetFile; # out here so it won't go out of scope too early
 
     if( $target ) {
         unless( -d $target ) {
@@ -89,8 +90,8 @@ sub run {
         }
         trace( 'Configuration device:', $device );
 
-        my $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
-        $target        = $targetFile->dirname;
+        $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
+        $target     = $targetFile->dirname;
 
         debugAndSuspend( 'Mounting configuration device', $device, 'to', $target );
         if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {

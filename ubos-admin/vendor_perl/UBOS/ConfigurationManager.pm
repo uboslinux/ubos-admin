@@ -130,7 +130,7 @@ sub checkConfigurationDevice {
             $@ = 'More than one suitable partition found: ' . $ret . ' ' . $name;
             return undef;
         }
-        $ret = "/dev/$name";
+        $ret = $name;
     }
     unless( $ret ) {
         $@ = 'No suitable partition found on: ' . $device;
