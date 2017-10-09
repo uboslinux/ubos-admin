@@ -77,9 +77,9 @@ sub new {
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = {
-            'os' =>    '$depotRoot/$arch/os',
-            'hl' =>    '$depotRoot/$arch/hl',
-            'tools' => '$depotRoot/$arch/tools' };
+            'os' =>    '$depotRoot/$channel/$arch/os',
+            'hl' =>    '$depotRoot/$channel/$arch/hl',
+            'tools' => '$depotRoot/$channel/$arch/tools' };
     }
     unless( $self->{addpackagedbs} ) {
         $self->{addpackagedbs} = {};
