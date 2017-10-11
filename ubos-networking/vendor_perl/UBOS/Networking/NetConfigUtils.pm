@@ -103,9 +103,10 @@ sub networkingDefaults() {
         my $doWrite     = 0; # info has been updated
         my $skipWriting = 0; # but it would not be safe to write
         if( -e $networkingDefaultsConfFile ) {
-            $_networkingDefaultsConf = UBOS::Utils::readJsonFromFile( $networkingDefaultsConfFile );
+            $_networkingDefaultsConf = UBOS::Utils::readJsonFromFile(
+                    $networkingDefaultsConfFile,
+                    sub { ( 'Networking defaults file is malformed, falling back to built-in defaults:', $networkingDefaultsConfFile ) } );
             unless( $_networkingDefaultsConf ) {
-                warning( 'Networking defaults file is malformed, falling back to built-in defaults:', $networkingDefaultsConfFile );
                 $skipWriting = 1;
             }
         }

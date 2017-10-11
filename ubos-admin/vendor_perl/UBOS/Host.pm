@@ -59,6 +59,9 @@ my $_physicalNics          = undef; # allocated as needed
 sub config {
     unless( $_hostConf ) {
         my $raw = readJsonFromFile( $HOST_CONF_FILE );
+        unless( $raw ) {
+            fatal();
+        }
         my $now = UBOS::Utils::now();
 
         $raw->{hostname}        = Sys::Hostname::hostname;
@@ -131,14 +134,22 @@ sub sites {
             # If we are root, we read the full files, otherwise the public files
             foreach my $f ( <"$SITES_DIR/*-full.json"> ) {
                 my $siteJson = readJsonFromFile( $f );
-                my $site     = UBOS::Site->new( $siteJson );
-                $_sites->{$site->siteId()} = $site;
+                if( $siteJson ) {
+                    my $site = UBOS::Site->new( $siteJson );
+                    $_sites->{$site->siteId()} = $site;
+                } else {
+                    fatal();
+                }
             }
         } else {
             foreach my $f ( <"$SITES_DIR/*-world.json"> ) {
                 my $siteJson = readJsonFromFile( $f );
-                my $site     = UBOS::Site->new( $siteJson );
-                $_sites->{$site->siteId()} = $site;
+                if( $siteJson ) {
+                    my $site     = UBOS::Site->new( $siteJson );
+                    $_sites->{$site->siteId()} = $site;
+                } else {
+                    fatal();
+                }
             }
         }
     }
@@ -1116,8 +1127,7 @@ sub ipAddressesOnNic {
 }
 
 ##
-# Obtain a function that knows how to read manifest files from the default
-# location.
+# Reads manifest files from the default location.
 # $packageIdentifier: the package identifier
 # return: JSON
 sub defaultManifestFileReader {

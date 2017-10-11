@@ -73,7 +73,7 @@ sub run {
         foreach my $file ( @files ) {
             my $json = readJsonFromFile( $file );
             unless( $json ) {
-                exit 1;
+                fatal();
             }
             $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
             $jsons{$file} = $json;

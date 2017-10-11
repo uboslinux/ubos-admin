@@ -155,10 +155,11 @@ sub read {
 
     foreach my $siteJsonFile ( <$updateBackupDir/*.json> ) {
         my $siteJson = UBOS::Utils::readJsonFromFile( $siteJsonFile );
+        if( $siteJson ) {
+            my $site = UBOS::Site->new( $siteJson );
 
-        my $site = UBOS::Site->new( $siteJson );
-
-        $self->{sites}->{$site->siteId()} = $site;
+            $self->{sites}->{$site->siteId()} = $site;
+        }
     }
 
     return 1;

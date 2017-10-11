@@ -332,9 +332,11 @@ sub _readCachesIfNeeded {
         while( my $entry = readdir DIR ) {
             if( $entry ne '.' && $entry ne '..' ) {
                 my $json = UBOS::Utils::readJsonFromFile( "$RESOURCES_DIR/$entry" );
-                my $entryBase = $entry;
-                $entryBase =~ s!\.json$!!;
-                $resourcesCache->{$entryBase} = $json;
+                if( $json ) {
+                    my $entryBase = $entry;
+                    $entryBase =~ s!\.json$!!;
+                    $resourcesCache->{$entryBase} = $json;
+                }
             }
         }
         closedir DIR;
@@ -347,9 +349,11 @@ sub _readCachesIfNeeded {
         while( my $entry = readdir DIR ) {
             if( $entry ne '.' && $entry ne '..' ) {
                 my $json = UBOS::Utils::readJsonFromFile( "$PINNED_DIR/$entry" );
-                my $entryBase = $entry;
-                $entryBase =~ s!\.json$!!;
-                $pinnedCache->{$entryBase} = $json;
+                if( $json ) {
+                    my $entryBase = $entry;
+                    $entryBase =~ s!\.json$!!;
+                    $pinnedCache->{$entryBase} = $json;
+                }
             }
         }
         closedir DIR;

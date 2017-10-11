@@ -93,6 +93,9 @@ sub run {
         if( $file ) {
             # if $file is given, construct @siteIds from there
             my $json = readJsonFromFile( $file );
+            unless( $json ) {
+                fatal();
+            }
             $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
 
             if( ref( $json ) eq 'HASH' && %$json ) {
