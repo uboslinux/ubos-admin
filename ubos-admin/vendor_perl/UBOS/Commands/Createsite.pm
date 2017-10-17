@@ -435,7 +435,8 @@ sub run {
                                 . " customization for $custPointName"
                                 . ( $isFile ? ' (enter filename)' : ' (enter value)' )
                                 . ': ',
-                                exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef );
+                                exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef,
+                                'password' eq $custPointDef->{type} );
 
                         if( !$value && !$custPointDef->{required} ) {
                             # allow defaults for non-required values
