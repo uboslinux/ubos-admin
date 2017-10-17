@@ -27,7 +27,6 @@ package UBOS::Backup::ZipFileBackup;
 use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
 use UBOS::AppConfiguration;
 use UBOS::Backup::ZipFileBackupContext;
-use UBOS::Configuration;
 use UBOS::Logging;
 use UBOS::Site;
 use UBOS::Utils qw( readJsonFromString writeJsonToString );

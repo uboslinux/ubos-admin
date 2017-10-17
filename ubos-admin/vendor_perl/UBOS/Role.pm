@@ -117,13 +117,13 @@ sub deployOrCheck {
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
-					if( $doIt ) {
-						debugAndSuspend(
-								'Deploy',         $itemIndex,
-								'with role',      $roleName,
-								'of installable', $installable->packageName,
-								'at appconfig',   $appConfig->appConfigId );
-            		}
+                    if( $doIt ) {
+                        debugAndSuspend(
+                                'Deploy',         $itemIndex,
+                                'with role',      $roleName,
+                                'of installable', $installable->packageName,
+                                'at appconfig',   $appConfig->appConfigId );
+                    }
                     $ret &= $item->deployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
                 ++$itemIndex;
@@ -169,13 +169,13 @@ sub undeployOrCheck {
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item ) {
-					if( $doIt ) {
-						debugAndSuspend(
-								'Undeploy',       $itemIndex,
-								'with role',      $roleName,
-								'of installable', $installable->packageName,
-								'at appconfig',   $appConfig->appConfigId );
-            		}
+                    if( $doIt ) {
+                        debugAndSuspend(
+                                'Undeploy',       $itemIndex,
+                                'with role',      $roleName,
+                                'of installable', $installable->packageName,
+                                'at appconfig',   $appConfig->appConfigId );
+                    }
                     $ret &= $item->undeployOrCheck( $doIt, $codeDir, $dir, $config );
                 }
                 --$itemIndex;

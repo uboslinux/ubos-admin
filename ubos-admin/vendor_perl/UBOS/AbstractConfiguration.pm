@@ -263,7 +263,7 @@ sub dump {
                 } elsif( ref( $value )) {
                     "    $_ => " . ref( $value ) ."\n";
                 } else {
-                    "    $_ => $value\n";
+                    "    $_ => '$value'\n";
                 }
             } else {
                 "    $_ => <undef>\n";
@@ -289,7 +289,7 @@ sub _applyFunc {
     } elsif( defined( $func )) {
         error( 'Not a function', $funcName, 'in varsubst' );
         $ret = $value;
-        
+
     } else {
         error( 'Unknown function', $funcName, 'in varsubst' );
         $ret = $value;

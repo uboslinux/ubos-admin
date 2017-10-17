@@ -48,10 +48,15 @@ sub new {
         $self->checkManifest( 'accessory', $skipFilesystemChecks );
         $self->checkManifestAccessoryInfo();
     }
+
+    my $accessoryId = exists( $self->{json}->{accessoryinfo}->{accessoryid} )
+            ? $self->{json}->{accessoryinfo}->{accessoryid}
+            : $packageName; # This is optional; always have a value
+
     $self->{config}->put(
                 "package.name"                            => $packageName,
                 "installable.accessoryinfo.appid"         => $self->{json}->{accessoryinfo}->{appid},
-                "installable.accessoryinfo.accessoryid"   => $self->{json}->{accessoryinfo}->{accessoryid},
+                "installable.accessoryinfo.accessoryid"   => $accessoryId,
                 "installable.accessoryinfo.accessorytype" => $self->{json}->{accessoryinfo}->{accessorytype} );
 
     return $self;

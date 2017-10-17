@@ -27,7 +27,6 @@ package UBOS::UpdateBackup;
 use base qw( UBOS::AbstractBackup );
 use fields;
 
-use UBOS::Configuration;
 use UBOS::Logging;
 use UBOS::UpdateBackupContext;
 use UBOS::Utils;
