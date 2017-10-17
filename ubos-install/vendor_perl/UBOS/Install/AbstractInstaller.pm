@@ -950,6 +950,10 @@ sub cleanup {
     # create /var/cache/pacman/pkg or there will be an unnecessary warning
     UBOS::Utils::mkdirDashP( "$target/var/cache/pacman/pkg", 0755 );
 
+    # /etc/machine-id must be unique
+    if( -e "$target/etc/machine-id" ) {
+        UBOS::Utils::deleteFile( "$target/etc/machine-id" );
+    }
     return $ret;
 }
 
