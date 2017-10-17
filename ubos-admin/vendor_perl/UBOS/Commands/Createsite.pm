@@ -86,11 +86,13 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
-    my $oldSites = UBOS::Host::sites();
+    my $oldSites        = UBOS::Host::sites();
+    my $starWarningDone = 0;
 
     if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostname ) {
         if( $dryRun ) {
             print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
+            $starWarningDone = 1;
         } else {
             fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
         }
@@ -108,7 +110,9 @@ sub run {
             if( '*' eq $hostname ) {
                 if( %$oldSites ) {
                     if( $dryRun ) {
-                        print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
+                        unless( $starWarningDone ) {
+                            print "WARNING: You can only create a site with hostname * (any) if no other sites exist. You will not be able to deploy the site you are creating on this device.\n";
+                        }
                     } else {
                         print "You can only create a site with hostname * (any) if no other sites exist.\n";
                         next outer;
