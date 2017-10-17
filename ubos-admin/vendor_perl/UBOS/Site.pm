@@ -510,6 +510,9 @@ sub appConfigAtContext {
     my $context = shift;
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
+        unless( defined( $appConfig->context )) {
+            next; # Non-web apps
+        }
         if( $context eq $appConfig->context ) {
             return $appConfig;
         }
