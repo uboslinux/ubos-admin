@@ -43,8 +43,6 @@ sub run {
     my $debug         = undef;
     my $json          = 0;
     my $brief         = 0;
-    my @siteIds       = ();
-    my @hosts         = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -52,9 +50,7 @@ sub run {
             'logConfig=s' => \$logConfigFile,
             'debug'       => \$debug,
             'json'        => \$json,
-            'brief'       => \$brief,
-            'siteid=s'    => \@siteIds,
-            'hostname=s'  => \@hosts );
+            'brief'       => \$brief );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -63,27 +59,7 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $sites;
-    if( @siteIds || @hosts ) {
-        foreach my $siteId ( @siteIds ) {
-            my $site = UBOS::Host::findSiteByPartialId( $siteId );
-            if( $site ) {
-                $sites->{$site->siteId} = $site;
-            } else {
-                fatal( $@ );
-            }
-        }
-        foreach my $host ( @hosts ) {
-            my $site = UBOS::Host::findSiteByHostname( $host );
-            if( $site ) {
-                $sites->{$site->siteId} = $site;
-            } else {
-                fatal( $@ );
-            }
-        }
-    } else {
-        $sites = UBOS::Host::sites();
-    }
+    my $sites = UBOS::Host::sites();
 
     if( $json ) {
         my $sitesJson = {};
@@ -115,18 +91,8 @@ SSS
     customization points marked as "private").
 DDD
         'cmds' => {
-            '' => <<HHH,
-    Show all sites.
-HHH
-            <<SSS => <<HHH,
-    --siteid <siteid> [--siteid <siteid>]...
-SSS
-    Show only the the site or sites with site ids <siteid>.
-HHH
-            <<SSS => <<HHH
-    --hostname <hostname> [--hostname <hostname>]...
-SSS
-    Show only the the site or sites with hostnames <hostname>.
+            '' => <<HHH
+    Show all currently deployed sites.
 HHH
         },
         'args' => {
