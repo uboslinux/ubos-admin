@@ -105,8 +105,8 @@ sub run {
         $jsonOutput = {};
         $jsonOutput->{'type'}       = $backup->backupType;
         $jsonOutput->{'created'}    = $backup->startTimeString;
-        $jsonOutput->{'sites'}      = [];
-        $jsonOutput->{'appconfigs'} = [];
+        $jsonOutput->{'sites'}      = {};
+        $jsonOutput->{'appconfigs'} = {};
 
     } elsif( !$brief ) {
         print "Type:    " . $backup->backupType      . "\n";
