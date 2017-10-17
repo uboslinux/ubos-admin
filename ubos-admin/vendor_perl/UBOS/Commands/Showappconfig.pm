@@ -45,7 +45,7 @@ sub run {
     my $siteId;
     my $host;
     my $appConfigId;
-    my $context;
+    my $context = undef;
     my $url;
 
     my $parseOk = GetOptionsFromArray(
@@ -66,11 +66,12 @@ sub run {
 
     if(    !$parseOk
         || ( $json && $brief )
-        || ( $appConfigId && ( $siteId || $host || $context || $url ))
+        || ( $appConfigId && ( $siteId || $host || defined( $context ) || $url ))
         || ( $siteId && $host )
         || ( $siteId && $url )
         || ( $host && $url )
-        || ( !$appConfigId && !$context && !$url )
+        || (( $siteId || $host ) && !defined( $context ))
+        || ( !$appConfigId && !defined( $context ) && !$url )
         || @args
         || ( $verbose && $logConfigFile ))
     {
