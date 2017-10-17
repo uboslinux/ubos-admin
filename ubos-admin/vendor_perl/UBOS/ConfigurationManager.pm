@@ -194,9 +194,17 @@ sub saveCurrentConfiguration {
     unless( -d "$target/$sshDir" ) {
         UBOS::Utils::mkdirDashP( "$target/$sshDir" );
     }
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_dsa_key
+#HostKey /etc/ssh/ssh_host_ecdsa_key
+#HostKey /etc/ssh/ssh_host_ed25519_key
+    foreach my $pubKeyFile ( glob "/etc/ssh/ssh_host_*.pub" ) {
+        my $shortPubKeyFile = $pubKeyFile;
+        $shortPubKeyFile =~ s!^(.*/)!!;
 
-    my $sshHostKey = UBOS::Utils::slurpFile( '/etc/ssh/ssh_host_key.pub' );
-    UBOS::Utils::saveFile( "$target/$sshDir/ssh_host_key.pub", $sshHostKey );
+        my $pubKey = UBOS::Utils::slurpFile( $pubKeyFile );
+        UBOS::Utils::saveFile( "$target/$sshDir/$shortPubKeyFile", $pubKey );
+    }
 
     return 0;
 }
