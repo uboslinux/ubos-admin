@@ -712,7 +712,7 @@ END
             if( $resolvedConfContent =~ m!^\[Resolve\]! ) {
                 $resolvedConfContent =~ s!(\[Resolve\])!$1\nDNSStubListener=no!;
             } else {
-                $resolvedConfContent .=~ "\n[Resolve]\nDNSStubListener=no";
+                $resolvedConfContent .= "\n[Resolve]\nDNSStubListener=no";
             }
             UBOS::Utils::saveFile( $resolvedConfFile, $resolvedConfContent, 0x644 );
         }
