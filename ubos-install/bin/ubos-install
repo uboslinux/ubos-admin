@@ -160,7 +160,7 @@ if( %additionalServices ) {
 if( %additionalModules ) {
     $installer->addPackages( keys %additionalModules );
 }
-if( @addKernelParameters ) {addPackageDbs
+if( @addKernelParameters ) {
     $installer->addKernelParameters( @addKernelParameters );
 }
 if( %addPackageDbs ) {
