@@ -428,6 +428,9 @@ sub run {
                     }
                     my $isFile = $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile};
                     while( 1 ) {
+                        my $blank =    ( 'password' eq $custPointDef->{type} )
+                                    || ( exists( $custPointDef->{private} ) && $custPointDef->{private} );
+
                         my $value = ask(
                                 (( $installable == $app ) ? 'App ' : 'Accessory ' )
                                 . $installable->packageName
@@ -436,7 +439,8 @@ sub run {
                                 . ( $isFile ? ' (enter filename)' : ' (enter value)' )
                                 . ': ',
                                 exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef,
-                                'password' eq $custPointDef->{type} || ( defined( $custPointDef->{private} ) && $custPointDef->{private} ));
+                                $blank,
+                                $blank );
 
                         if( !$value && !$custPointDef->{required} ) {
                             # allow defaults for non-required values
