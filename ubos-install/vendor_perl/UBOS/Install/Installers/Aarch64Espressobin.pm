@@ -124,9 +124,10 @@ sub createDiskLayout {
                 $ret = UBOS::Install::DiskLayouts::DiskImage->new(
                         $rootDiskOrImage,
                         {   '/boot' => {
-                                'index' => 1,
-                                'fs'    => 'ext4',
-                                'size'  => '100M'
+                                'index'     => 1,
+                                'fs'        => 'ext4',
+                                'size'      => '100M',
+                                'mkfsflags' => '-O ^metadata_csum,^64bit'
                             },
                             '/' => {
                                 'index' => 2,
@@ -138,9 +139,10 @@ sub createDiskLayout {
                 $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
                         [   $rootDiskOrImage    ],
                         {   '/boot' => {
-                                'index' => 1,
-                                'fs'    => 'ext4',
-                                'size'  => '100M'
+                                'index'     => 1,
+                                'fs'        => 'ext4',
+                                'size'      => '100M',
+                                'mkfsflags' => '-O ^metadata_csum,^64bit'
                             },
                             '/' => {
                                 'index' => 2,
