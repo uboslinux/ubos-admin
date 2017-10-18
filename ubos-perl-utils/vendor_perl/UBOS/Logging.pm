@@ -60,15 +60,16 @@ sub initialize {
     my $verbosity   = shift || 0;
     my $logConfFile = shift;
     my $debug       = shift;
+    my $confFileDir = shift || '/etc/ubos';
 
     if( $verbosity ) {
         if( $logConfFile ) {
             fatal( 'Specify --verbose or --logConfFile, not both' );
         }
-        $logConfFile = "/etc/ubos/log-default-v$verbosity.conf";
+        $logConfFile = "$confFileDir/log-default-v$verbosity.conf";
 
     } elsif( !$logConfFile ) {
-        $logConfFile = '/etc/ubos/log-default.conf';
+        $logConfFile = "$confFileDir/log-default.conf";
     }
 
     unless( -r $logConfFile ) {
