@@ -436,7 +436,7 @@ sub run {
                                 . ( $isFile ? ' (enter filename)' : ' (enter value)' )
                                 . ': ',
                                 exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef,
-                                'password' eq $custPointDef->{type} );
+                                'password' eq $custPointDef->{type} || ( defined( $custPointDef->{private} ) && $custPointDef->{private} ));
 
                         if( !$value && !$custPointDef->{required} ) {
                             # allow defaults for non-required values
