@@ -464,7 +464,7 @@ sub generatePacmanConfigTarget {
     if( $repo ) {
         $depotRoot = "file://$repo";
     } else {
-        $depotRoot = "http://depot.ubos.net/";
+        $depotRoot = 'http://depot.ubos.net'; # No trailing slash
     }
 
     my $levelString = $self->getSigLevelString();
