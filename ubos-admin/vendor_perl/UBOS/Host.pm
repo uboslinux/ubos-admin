@@ -1057,7 +1057,8 @@ sub nics {
         }
     }
     if( $all ) {
-        return $_allNics;
+        my %copy = %$_allNics;
+        return \%copy;
     }
     unless( defined( $_physicalNics )) {
         $_physicalNics = {};
@@ -1069,7 +1070,8 @@ sub nics {
             }
         }
     }
-    return $_physicalNics;
+    my %copy = %$_physicalNics;
+    return \%copy;
 }
 
 ##
