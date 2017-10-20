@@ -777,7 +777,8 @@ sub checkCustomizationPointValues {
                         my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
                         my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                         # checked earlier that this is non-null
-                        unless( $custPointValidation->{valuecheck}->( $value, $custPointDef )) {
+                        my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
+                        unless( $ok ) {
                             fatal(   'AppConfiguration ' . $self->appConfigId
                                    . ', package ' . $packageName
                                    . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName

@@ -101,7 +101,7 @@ our $knownCustomizationPointTypes = {
             my $custPointJson = shift; # ignored
 
             if( ref( $v ) =~ m/^JSON.*[Bb]oolean$/ ) {
-                return ( 1, $v );
+                return ( 1, $v ? JSON::true : JSON::false );
             } elsif( ref( $v )) {
                 return ( 0, $v );
             } elsif( $v eq 'true' ) {
