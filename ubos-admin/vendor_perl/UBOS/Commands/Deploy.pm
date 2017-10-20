@@ -384,12 +384,8 @@ HHH
             '--verbose' => <<HHH,
     Display extra output. May be repeated for even more output.
 HHH
-            '--logConfig <file>' => <<HHH,
+            '--logConfig <file>' => <<HHH
     Use an alternate log configuration file for this command.
-HHH
-            '--siteid <siteid>' => <<HHH
-    If specified, only deploy the site(s) with this site id <siteid>.
-    May be specified more than once.
 HHH
         }
     };
