@@ -262,7 +262,7 @@ sub configureAll {
 
     foreach my $nic ( keys %$config ) {
         # wildcards allowed here
-        my $priority = 50; # by default
+        my $nicPriority       = 50; # by default
         my $dotNetworkContent = <<END;
 #
 # UBOS networking configuration for $nic
@@ -290,7 +290,7 @@ END
             $dotNetworkContent .= "BindCarrier=" . $config->{$nic}->{bindcarrier} . "\n";
         }
         if( exists( $config->{$nic}->{priority} ) && $config->{$nic}->{priority} ) {
-            $priority = $config->{$nic}->{priority};
+            $nicPriority = $config->{$nic}->{priority};
         }
 
         my $noWildNic = $nic;
