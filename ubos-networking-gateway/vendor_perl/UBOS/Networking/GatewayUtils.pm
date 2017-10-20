@@ -165,7 +165,8 @@ sub activate {
 
     foreach my $nic ( keys %$upUnconfiguredNics ) {
         $conf->{$nic} = {
-            'state' => 'switch'
+            'state'    => 'switch',
+            'priority' => 49
         };
     }
 

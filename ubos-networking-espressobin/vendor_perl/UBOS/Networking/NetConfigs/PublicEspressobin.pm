@@ -73,7 +73,8 @@ sub activate {
                 'masquerade'   => JSON::true,
                 'ports'        => JSON::true,
                 'ssh'          => JSON::true,
-                'sshratelimit' => JSON::true
+                'sshratelimit' => JSON::true,
+                'bindcarrier'  => $defaultSwitchNicPatterns[0],
             },
             {
                 'dns'          => JSON::true, # listen to DNS queries from the LAN
@@ -82,7 +83,8 @@ sub activate {
                 'mdns'         => JSON::true,
                 'ports'        => JSON::true,
                 'ssh'          => JSON::true,
-                'sshratelimit' => JSON::true
+                'sshratelimit' => JSON::true,
+                'bindcarrier'  => $defaultSwitchNicPatterns[0]
             },
             \@defaultGatewayNicPatterns,
             \@defaultSwitchNicPatterns );

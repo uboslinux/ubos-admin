@@ -33,7 +33,7 @@ my $iptablesConfigFile          = '/etc/iptables/iptables.rules';
 my $ip6tablesConfigFile         = '/etc/iptables/ip6tables.rules';
 my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.conf';
 my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
-my $dotNetworkFilePattern       = '/etc/systemd/network/50-ubos-%s.network';
+my $dotNetworkFilePattern       = '/etc/systemd/network/%2d-ubos-%s.network';
 my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
 my $networkingDefaultsConfFile  = '/etc/ubos/networking-defaults.json';
 my $_networkingDefaultsConf     = undef; # cached content of $networkingDefaultsConfFile
@@ -262,6 +262,7 @@ sub configureAll {
 
     foreach my $nic ( keys %$config ) {
         # wildcards allowed here
+        my $priority = 50; # by default
         my $dotNetworkContent = <<END;
 #
 # UBOS networking configuration for $nic
@@ -285,11 +286,17 @@ END
         if( exists( $config->{$nic}->{forward} ) && $config->{$nic}->{forward} ) {
             $dotNetworkContent .= "IPForward=yes\n";
         }
+        if( exists( $config->{$nic}->{bindcarrier} ) && $config->{$nic}->{bindcarrier} ) {
+            $dotNetworkContent .= "BindCarrier=" . $config->{$nic}->{bindcarrier} . "\n";
+        }
+        if( exists( $config->{$nic}->{priority} ) && $config->{$nic}->{priority} ) {
+            $priority = $config->{$nic}->{priority};
+        }
 
         my $noWildNic = $nic;
         $noWildNic =~ s!\*!!g;
 
-        UBOS::Utils::saveFile( sprintf( $dotNetworkFilePattern, $noWildNic ), $dotNetworkContent );
+        UBOS::Utils::saveFile( sprintf( $dotNetworkFilePattern, $nicPriority, $noWildNic ), $dotNetworkContent );
     }
 
     # Avahi
