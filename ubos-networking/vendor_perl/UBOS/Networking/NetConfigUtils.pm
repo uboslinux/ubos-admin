@@ -721,7 +721,7 @@ END
             } else {
                 $resolvedConfContent .= "\n[Resolve]\nDNSStubListener=no";
             }
-            UBOS::Utils::saveFile( $resolvedConfFile, $resolvedConfContent, 0x644 );
+            UBOS::Utils::saveFile( $resolvedConfFile, $resolvedConfContent, 0644 );
         }
     }
 
