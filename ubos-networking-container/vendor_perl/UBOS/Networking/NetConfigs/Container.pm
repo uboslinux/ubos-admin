@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 #
-# A network configuration for a Linux container run with systemd-nspawn.
+# A network configuration for a Linux container run with systemd-nspawn,
+# and perhaps other programs.
 #
 # This file is part of ubos-networking.
 # (C) 2012-2015 Indie Computing Corp.
@@ -94,7 +95,7 @@ sub activate {
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Networking for a systemd-nspawn container.';
+    return 'Networking for a Linux container.';
 }
 
 1;
