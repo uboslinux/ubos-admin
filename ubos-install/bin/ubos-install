@@ -149,6 +149,9 @@ if( $repo ) {
     $installer->setRepo( $repo );
 }
 if( $depotRoot ) {
+    if( $depotRoot =~ m!/$! ) {
+        fatal( 'Do not give a trailing slash for depotroot:', $depotRoot );
+    }
     $installer->setDepotRoot( $depotRoot );
 }
 if( %additionalPackages ) {

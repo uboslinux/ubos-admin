@@ -77,9 +77,15 @@ sub new {
     }
     unless( $self->{packagedbs} ) {
         $self->{packagedbs} = {
-            'os' =>    '$depotRoot/$channel/$arch/os',
-            'hl' =>    '$depotRoot/$channel/$arch/hl',
-            'tools' => '$depotRoot/$channel/$arch/tools' };
+            'os'      => '$depotRoot/$channel/$arch/os',
+            'hl'      => '$depotRoot/$channel/$arch/hl',
+            'tools'   => '$depotRoot/$channel/$arch/tools',
+            'toyapps' => '$depotRoot/$channel/$arch/toyapps',
+
+            'os-experimental'    => '$depotRoot/$channel/$arch/os-experimental',
+            'hl-experimental'    => '$depotRoot/$channel/$arch/hl-experimental',
+            'tools-experimental' => '$depotRoot/$channel/$arch/tools-experimental'
+        };
     }
     unless( $self->{addpackagedbs} ) {
         $self->{addpackagedbs} = {};
@@ -89,7 +95,11 @@ sub new {
     }
     unless( $self->{disablepackagedbs} ) {
         $self->{disablepackagedbs} = {
-            'toyapps' => 1
+            'toyapps' => 1,
+
+            'os-experimental'    => 1,
+            'hl-experimental'    => 1,
+            'tools-experimental' => 1
         };
     }
 
