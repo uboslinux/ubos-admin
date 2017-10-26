@@ -71,6 +71,7 @@ sub run {
         || ( $siteId && $url )
         || ( $host && $url )
         || (( $siteId || $host ) && !defined( $context ))
+        || (( !$siteId && !$host ) && defined( $context ))
         || ( !$appConfigId && !defined( $context ) && !$url )
         || @args
         || ( $verbose && $logConfigFile ))

@@ -90,6 +90,11 @@ sub performBackup {
             ++$torSitesCount;
         }
     }
+    if( keys %$appConfigs == 0 ) {
+        $@ = 'No sites found. Nothing to do.';
+        return undef;
+    }
+
     if( $noTorKey && !$torSitesCount ) {
         fatal( 'No Tor site found, but --notorkey specified.' );
     }
@@ -128,7 +133,7 @@ sub performBackup {
     UBOS::Host::executeTriggers( $resumeTriggers );
 
     unless( $ret ) {
-        error( "Backup failed." );
+        @$ = 'Backup failed.';
     }
     return $ret;
 }

@@ -87,6 +87,9 @@ sub run {
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
     my $ret = UBOS::BackupUtils::performBackup( $backup, $out, \@siteIds, \@appConfigIds, $noTls, $noTorKey );
+    unless( $ret ) {
+        error( $@ );
+    }
 
     return $ret;
 }
