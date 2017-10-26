@@ -82,7 +82,7 @@ sub run {
     if( $appConfigId ) {
         $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
         unless( $appConfig ) {
-            fatal( 'Cannot find a appconfiguration with appconfigid:', $appConfigId );
+            fatal( $@ );
         }
     } else {
         # Can use the same code here for url vs. host+context

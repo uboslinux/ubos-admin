@@ -194,9 +194,8 @@ sub findSiteByPartialId {
             $ret = $candidates[0];
 
         } elsif( @candidates ) {
-            $@ = "There is more than one site whose siteid starts with $partial: "
-               . join( " vs ", map { $_->siteId } @candidates )
-               . '.';
+            $@ = "There is more than one site whose siteid starts with $partial:\n"
+               . join( "\n", map { $_->siteId } @candidates );
             return undef;
 
         } else {
@@ -284,8 +283,8 @@ sub findAppConfigurationByPartialId {
             $ret = $candidates[0][0];
 
         } elsif( @candidates ) {
-            $@ = "There is more than one AppConfiguration whose app config id starts with $partial: "
-                 . join( " vs ", map { "$_[0] (site $_[1] )" } @candidates ) . '.';
+            $@ = "There is more than one AppConfiguration whose app config id starts with $partial:\n"
+                 . join( "\n", map { $_->[0]->appConfigId() . " (site " . $_->[1]->siteId() . ")" } @candidates );
             return undef;
 
         } else {

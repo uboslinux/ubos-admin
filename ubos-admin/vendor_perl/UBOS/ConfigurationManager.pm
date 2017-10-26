@@ -326,6 +326,7 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/ubos-install *, \
     /usr/bin/umount *, \
     /usr/bin/snapper *, \
+    /usr/bin/su *, \
     /bin/bash *
 CONTENT
     }
