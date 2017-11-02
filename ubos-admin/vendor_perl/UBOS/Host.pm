@@ -584,7 +584,8 @@ sub updateCode {
             $kernelVersion =~ s!\s+$!!;
             $kernelVersion =~ s!-ARCH$!!; # somehow there's a -ARCH at the end
 
-            if( $kernelPackageVersion ne $kernelVersion ) {
+            if( $kernelPackageVersion ne $kernelVersion && "$kernelPackageVersion-ec2" ne $kernelVersion ) {
+                # apparently the EC2 kernel version has a trailing -ec2
                 # reboot necessary
                 $ret = -1;
             }
