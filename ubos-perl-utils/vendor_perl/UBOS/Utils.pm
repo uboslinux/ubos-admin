@@ -556,7 +556,7 @@ sub copyRecursively {
     my $from = shift;
     my $to   = shift;
 
-    if( myexec( "cp -d -r -p --reflink=always '$from' '$to'" )) {
+    if( myexec( "cp -d -r -p --reflink=auto '$from' '$to'" )) {
         return 0;
     } else {
         return 1;
@@ -1138,7 +1138,7 @@ sub deviceClass {
             if( myexec( 'pacman -Qs virtualbox-guest', undef, \$out, \$out ) == 0 ) {
                 $_deviceClass = 'vbox';
             } elsif( myexec( 'pacman -Qs linux-ec2', undef, \$out, \$out ) == 0 ) {
-                $_deviceClass = 'ec2-instance';
+                $_deviceClass = 'ec2';
             } else {
                 $_deviceClass = 'pc';
             }
