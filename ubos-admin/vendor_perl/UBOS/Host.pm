@@ -52,6 +52,7 @@ my $_sites                 = undef; # allocated as needed
 my $_osReleaseInfo         = undef; # allocated as needed
 my $_allNics               = undef; # allocated as needed
 my $_physicalNics          = undef; # allocated as needed
+my $_gpgHostKeyFingerprint = undef; # allocated as needed
 
 ##
 # Obtain the host Configuration object.
@@ -917,25 +918,26 @@ sub ensurePacmanInit {
 # Determine the fingerprint of the host key
 sub gpgHostKeyFingerprint {
 
-    my $out;
-    my $err;
-    if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --fingerprint pacman@localhost', undef, \$out, \$err )) {
-        error( 'Cannot determine host key', $out, $err );
-        return '';
-    }
-    # gpg: WARNING: unsafe permissions on homedir '/etc/pacman.d/gnupg'
-    # pub   rsa2048/B0B434F0 2015-02-15
-    #       Key fingerprint = 26FC BC8B 874A 9744 7718  5E8C 5311 6A36 B0B4 34F0
-    # uid       [ultimate] Pacman Keyring Master Key <pacman@localhost>
-    # 2016-07: apparently the "Key fingerprint =" is not being emitted any more
+    unless( $_gpgHostKeyFingerprint ) {
+        my $out;
+        my $err;
+        if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --fingerprint pacman@localhost', undef, \$out, \$err )) {
+            error( 'Cannot determine host key', $out, $err );
+            return '';
+        }
+        # gpg: WARNING: unsafe permissions on homedir '/etc/pacman.d/gnupg'
+        # pub   rsa2048/B0B434F0 2015-02-15
+        #       Key fingerprint = 26FC BC8B 874A 9744 7718  5E8C 5311 6A36 B0B4 34F0
+        # uid       [ultimate] Pacman Keyring Master Key <pacman@localhost>
+        # 2016-07: apparently the "Key fingerprint =" is not being emitted any more
 
-    my $ret;
-    if( $out =~ m!((\s+[0-9A-F]{4}){10})!m ) {
-        $ret = $1;
-        $ret =~ s!\s+!!g;
-    } else {
-        error( 'Unexpected fingerprint format:', $out );
-        $ret = '';
+        if( $out =~ m!((\s+[0-9A-F]{4}){10})!m ) {
+            $_gpgHostKeyFingerprint = lc( $1 );
+            $_gpgHostKeyFingerprint =~ s!\s+!!g;
+        } else {
+            error( 'Unexpected fingerprint format:', $out );
+            $_gpgHostKeyFingerprint = '';
+        }
     }
     return $ret;
 }
