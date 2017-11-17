@@ -939,7 +939,7 @@ sub gpgHostKeyFingerprint {
             $_gpgHostKeyFingerprint = '';
         }
     }
-    return $ret;
+    return $_gpgHostKeyFingerprint;
 }
 
 ##
