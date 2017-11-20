@@ -49,6 +49,16 @@ post_install() {
 post_upgrade() {
     ensureChattr
 
+    # Make Java 9 the default
+    if [ -e /usr/lib/jvm/default ]; then
+        \rm /usr/lib/jvm/default
+    fi
+    if [ -e /usr/lib/jvm/default-runtime ]; then
+        \rm /usr/lib/jvm/default-runtime
+    fi
+    ln -sf java-9-openjdk /usr/lib/jvm/default
+    ln -sf java-9-openjdk /usr/lib/jvm/default-runtime
+
     systemctl daemon-reload
 
     perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
