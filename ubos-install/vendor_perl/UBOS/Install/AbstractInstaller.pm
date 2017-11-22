@@ -58,7 +58,7 @@ sub new {
     }
     # set some defaults
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-device';
+        $self->{hostname} = 'ubos-' . $self->arch() . '-' . $self->deviceClass();
     }
     unless( $self->{channel} ) {
         $self->{channel} = 'yellow'; # FIXME once we have 'green';

@@ -48,9 +48,6 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-' . $self->deviceClass();
-    }
     $self->{kernelpackage} = undef; # no kernel
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-container ) ];

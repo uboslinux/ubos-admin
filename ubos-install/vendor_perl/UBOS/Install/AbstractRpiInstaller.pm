@@ -51,9 +51,6 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-raspberry-pi';
-    }
     $self->{kernelpackage} = 'linux-raspberrypi';
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client

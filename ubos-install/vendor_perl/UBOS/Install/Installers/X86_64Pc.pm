@@ -49,7 +49,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-' . $self->deviceClass();
+        $self->{hostname} = 'ubos-pc';
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {

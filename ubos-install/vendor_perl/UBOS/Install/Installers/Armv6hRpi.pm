@@ -44,7 +44,7 @@ sub new {
         $self = fields::new( $self );
     }
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-' . $self->deviceClass();
+        $self->{hostname} = 'ubos-raspberry-pi';
     }
 
     $self->SUPER::new( @args );
