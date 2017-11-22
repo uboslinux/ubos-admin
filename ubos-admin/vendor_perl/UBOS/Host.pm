@@ -522,20 +522,18 @@ sub updateCode {
         }
     }
 
-    # ubos-admin comes first
-    $cmd = 'pacman -S ubos-admin --noconfirm';
-    debugAndSuspend( 'Execute pacman -S ubos-admin' );
-    if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
-        error( 'Command failed:', $cmd, "\n$out" );
-
-    } elsif( UBOS::Logging::isTraceActive() ) {
-        print $out;
-    }
-    my $ubosAdminUpdated;
-    if( $out =~ m!warning.*reinstalling!i ) {
-        $ubosAdminUpdated = 0;
-    } else {
-        $ubosAdminUpdated = 1;
+    # ubos-admin and the key packages come first
+    my @firstUpgraded = ();
+    foreach my $pack ( 'archlinux-keyring', 'archlinuxarm-keyring', 'ec2-keyring', 'ubos-admin' ) {
+        debugAndSuspend( 'Execute pacman -S ', $pack );
+        if( myexec( "pacman -Q $pack 2> /dev/null && pacman -S $pack --noconfirm || true", undef, \$out, \$out ) != 0 ) {
+            error( 'Checking/upgrading package failed:', $pack, "\n$out" );
+        } elsif( UBOS::Logging::isTraceActive() ) {
+            print $out;
+        }
+        if( $out && $out !~ m!warning.*reinstalling!i ) {
+            push @firstUpgraded, $pack;
+        }
     }
 
     $cmd = 'pacman -Su --noconfirm';
@@ -555,10 +553,10 @@ sub updateCode {
         if( @installed ) {
             print 'Packages installed: ' . join( ' ', @installed ) . "\n";
         }
-        if( @upgraded ) {
-            print 'Packages upgraded:' . ( $ubosAdminUpdated ? ' ubos-admin' : '' ) . ' ' . join( ' ', @upgraded ) . "\n";
+        if( @firstUpgraded || @upgraded ) {
+            print 'Packages upgraded: ' . join( ' ', @firstUpgraded, @upgraded ) . "\n";
         }
-        if( $ubosAdminUpdated + scalar( @installed ) + scalar( @upgraded ) == 0 ) {
+        if( scalar( @firstUpgraded ) + scalar( @installed ) + scalar( @upgraded ) == 0 ) {
             print "No packages installed or upgraded.\n";
         }
     }
