@@ -821,10 +821,13 @@ sub print {
     } else {
         print "AppConfiguration: ";
 
-        if( $self->context ) {
-            print $self->context;
-        } else {
+        my $context = $self->context;
+        if( $context ) {
+            print $context;
+        } elsif( defined( $context )) {
             print '<root>';
+        } else {
+            print '<none>';
         }
 
         print " (" . $self->appConfigId . ")";
