@@ -367,6 +367,18 @@ sub snapperBtrfsMountPoints {
 }
 
 ##
+# Helper method to determine the names of the root device
+# return: the device name(s)
+sub getRootDeviceNames {
+    my $self = shift;
+
+    my @ret = @{$self->{devicetable}->{'/'}->{devices}};
+    return @ret;
+}
+
+# -- statics from here
+
+##
 # Helper method to determine some facts about a given path, such as whether it is a file,
 # a disk, or a partition
 # $path: the path
@@ -466,21 +478,11 @@ sub isLoopDevice {
 ##
 # Helper method to determine the PARTUUID of a given device, assuming it has one
 # $path: the file's name
-sub getPartUuid {
+sub determinePartUuid {
     my $path = shift;
 
     my $uuid = _determineDeviceFact( $path, 'partuuid' );
     return $uuid;
-}
-
-##
-# Helper method to determine the names of the root device
-# return: the device name(s)
-sub getRootDeviceNames {
-    my $self = shift;
-
-    my @ret = @{$self->{devicetable}->{'/'}->{devices}};
-    return @ret;
 }
 
 1;

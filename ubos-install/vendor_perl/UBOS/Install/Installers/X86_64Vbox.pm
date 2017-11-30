@@ -56,7 +56,11 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client mkinitcpio grub virtualbox-guest ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-client mkinitcpio virtualbox-guest ) ];
+
+        if( 'mbr' eq $self->{partitioningscheme} ) {
+            push @{$self->{devicepackages}}, 'grub';
+        }
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service vboxservice.service systemd-timesyncd.service ) ];

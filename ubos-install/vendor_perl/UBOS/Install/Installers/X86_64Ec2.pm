@@ -55,7 +55,11 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-ec2';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio grub ec2-keyring ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio ec2-keyring ) ];
+
+        if( 'mbr' eq $self->{partitioningscheme} ) {
+            push @{$self->{devicepackages}}, 'grub';
+        }
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];

@@ -55,9 +55,13 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( rng-tools mkinitcpio grub
+        $self->{devicepackages} = [ qw( rng-tools mkinitcpio
                 ubos-networking-client ubos-networking-gateway
                 ubos-networking-standalone smartmontools wpa_supplicant crda ) ];
+
+        if( 'mbr' eq $self->{partitioningscheme} ) {
+            push @{$self->{devicepackages}}, 'grub';
+        }
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service smartd.service ) ];
