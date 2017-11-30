@@ -33,23 +33,17 @@ use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
 
 ##
-# Install the grub bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
+# Install a Ram disk
 # $diskLayout: the disk layout
 # $kernelPostfix: allows us to add -ec2 to EC2 kernels
 # return: number of errors
-sub installGrub {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
-    my $kernelPostfix    = shift || '';
-
-    info( 'Installing grub boot loader' );
+sub installRamdisk {
+    my $self          = shift;
+    my $diskLayout    = shift;
+    my $kernelPostfix = shift || '';
 
     my $errors = 0;
     my $target = $self->{target};
-
-    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
 
     # Ramdisk
     trace( "Generating ramdisk" );
@@ -81,10 +75,37 @@ END
         error( "Generating ramdisk failed:", $err );
         ++$errors;
     }
+    return $errors;
+}
+
+##
+# Install the grub bootloader
+# $diskLayout: the disk layout
+# $args: hash of parameters for grub-install
+# return: number of errors
+sub installGrub {
+    my $self       = shift;
+    my $diskLayout = shift;
+    my $args       = shift;
+
+    info( 'Installing grub boot loader' );
+
+    my $errors = 0;
+    my $target = $self->{target};
+
+    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
+
+    my $out;
+    my $err;
 
     # Boot loader
     if( $bootLoaderDevice ) {
-        if( UBOS::Utils::myexec( "grub-install '--boot-directory=$target/boot' --recheck '$bootLoaderDevice'", undef, \$out, \$err )) {
+        my $cmd = 'grub-install';
+        if( $args ) {
+            $cmd .= ' ' . join( ' ', map { "--$_=" . $args->{$_} } keys %$args );
+        }
+        $cmd .= " --recheck '$bootLoaderDevice'";
+        if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
             error( "grub-install failed", $err );
             ++$errors;
         }
@@ -117,6 +138,19 @@ END
         }
     }
     return $errors;
+}
+
+##
+# Install the systemd-boot bootloader
+# $diskLayout: the disk layout
+# return: number of errors
+sub installSystemdBoot {
+    my $self             = shift;
+    my $diskLayout       = shift;
+
+    info( 'Installing systemd-boot boot loader -- FIXME, not yet' );
+
+    return 0;
 }
 
 1;

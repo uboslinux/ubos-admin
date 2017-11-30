@@ -32,8 +32,8 @@ use fields;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
@@ -113,7 +113,7 @@ sub createDiskLayout {
             my $first = $argvp->[0];
             if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
                 # Option 1
-                $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                         $first,
                         {   '/' => {
                                 'index' => 1,
@@ -122,7 +122,7 @@ sub createDiskLayout {
                         } );
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
                 # Option 2
-                $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
                         $argvp,
                         {   '/' => {
                                 'index' => 1,

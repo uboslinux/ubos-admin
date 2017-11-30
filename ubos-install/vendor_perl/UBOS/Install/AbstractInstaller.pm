@@ -35,12 +35,14 @@ use fields qw( hostname
                basemodules  devicemodules  additionalmodules
                additionalkernelparameters
                checksignatures
+               partitioningscheme
                packagedbs disablepackagedbs addpackagedbs removepackagedbs );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
 # *services: same for systemd services
 # *modules: same for kernel modules
+# partitioningscheme: { 'mbr', 'gpt' }
 
 use Cwd;
 use File::Spec;
@@ -101,6 +103,9 @@ sub new {
             'hl-experimental'    => 1,
             'tools-experimental' => 1
         };
+    }
+    unless( $self->{partitioningscheme} ) {
+        $self->{partitioningscheme} = 'mbr'; # default
     }
 
     return $self;
@@ -254,6 +259,22 @@ sub setCheckSignatures {
 }
 
 ##
+# Use MBR instead of deviceclass-specific default.
+sub setUseMbr {
+    my $self = shift;
+
+    $self->{partitioningscheme} = 'mbr';
+}
+
+##
+# Use GPT instead of deviceclass-specific default.
+sub setUseGpt {
+    my $self = shift;
+
+    $self->{partitioningscheme} = 'gpt';
+}
+
+##
 # Install UBOS
 # $diskLayout: the disk layout to use
 sub install {
@@ -298,6 +319,7 @@ sub install {
         return $errors;
     }
     $errors += $diskLayout->mountDisks( $self->{target} );
+    $errors += $diskLayout->ensureSpecialDirectories( $self->{target} );
     $errors += $self->mountSpecial();
     $errors += $diskLayout->createSubvols( $self->{target} );
     $errors += $self->installPackages( $pacmanConfigInstall->filename );
@@ -317,7 +339,8 @@ sub install {
         $errors += $self->configureNetworkd();
         $errors += $self->doUpstreamFixes();
 
-        $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
+        $errors += $self->installRamdisk( $diskLayout );
+        $errors += $self->installBootLoader( $diskLayout );
 
         my $chrootScript = <<'SCRIPT';
 #!/bin/bash
@@ -789,14 +812,25 @@ sub doUpstreamFixes {
 }
 
 ##
+# Install a Ram disk
+# $diskLayout: the disk layout
+# return: number of errors
+sub installRamdisk {
+    my $self       = shift;
+    my $diskLayout = shift;
+
+    # by default, do nothing
+
+    return 0;
+}
+
+##
 # Install the bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
-# $bootLoaderDevice: device to install the bootloader on
+# $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-    my $bootLoaderDevice = shift;
+    my $self       = shift;
+    my $diskLayout = shift;
 
     error( 'Method installBootLoader() must be overridden for', ref( $self ));
 
@@ -844,7 +878,7 @@ sub addGenerateLocaleToScript {
     trace( "Executing addGenerateLocaleToScript" );
 
     # Run perl with the old locale
-    $$chrootScriptP .= "perl -pi -e 's/^#en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
+    $$chrootScriptP .= "LANG=C perl -pi -e 's/^#en_US\.UTF-8.*\$/en_US.UTF-8 UTF-8/g' '/etc/locale.gen'\n";
     $$chrootScriptP .= "echo LANG=en_US.utf8 > /etc/locale.conf\n";
     $$chrootScriptP .= "locale-gen\n";
 

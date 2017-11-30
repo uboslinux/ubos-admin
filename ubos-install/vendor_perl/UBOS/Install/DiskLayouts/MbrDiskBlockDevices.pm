@@ -1,5 +1,5 @@
 #
-# A disk layout using full disks. May contain boot sector.
+# A disk layout using full disks with Master Boot Records. May contain boot sector.
 #
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -21,12 +21,13 @@
 use strict;
 use warnings;
 
-package UBOS::Install::DiskLayouts::DiskBlockDevices;
+package UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
 
-use base qw( UBOS::Install::AbstractDiskLayout );
-use fields qw( disks );
+use base qw( UBOS::Install::AbstractDiskBlockDevices );
+use fields qw();
 
 use UBOS::Install::AbstractDiskLayout;
+use UBOS::Install::PartitionUtils;
 use UBOS::Logging;
 
 ##
@@ -41,9 +42,7 @@ sub new {
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $devicetable );
-
-    $self->{disks} = $disksp;
+    $self->SUPER::new( $disksp, $devicetable );
 
     return $self;
 }
@@ -89,13 +88,13 @@ END
 
 END
         }
-        if( exists( $data->{boot} )) {
+        if( exists( $data->{mbrboot} )) {
             $fdiskScript .= <<END;
 a
 END
         }
 
-        $fdiskScript .= $self->appendFdiskChangePartitionType( $data->{fs}, $index );
+        $fdiskScript .= UBOS::Install::PartitionUtils::appendFdiskChangePartitionType( $data->{mbrparttype}, $index );
 
         unless( exists( $data->{devices} )) {
             $data->{devices} = [];
@@ -118,9 +117,10 @@ END
             error( 'fdisk failed', $out, $err );
             ++$errors;
         }
-        # Reread partition table
-        UBOS::Utils::myexec( "partprobe '$disk'" );
+    }
 
+    if( UBOS::Utils::myexec( "partprobe" )) {
+        ++$errors;
     }
     return $errors;
 }

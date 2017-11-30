@@ -33,9 +33,11 @@ use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskBlockDevices;
+use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -62,7 +64,6 @@ sub new {
         $self->{additionalkernelparameters} = [
                 'ro',
                 'rootwait',
-                # 'rootfstype=btrfs', --not sure this is needed
                 'nomodeset',
                 'console=hvc0',
                 'earlyprintk=xen,verbose',
@@ -81,6 +82,10 @@ sub createDiskLayout {
     my $self  = shift;
     my $argvp = shift;
 
+    if( 'gpt' eq $self->{partitioningscheme} ) {
+        fatal( 'Partitioning scheme GPT is not supported for deviceclass', $self->deviceClass );
+    }
+
     # Option 1: a single image file
     # ubos-install ... image.img
 
@@ -96,20 +101,24 @@ sub createDiskLayout {
         my $first = $argvp->[0];
         if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
             # Option 1
-            $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+            $ret = UBOS::Install::AbstractDiskImage::create(
+                    $self->{partitioningscheme},
                     $first,
                     {   '/' => {
                             'index' => 1,
                             'fs'    => 'btrfs'
+                            # default partition type
                         },
                     } );
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
             # Option 2
-            $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+            $ret = UBOS::Install::AbstractDiskBlockDevices::create(
+                    $self->{partitioningscheme},
                     $argvp,
                     {   '/' => {
                             'index' => 1,
                             'fs'    => 'btrfs'
+                            # default partition type
                         },
                     } );
 
@@ -127,16 +136,44 @@ sub createDiskLayout {
 }
 
 ##
+# Install a Ram disk -- overridden for EC2 so we can get the -ec2 kernel
+# $diskLayout: the disk layout
+# $kernelPostfix: allows us to add -ec2 to EC2 kernels
+# return: number of errors
+sub installRamdisk {
+    my $self          = shift;
+    my $diskLayout    = shift;
+
+    return $self->SUPER::installRamdisk( $diskLayout, '-ec2' );
+}
+
+##
 # Install the bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
+    my $self       = shift;
+    my $diskLayout = shift;
 
-    return $self->installGrub( $pacmanConfigFile, $diskLayout, '-ec2' );
+    my $errors = 0;
+    if( $self->{partitioningscheme} eq 'mbr' ) {
+        $errors += $self->installGrub( $diskLayout, {
+                    'target'         => 'i386-pc',
+                    'boot-directory' => $self->{target} . '/boot'
+            } );
+
+    } elsif( $self->{partitioningscheme} eq 'gpt' ) {
+        $errors += $self->installGrub( $diskLayout, {
+                    'target'        => 'x86_64-efi',
+                    'efi-directory' => $self->{target} . '/boot/EFI'
+                } );
+        $errors += $self->installSystemdBoot( $diskLayout );
+
+    } else {
+        fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );
+    }
+    return $errors;
+
 }
 
 ##

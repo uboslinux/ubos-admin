@@ -30,10 +30,12 @@ use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskBlockDevices;
+use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
@@ -71,6 +73,10 @@ sub new {
 sub createDiskLayout {
     my $self  = shift;
     my $argvp = shift;
+
+    if( 'gpt' eq $self->{partitioningscheme} ) {
+        fatal( 'Partitioning scheme GPT is not supported on this platform' );
+    }
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -119,32 +125,39 @@ sub createDiskLayout {
             my $rootDiskOrImage = $argvp->[0];
             if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
                 # Option 1
-                $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                         $rootDiskOrImage,
                         {   '/boot' => {
                                 'index'     => 1,
                                 'fs'        => 'ext4',
                                 'size'      => '100M',
-                                'mkfsflags' => '-O ^metadata_csum,^64bit'
+                                'mkfsflags' => '-O ^metadata_csum,^64bit',
+                                'mbrboot'   => 1
+                                # default partition type                                
                             },
                             '/' => {
                                 'index' => 2,
                                 'fs'    => 'btrfs'
+                                # default partition type
                             },
                         } );
             } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
-                $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
+                        $self->{partitioningscheme},
                         [   $rootDiskOrImage    ],
                         {   '/boot' => {
                                 'index'     => 1,
                                 'fs'        => 'ext4',
                                 'size'      => '100M',
-                                'mkfsflags' => '-O ^metadata_csum,^64bit'
+                                'mkfsflags' => '-O ^metadata_csum,^64bit',
+                                'mbrboot'   => 1
+                                # default partition type
                             },
                             '/' => {
                                 'index' => 2,
                                 'fs'    => 'btrfs'
+                                # default partition type
                             },
                         } );
             } else {

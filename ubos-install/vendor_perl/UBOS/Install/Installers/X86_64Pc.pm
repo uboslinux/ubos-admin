@@ -30,10 +30,12 @@ use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskBlockDevices;
+use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
@@ -82,13 +84,14 @@ sub createDiskLayout {
     # ubos-install ... /dev/sda
     # ubos-install ... /dev/sda /dev/sdb /dev/sdc
 
-    # Option 3: one or more boot partition devices, one more more root partition devices (raid mode), and possibly swap partition devices
-    # ubos-install ... --bootloaderdevice /dev/sda --bootpartition /dev/sda1 --bootpartition /dev/sdb1 --rootpartition /dev/sda2 --rootpartition /dev/sdb2 --swappartition /dev/sdc1
+    # Option 3: one or more boot partition devices, one more more root partition devices (raid mode),
+    #           zero or more var partition devices, and possibly swap partition devices
+    # ubos-install ... --bootloaderdevice /dev/sda --bootpartition /dev/sda1 --bootpartition /dev/sdb1
+    #                  --rootpartition /dev/sda2 --rootpartition /dev/sdb2
+    #                  --varpartition /dev/sda3 --varpartition /dev/sdb3
+    #                  --swappartition /dev/sda4 --swappartition /dev/sdb4
 
-    # Option 4: a boot partition device, a root partition device, one or more var partition devices, and possibly swap partition devices
-    # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1 --swappartition /dev/sdc1
-
-    # Option 5: a directory
+    # Option 4: a directory
 
     my $bootloaderdevice;
     my $bootpartition;
@@ -112,7 +115,7 @@ sub createDiskLayout {
 
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
-        # Option 5
+        # Option 4
         if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions || @$argvp ) {
             error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
             $ret = undef;
@@ -128,7 +131,11 @@ sub createDiskLayout {
         }
 
     } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions ) {
-        # Option 3 or 4
+        # Option 3
+        if( 'gpt' eq $self->{partitioningscheme} ) {
+            fatal( 'Partitioning scheme GPT is not yet supported for this configuration' );
+        }
+
         if( @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
             $ret = undef;
@@ -169,8 +176,7 @@ sub createDiskLayout {
                 $haveAlready{$part} = 1;
             }
         }
-        if( $ret && @varpartitions == 0 ) {
-            # Option 3
+        if( $ret ) {
             my $devicetable      = {};
             my $devicetableIndex = 1;
 
@@ -179,53 +185,31 @@ sub createDiskLayout {
                     'index'   => $devicetableIndex++,
                     'fs'      => 'ext4',
                     'devices' => [ $bootpartition ],
-                    'boot'    => 1
+                    'mbrboot' => 1
+                     # default partition type
                 };
             }
             $devicetable->{'/'} = {
                 'index'   => $devicetableIndex++,
                 'fs'      => 'btrfs',
                 'devices' => \@rootpartitions
+                     # default partition type
             };
-            if( @swappartitions ) {
-                $devicetable->{'swap'} = {
+            if( @varpartitions ) {
+                $devicetable->{'/var'} = {
                     'index'   => $devicetableIndex++,
-                    'fs'      => 'swap',
-                    'devices' => \@swappartitions
+                    'fs'      => 'btrfs',
+                    'devices' => \@varpartitions
+                         # default partition type
                 };
             }
-            $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
-                    $bootloaderdevice,
-                    $devicetable );
-
-        } elsif( $ret ) {
-            # Options 4
-            my $devicetable      = {};
-            my $devicetableIndex = 1;
-
-            if( $bootpartition ) {
-                $devicetable->{'/boot'} = {
-                    'index'   => $devicetableIndex++,
-                    'fs'      => 'ext4',
-                    'devices' => [ $bootpartition ],
-                    'boot'    => 1
-                };
-            }
-            $devicetable->{'/'} = {
-                'index'   => $devicetableIndex++,
-                'fs'      => 'btrfs',
-                'devices' => \@rootpartitions
-            };
-            $devicetable->{'/var'} = {
-                'index'   => $devicetableIndex++,
-                'fs'      => 'btrfs',
-                'devices' => \@varpartitions
-            };
             if( @swappartitions ) {
                 $devicetable->{'swap'} = {
-                    'index'   => $devicetableIndex++,
-                    'fs'      => 'swap',
-                    'devices' => \@swappartitions
+                    'index'       => $devicetableIndex++,
+                    'fs'          => 'swap',
+                    'devices'     => \@swappartitions,
+                    'mbrparttype' => '82',
+                    'gptparttype' => '8200'
                 };
             }
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector->new(
@@ -243,19 +227,45 @@ sub createDiskLayout {
                     error( 'Do not specify more than one disk image; cannot RAID disk images' );
                     $ret = undef;
                 } else {
-                    $ret = UBOS::Install::DiskLayouts::DiskImage->new(
-                            $first,
-                            {   '/boot' => {
-                                    'index' => 1,
-                                    'fs'    => 'ext4',
-                                    'size'  => '100M',
-                                    'boot'  => 1
-                                },
-                                '/' => {
-                                    'index' => 2,
-                                    'fs'    => 'btrfs'
-                                }
-                            } );
+                    if( 'gpt' eq $self->{partitioningscheme} ) {
+                        $ret = UBOS::Install::DiskLayouts::GptDiskImage->new(
+                                $first,
+                                {   '/boot' => {
+                                        'index'       => 1,
+                                        'fs'          => 'vfat',
+                                        'size'        => '500M',
+                                        'mkfsflags'   => '-F32',
+                                        'gptparttype' => 'EF00'
+                                        # default partition type
+                                    },
+                                    'nomount-bios-boot-partition' => {
+                                        'index'       => 2,
+                                        'size'        => '1M',
+                                        'gptparttype' => 'EF02'
+                                    },
+                                    '/' => {
+                                        'index' => 3,
+                                        'fs'    => 'btrfs'
+                                        # default partition type
+                                    }
+                                } );
+                    } else {
+                        $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
+                                $first,
+                                {   '/boot' => {
+                                        'index'   => 1,
+                                        'fs'      => 'ext4',
+                                        'size'    => '100M',
+                                        'mbrboot' => 1
+                                        # default partition type
+                                    },
+                                    '/' => {
+                                        'index' => 2,
+                                        'fs'    => 'btrfs'
+                                        # default partition type
+                                    }
+                                } );
+                    }
                 }
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
                 # Option 2
@@ -277,24 +287,53 @@ sub createDiskLayout {
                     $haveAlready{$disk} = 1;
                 }
                 if( $ret ) {
-                    $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
-                            $argvp,
-                            {   '/boot' => {
-                                    'index' => 1,
-                                    'fs'    => 'ext4',
-                                    'size'  => '100M',
-                                    'boot'  => 1
-                                },
-                                'swap' => {
-                                    'index' => 2,
-                                    'fs'    => 'swap',
-                                    'size'  => '4G',
-                                },
-                                '/' => {
-                                    'index' => 3,
-                                    'fs'    => 'btrfs'
-                                }
-                            } );
+                    if( 'gpt' eq $self->{partitioningscheme} ) {
+                        $ret = UBOS::Install::DiskLayouts::GptDiskBlockDevices->new(
+                                $argvp,
+                                {   '/boot' => {
+                                        'index'   => 1,
+                                        'fs'      => 'ext4',
+                                        'size'    => '100M',
+                                        'mbrboot' => 1
+                                        # default partition type
+                                    },
+                                    'swap' => {
+                                        'index'       => 2,
+                                        'fs'          => 'swap',
+                                        'size'        => '4G',
+                                        'mbrparttype' => '82',
+                                        'gptparttype' => '8200'
+                                    },
+                                    '/' => {
+                                        'index' => 3,
+                                        'fs'    => 'btrfs'
+                                        # default partition type
+                                    }
+                                } );
+                    } else {
+                        $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
+                                $argvp,
+                                {   '/boot' => {
+                                        'index'   => 1,
+                                        'fs'      => 'ext4',
+                                        'size'    => '100M',
+                                        'mbrboot' => 1
+                                        # default partition type
+                                    },
+                                    'swap' => {
+                                        'index'       => 2,
+                                        'fs'          => 'swap',
+                                        'size'        => '4G',
+                                        'mbrparttype' => '82',
+                                        'gptparttype' => '8200'
+                                    },
+                                    '/' => {
+                                        'index' => 3,
+                                        'fs'    => 'btrfs'
+                                        # default partition type
+                                    }
+                                } );
+                    }
                 }
             } elsif( $ret ) {
                 error( 'Must be file or disk:', $first );
@@ -312,15 +351,30 @@ sub createDiskLayout {
 
 ##
 # Install the bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
+    my $self       = shift;
+    my $diskLayout = shift;
 
-    return $self->installGrub( $pacmanConfigFile, $diskLayout, '' );
+    my $errors = 0;
+    if( $self->{partitioningscheme} eq 'mbr' ) {
+        $errors += $self->installGrub( $diskLayout, {
+                    'target'         => 'i386-pc',
+                    'boot-directory' => $self->{target} . '/boot'
+            } );
+
+    } elsif( $self->{partitioningscheme} eq 'gpt' ) {
+        $errors += $self->installGrub( $diskLayout, {
+                    'target'        => 'x86_64-efi',
+                    'efi-directory' => $self->{target} . '/boot/EFI'
+                } );
+        $errors += $self->installSystemdBoot( $diskLayout );
+
+    } else {
+        fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );
+    }
+    return $errors;
 }
 
 ##

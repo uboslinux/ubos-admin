@@ -10,11 +10,16 @@ license=('GPL')
 depends=(
     'btrfs-progs'
     'dosfstools'
+    'gptfdisk'
     'parted'
     'ubos-keyring'
     'ubos-perl-utils' )
 _vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
 options=('!strip')
+
+if [[ "$(uname -m)" == 'x86_64' ]]; then
+    depends+=('grub')
+fi
 
 package() {
 # Code

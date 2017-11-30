@@ -27,8 +27,9 @@ use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskBlockDevices;
 use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;

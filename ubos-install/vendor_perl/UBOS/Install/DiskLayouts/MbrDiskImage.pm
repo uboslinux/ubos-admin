@@ -1,6 +1,6 @@
 #
-# A DiskImage disk layout. Contains at least one partition. May contain
-# boot sector.
+# A Master Boot Record-based image disk layout. Contains at least
+# one partition. May contain a boot sector.
 #
 # This file is part of ubos-install.
 # (C) 2012-2015 Indie Computing Corp.
@@ -22,12 +22,13 @@
 use strict;
 use warnings;
 
-package UBOS::Install::DiskLayouts::DiskImage;
+package UBOS::Install::DiskLayouts::MbrDiskImage;
 
-use base qw( UBOS::Install::AbstractDiskLayout );
-use fields qw( image loopDevice );
+use base qw( UBOS::Install::AbstractDiskImage );
+use fields qw();
 
-use UBOS::Install::AbstractDiskLayout;
+use UBOS::Install::AbstractDiskImage;
+use UBOS::Install::PartitionUtils;
 use UBOS::Logging;
 
 ##
@@ -46,9 +47,7 @@ sub new {
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $devicetable );
-
-    $self->{image} = $image;
+    $self->SUPER::new( $image, $devicetable );
 
     return $self;
 }
@@ -103,7 +102,7 @@ a
 END
         }
 
-        $fdiskScript .= $self->appendFdiskChangePartitionType( $data->{fs}, $index );
+        $fdiskScript .= UBOS::Install::PartitionUtils::appendFdiskChangePartitionType( $data->{mbrparttype}, $index );
     }
     $fdiskScript .= <<END;
 w
@@ -120,64 +119,6 @@ END
     }
 
     return $errors;
-}
-
-##
-# Create any needed loop devices.
-# return: number of errors
-sub createLoopDevices {
-    my $self = shift;
-
-    trace( "Creating loop devices" );
-
-    my $errors = 0;
-
-    my $out;
-    if( UBOS::Utils::myexec( "losetup --show --find --partscan '" . $self->{image} . "'", undef, \$out, \$out )) {
-        error( "losetup -a error:", $out );
-        ++$errors;
-    }
-    $out =~ s!^\s+!!;
-    $out =~ s!\s+$!!;
-    $self->{loopDevice} = $out;
-    my $partitionLoopDeviceRoot = $self->{loopDevice};
-
-    # in sequence of index
-    my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
-    foreach my $mountPath ( @mountPathIndexSequence ) {
-        my $data = $self->{devicetable}->{$mountPath};
-
-        $data->{devices} = [ $partitionLoopDeviceRoot . 'p' . $data->{index} ]; # augment $self->{devicetable}
-    }
-
-    return $errors;
-}
-
-##
-# Delete any created loop devices.
-# return: number of errors
-sub deleteLoopDevices {
-    my $self = shift;
-
-    trace( "Deleting loop devices" );
-
-    my $errors = 0;
-
-    my $out;
-    if( UBOS::Utils::myexec( "losetup -d  '" . $self->{loopDevice} . "'", undef, \$out, \$out )) {
-        error( "losetup -d error:", $out );
-        ++$errors;
-    }
-
-    return $errors;
-}
-
-##
-# Determine the boot loader device for this DiskLayout
-sub determineBootLoaderDevice {
-    my $self = shift;
-
-    return $self->{image};
 }
 
 1;

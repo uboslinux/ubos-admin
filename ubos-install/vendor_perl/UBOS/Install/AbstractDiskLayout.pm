@@ -68,8 +68,12 @@ sub formatDisks {
         my $data = $self->{devicetable}->{$mountPath};
         my $fs   = $data->{fs};
 
-        debugAndSuspend( 'Format file system', $mountPath, 'with', $fs );
+        if( !$fs ) {
+            # do not format
+            next;
+        }
 
+        debugAndSuspend( 'Format file system', $mountPath, 'with', $fs );
         if( 'btrfs' eq $fs ) {
             my $cmd = 'mkfs.btrfs -f ';
             if( @{$data->{devices}} > 1 ) {
@@ -139,6 +143,7 @@ sub deleteLoopDevices {
 ##
 # Mount this disk layout at the specified target directory
 # $target: the target directory
+# return: number of errors
 sub mountDisks {
     my $self   = shift;
     my $target = shift;
@@ -153,8 +158,7 @@ sub mountDisks {
         my @devices = @{$entry->{devices}};
 
         unless( $fs ) {
-            error( 'No fs given for', $mountPoint );
-            ++$errors;
+            # no need to mount
             next;
         }
         unless( @devices ) {
@@ -174,7 +178,7 @@ sub mountDisks {
                     ++$errors;
                 }
             }
-        } else {
+        } elsif( $mountPoint =~ m!^/! ) { # don't mount devices that don't start with /
             my $firstDevice = $devices[0];
 
             debugAndSuspend( 'Mount device', $firstDevice, 'at', "$target$mountPoint", 'with', $fs );
@@ -184,6 +188,20 @@ sub mountDisks {
         }
     }
     return $errors;
+}
+
+##
+# Ensure any special directories that this DiskLayout may need
+# $target: the target directory
+# return: number of errors
+sub ensureSpecialDirectories {
+    my $self   = shift;
+    my $target = shift;
+
+    trace( 'AbstractDiskLayout::ensureSpecialDirectories', $target );
+
+    # by default, do nothing
+    return 0;
 }
 
 ##
@@ -201,6 +219,10 @@ sub umountDisks {
         my $entry  = $self->{devicetable}->{$mountPoint};
         my $fs     = $entry->{fs};
 
+        unless( $fs ) {
+            next;
+        }
+
         if( 'swap' eq $fs ) {
             foreach my $device ( @{$entry->{devices}} ) {
                 debugAndSuspend( 'Swapoff device', $device );
@@ -208,7 +230,7 @@ sub umountDisks {
                     ++$errors;
                 }
             }
-        } else {
+        } elsif( $mountPoint =~ m!^/! ) { # don't umount devices that don't start with /
             debugAndSuspend( 'Umount ', $mountPoint );
             if( UBOS::Utils::myexec( "umount '$target$mountPoint'" )) {
                 ++$errors;
@@ -216,45 +238,6 @@ sub umountDisks {
         }
     }
     return $errors;
-}
-
-##
-# Create an fdisk script fragment to change a partition type
-# $fs: desired file system type
-# $i: partition number
-sub appendFdiskChangePartitionType {
-    my $self = shift;
-    my $fs   = shift;
-    my $i    = shift;
-
-    my $typesToCode = {
-        'vfat' => 'c',
-        'swap' => '82'
-        # This may have to be extended
-    };
-    my $script = '';
-    if( $fs && $i ) {
-
-        # Only specify $i if $i > 1; we generate partitions in sequence, and fdisk does not
-        # ask which partition if number == 1
-        my $code = $typesToCode->{$fs};
-        if( $code ) {
-            if( $i > 1 ) {
-                $script .= <<END;
-t
-$i
-$code
-END
-            } else {
-                $script .= <<END;
-t
-$code
-END
-            }
-        }
-
-    }
-    return $script;
 }
 
 ##
@@ -287,6 +270,7 @@ sub createSubvols {
 
     return $errors;
 }
+
 ##
 # Generate and save /etc/fstab
 # $@mountPathSequence: the sequence of paths to mount
@@ -312,6 +296,10 @@ FSTAB
         foreach my $mountPoint ( sort { length( $a ) <=> length( $b ) } keys %{$self->{devicetable}} ) {
             my $deviceTable = $self->{devicetable}->{$mountPoint};
             my $fs          = $deviceTable->{fs};
+
+            unless( $fs ) {
+                next;
+            }
 
             if( 'btrfs' eq $fs ) {
                 my @devices = @{$deviceTable->{devices}};
@@ -382,7 +370,7 @@ sub snapperBtrfsMountPoints {
             my $deviceTable = $self->{devicetable}->{$mountPoint};
             my $fs          = $deviceTable->{fs};
 
-            if( 'btrfs' eq $fs ) {
+            if( defined( $fs ) && 'btrfs' eq $fs ) {
                 push @ret, $mountPoint;
             }
         }

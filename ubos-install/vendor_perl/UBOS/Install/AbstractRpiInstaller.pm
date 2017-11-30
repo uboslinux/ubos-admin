@@ -33,10 +33,12 @@ use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskBlockDevices;
+use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
@@ -76,6 +78,10 @@ sub new {
 sub createDiskLayout {
     my $self  = shift;
     my $argvp = shift;
+
+    if( 'gpt' eq $self->{partitioningscheme} ) {
+        fatal( 'Partitioning scheme GPT is not supported for deviceclass', $self->deviceClass );
+    }
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -166,35 +172,42 @@ sub createDiskLayout {
             # Option 3
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
                     {   '/boot' => {
-                            'index'   => 1,
-                            'fs'      => 'ext4',
-                            'devices' => [ $bootpartition ],
-                            'boot'    => 1
+                            'index'       => 1,
+                            'fs'          => 'vfat',
+                            'devices'     => [ $bootpartition ],
+                            'mbrboot'     => 1,
+                            'mbrparttype' => 'c'
+                            # default partition type for gpt
                         },
                         '/' => {
                             'index'  => 2,
                             'fs'      => 'btrfs',
                             'devices' => \@rootpartitions
+                             # default partition type
                         }
                     } );
         } elsif( $ret ) {
             # Options 4
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
                     {   '/boot' => {
-                            'index'   => 1,
-                            'fs'      => 'ext4',
-                            'devices' => [ $bootpartition ],
-                            'boot'    => 1
+                            'index'       => 1,
+                            'fs'          => 'vfat',
+                            'devices'     => [ $bootpartition ],
+                            'mbrboot'     => 1,
+                            'mbrparttype' => 'c'
+                            # default partition type for gpt
                         },
                         '/' => {
                             'index'   => 2,
                             'fs'      => 'btrfs',
                             'devices' => \@rootpartitions
+                             # default partition type
                         },
                         '/var' => {
                             'index'  => 3,
                             'fs'      => 'btrfs',
                             'devices' => \@varpartitions
+                             # default partition type
                         }
                     } );
         }
@@ -205,30 +218,36 @@ sub createDiskLayout {
             my $rootDiskOrImage = $argvp->[0];
             if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
                 # Option 1
-                $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                         $rootDiskOrImage,
                         {   '/boot' => {
-                                'index' => 1,
-                                'fs'    => 'vfat',
-                                'size'  => '100M'
+                                'index'       => 1,
+                                'fs'          => 'vfat',
+                                'size'        => '100M',
+                                'mbrparttype' => 'c'
+                                # default partition type for gpt
                             },
                             '/' => {
                                 'index' => 2,
                                 'fs'    => 'btrfs'
+                                # default partition type
                             },
                         } );
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
-                $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+                $ret = UBOS::Install::DiskLayouts::GptDiskBlockDevices->new(
                         [   $rootDiskOrImage    ],
                         {   '/boot' => {
-                                'index' => 1,
-                                'fs'    => 'vfat',
-                                'size'  => '100M'
+                                'index'       => 1,
+                                'fs'          => 'vfat',
+                                'size'        => '100M',
+                                'mbrparttype' => 'c'
+                                # default partition type for gpt
                             },
                             '/' => {
                                 'index' => 2,
                                 'fs'    => 'btrfs'
+                                # default partition type
                             },
                         } );
             } elsif( $ret ) {

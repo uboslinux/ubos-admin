@@ -57,6 +57,8 @@ my @addKernelParameters = ();
 my %addPackageDbs       = ();
 my %removePackageDbs    = ();
 my %disablePackageDbs   = ();
+my $mbr                 = undef;
+my $gpt                 = undef;
 my $checkSignatures     = 'required';
 my $help                = 0;
 
@@ -80,6 +82,8 @@ my $parseOk = GetOptions(
         'removepackagedb=s'    => sub { _addCheck( \@_, \%removePackageDbs,  \%addPackageDbs,    \%disablePackageDbs ); },
         'disablepackagedb=s'   => sub { _addCheck( \@_, \%disablePackageDbs, \%addPackageDbs,    \%removePackageDbs ); },
         'checksignatures=s'    => \$checkSignatures,
+        'mbr'                  => \$mbr,
+        'gpt'                  => \$gpt,
         'h|help'               => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
@@ -96,6 +100,10 @@ if( $list ) {
 
 $checkSignatures = lc( $checkSignatures );
 if( $checkSignatures ne 'never' && $checkSignatures ne 'optional' && $checkSignatures ne 'required' ) {
+    synopsisHelpQuit( 0 );
+}
+
+if( $mbr && $gpt ) {
     synopsisHelpQuit( 0 );
 }
 
@@ -176,6 +184,13 @@ if( %disablePackageDbs ) {
     $installer->disablePackageDbs( \%disablePackageDbs );
 }
 $installer->setCheckSignatures( $checkSignatures );
+
+if( $mbr ) {
+    $installer->setUseMbr();
+}
+if( $gpt ) {
+    $installer->setUseGpt();
+}
 
 trace( 'Using installer', ref( $installer ));
 
@@ -401,6 +416,12 @@ Optional arguments:
     --disablepackagedb <name>
           Disable one of the default UBOS repositories, where <name> is the section name
           for the default UBOS repository.
+    --mbr
+          Use Master Boot Record format for disks. Conflicts with --gpt.
+          If neither --mbr nor --gpt are given, use default for device class.
+    --gpt
+          Use GUID Partition Table format for disks. Conflicts with --mbr.
+          If neither --mbr nor --gpt are given, use default for device class.
 END
     } else {
         print <<END;

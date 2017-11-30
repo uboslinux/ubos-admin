@@ -32,9 +32,11 @@ use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Install::AbstractDiskBlockDevices;
+use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::DiskBlockDevices;
-use UBOS::Install::DiskLayouts::DiskImage;
+use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
+use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;
 use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
@@ -73,6 +75,10 @@ sub createDiskLayout {
     my $self  = shift;
     my $argvp = shift;
 
+    if( 'gpt' eq $self->{partitioningscheme} ) {
+        fatal( 'Partitioning scheme GPT is not yet supported for deviceclass', $self->deviceClass );
+    }
+
     # Option 1: a single image file
     # ubos-install ... image.img
 
@@ -88,20 +94,22 @@ sub createDiskLayout {
         my $first = $argvp->[0];
         if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
             # Option 1
-            $ret = UBOS::Install::DiskLayouts::DiskImage->new(
+            $ret = UBOS::Install::DiskImages::MbrDiskImage->new(
                     $first,
                     {   '/' => {
                             'index' => 1,
                             'fs'    => 'btrfs'
+                            # default partition type
                         },
                     } );
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
             # Option 2
-            $ret = UBOS::Install::DiskLayouts::DiskBlockDevices->new(
+            $ret = UBOS::Install::DiskImages::MbrDiskBlockDevices->new(
                     $argvp,
                     {   '/' => {
                             'index' => 1,
                             'fs'    => 'btrfs'
+                            # default partition type
                         },
                     } );
 
@@ -120,15 +128,30 @@ sub createDiskLayout {
 
 ##
 # Install the bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
+    my $self       = shift;
+    my $diskLayout = shift;
 
-    return $self->installGrub( $pacmanConfigFile, $diskLayout, '' );
+    my $errors = 0;
+    if( $self->{partitioningscheme} eq 'mbr' ) {
+        $errors += $self->installGrub( $diskLayout, {
+                    'target'         => 'i386-pc',
+                    'boot-directory' => $self->{target} . '/boot'
+            } );
+
+    } elsif( $self->{partitioningscheme} eq 'gpt' ) {
+        $errors += $self->installGrub( $diskLayout, {
+                    'target'        => 'x86_64-efi',
+                    'efi-directory' => $self->{target} . '/boot/EFI'
+                } );
+        $errors += $self->installSystemdBoot( $diskLayout );
+
+    } else {
+        fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );
+    }
+    return $errors;
 }
 
 ##
