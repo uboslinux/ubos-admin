@@ -165,7 +165,7 @@ timer 4
 default ubos
 CONTENT
 
-    my $rootPartUuid = $self->getPartUuid( $diskLayout->getRootDeviceNames() );
+    my $rootPartUuid = $diskLayout->getPartUuid( $diskLayout->getRootDeviceNames() );
 
     UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT );
 title UBOS
