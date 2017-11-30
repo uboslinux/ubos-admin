@@ -396,7 +396,7 @@ sub _determineDeviceFact {
             my $deviceName = $path;
             $deviceName =~ s!(.*/)!!;
 
-            my $json = UBOS::Utils::parseJsonFromString( $out );
+            my $json = UBOS::Utils::readJsonFromString( $out );
 
             foreach my $deviceEntry ( @{$json->{blockdevices}} ) {
                 if( $deviceName eq $deviceEntry->{name} ) {
