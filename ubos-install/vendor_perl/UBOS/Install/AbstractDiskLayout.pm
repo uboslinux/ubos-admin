@@ -391,7 +391,7 @@ sub _determineDeviceFact {
         } elsif( -b $path ) {
 
             my $out;
-            UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID -n '$path'", undef, \$out );
+            UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID --json -n '$path'", undef, \$out );
 
             my $deviceName = $path;
             $deviceName =~ s!(.*/)!!;
@@ -405,7 +405,7 @@ sub _determineDeviceFact {
                 }
             }
         }
-        if( keys %$facts ) {
+        unless( keys %$facts ) {
             warning( 'Cannot determine type of path:', $path );
         }
         $pathFacts->{$path} = $facts;
