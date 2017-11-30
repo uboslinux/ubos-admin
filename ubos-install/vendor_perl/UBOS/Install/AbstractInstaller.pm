@@ -319,7 +319,6 @@ sub install {
         return $errors;
     }
     $errors += $diskLayout->mountDisks( $self->{target} );
-    $errors += $diskLayout->ensureSpecialDirectories( $self->{target} );
     $errors += $self->mountSpecial();
     $errors += $diskLayout->createSubvols( $self->{target} );
     $errors += $self->installPackages( $pacmanConfigInstall->filename );

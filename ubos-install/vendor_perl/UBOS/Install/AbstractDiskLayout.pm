@@ -191,20 +191,6 @@ sub mountDisks {
 }
 
 ##
-# Ensure any special directories that this DiskLayout may need
-# $target: the target directory
-# return: number of errors
-sub ensureSpecialDirectories {
-    my $self   = shift;
-    my $target = shift;
-
-    trace( 'AbstractDiskLayout::ensureSpecialDirectories', $target );
-
-    # by default, do nothing
-    return 0;
-}
-
-##
 # Unmount the previous mounts
 # $target: the target directory
 sub umountDisks {

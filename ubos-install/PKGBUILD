@@ -10,6 +10,7 @@ license=('GPL')
 depends=(
     'btrfs-progs'
     'dosfstools'
+    'efibootmgr'
     'gptfdisk'
     'parted'
     'ubos-keyring'

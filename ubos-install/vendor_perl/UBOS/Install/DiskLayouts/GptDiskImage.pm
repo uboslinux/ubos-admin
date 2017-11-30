@@ -95,21 +95,4 @@ sub createDisks {
     return $errors;
 }
 
-##
-# Ensure any special directories that this DiskLayout may need
-# $target: the target directory
-# return: number of errors
-sub ensureSpecialDirectories {
-    my $self   = shift;
-    my $target = shift;
-
-    trace( 'GptDiskImage::ensureSpecialDirectories', $target );
-
-    unless( -d "$target/boot/EFI" ) {
-        UBOS::Utils::mkdir( "$target/boot/EFI" );
-    }
-    return 0;
-}
-
-
 1;
