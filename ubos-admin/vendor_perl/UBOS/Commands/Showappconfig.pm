@@ -107,9 +107,11 @@ sub run {
         $appConfig = $site->appConfigAtContext( $context );
         unless( $appConfig ) {
             if( $context ) {
-                fatal( 'Cannot find an appconfiguration at context path', $context );
+                fatal(  'Cannot find an appconfiguration at context path', $context,
+                        'for site', $site->hostname, '(' . $site->siteId . ').' );
             } else {
-                fatal( 'Cannot find an appconfiguration at root context' );
+                fatal( 'Cannot find an appconfiguration at the root context',
+                        'of site', $site->hostname, '(' . $site->siteId . ').' );
             }
         }
     }
