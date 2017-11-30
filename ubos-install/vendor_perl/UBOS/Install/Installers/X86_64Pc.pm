@@ -237,13 +237,8 @@ sub createDiskLayout {
                                         'mkfsflags'   => '-F32',
                                         'gptparttype' => 'EF00'
                                     },
-                                    'nomount-bios-boot-partition' => {
-                                        'index'       => 2,
-                                        'size'        => '1M',
-                                        'gptparttype' => 'EF02'
-                                    },
                                     '/' => {
-                                        'index' => 3,
+                                        'index' => 2,
                                         'fs'    => 'btrfs'
                                         # default partition type
                                     }
@@ -296,19 +291,14 @@ sub createDiskLayout {
                                         'mkfsflags'   => '-F32',
                                         'gptparttype' => 'EF00'
                                     },
-                                    'nomount-bios-boot-partition' => {
-                                        'index'       => 2,
-                                        'size'        => '1M',
-                                        'gptparttype' => 'EF02'
-                                    },
                                     'swap' => {
-                                        'index'       => 3,
+                                        'index'       => 2,
                                         'fs'          => 'swap',
                                         'size'        => '4G',
                                         'gptparttype' => '8200'
                                     },
                                     '/' => {
-                                        'index' => 4,
+                                        'index' => 3,
                                         'fs'    => 'btrfs'
                                         # default partition type
                                     }
