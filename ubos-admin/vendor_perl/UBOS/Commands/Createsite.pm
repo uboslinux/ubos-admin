@@ -95,7 +95,7 @@ sub run {
     my $oldSites        = UBOS::Host::sites();
     my $starWarningDone = 0;
 
-    if( keys %$oldSites == 1 && '*' eq (( values %$oldSites )[0])->hostname ) {
+    if( !$tor && grep { '*' eq $_->hostname } values %$oldSites ) {
         if( $dryRun ) {
             print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
             $starWarningDone = 1;
