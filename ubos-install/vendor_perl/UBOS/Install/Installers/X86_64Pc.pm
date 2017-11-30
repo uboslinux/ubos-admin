@@ -368,10 +368,6 @@ sub installBootLoader {
             } );
 
     } elsif( $self->{partitioningscheme} eq 'gpt' ) {
-        $errors += $self->installGrub( $diskLayout, {
-                    'target'        => 'x86_64-efi',
-                    'efi-directory' => $self->{target} . '/boot' # not /boot/EFI
-                } );
         $errors += $self->installSystemdBoot( $diskLayout );
 
     } else {

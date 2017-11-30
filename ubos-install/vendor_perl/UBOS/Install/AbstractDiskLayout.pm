@@ -28,6 +28,8 @@ use fields qw( devicetable );
 use UBOS::Logging;
 use UBOS::Utils;
 
+my $pathFacts = {}; # cache of facts about particular paths, hash of <string,hash>
+
 ##
 # Constructor for subclasses only
 # $devicetable: information about the layout
@@ -364,91 +366,122 @@ sub snapperBtrfsMountPoints {
     return @ret;
 }
 
-# cache found device types
-my %deviceTypes = ();
-
 ##
-# Helper method to determine whether a given device is a file, a disk, or a partition
-# $path: the file's name
-sub _determineDeviceType {
+# Helper method to determine some facts about a given path, such as whether it is a file,
+# a disk, or a partition
+# $path: the path
+# $fact: the fact to determine
+sub _determineDeviceFact {
     my $path = shift;
+    my $fact = shift;
 
-    my $ret = $deviceTypes{$path};
-    unless( $ret ) {
-        $ret = 'unknown'; # default
+    my $facts = $pathFacts->{$path};
+    unless( $facts ) {
+        $facts = {}; # default
+
         if( ! -e $path ) {
-            $ret = 'missing';
+            $facts->{devicetype} = 'missing';
+
         } elsif( -f $path ) {
-            $ret = 'file';
+            $facts->{devicetype} = 'file';
+
         } elsif( -d $path ) {
-            $ret = 'directory';
+            $facts->{devicetype} = 'directory';
+
         } elsif( -b $path ) {
+
             my $out;
-            UBOS::Utils::myexec( "lsblk -o TYPE -n '$path'", undef, \$out );
-            if( $out =~ m!disk! ) {
-                $ret = 'disk';
-            } elsif( $out =~ m!loop! ) {
-                $ret = 'loop';
-            } elsif( $out =~ m!part! ) {
-                $ret = 'part';
+            UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID -n '$path'", undef, \$out );
+
+            my $deviceName = $path;
+            $deviceName =~ s!(.*/)!!;
+
+            my $json = UBOS::Utils::parseJsonFromString( $out );
+
+            foreach my $deviceEntry ( @{$json->{blockdevices}} ) {
+                if( $deviceName eq $deviceEntry->{name} ) {
+                    $facts->{devicetype} = $deviceEntry->{type};
+                    $facts->{partuuid}   = $deviceEntry->{partuuid};
+                }
             }
         }
-        if( 'unknown' eq $ret ) {
-            warning( 'Cannot determine type of device:', $path );
+        if( keys %$facts ) {
+            warning( 'Cannot determine type of path:', $path );
         }
-        $deviceTypes{$path} = $ret;
+        $pathFacts->{$path} = $facts;
     }
-    return $ret;
+    return $facts->{$fact};
 }
 
 ##
-# Helper method to determine whether a given device is a file
-# $path: the file's name
+# Helper method to determine whether a given path points to a file
+# $path: the path
 sub isFile {
     my $path = shift;
 
-    my $type = _determineDeviceType( $path );
+    my $type = _determineDeviceFact( $path, 'devicetype' );
     return $type eq 'file';
 }
 
 ##
-# Helper method to determine whether a given device is a disk
-# $path: the file's name
+# Helper method to determine whether a given path points to a disk
+# $path: the path
 sub isDisk {
     my $path = shift;
 
-    my $type = _determineDeviceType( $path );
+    my $type = _determineDeviceFact( $path, 'devicetype' );
     return $type eq 'disk';
 }
 
 ##
-# Helper method to determine whether a given device is a partition
-# $path: the file's name
+# Helper method to determine whether a given path points to a partition
+# $path: the path
 sub isPartition {
     my $path = shift;
 
-    my $type = _determineDeviceType( $path );
+    my $type = _determineDeviceFact( $path, 'devicetype' );
     return $type eq 'part';
 }
 
 ##
-# Helper method to determine whether a given device is a disk
-# $path: the file's name
+# Helper method to determine whether a given path points to a block device
+# $path: the path
 sub isBlockDevice {
     my $path = shift;
 
-    my $type = _determineDeviceType( $path );
+    my $type = _determineDeviceFact( $path, 'devicetype' );
     return $type eq 'disk' || $type eq 'part';
 }
 
 ##
-# Helper method to determine whether a given device is a loop device
-# $path: the file's name
+# Helper method to determine whether a given path points to a loop device
+# $path: the path
 sub isLoopDevice {
     my $path = shift;
 
-    my $type = _determineDeviceType( $path );
+    my $type = _determineDeviceFact( $path, 'devicetype' );
     return $type eq 'loop';
 }
 
+##
+# Helper method to determine the PARTUUID of a given device, assuming it has one
+# $path: the file's name
+sub getPartUuid {
+    my $path = shift;
+
+    my $uuid = _determineDeviceFact( $path, 'partuuid' );
+    return $uuid;
+}
+
+##
+# Helper method to determine the names of the root device
+# return: the device name(s)
+sub getRootDeviceNames {
+    my $self = shift;
+
+    my @ret = @{$self->{devicetype}->{'/'}->{devices}};
+    return @ret;
+}
+
 1;
+

@@ -148,7 +148,31 @@ sub installSystemdBoot {
     my $self             = shift;
     my $diskLayout       = shift;
 
-    info( 'Installing systemd-boot boot loader -- FIXME, not yet' );
+    info( 'Installing systemd-boot boot loader' );
+
+    my $errors = 0;
+
+    if( myexec( "bootctl '--path=$self->{target}/boot' install" )) {
+        ++$errors;
+    }
+
+    unless( -d $self->{target} . '/boot/loader/entries' ) {
+        UBOS::Utils::mkdirDashP( $self->{target} . '/boot/loader/entries' );
+    }
+
+    UBOS::Utils::saveFile( $self->{target} . '/boot/loader/loader.conf', <<CONTENT );
+timer 4
+default ubos
+CONTENT
+
+    my $rootPartUuid = $self->getPartUuid( $diskLayout->getRootDeviceNames() );
+
+    UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT );
+title UBOS
+linux /vmlinuz-linux
+initrd /initramfs-linux.img
+options root=PARTUUID=$rootPartUuid rw
+CONTENT
 
     return 0;
 }
