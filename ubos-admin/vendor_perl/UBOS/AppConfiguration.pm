@@ -784,6 +784,15 @@ sub checkCustomizationPointValues {
                                    . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
                                    . ', is ' . ( ref( $value ) || $value ));
                         }
+
+                        if( exists( $custPointDef->{regex} )) {
+                            unless( $value =~ $custPointDef->{regex} ) {
+                                fatal(   'AppConfiguration ' . $self->appConfigId
+                                       . ', package ' . $packageName
+                                       . ', invalid value, regex is ' . $custPointDef->{regex} . ': ' . $custPointName
+                                       . ', is ' . ( ref( $value ) || $value ));
+                            }
+                        }
                     }
                 }
 
