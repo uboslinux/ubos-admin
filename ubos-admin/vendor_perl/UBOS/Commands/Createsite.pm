@@ -339,6 +339,9 @@ sub run {
             if( !$appId || UBOS::Host::ensurePackages( $appId, $quiet ) >= 0 ) {
                 last;
             }
+            if( $@ =~ m!unless you are root! ) {
+                fatal( 'To download this package, you need root privileges. Please re-run as root' );
+            }
             error( $@ );
         }
         unless( $appId ) {
@@ -410,6 +413,9 @@ sub run {
                     %nextAccs    = ();
 
                 } else {
+                    if( $@ =~ m!unless you are root! ) {
+                        fatal( 'To download a needed package, you need root privileges. Please re-run as root' );
+                    }
                     error( $@ );
                     $askUserAgain = 1;
                 }
