@@ -479,7 +479,7 @@ sub getPartUuid {
 sub getRootDeviceNames {
     my $self = shift;
 
-    my @ret = @{$self->{devicetype}->{'/'}->{devices}};
+    my @ret = @{$self->{devicetable}->{'/'}->{devices}};
     return @ret;
 }
 
