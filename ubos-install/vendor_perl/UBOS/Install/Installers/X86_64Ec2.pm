@@ -56,10 +56,6 @@ sub new {
     $self->{kernelpackage} = 'linux-ec2';
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-cloud mkinitcpio ec2-keyring ) ];
-
-        if( 'mbr' eq $self->{partitioningscheme} ) {
-            push @{$self->{devicepackages}}, 'grub';
-        }
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];
@@ -153,21 +149,28 @@ sub installRamdisk {
 
 ##
 # Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self       = shift;
-    my $diskLayout = shift;
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
 
     my $errors = 0;
     if( $self->{partitioningscheme} eq 'mbr' ) {
-        $errors += $self->installGrub( $diskLayout, {
+        $errors += $self->installGrub(
+                $pacmanConfigFile,
+                $diskLayout,
+                {
                     'target'         => 'i386-pc',
                     'boot-directory' => $self->{target} . '/boot'
-            } );
+                } );
 
     } elsif( $self->{partitioningscheme} eq 'gpt' ) {
-        $errors += $self->installSystemdBoot( $diskLayout );
+        $errors += $self->installSystemdBoot(
+                $pacmanConfigFile,
+                $diskLayout );
 
     } else {
         fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );

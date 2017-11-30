@@ -339,7 +339,7 @@ sub install {
         $errors += $self->doUpstreamFixes();
 
         $errors += $self->installRamdisk( $diskLayout );
-        $errors += $self->installBootLoader( $diskLayout );
+        $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
 
         my $chrootScript = <<'SCRIPT';
 #!/bin/bash
@@ -542,11 +542,11 @@ END
 
 ##
 # Install the packages that need to be installed
-# $pacmanConfig: pacman config file to use
+# $pacmanConfigFile: pacman config file to use
 #
 sub installPackages {
-    my $self         = shift;
-    my $pacmanConfig = shift;
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
 
     info( "Installing packages" );
 
@@ -568,7 +568,7 @@ sub installPackages {
     my $cmd = "pacman"
             . " -r '$target'"
             . " -Sy"
-            . " '--config=$pacmanConfig'"
+            . " '--config=$pacmanConfigFile'"
             . " --cachedir '$target/var/cache/pacman/pkg'"
             . " --noconfirm"
             . ' ' . join( ' ', @allPackages );
@@ -578,7 +578,7 @@ sub installPackages {
     my $out;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
         error( "pacman failed:", $out );
-        trace( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfig ) } );
+        trace( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfigFile ) } );
         ++$errors;
     }
 
@@ -825,11 +825,13 @@ sub installRamdisk {
 
 ##
 # Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self       = shift;
-    my $diskLayout = shift;
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
 
     error( 'Method installBootLoader() must be overridden for', ref( $self ));
 

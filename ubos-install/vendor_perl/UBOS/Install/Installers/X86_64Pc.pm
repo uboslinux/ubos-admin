@@ -58,10 +58,6 @@ sub new {
         $self->{devicepackages} = [ qw( rng-tools mkinitcpio
                 ubos-networking-client ubos-networking-gateway
                 ubos-networking-standalone smartmontools wpa_supplicant crda ) ];
-
-        if( 'mbr' eq $self->{partitioningscheme} ) {
-            push @{$self->{devicepackages}}, 'grub';
-        }
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service smartd.service ) ];
@@ -348,21 +344,28 @@ sub createDiskLayout {
 
 ##
 # Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
-    my $self       = shift;
-    my $diskLayout = shift;
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
 
     my $errors = 0;
     if( $self->{partitioningscheme} eq 'mbr' ) {
-        $errors += $self->installGrub( $diskLayout, {
+        $errors += $self->installGrub(
+                $pacmanConfigFile,
+                $diskLayout,
+                {
                     'target'         => 'i386-pc',
                     'boot-directory' => $self->{target} . '/boot'
-            } );
+                } );
 
     } elsif( $self->{partitioningscheme} eq 'gpt' ) {
-        $errors += $self->installSystemdBoot( $diskLayout );
+        $errors += $self->installSystemdBoot(
+                $pacmanConfigFile,
+                $diskLayout );
 
     } else {
         fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );

@@ -80,13 +80,15 @@ END
 
 ##
 # Install the grub bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # $args: hash of parameters for grub-install
 # return: number of errors
 sub installGrub {
-    my $self       = shift;
-    my $diskLayout = shift;
-    my $args       = shift;
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
+    my $args             = shift;
 
     info( 'Installing grub boot loader' );
 
@@ -100,7 +102,25 @@ sub installGrub {
 
     # Boot loader
     if( $bootLoaderDevice ) {
-        my $cmd = 'grub-install';
+        # install grub package
+        my $cmd = "pacman"
+                . " -r '$target'"
+                . " -Sy"
+                . " '--config=$pacmanConfigFile'"
+                . " --cachedir '$target/var/cache/pacman/pkg'"
+                . " --noconfirm"
+                . ' grub';
+
+        debugAndSuspend( 'Installing package grub' );
+
+        if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
+            error( "pacman failed:", $out );
+            trace( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfigFile ) } );
+            ++$errors;
+        }
+
+        # invoke grub-install
+        $cmd = 'grub-install';
         if( $args ) {
             $cmd .= ' ' . join( ' ', map { "--$_=" . $args->{$_} } keys %$args );
         }
@@ -142,17 +162,21 @@ END
 
 ##
 # Install the systemd-boot bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
 # return: number of errors
 sub installSystemdBoot {
     my $self             = shift;
+    my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
     info( 'Installing systemd-boot boot loader' );
 
     my $errors = 0;
+    my $out;
 
-    if( UBOS::Utils::myexec( "bootctl '--path=$self->{target}/boot' install" )) {
+    if( UBOS::Utils::myexec( "bootctl '--path=$self->{target}/boot' install", undef, \$out, \$out )) {
+        error( "bootctl reports:", $out );
         ++$errors;
     }
 
