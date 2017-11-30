@@ -236,7 +236,6 @@ sub createDiskLayout {
                                         'size'        => '500M',
                                         'mkfsflags'   => '-F32',
                                         'gptparttype' => 'EF00'
-                                        # default partition type
                                     },
                                     'nomount-bios-boot-partition' => {
                                         'index'       => 2,
@@ -292,20 +291,24 @@ sub createDiskLayout {
                                 $argvp,
                                 {   '/boot' => {
                                         'index'   => 1,
-                                        'fs'      => 'ext4',
-                                        'size'    => '100M',
-                                        'mbrboot' => 1
-                                        # default partition type
+                                        'fs'      => 'vfat',
+                                        'size'    => '500M',
+                                        'mkfsflags'   => '-F32',
+                                        'gptparttype' => 'EF00'
+                                    },
+                                    'nomount-bios-boot-partition' => {
+                                        'index'       => 2,
+                                        'size'        => '1M',
+                                        'gptparttype' => 'EF02'
                                     },
                                     'swap' => {
-                                        'index'       => 2,
+                                        'index'       => 3,
                                         'fs'          => 'swap',
                                         'size'        => '4G',
-                                        'mbrparttype' => '82',
                                         'gptparttype' => '8200'
                                     },
                                     '/' => {
-                                        'index' => 3,
+                                        'index' => 4,
                                         'fs'    => 'btrfs'
                                         # default partition type
                                     }
