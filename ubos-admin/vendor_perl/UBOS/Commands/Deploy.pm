@@ -68,7 +68,7 @@ sub run {
 
     trace( 'Parsing site JSON and checking' );
 
-    my %jsons; # hash from filename to parsed JSON content
+    my @jsons = ();
     if( @files ) {
         foreach my $file ( @files ) {
             my $json = readJsonFromFile( $file );
@@ -76,7 +76,11 @@ sub run {
                 fatal();
             }
             $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
-            $jsons{$file} = $json;
+            if( ref( $json ) eq ARRAY ) {
+                push @jsons, @$json;
+            } else {
+                push @jsons, $json;
+            }
         }
     } else {
         my $json = readJsonFromStdin();
@@ -84,13 +88,16 @@ sub run {
             fatal( 'No JSON input provided on stdin' );
         }
         $json = UBOS::Utils::insertSlurpedFiles( $json, getcwd() );
-        $jsons{''} = $json;
+        if( ref( $json ) eq ARRAY ) {
+            push @jsons, @$json;
+        } else {
+            push @jsons, $json;
+        }
     }
 
     my $newSitesHash = {};
 
-   foreach my $fileName ( keys %jsons ) {
-       my $json   = $jsons{$fileName};
+   foreach my $json ( @jsons ) {
        my $site   = UBOS::Site->new( $json, $useAsTemplate );
        my $siteId = $site->siteId;
        if( $newSitesHash->{$siteId} ) {
