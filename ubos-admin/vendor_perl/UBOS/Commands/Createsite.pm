@@ -50,6 +50,7 @@ sub run {
     my $selfSigned    = 0;
     my $letsEncrypt   = 0;
     my $out           = undef;
+    my $force         = 0;
     my $tor           = 0;
     my $quiet         = 0;
     my $dryRun;
@@ -65,6 +66,7 @@ sub run {
             'letsencrypt'                  => \$letsEncrypt,
             'tor'                          => \$tor,
             'out=s',                       => \$out,
+            'force',                       => \$force,
             'quiet',                       => \$quiet,
             'dry-run|n'                    => \$dryRun );
 
@@ -80,6 +82,10 @@ sub run {
         || ( $selfSigned && $letsEncrypt ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $out && -e $out && !$force ) {
+        fatal( 'Output file exists already. Use --force to overwrite.' );
     }
 
     if( !$dryRun && $< != 0 ) {
@@ -726,6 +732,9 @@ HHH
 HHH
             '--out <file>' => <<HHH,
     Save the generated Site JSON file locally to file <file>.
+HHH
+            '--force' => <<HHH,
+    If the output file exists already, overwrite instead of aborting.
 HHH
             '--dry-run' => <<HHH,
     Do not actually deploy the site. In conjunction with --out, this is

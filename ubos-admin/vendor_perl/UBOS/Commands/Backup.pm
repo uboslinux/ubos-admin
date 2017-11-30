@@ -47,6 +47,7 @@ sub run {
     my $logConfigFile = undef;
     my $debug         = undef;
     my $out           = undef;
+    my $force         = 0;
     my @siteIds       = ();
     my @hosts         = ();
     my @appConfigIds  = ();
@@ -59,6 +60,7 @@ sub run {
             'logConfig=s'   => \$logConfigFile,
             'debug'         => \$debug,
             'out=s',        => \$out,
+            'force',        => \$force,
             'siteid=s'      => \@siteIds,
             'hostname=s'    => \@hosts,
             'appconfigid=s' => \@appConfigIds,
@@ -70,6 +72,10 @@ sub run {
 
     if( !$parseOk || @args || !$out || ( $verbose && $logConfigFile ) ) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( -e $out && !$force ) {
+        fatal( 'Output file exists already. Use --force to overwrite.' );
     }
 
     # Don't need to do any cleanup of siteIds or appConfigIds, BackupUtils::performBackup
@@ -142,6 +148,9 @@ HHH
 HHH
             '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
+HHH
+            '--force' => <<HHH,
+    If the output file exists already, overwrite instead of aborting.
 HHH
             '--notls' => <<HHH,
     If a site uses TLS, do not put the TLS key and certificate into the
