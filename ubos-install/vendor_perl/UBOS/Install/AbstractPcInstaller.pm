@@ -29,8 +29,8 @@ package UBOS::Install::AbstractPcInstaller;
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
-use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
+use UBOS::Utils;
 
 ##
 # Install a Ram disk
@@ -152,7 +152,7 @@ sub installSystemdBoot {
 
     my $errors = 0;
 
-    if( myexec( "bootctl '--path=$self->{target}/boot' install" )) {
+    if( UBOS::Utils::myexec( "bootctl '--path=$self->{target}/boot' install" )) {
         ++$errors;
     }
 
