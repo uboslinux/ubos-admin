@@ -41,12 +41,16 @@ pre_install() {
 }
 
 post_install() {
+    systemctl-sysusers
+
     perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
 }
 
 ## arg 1: the new package version
 ## arg 2: the old package version
 post_upgrade() {
+    systemctl-sysusers
+
     ensureChattr
 
     # Make Java 9 the default

@@ -841,6 +841,8 @@ sub getGname {
 # $comment: the comment for the /etc/passwd file
 # $homeDir: desired location of home directory
 # return: success or fail
+#
+# DEPRECATED in favor of systemd-sysusers
 sub ensureOsUser {
     my $userId   = shift;
     my $groupIds = shift;

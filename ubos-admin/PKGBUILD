@@ -135,6 +135,9 @@ package() {
     install -D -m644 ${startdir}/etc/ubos/open-ports.d/* -t ${pkgdir}/etc/ubos/open-ports.d/
     mkdir -p ${pkgdir}/etc/ubos/hostname-callbacks
 
+    mkdir pp ${pkgdir}/etc/sysusers.d
+    install -m644 ${startdir}/etc/sysusers.d/shepherd -t ${pkgdir}/etc/sysusers.d/
+
 # A directory to mount a UBOS staff to in a container
     mkdir -p -m 755 ${pkgdir}/UBOS-STAFF
 }
