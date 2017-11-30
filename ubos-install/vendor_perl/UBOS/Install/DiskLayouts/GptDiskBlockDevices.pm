@@ -86,7 +86,7 @@ sub createDisks {
                 $size  = '+' . $data->{size};
             }
 
-            if( UBOS::Utils::myexec( "sgdisk '--new=$index:$startsector:$size' '" . $disk . "'", undef, \$out, $out )) {
+            if( UBOS::Utils::myexec( "sgdisk '--new=$index:$startsector:$size' '" . $disk . "'", undef, \$out, \$out )) {
                 error( "sgdisk --new=$index:$startsector:$size " . $disk . ':', $out );
                 ++$errors;
             }
