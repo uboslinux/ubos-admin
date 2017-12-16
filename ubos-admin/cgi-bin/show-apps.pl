@@ -47,7 +47,7 @@ if( $site ) {
  </head>
  <body>
   <div class="page">
-   <div class="logo"><a href="http://ubos.net/"><img src="/_common/images/ubos-logo-128x41.png"/></a></div>
+   <div class="logo"><a href="http://ubos.net/"><img src="/_common/images/ubos-logo.png"/></a></div>
    <div class="content">
     <h1>$hostname</h1>
 HTML
