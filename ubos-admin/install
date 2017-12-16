@@ -41,7 +41,7 @@ pre_install() {
 }
 
 post_install() {
-    systemctl-sysusers
+    systemd-sysusers
 
     perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
 }
@@ -49,7 +49,7 @@ post_install() {
 ## arg 1: the new package version
 ## arg 2: the old package version
 post_upgrade() {
-    systemctl-sysusers
+    systemd-sysusers
 
     ensureChattr
 
