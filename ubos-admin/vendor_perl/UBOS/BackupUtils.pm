@@ -37,7 +37,7 @@ use UBOS::Utils;
 # @appConfigIds: the AppConfigIds of the AppConfigs to back up
 # $noTls: if true, no TLS info (key, cert...) will be backed up
 # $noTorKey: if true, for Tor sites, the Tor private key will not be backed up
-# return: desired exit code
+# return: 1 if ok, 0 if error
 sub performBackup {
     my $backup        = shift;
     my $backupOut     = shift;

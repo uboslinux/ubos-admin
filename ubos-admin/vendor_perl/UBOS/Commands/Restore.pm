@@ -41,7 +41,7 @@ use UBOS::Utils;
 
 ##
 # Execute this command.
-# return: desired exit code
+# return: 1 if ok, 0 if error
 sub run {
     my $cmd  = shift;
     my @args = @_;
