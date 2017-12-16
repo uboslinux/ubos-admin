@@ -54,6 +54,7 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
+    my $active     = UBOS::Networking::NetConfigUtils::activeNetConfigName();
     my $netConfigs = UBOS::Networking::NetConfigUtils::findNetConfigs();
     print UBOS::Utils::hashAsColumns(
             $netConfigs,
@@ -63,7 +64,12 @@ sub run {
                 if( !$all && !UBOS::Utils::invokeMethod( $netConfig . '::isPossible' ) ) {
                     return undef; # skip this
                 }
-                UBOS::Utils::invokeMethod( $netConfig . '::help' );
+                my $text = UBOS::Utils::invokeMethod( $netConfig . '::help' );
+                if( $active && UBOS::Utils::invokeMethod( $netConfig . '::name' ) eq $active ) {
+                    $text =~ s!\.$!!;
+                    $text .= ' (active).';
+                }
+                return $text;
             } );
 
     return 1;

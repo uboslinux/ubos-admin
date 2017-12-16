@@ -40,6 +40,7 @@ my $_networkingDefaultsConf     = undef; # cached content of $networkingDefaults
 my $netconfigConfFilePattern    = '/etc/ubos/netconfig-%s.json';
 my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePattern, keyed by netconfig name
 my $resolvedConfFile            = '/etc/systemd/resolved.conf';
+my $currentNetConfigFile        = '/etc/ubos/active-netconfig';
 
 # Regardless of Netconfig, always run these
 my %alwaysServices = (
@@ -94,6 +95,19 @@ sub activateNetConfig {
     } else {
         fatal( 'Unknown netconfig', $newConfigName );
     }
+}
+
+##
+# Obtain the name of the current NetConfig if known.
+# return: the name
+sub activeNetConfigName {
+
+    my $ret = undef;
+    if( -e $currentNetConfigFile ) {
+        $ret = UBOS::Utils::slurpFile( $currentNetConfigFile );
+        $ret =~ s!\s+!!g;
+    }
+    return $ret;
 }
 
 ##
@@ -795,6 +809,9 @@ END
         UBOS::Utils::myexec( 'sudo systemctl start ' . join( ' ', grep { m!\.service$! } keys %servicesNeeded ));
         # .socket don't want to be started
     }
+
+    UBOS::Utils::saveFile( $currentNetConfigFile, "$name\n" );
+
     return 1;
 }
 

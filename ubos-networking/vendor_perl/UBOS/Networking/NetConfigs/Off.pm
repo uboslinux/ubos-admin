@@ -30,6 +30,13 @@ use UBOS::Networking::NetConfigUtils;
 my $name = 'off';
 
 ##
+# Obtain this network configuration's name.
+# return: the name
+sub name {
+    return $name;
+}
+
+##
 # Determine whether this network configuration could currently be activated.
 # This return false, if, for example, this network configuration requires two
 # ethernet interfaces, but the device has only one ethernet interface attached.
