@@ -78,7 +78,8 @@ sub run {
         }
     }
 
-    my $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
+    my $tmpDir     = UBOS::Host()->config( 'host.tmp', '/tmp' );
+    my $targetFile = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
     my $target     = $targetFile->dirname;
     my $errors     = 0;
 

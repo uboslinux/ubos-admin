@@ -54,7 +54,8 @@ sub initializeIfNeeded {
         if( $device ) {
             trace( 'Staff device:', $device );
 
-            $targetFile = File::Temp->newdir( DIR => '/var/tmp', UNLINK => 1 );
+            my $tmpDir  = UBOS::Host()->config( 'host.tmp', '/tmp' );
+            $targetFile = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
             $target     = $targetFile->dirname;
 
             if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {

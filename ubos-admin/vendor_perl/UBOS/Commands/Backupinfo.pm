@@ -78,7 +78,8 @@ sub run {
         }
         $file = $in;
     } else {
-        $tmpFile = File::Temp->new( UNLINK => 1 );
+        my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+        $tmpFile = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
         close $tmpFile;
         $file = $tmpFile->filename();
 

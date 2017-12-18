@@ -89,7 +89,9 @@ sub run {
     # Need to keep a copy of the logConfigFile, new package may not have it any more
     my $stage2LogConfigFile;
     if( $logConfigFile ) {
-        my $tmp = File::Temp->new( UNLINK => 0, SUFFIX => '.conf' );
+        my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+
+        my $tmp = File::Temp->new( DIR => $tmpDir, UNLINK => 0, SUFFIX => '.conf' );
         $stage2LogConfigFile = $tmp->filename;
 
         debugAndSuspend( 'Copy log config file to', $stage2LogConfigFile );

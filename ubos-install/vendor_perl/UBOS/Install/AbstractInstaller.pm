@@ -47,6 +47,7 @@ use fields qw( hostname
 use Cwd;
 use File::Spec;
 use File::Temp;
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -284,7 +285,8 @@ sub install {
     info( 'Installing UBOS with hostname', $self->{hostname} );
 
     unless( $self->{target} ) {
-        $self->{tempTarget} = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
+        my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+        $self->{tempTarget} = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
         $self->{target}     = $self->{tempTarget}->dirname;
     }
 
@@ -502,7 +504,8 @@ sub generatePacmanConfigTarget {
     my $levelString = $self->getSigLevelString();
 
     # Generate pacman config file for creating the image
-    my $file = File::Temp->new( UNLINK => 1 );
+    my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+    my $file = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
     print $file <<END;
 #
 # Pacman config file for installing packages

@@ -197,7 +197,8 @@ sub run {
                 print "Generating TLS keys...\n";
             }
 
-            my $dir = File::Temp->newdir();
+            my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+            my $dir    = File::Temp->newdir( DIR => $tmpDir );
             chmod 0700, $dir;
 
             my $err;

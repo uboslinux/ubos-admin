@@ -90,8 +90,9 @@ sub run {
         }
         trace( 'Configuration device:', $device );
 
-        $targetFile = File::Temp->newdir( DIR => getcwd(), UNLINK => 1 );
-        $target     = $targetFile->dirname;
+        my $tmpDir     = UBOS::Host()->config( 'host.tmp', '/tmp' );
+        my $targetFile = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
+        $target        = $targetFile->dirname;
 
         debugAndSuspend( 'Mounting configuration device', $device, 'to', $target );
         if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
