@@ -342,6 +342,9 @@ sub run {
             if( $@ =~ m!unless you are root! ) {
                 fatal( 'To download this package, you need root privileges. Please re-run as root' );
             }
+            if( $@ =~ m!The requested URL returned error: 404! ) {
+                fatal( 'Before this package can be installed, you need to run "ubos-admin update". Then try again.' );
+            }
             error( $@ );
         }
         unless( $appId ) {
@@ -415,6 +418,9 @@ sub run {
                 } else {
                     if( $@ =~ m!unless you are root! ) {
                         fatal( 'To download a needed package, you need root privileges. Please re-run as root' );
+                    }
+                    if( $@ =~ m!The requested URL returned error: 404! ) {
+                        fatal( 'Before this package can be installed, you need to run "ubos-admin update". Then try again.' );
                     }
                     error( $@ );
                     $askUserAgain = 1;
