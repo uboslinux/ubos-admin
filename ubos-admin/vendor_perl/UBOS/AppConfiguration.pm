@@ -440,12 +440,12 @@ sub deployOrCheck {
             UBOS::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId/$packageName" );
         }
 
-        $self->_addCustomizationPointValuesToConfig( $config, $installable, $doIt );
+        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable, $doIt );
 
         # Now for all the roles
         foreach my $role ( @rolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->deployOrCheck( $doIt, $self, $installable, $config );
+                $ret &= $role->deployOrCheck( $doIt, $self, $installable, $appConfigInstallableConfig );
             }
         }
     }
@@ -485,12 +485,12 @@ sub undeployOrCheck {
                 "Installable=$packageName",
                 $installable );
 
-        $self->_addCustomizationPointValuesToConfig( $config, $installable );
+        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
 
         # Now for all the roles
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $config );
+                $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $appConfigInstallableConfig );
             }
         }
     }
@@ -522,12 +522,12 @@ sub suspend {
                 "Installable=$packageName",
                 $installable );
 
-        $self->_addCustomizationPointValuesToConfig( $config, $installable );
+        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
 
         # Now for all the roles
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->suspend( $self, $installable, $config );
+                $ret &= $role->suspend( $self, $installable, $appConfigInstallableConfig );
             }
         }
     }
@@ -559,12 +559,12 @@ sub resume {
                 "Installable=$packageName",
                 $installable );
 
-        $self->_addCustomizationPointValuesToConfig( $config, $installable );
+        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
 
         # Now for all the roles
         foreach my $role ( @rolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->resume( $self, $installable, $config );
+                $ret &= $role->resume( $self, $installable, $appConfigInstallableConfig );
             }
         }
     }
@@ -618,7 +618,7 @@ sub _runPostDeploy {
                 "Installable=$packageName",
                 $installable );
 
-        $self->_addCustomizationPointValuesToConfig( $config, $installable );
+        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
 
         foreach my $role ( @rolesOnHost ) {
             if( $self->needsRole( $role )) {
@@ -644,7 +644,7 @@ sub _runPostDeploy {
                                 'with role',              $role,
                                 'of installable',         $installable,
                                 'at appconfig',           $appConfigId );
-                        $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $config );
+                        $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $appConfigInstallableConfig );
                     }
                     ++$itemCount;
                 }
@@ -682,14 +682,14 @@ sub _initialize {
 ##
 # Internal helper to add the applicable customization point values to the $config object.
 # This is factored out because it is used in several places.
-# $config: the Configuration object
 # $installable: the installable whose customization points values are to be added
 # $save: if true, save the value to the file as well
-sub _addCustomizationPointValuesToConfig {
+sub _createAppConfigInstallableConfiguration {
     my $self        = shift;
-    my $config      = shift;
     my $installable = shift;
     my $save        = shift || 0;
+
+    my $params = {};
 
     my $installableCustPoints = $installable->customizationPoints;
     if( $installableCustPoints ) {
@@ -698,11 +698,6 @@ sub _addCustomizationPointValuesToConfig {
         my $appConfigCustPoints = $self->customizationPoints();
 
         foreach my $custPointName ( keys %$installableCustPoints ) {
-            if( $config->get( 'installable.customizationpoints.' . $custPointName . '.value' )) {
-                # no need to do it again
-                next;
-            }
-
             my $custPointDef = $installableCustPoints->{$custPointName};
 
             my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
@@ -731,12 +726,18 @@ sub _addCustomizationPointValuesToConfig {
                     if( $save ) {
                         UBOS::Utils::saveFile( $filename, $data );
                     }
-                    $config->put( 'installable.customizationpoints.' . $custPointName . '.filename', $filename );
+                    $params->{'installable.customizationpoints.' . $custPointName . '.filename'} = $filename;
                 }
-                $config->put( 'installable.customizationpoints.' . $custPointName . '.value', $data );
+                $params->{'installable.customizationpoints.' . $custPointName . '.value'} = $data;
             }
         }
     }
+    my $appConfigId = $self->appConfigId();
+    return UBOS::Configuration->new(
+            "AppConfiguration=$appConfigId,Installable=$installable",
+            $params,
+            $self,
+            $installable );
 }
 
 ##

@@ -29,6 +29,7 @@ use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Networking::NetConfigUtils;
 use UBOS::Utils;
 
 ##
