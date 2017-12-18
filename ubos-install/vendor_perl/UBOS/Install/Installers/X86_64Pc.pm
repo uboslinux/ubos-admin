@@ -235,11 +235,13 @@ sub createDiskLayout {
                                         'fs'          => 'vfat',
                                         'size'        => '500M',
                                         'mkfsflags'   => '-F32',
-                                        'gptparttype' => 'EF00'
+                                        'gptparttype' => 'EF00',
+                                        'label'       => 'UBOS boot'
                                     },
                                     '/' => {
                                         'index' => 2,
-                                        'fs'    => 'btrfs'
+                                        'fs'    => 'btrfs',
+                                        'label' => 'UBOS root'
                                         # default partition type
                                     }
                                 } );
@@ -289,17 +291,20 @@ sub createDiskLayout {
                                         'fs'      => 'vfat',
                                         'size'    => '500M',
                                         'mkfsflags'   => '-F32',
-                                        'gptparttype' => 'EF00'
+                                        'gptparttype' => 'EF00',
+                                        'label'       => 'UBOS boot'
                                     },
                                     'swap' => {
                                         'index'       => 2,
                                         'fs'          => 'swap',
                                         'size'        => '4G',
-                                        'gptparttype' => '8200'
+                                        'gptparttype' => '8200',
+                                        'label'       => 'swap'
                                     },
                                     '/' => {
                                         'index' => 3,
                                         'fs'    => 'btrfs'
+                                        'label' => 'UBOS root'
                                         # default partition type
                                     }
                                 } );

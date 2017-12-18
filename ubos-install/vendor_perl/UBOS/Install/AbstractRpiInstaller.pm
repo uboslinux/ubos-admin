@@ -241,12 +241,14 @@ sub createDiskLayout {
                                 'index'       => 1,
                                 'fs'          => 'vfat',
                                 'size'        => '100M',
-                                'mbrparttype' => 'c'
+                                'mbrparttype' => 'c',
+                                'label'       => 'UBOS boot'
                                 # default partition type for gpt
                             },
                             '/' => {
                                 'index' => 2,
                                 'fs'    => 'btrfs'
+                                'label' => 'UBOS root'
                                 # default partition type
                             },
                         } );

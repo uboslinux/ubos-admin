@@ -77,14 +77,17 @@ sub formatDisks {
 
         debugAndSuspend( 'Format file system', $mountPath, 'with', $fs );
         if( 'btrfs' eq $fs ) {
-            my $cmd = 'mkfs.btrfs -f ';
+            my $cmd = 'mkfs.btrfs -f';
             if( @{$data->{devices}} > 1 ) {
-                $cmd .= '-m raid1 -d raid1 ';
+                $cmd .= ' -m raid1 -d raid1';
             }
             if( exists( $data->{mkfsflags} )) {
-                $cmd .= $data->{mkfsflags} . ' ';
+                $cmd .= ' ' . $data->{mkfsflags};
             }
-            $cmd .= join( ' ', @{$data->{devices}} );
+            if( exists( $data->{label} )) {
+                $cmd .= " --label '" . $data->{label} . "'";
+            }
+            $cmd .= ' ' . join( ' ', @{$data->{devices}} );
 
             my $out;
             my $err;
@@ -98,6 +101,11 @@ sub formatDisks {
                 my $out;
                 my $err;
                 my $cmd = "mkswap '$dev'";
+
+                if( exists( $data->{label} )) {
+                    $cmd .= " --label '" . $data->{label} . "'";
+                }
+
                 if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
                     error( "$cmd error:", $err );
                     ++$errors;
@@ -109,6 +117,9 @@ sub formatDisks {
                 my $cmd = "mkfs.$fs";
                 if( exists( $data->{mkfsflags} )) {
                     $cmd .= ' ' . $data->{mkfsflags};
+                }
+                if( exists( $data->{label} )) {
+                    $cmd .= " -L '" . $data->{label} . "'";
                 }
                 $cmd .= " '$device'";
 
