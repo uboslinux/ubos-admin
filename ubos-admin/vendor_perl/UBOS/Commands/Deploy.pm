@@ -76,7 +76,7 @@ sub run {
                 fatal();
             }
             $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
-            if( ref( $json ) eq ARRAY ) {
+            if( ref( $json ) eq 'ARRAY' ) {
                 push @jsons, @$json;
             } else {
                 push @jsons, $json;
@@ -88,7 +88,7 @@ sub run {
             fatal( 'No JSON input provided on stdin' );
         }
         $json = UBOS::Utils::insertSlurpedFiles( $json, getcwd() );
-        if( ref( $json ) eq ARRAY ) {
+        if( ref( $json ) eq 'ARRAY' ) {
             push @jsons, @$json;
         } else {
             push @jsons, $json;
@@ -308,6 +308,8 @@ sub run {
             $ret &= $site->deploy( $deployUndeployTriggers );
         }
     }
+    UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
     debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
     UBOS::Host::executeTriggers( $deployUndeployTriggers );
 

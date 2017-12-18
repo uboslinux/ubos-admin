@@ -69,7 +69,7 @@ sub new {
         $self->{depotRoot} = 'http://depot.ubos.net';
     }
     unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( ubos-base ubos-networking ) ];
+        $self->{basepackages} = [ qw( ubos-base ) ];
     }
     unless( $self->{baseservices} ) {
         $self->{baseservices} = [ qw( ubos-admin.service ubos-ready.service sshd.service snapper-timeline.timer snapper-cleanup.timer ) ];

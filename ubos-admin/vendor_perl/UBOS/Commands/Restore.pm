@@ -413,6 +413,9 @@ sub restoreAppConfigs {
         debugAndSuspend( 'Resuming site', $toSite->siteId );
         $ret &= $toSite->resume( $resumeTriggers );
     }
+
+    UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
     debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 
@@ -665,6 +668,9 @@ sub restoreSites {
         debugAndSuspend( 'Resume site', $siteNew->siteId );
         $ret &= $siteNew->resume( $resumeTriggers );
     }
+
+    UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
     debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
 

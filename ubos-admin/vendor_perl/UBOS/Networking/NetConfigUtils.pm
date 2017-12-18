@@ -2,21 +2,21 @@
 #
 # Collection of utility methods for UBOS network configuration management.
 #
-# This file is part of ubos-networking.
+# This file is part of ubos-admin.
 # (C) 2012-2016 Indie Computing Corp.
 #
-# ubos-networking is free software: you can redistribute it and/or modify
+# ubos-admin is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# ubos-networking is distributed in the hope that it will be useful,
+# ubos-admin is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with ubos-networking.  If not, see <http://www.gnu.org/licenses/>.
+# along with ubos-admin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 use strict;
@@ -32,7 +32,8 @@ my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
 my $iptablesConfigFile          = '/etc/iptables/iptables.rules';
 my $ip6tablesConfigFile         = '/etc/iptables/ip6tables.rules';
 my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.conf';
-my $openPortsFilePattern        = '/etc/ubos/open-ports.d/*';
+my $openPortsDir                = '/etc/ubos/open-ports.d';
+my $openPortsFilePattern        = $openPortsDir . '/*';
 my $dotNetworkFilePattern       = '/etc/systemd/network/%2d-ubos-%s.network';
 my $dotNetworkDeleteGlob        = '/etc/systemd/network/??-ubos-*.network';
 my $networkingDefaultsConfFile  = '/etc/ubos/networking-defaults.json';
@@ -96,6 +97,48 @@ sub activateNetConfig {
         fatal( 'Unknown netconfig', $newConfigName );
     }
 }
+
+##
+# If the open-ports spec has changed, make necessary changes.
+# If not, don't do anything.
+# This works by comparing the timestamp of the open-ports directory with
+# that of the active netconfig file.
+sub updateOpenPorts {
+    
+    my $openPortsCtime        = ~0; # max
+    my $currentNetConfigCtime =  0;
+
+    if( -d $openPortsDir ) {
+        $openPortsCtime = ( stat( $openPortsDir ))[10];
+    }
+    if( -e $currentNetConfigFile ) {
+        $currentNetConfigCtime = ( stat( $currentNetConfigFile ))[10];
+    }
+    if( $openPortsCtime <= $currentNetConfigCtime ) {
+        return 0;
+    }
+
+    unless( -e $currentNetConfigFile ) {
+        warning( 'Cannot update firewall; do not know current netconfig. Run "ubos-admin setnetconfig" once' );
+        return 0;
+    }
+
+    info( 'Updating firewall' );
+
+    my $netConfig = UBOS::Utils::slurpFile( $currentNetConfigFile );
+    $netConfig =~ s!^\s+!!;
+    $netConfig =~ s!\s+$!!;
+
+    activateNetConfig( $netConfig );
+
+    # update the time stamp file
+    my $now = time();
+    utime $now, $now, $currentNetConfigFile;
+
+    return 1;
+}
+
+
 
 ##
 # Obtain the name of the current NetConfig if known.

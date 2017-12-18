@@ -9,16 +9,21 @@ arch=('any')
 license=('GPL')
 depends=(
     'apache'
+    'avahi'
     'btrfs-progs'
     'cronie'
+    'iptables'
+    'nss-mdns'
     'perl-archive-zip'
     'perl-cgi'
     'perl-dbi'
     'php-apache'
+    'perl-net-ip'
     'snapper'
     'sudo'
     'ubos-keyring'
     'ubos-perl-utils' )
+# Not yet: conflicts=('ubos-networking')
 backup=(
     'etc/ubos/config.json'
     'etc/httpd/ubos/defaults.conf'
@@ -37,9 +42,11 @@ package() {
 # Code
     install -D -m755 ${startdir}/bin/ubos-admin -t ${pkgdir}/usr/bin/
 
-    for d in AppConfigurationItems Backup Commands Databases Roles TemplateProcessor; do
+    for d in AppConfigurationItems Backup Commands Databases HostnameCallbacks Networking Networking/NetConfigs Roles TemplateProcessor; do
         for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
-            install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/${d}/
+            if [ -r "$f" ]; then
+                install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/${d}/
+            fi
         done
     done
     for f in ${startdir}/vendor_perl/UBOS/*.pm; do
@@ -103,6 +110,10 @@ package() {
     install -D -m644 ${startdir}/etc/tomcat8/server-ubos.xml.tmpl -t ${pkgdir}/etc/tomcat8/
     mkdir -p -m775 ${pkgdir}/var/lib/tomcat8
     mkdir -p -m755 ${pkgdir}/var/lib/tomcat8/sites
+
+# Avahi
+    install -D -m 644 ${startdir}/avahi/{http,https}.service -t ${pkgdir}/etc/avahi/services/
+    install -D -m 644 ${startdir}/avahi/systemd/*.service -t ${pkgdir}/etc/systemd/system/
 
 # Mysql
     # Our mysql-ubos.service runs the mysql initialization as user mysql:mysql, and thus cannot

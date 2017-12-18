@@ -166,6 +166,9 @@ sub run {
             $ret &= $oldSite->removeLetsEncryptCertificate();
         }
     }
+
+    UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
     debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
     UBOS::Host::executeTriggers( $undeployTriggers );
 

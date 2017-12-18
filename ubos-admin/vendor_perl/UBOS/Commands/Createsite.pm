@@ -564,12 +564,10 @@ sub run {
         debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
 
+        UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
         debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
         UBOS::Host::executeTriggers( $deployUndeployTriggers );
-
-        if( $tor ) {
-            # determine private keys
-        }
 
         info( 'Resuming sites' );
 

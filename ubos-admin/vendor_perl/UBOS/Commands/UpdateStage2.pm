@@ -118,6 +118,8 @@ sub finishUpdate {
             debugAndSuspend( 'Resume site', $site->siteId );
             $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
         }
+        UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
         if( $restartServices ) {
             debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
             UBOS::Host::executeTriggers( $resumeTriggers );
