@@ -64,8 +64,8 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $errors = 0;
-    my $targetFile; # out here so it won't go out of scope too early
+    my $errors    = 0;
+    my $targetDir = undef;
 
     if( $target ) {
         unless( -d $target ) {
@@ -90,27 +90,17 @@ sub run {
         }
         trace( 'Configuration device:', $device );
 
-        my $tmpDir     = UBOS::Host()->config( 'host.tmp', '/tmp' );
-        my $targetFile = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
-        $target        = $targetFile->dirname;
-
-        debugAndSuspend( 'Mounting configuration device', $device, 'to', $target );
-        if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
-            ++$errors;
-        }
+        $errors += UBOS::ConfigurationManager::mountDevice( $device, \$targetDir );
+        $target = $targetDir->dirname();
     }
 
-    debugAndSuspend( 'Loading from mounted configuration device at', $target );
     $errors += UBOS::ConfigurationManager::loadCurrentConfiguration( $target );
 
-    if( $device ) {
-        debugAndSuspend( 'Unmounting configuration device' );
-        if( UBOS::Utils::myexec( "umount '$target'" )) {
-            ++$errors;
-        }
+    if( $targetDir ) {
+        $errors += UBOS::ConfigurationManager::unmountDevice( $device, $targetDir );
     }
 
-    return 1;
+    return $errors ? 0 : 1;
 }
 
 ##

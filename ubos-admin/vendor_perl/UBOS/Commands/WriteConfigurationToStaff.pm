@@ -25,8 +25,6 @@ use warnings;
 
 package UBOS::Commands::WriteConfigurationToStaff;
 
-use Cwd;
-use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::ConfigurationManager;
 use UBOS::Host;
@@ -78,25 +76,14 @@ sub run {
         }
     }
 
-    my $tmpDir     = UBOS::Host()->config( 'host.tmp', '/tmp' );
-    my $targetFile = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
-    my $target     = $targetFile->dirname;
-    my $errors     = 0;
+    my $targetDir;
+    my $errors = 0;
+    
+    $errors += UBOS::ConfigurationManager::mountDevice( $device, \$targetDir );
+    $errors += UBOS::ConfigurationManager::saveCurrentConfiguration( $targetDir->dirname() );
+    $errors += UBOS::ConfigurationManager::unmountDevice( $device, $targetDir ); 
 
-    debugAndSuspend( 'Mount configuration device', $device, 'to', $target );
-    if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
-        ++$errors;
-    }
-
-    debugAndSuspend( 'Save configuration to', $target );
-    $errors += UBOS::ConfigurationManager::saveCurrentConfiguration( $target );
-
-    debugAndSuspend( 'Unmount', $target );
-    if( UBOS::Utils::myexec( "umount '$target'" )) {
-        ++$errors;
-    }
-
-    return 1;
+    return $errors ? 0 : 1;
 }
 
 ##

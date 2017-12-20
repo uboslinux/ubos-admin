@@ -40,25 +40,21 @@ use UBOS::Utils;
 my $LABEL = 'UBOS-STAFF';
 
 ##
+# Invoked during boot.
 # 1. Initialize the configuration if there's a configuration device attached
 # 2. Deploy site templates if needed
-sub initializeIfNeeded {
+sub performBootActions {
     trace( 'ConfigurationManager::initializeIfNeeded' );
 
     if( UBOS::Host::config()->get( 'host.readstaffonboot', 1 )) {
         my $device = guessConfigurationDevice();
 
-        my $targetFile = undef; # must be out here so unlinking happens at end of function
         my $target     = undef;
         my $init       = 0;
         if( $device ) {
             trace( 'Staff device:', $device );
 
-            my $tmpDir  = UBOS::Host()->config( 'host.tmp', '/tmp' );
-            $targetFile = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
-            $target     = $targetFile->dirname;
-
-            if( UBOS::Utils::myexec( "mount -t vfat '$device' '$target'" )) {
+            if( mountDevice( $device, \$target )) {
                 error( 'Failed to mount:', $device, $target );
                 return;
             }
@@ -75,8 +71,8 @@ sub initializeIfNeeded {
         }
 
         if( $init && UBOS::Host::config()->get( 'host.initializestaffonboot', 1 )) {
-            if( initializeConfigurationIfNeeded( $target )) {
-                error( 'Initialization staff device failed:', $device, $target );
+            if( _generateShepherdKeyPair( $target )) {
+                error( 'Generation of shepherd key pair on staff device failed:', $device, $target );
             }
         }
 
@@ -85,7 +81,7 @@ sub initializeIfNeeded {
         }
 
         if( $device ) {
-            if( UBOS::Utils::myexec( "umount '$target'" )) {
+            if( unmountDevice( $device, $target )) {
                 error( 'Failed to unmount:', $device, $target );
             }
         }
@@ -97,11 +93,13 @@ sub initializeIfNeeded {
 ##
 # Check that a candidate device is indeed a configuration device
 # $device: the candidate device, may be disk or partition
+# $ignoreLabel: if 1, do not check for UBOS-STAFF label
 # return: the $device if partition, or the partition device on $device, or undef
 sub checkConfigurationDevice {
-    my $device = shift;
+    my $device      = shift;
+    my $ignoreLabel = shift;
 
-    trace( 'ConfigurationManager::checkConfigurationDevice', $device );
+    trace( 'ConfigurationManager::checkConfigurationDevice', $device, $ignoreLabel );
 
     unless( -b $device ) {
         $@ = 'Not a valid UBOS staff device: ' . $device;
@@ -124,17 +122,17 @@ sub checkConfigurationDevice {
         unless( $fstype eq 'vfat' ) {
             next;
         }
-        unless( $label eq $LABEL ) {
+        if( !$ignoreLabel && $label ne $LABEL ) {
             next;
         }
         if( $ret ) {
-            $@ = 'More than one suitable partition found: ' . $ret . ' ' . $name;
+            $@ = 'More than one partition suitable as UBOS staff found: ' . $ret . ' ' . $name;
             return undef;
         }
         $ret = $name;
     }
     unless( $ret ) {
-        $@ = 'No suitable partition found on: ' . $device;
+        $@ = 'No partition suitable as UBOS staff found on: ' . $device;
     }
 
     return $ret;
@@ -211,13 +209,104 @@ sub saveCurrentConfiguration {
 }
 
 ##
-# If this is a valid staff device, but it has not been initialized, initialize
+# Completely erase all files in a directory and initialize with the staff structure
+# $dir: the directory
+# $keys: array of public ssh keys for the shepherd
+# $wifis: hash of WiFi network client information
+# return: number of errors
+sub initDirectoryAsStaff {
+    my $dir   = shift;
+    my $keys  = shift;
+    my $wifis = shift;
+
+    my $errors = 0;
+
+    # Delete existing content first
+    unless( opendir( DIR, $dir )) {
+        ++$errors;
+        error( $! );
+    }
+
+    my @toDelete;
+    while( my $file = readdir( DIR )) {
+        if( $file ne '.' && $file ne '..' ) {
+            push @toDelete, "$dir/$file";
+        }
+    }
+    closedir( DIR );
+
+    UBOS::Utils::deleteRecursively( @toDelete );
+
+    # Now put new files in
+    UBOS::Utils::mkdirDashP( "$dir/shepherd/ssh" );
+    UBOS::Utils::saveFile( "$dir/shepherd/ssh/README", <<CONTENT );
+This directory holds the public ssh key of the shepherd account. The file
+must be named "id_rsa.pub" (no quotes). It may also hold the corresponding
+private key, named "id_rsa" (no quotes).
+
+For details, go to https://ubos.net/staff
+
+CONTENT
+
+    if( @$keys ) {
+        # no need to care about permissions, this is DOS
+        UBOS::Utils::saveFile( "$dir/shepherd/ssh/id_rsa.pub", join( "\n", @$keys ));
+    }
+
+    UBOS::Utils::mkdirDashP( "$dir/wifi" );
+    foreach my $ssid ( keys %$wifis ) {
+        my $values  = $wifis->{$ssid};
+        my $content = join( '', map { $_ . '="' . _escape( $values-{$_} ) . '"' . "\n" } %$values );
+        UBOS::Utils::saveFile( "$dir/wifi/$ssid.conf", $content );
+    }
+    UBOS::Utils::saveFile( "$dir/wifi/README", <<CONTENT );
+This directory can hold information about one or more WiFi networks.
+Each WiFi network must be described in a separate file and must be named
+<ssid>.conf if <ssid> is the SSID of the network.
+
+For details, go to https://ubos.net/staff
+
+CONTENT
+
+    return $errors;
+}
+
+##
+# Label a device as being a staff device
+# $device: the device
+# return: number of errors
+sub labelDeviceAsStaff {
+    my $device = shift;
+
+    my $out;
+    my $errors = 0;
+
+    if( UBOS::Utils::myexec( "dosfslabel '$device'", undef, \$out )) {
+        error( 'Cannot read DOS filesystem label from device:', $device );
+        ++$errors;
+    }
+    unless( $out =~ m!$LABEL! ) {
+        # There might be a lot more output than just the label, such as
+        # error messages. Unfortunately they are printed to stdout with
+        # no clear distinction between label and message
+
+        if( UBOS::Utils::myexec( "dosfslabel '$device' $LABEL" )) {
+            error( 'Cannot change DOS filesystem label of device:', $device );
+        }
+    }
+
+    return $errors;
+}
+
+##
+# If this is a valid staff device, but it does not have a key for the shepherd,
+# generate a key pair.
 # $target: the target directory from which to read (root directory of stick)
 # return: number of errors
-sub initializeConfigurationIfNeeded {
+sub _generateShepherdKeyPair {
     my $target = shift;
 
-    trace( 'ConfigurationManager::initializeConfigurationIfNeeded', $target );
+    trace( 'ConfigurationManager::_generateShepherdKeyPair', $target );
 
     my $errors = 0;
     unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
@@ -250,6 +339,36 @@ sub loadCurrentConfiguration {
         $sshKey =~ s!\s+$!!;
 
         setupUpdateShepherd( 0, $sshKey );
+    }
+
+    if( -d "$target/wifi" ) {
+        my $out;
+        if( UBOS::Utils::myexec( "pacman -Qi wpa_supplicant", undef, \$out, \$out )) {
+            error( 'Cannot provision WiFi from staff device: package wpa_supplicant is not installed' );
+
+        } else {
+            my $confs    = UBOS::Utils::readFilesInDirectory( $target, '*.conf' );
+            my $wlanNics = UBOS::Host::wlanNics();
+
+            if(( keys %$confs ) && ( keys %$wlanNics )) {
+                unless( -d "$target/etc/wpa_supplicant" ) {
+                    UBOS::Utils::mkdir( "$target/etc/wpa_supplicant" );
+                }
+                my $content = <<CONTENT;
+eapol_version=1
+ap_scan=1
+fast_reauth=1
+
+CONTENT
+                $content .= join( "\n", map { "network={\n" . $_ . "}\n" } values %$confs );
+                foreach my $nic ( keys %$wlanNics ) {
+                    UBOS::Utils::saveFile( "$target/etc/wpa_supplicant-$nic.conf", $content );
+
+                    UBOS::Utils::myexec( 'systemctl is-enabled wpa_supplicant@' . $nic . ' > /dev/null || systemctl enable wpa_supplicant@' . $nic, undef, \$out, \$out );
+                    UBOS::Utils::myexec( 'systemctl is-active  wpa_supplicant@' . $nic . ' > /dev/null || systemctl start  wpa_supplicant@' . $nic, undef, \$out, \$out );
+                }
+            }
+        }
     }
 
     my $destDir = UBOS::Host::config()->get( 'host.deploysitetemplatesonbootdir', undef );
@@ -331,6 +450,47 @@ shepherd ALL = NOPASSWD: \
     /bin/bash *
 CONTENT
     }
+}
+
+##
+# Helper method to mount a device
+# $device: name of the device, e.g. /dev/sdc1
+# $targetP: writes the tmp directory object into this var (not the name)
+# return: number of errors
+sub mountDevice {
+    my $device  = shift;
+    my $targetP = shift;
+    
+    my $tmpDir    = UBOS::Host()->config( 'host.tmp', '/tmp' );
+    $$targetP     = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
+    my $targetDir = $$targetP->dirname;
+    my $errors    = 0;
+
+    debugAndSuspend( 'Mount configuration device', $device, 'to', $targetDir );
+    if( UBOS::Utils::myexec( "mount -t vfat '$device' '$targetDir'" )) {
+        ++$errors;
+    }
+    return $errors;
+}
+
+##
+# Helper method to unmount a mounted device
+# $device: name of the device, e.g. /dev/sdc1
+# $target: the tmp directory object (not the name)
+# return: number of errors
+sub unmountDevice {
+    my $device = shift;
+    my $target = shift;
+
+    my $targetDir = $target->dirname;
+    my $errors    = 0;
+
+    debugAndSuspend( 'Unmount', $targetDir );
+    if( UBOS::Utils::myexec( "umount '$targetDir'" )) {
+        ++$errors;
+    }
+
+    return $errors;
 }
 
 1;

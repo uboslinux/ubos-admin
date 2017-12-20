@@ -1075,6 +1075,18 @@ sub nics {
 }
 
 ##
+# Determine all current WiFi interfaces of this host and their properties.
+# return: see #nics()
+sub wlanNics {
+    my $allNics = nics();
+
+    my %ret = ();
+    map { $ret{$_} = $allNics->{$_} } grep { $allNics->{$_}->{type} eq 'wlan' } keys %$allNics;
+
+    return \%ret;
+}
+
+##
 # Determine IP addresses assigned to a network interface given by a
 # name or a wildcard expression, e.g. "enp2s0" or "enp*".
 #

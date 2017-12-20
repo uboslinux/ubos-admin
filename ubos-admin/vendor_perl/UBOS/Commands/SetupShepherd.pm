@@ -55,7 +55,7 @@ sub run {
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'debug'       => \$debug,
-            'add'         => \$add );
+            'add-key'     => \$add );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -100,7 +100,7 @@ SSS
     account did not exist yet, create it first.
 HHH
             <<SSS => <<HHH
-    --add <public ssh key> ...
+    --add-key <public ssh key> ...
 SSS
     Add the given public ssh key to the shepherd account. If a previous
     ssh key was already set, add this ssh key and do not replace the
