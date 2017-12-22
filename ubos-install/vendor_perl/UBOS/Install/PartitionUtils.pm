@@ -34,7 +34,7 @@ sub appendFdiskChangePartitionType {
     my $i           = shift;
 
     unless( $mbrparttype ) {
-        return 0;
+        return '';
     }
 
     my $script = '';
@@ -50,6 +50,7 @@ t
 $mbrparttype
 END
     }
+print "*** appendFdiskChangePartitionType returning '$script'\n";
     return $script;
 }
 

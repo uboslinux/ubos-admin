@@ -285,7 +285,7 @@ sub install {
     info( 'Installing UBOS with hostname', $self->{hostname} );
 
     unless( $self->{target} ) {
-        my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+        my $tmpDir = UBOS::Host::config()->get( 'host.tmp', '/tmp' );
         $self->{tempTarget} = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
         $self->{target}     = $self->{tempTarget}->dirname;
     }
@@ -504,7 +504,7 @@ sub generatePacmanConfigTarget {
     my $levelString = $self->getSigLevelString();
 
     # Generate pacman config file for creating the image
-    my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+    my $tmpDir = UBOS::Host::config->get( 'host.tmp', '/tmp' );
     my $file = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
     print $file <<END;
 #

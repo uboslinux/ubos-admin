@@ -303,7 +303,7 @@ sub createDiskLayout {
                                     },
                                     '/' => {
                                         'index' => 3,
-                                        'fs'    => 'btrfs'
+                                        'fs'    => 'btrfs',
                                         'label' => 'UBOS root'
                                         # default partition type
                                     }
