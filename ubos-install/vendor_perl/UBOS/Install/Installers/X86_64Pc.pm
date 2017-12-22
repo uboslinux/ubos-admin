@@ -34,6 +34,8 @@ use UBOS::Install::AbstractDiskBlockDevices;
 use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
+use UBOS::Install::DiskLayouts::GptDiskBlockDevices;
+use UBOS::Install::DiskLayouts::GptDiskImage;
 use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
 use UBOS::Install::DiskLayouts::MbrDiskImage;
 use UBOS::Install::DiskLayouts::PartitionBlockDevices;

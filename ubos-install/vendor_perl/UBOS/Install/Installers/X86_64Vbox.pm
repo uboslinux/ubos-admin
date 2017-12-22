@@ -94,7 +94,7 @@ sub createDiskLayout {
         my $first = $argvp->[0];
         if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
             # Option 1
-            $ret = UBOS::Install::DiskImages::MbrDiskImage->new(
+            $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                     $first,
                     {   '/' => {
                             'index' => 1,
@@ -104,7 +104,7 @@ sub createDiskLayout {
                     } );
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
             # Option 2
-            $ret = UBOS::Install::DiskImages::MbrDiskBlockDevices->new(
+            $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
                     $argvp,
                     {   '/' => {
                             'index' => 1,
