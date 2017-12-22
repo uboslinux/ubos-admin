@@ -144,7 +144,6 @@ sub createDiskLayout {
             } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
                 $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
-                        $self->{partitioningscheme},
                         [   $rootDiskOrImage    ],
                         {   '/boot' => {
                                 'index'     => 1,
