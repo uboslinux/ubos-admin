@@ -182,6 +182,13 @@ sub run {
                     }
                 }
             }
+
+            my $appPackage = $newAppConfig->app()->packageName();
+            foreach my $acc ( $newAppConfig->accessories() ) {
+                if( $appPackage ne $acc->belongsToApp() ) {
+                    fatal( 'Accessory', $acc->packageName(), 'cannot be used in appconfig', $newAppConfigId, 'as it does not belong to app', $appId );
+                }
+            }
         }
 
         my $oldSite = $oldSites->{$newSiteId};

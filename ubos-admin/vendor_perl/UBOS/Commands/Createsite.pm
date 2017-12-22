@@ -433,6 +433,12 @@ sub run {
             }
         }
 
+        foreach my $acc ( values %accs ) {
+            if( $appId ne $acc->belongsToApp() ) {
+                fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+            }
+        }
+
         foreach my $installable ( $app, values %accs ) {
             my $custPoints = $installable->customizationPoints;
             if( $custPoints ) {

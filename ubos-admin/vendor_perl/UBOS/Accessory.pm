@@ -63,6 +63,16 @@ sub new {
 }
 
 ##
+# Obtain the app that this accessory belongs to
+# return: the package name of the app
+sub belongsToApp {
+    my $self = shift;
+
+    # always there
+    return $self->{json}->{accessoryinfo}->{appid};
+}
+
+##
 # Determine the set of other installables that must also be deployed at the
 # same AppConfiguration.
 # return: array (usually empty)
