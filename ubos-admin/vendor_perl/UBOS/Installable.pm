@@ -454,8 +454,10 @@ sub checkManifestCustomizationPointsSection {
             unless( ref( $custPointValidation )) {
                 $self->myFatal( "customizationpoints section: customizationpoint $custPointName: unknown type: " . $custPointJson->{type} );
             }
-            if( $custPointJson->{type} ne 'string' && defined( $custPointJson->{regex} )) {
-                $self->myFatal( "customizationpoints section: customizationpoint $custPointName: only string types may have a regex" );
+            if( defined( $custPointJson->{regex} )) {
+                if( $custPointJson->{type} ne 'string' && $custPointJson->{type} ne 'password' ) {
+                    $self->myFatal( "customizationpoints section: customizationpoint $custPointName: only string and password types may have a regex" );
+                }
             }
             unless( defined( $custPointJson->{required} ) ) {
                 $self->myFatal( "customizationpoints section: customizationpoint $custPointName: field 'required' must be given" );
