@@ -129,6 +129,10 @@ sub restoreRecursive {
     my $bucket  = shift;
     my $dirName = shift;
 
+    unless( -d ( $self->{contextPathInBackup} . "/$bucket" )) {
+        # The bucket is new
+        return 1;
+    }
     unless( opendir( DIR, $self->{contextPathInBackup} . "/$bucket" )) {
         error( $! );
         return 0;
