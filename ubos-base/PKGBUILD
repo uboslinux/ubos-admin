@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.16
+pkgver=0.17
 pkgrel=1
 pkgdesc="Metapackage for minimal UBOS"
 arch=('any')
@@ -47,6 +47,7 @@ depends=(
     'shadow'
     'sudo'
     'sysfsutils'
+    'systemd'
     'tar'
     'traceroute'
     'ubos-admin'
