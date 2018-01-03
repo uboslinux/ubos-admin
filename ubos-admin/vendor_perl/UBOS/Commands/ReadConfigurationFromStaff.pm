@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #
-# Command that reads the device's desired configuration from a
-# configuration device, called the UBOS staff
+# Command that reads the device's desired configuration from
+# a UBOS staff device
 #
 # This file is part of ubos-admin.
 # (C) 2012-2017 Indie Computing Corp.
@@ -28,9 +28,9 @@ package UBOS::Commands::ReadConfigurationFromStaff;
 use Cwd;
 use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::ConfigurationManager;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::StaffManager;
 use UBOS::Utils;
 
 ##
@@ -75,29 +75,29 @@ sub run {
     } else {
         if( @args ) {
             $device = shift @args;
-            debugAndSuspend( 'Checking configuration device', $device );
-            $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
+            debugAndSuspend( 'Checking staff device', $device );
+            $device = UBOS::StaffManager::checkStaffDevice( $device );
             unless( $device ) {
                 fatal( $@ );
             }
 
         } else {
-            debugAndSuspend( 'Guessing configuration device' );
-            $device = UBOS::ConfigurationManager::guessConfigurationDevice();
+            debugAndSuspend( 'Guessing staff device' );
+            $device = UBOS::StaffManager::guessStaffDevice();
             unless( $device ) {
                 fatal( 'Cannot determine UBOS staff device' );
             }
         }
-        trace( 'Configuration device:', $device );
+        trace( 'Staff device:', $device );
 
-        $errors += UBOS::ConfigurationManager::mountDevice( $device, \$targetDir );
+        $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
         $target = $targetDir->dirname();
     }
 
-    $errors += UBOS::ConfigurationManager::loadCurrentConfiguration( $target );
+    $errors += UBOS::StaffManager::loadCurrentConfiguration( $target );
 
     if( $targetDir ) {
-        $errors += UBOS::ConfigurationManager::unmountDevice( $device, $targetDir );
+        $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir );
     }
 
     return $errors ? 0 : 1;

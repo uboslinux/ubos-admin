@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #
 # Command that writes the device's current configuration to a
-# configuration device, called the UBOS staff
+# UBOS staff device
 #
 # This file is part of ubos-admin.
 # (C) 2012-2017 Indie Computing Corp.
@@ -26,9 +26,9 @@ use warnings;
 package UBOS::Commands::WriteConfigurationToStaff;
 
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::ConfigurationManager;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::StaffManager;
 use UBOS::Utils;
 
 ##
@@ -62,15 +62,15 @@ sub run {
 
     if( @args ) {
         $device = shift @args;
-        debugAndSuspend( 'Check configuration device', $device );
-        $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
+        debugAndSuspend( 'Check staff device', $device );
+        $device = UBOS::StaffManager::checkStaffDevice( $device );
         unless( -b $device ) {
             fatal( 'Not a valid UBOS staff device:', $device );
         }
 
     } else {
-        debugAndSuspend( 'Guess configuration device' );
-        $device = UBOS::ConfigurationManager::guessConfigurationDevice();
+        debugAndSuspend( 'Guess staff device' );
+        $device = UBOS::StaffManager::guessStaffDevice();
         unless( $device ) {
             fatal( 'Cannot determine UBOS staff device' );
         }
@@ -79,9 +79,9 @@ sub run {
     my $targetDir;
     my $errors = 0;
     
-    $errors += UBOS::ConfigurationManager::mountDevice( $device, \$targetDir );
-    $errors += UBOS::ConfigurationManager::saveCurrentConfiguration( $targetDir->dirname() );
-    $errors += UBOS::ConfigurationManager::unmountDevice( $device, $targetDir ); 
+    $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
+    $errors += UBOS::StaffManager::saveCurrentConfiguration( $targetDir->dirname() );
+    $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
 
     return $errors ? 0 : 1;
 }

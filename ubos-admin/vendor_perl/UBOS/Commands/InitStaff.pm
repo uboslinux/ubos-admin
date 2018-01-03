@@ -26,9 +26,9 @@ package UBOS::Commands::InitStaff;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::ConfigurationManager;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::StaffManager;
 use UBOS::Utils;
 
 ##
@@ -41,21 +41,23 @@ sub run {
     if ( $< != 0 ) {
         fatal( "This command must be run as root" );
     }
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my $format        = undef;
-    my $noformat      = undef;
-    my @keys          = ();
-    my @wifiStrings   = ();
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $format            = undef;
+    my $noformat          = undef;
+    my $shepherdKey       = undef;
+    my @wifiStrings       = ();
+    my @siteTemplateFiles = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'debug'       => \$debug,
-            'add-key=s'   => \@keys,
-            'add-wifi=s'  => \@wifiStrings );
+            'verbose+'                 => \$verbose,
+            'logConfig=s'              => \$logConfigFile,
+            'debug'                    => \$debug,
+            'add-shepherd-key=s'       => \$shepherdKey,
+            'add-wifi=s'               => \@wifiStrings,
+            'add-site-template-file=s' => \@siteTemplateFiles );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -67,13 +69,35 @@ sub run {
     my $device = @args ? $args[0] : undef;
     my $errors = 0;
 
-    foreach my $key ( @keys ) {
-        unless( $key =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
-            fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $key );
+    my $wifis         = {}; # SSID     => hash of parameters
+    my $siteTemplates = {}; # filename => Site template JSON
+
+    if( $shepherdKey && $shepherdKey !~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+        fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $shepherdKey );
+    }
+    foreach my $siteTemplateFile ( @siteTemplateFiles ) {
+        # make sure they exist and are valid
+        unless( -r $siteTemplateFile ) {
+            fatal( 'Cannot read file:', $siteTemplateFile );
         }
+
+        my $shortsiteTemplateName = $siteTemplateFile;
+        $shortsiteTemplateName =~ s!^(.*)/!!;
+
+        if( exists( $siteTemplates->{$shortsiteTemplateName} )) {
+            fatal( 'Already have a site template with short name:', $shortsiteTemplateName );
+        }
+
+        my $json = UBOS::Utils::readJsonFromFile( $siteTemplateFile );
+        unless( $json ) {
+            fatal( 'When reading file', $siteTemplateFile, ':', $@ );
+        }
+
+        my $site = UBOS::Site->new( $json, 1 );
+
+        $siteTemplates->{$shortsiteTemplateName} = $json;
     }
 
-    my $wifis = {}; # SSID => hash of parameters
 
     foreach my $wifiString ( @wifiStrings ) {
         my $w = _parseWifiString( $wifiString );
@@ -84,19 +108,19 @@ sub run {
     }
 
     if( $device ) {
-        $device = UBOS::ConfigurationManager::checkConfigurationDevice( $device );
+        $device = UBOS::StaffManager::checkStaffDevice( $device );
     } else {
-        $device = UBOS::ConfigurationManager::guessConfigurationDevice();
+        $device = UBOS::StaffManager::guessStaffDevice();
     }
     unless( $device ) {
         fatal( $@ );
     }
 
     my $targetDir;
-    $errors += UBOS::ConfigurationManager::labelDeviceAsStaff( $device );
-    $errors += UBOS::ConfigurationManager::mountDevice( $device, \$targetDir );
-    $errors += UBOS::ConfigurationManager::initDirectoryAsStaff( $targetDir->dirname(), \@keys, $wifis );
-    $errors += UBOS::ConfigurationManager::unmountDevice( $device, $targetDir ); 
+    $errors += UBOS::StaffManager::labelDeviceAsStaff( $device );
+    $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
+    $errors += UBOS::StaffManager::initDirectoryAsStaff( $targetDir->dirname(), $shepherdKey, $wifis, $siteTemplates );
+    $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
 
     return $errors ? 0 : 1;
 }
@@ -200,7 +224,7 @@ HHH
             '--[no]format' => <<HHH,
     Format (or do not format) this device. If not given, uses a heuristic.
 HHH
-            '--add-key <key>' => <<HHH,
+            '--add-shepherd-key <key>' => <<HHH,
     Add a public key to the staff. This public key will be used as the
     key for shepherd login on devices that read from the created staff.
     This may be repeated to add multiple keys.
@@ -213,6 +237,10 @@ HHH
     "networks" section of a wpa_supplicant.conf file. For example
     "--add-wifi ssid=MyNetwork,psk=secret" will enable the device to
     connect to MyNetwork with password secret.
+HHH
+            '--add-site-template-file <file>' => <<HHH,
+    Add a Site JSON template file to the staff, which will be instantiated
+    and deployed when the device boots with this Staff. This may be repeated.
 HHH
         }
     };

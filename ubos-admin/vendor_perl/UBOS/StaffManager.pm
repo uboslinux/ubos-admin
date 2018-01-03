@@ -30,7 +30,7 @@
 use strict;
 use warnings;
 
-package UBOS::ConfigurationManager;
+package UBOS::StaffManager;
 
 use File::Temp;
 use UBOS::Host;
@@ -41,49 +41,52 @@ my $LABEL = 'UBOS-STAFF';
 
 ##
 # Invoked during boot.
-# 1. Initialize the configuration if there's a configuration device attached
+# 1. Initialize the configuration if there's a staff device attached
 # 2. Deploy site templates if needed
 sub performBootActions {
-    trace( 'ConfigurationManager::initializeIfNeeded' );
+    trace( 'StaffManager::initializeIfNeeded' );
 
-    if( UBOS::Host::config()->get( 'host.readstaffonboot', 1 )) {
-        my $device = guessConfigurationDevice();
+    unless( UBOS::Host::config()->get( 'host.readstaffonboot', 1 )) {
+        return;
+    }
 
-        my $target     = undef;
-        my $init       = 0;
-        if( $device ) {
-            trace( 'Staff device:', $device );
+    my $device = guessStaffDevice();
 
-            if( mountDevice( $device, \$target )) {
-                error( 'Failed to mount:', $device, $target );
-                return;
-            }
-            $init = 1;
+    my $target = undef;
+    my $init   = 0;
+    if( $device ) {
+        trace( 'Staff device:', $device );
 
+        if( mountDevice( $device, \$target )) {
+            error( 'Failed to mount:', $device, $target );
+            return;
+        }
+        $init = 1;
+
+    } else {
+        # container/cloud case
+        if( -d "/$LABEL" ) {
+            $target = "/$LABEL";
+            # don't init
         } else {
-            if( -d "/$LABEL" ) {
-                $target = "/$LABEL";
-                # don't init
-            } else {
-                trace( 'No staff device found' );
-                return;
-            }
+            trace( 'No staff device found' );
+            return;
         }
+    }
 
-        if( $init && UBOS::Host::config()->get( 'host.initializestaffonboot', 1 )) {
-            if( _generateShepherdKeyPair( $target )) {
-                error( 'Generation of shepherd key pair on staff device failed:', $device, $target );
-            }
+    if( $init && UBOS::Host::config()->get( 'host.initializestaffonboot', 1 )) {
+        if( _generateShepherdKeyPair( $target )) {
+            error( 'Generation of shepherd key pair on staff device failed:', $device, $target );
         }
+    }
 
-        if( loadCurrentConfiguration( $target )) {
-            error( 'Loading current configuration failed from', $device, $target );
-        }
+    if( loadCurrentConfiguration( $target )) {
+        error( 'Loading current configuration failed from', $device, $target );
+    }
 
-        if( $device ) {
-            if( unmountDevice( $device, $target )) {
-                error( 'Failed to unmount:', $device, $target );
-            }
+    if( $device ) {
+        if( unmountDevice( $device, $target )) {
+            error( 'Failed to unmount:', $device, $target );
         }
     }
 
@@ -91,15 +94,15 @@ sub performBootActions {
 }
 
 ##
-# Check that a candidate device is indeed a configuration device
+# Check that a candidate device is indeed a staff device
 # $device: the candidate device, may be disk or partition
 # $ignoreLabel: if 1, do not check for UBOS-STAFF label
 # return: the $device if partition, or the partition device on $device, or undef
-sub checkConfigurationDevice {
+sub checkStaffDevice {
     my $device      = shift;
     my $ignoreLabel = shift;
 
-    trace( 'ConfigurationManager::checkConfigurationDevice', $device, $ignoreLabel );
+    trace( 'StaffManager::checkStaffDevice', $device, $ignoreLabel );
 
     unless( -b $device ) {
         $@ = 'Not a valid UBOS staff device: ' . $device;
@@ -139,11 +142,11 @@ sub checkConfigurationDevice {
 }
 
 ##
-# Guess the name of the configuration device
+# Guess the name of the staff device
 # return: device, or undef
-sub guessConfigurationDevice {
+sub guessStaffDevice {
 
-    trace( 'ConfigurationManager::guessConfigurationDevice' );
+    trace( 'StaffManager::guessStaffDevice' );
 
     my $out;
     my $err;
@@ -185,7 +188,7 @@ sub guessConfigurationDevice {
 sub saveCurrentConfiguration {
     my $target = shift;
 
-    trace( 'ConfigurationManager::saveCurrentConfiguration', $target );
+    trace( 'StaffManager::saveCurrentConfiguration', $target );
 
     my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
     my $sshDir         = "flock/$keyFingerprint/ssh";
@@ -211,13 +214,15 @@ sub saveCurrentConfiguration {
 ##
 # Completely erase all files in a directory and initialize with the staff structure
 # $dir: the directory
-# $keys: array of public ssh keys for the shepherd
+# $shepherdKey: public ssh key for the shepherd, if any
 # $wifis: hash of WiFi network client information
+# $siteTemplates: hash of template name to site template JSON
 # return: number of errors
 sub initDirectoryAsStaff {
-    my $dir   = shift;
-    my $keys  = shift;
-    my $wifis = shift;
+    my $dir           = shift;
+    my $shepherdKey   = shift;
+    my $wifis         = shift;
+    my $siteTemplates = shift;
 
     my $errors = 0;
 
@@ -248,9 +253,9 @@ For details, go to https://ubos.net/staff
 
 CONTENT
 
-    if( @$keys ) {
+    if( $shepherdKey ) {
         # no need to care about permissions, this is DOS
-        UBOS::Utils::saveFile( "$dir/shepherd/ssh/id_rsa.pub", join( "\n", @$keys ));
+        UBOS::Utils::saveFile( "$dir/shepherd/ssh/id_rsa.pub", "$shepherdKey\n" );
     }
 
     UBOS::Utils::mkdirDashP( "$dir/wifi" );
@@ -263,6 +268,20 @@ CONTENT
 This directory can hold information about one or more WiFi networks.
 Each WiFi network must be described in a separate file and must be named
 <ssid>.conf if <ssid> is the SSID of the network.
+
+For details, go to https://ubos.net/staff
+
+CONTENT
+
+    UBOS::Utils::mkdirDashP( "$dir/site-templates" );
+    foreach my $siteTemplateName ( keys %$siteTemplates ) {
+        my $siteTemplateJson = $siteTemplates->{$siteTemplateName};
+
+        UBOS::Utils::writeJsonToFile( "$dir/site-templates/$siteTemplateName.json", $siteTemplateJson );
+    }
+    UBOS::Utils::saveFile( "$dir/site-templates/README", <<CONTENT );
+This directory can hold one or more Site JSON templates, which will be instantiated
+and deployed upon boot.
 
 For details, go to https://ubos.net/staff
 
@@ -306,7 +325,7 @@ sub labelDeviceAsStaff {
 sub _generateShepherdKeyPair {
     my $target = shift;
 
-    trace( 'ConfigurationManager::_generateShepherdKeyPair', $target );
+    trace( 'StaffManager::_generateShepherdKeyPair', $target );
 
     my $errors = 0;
     unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
@@ -331,7 +350,7 @@ sub _generateShepherdKeyPair {
 sub loadCurrentConfiguration {
     my $target = shift;
 
-    trace( 'ConfigurationManager::loadCurrentConfiguration', $target );
+    trace( 'StaffManager::loadCurrentConfiguration', $target );
 
     if( -e "$target/shepherd/ssh/id_rsa.pub" ) {
         my $sshKey = UBOS::Utils::slurpFile( "$target/shepherd/ssh/id_rsa.pub" );
@@ -347,7 +366,7 @@ sub loadCurrentConfiguration {
             error( 'Cannot provision WiFi from staff device: package wpa_supplicant is not installed' );
 
         } else {
-            my $confs    = UBOS::Utils::readFilesInDirectory( $target, '*.conf' );
+            my $confs    = UBOS::Utils::readFilesInDirectory( "$target/wifi", '*.conf' );
             my $wlanNics = UBOS::Host::wlanNics();
 
             if(( keys %$confs ) && ( keys %$wlanNics )) {
@@ -368,39 +387,31 @@ CONTENT
                     UBOS::Utils::myexec( 'systemctl is-active  wpa_supplicant@' . $nic . ' > /dev/null || systemctl start  wpa_supplicant@' . $nic, undef, \$out, \$out );
                 }
             }
+
+            # Update regulatory domain
+            if( -e "$target/wifi/wireless-regdom" ) {
+                UBOS::Utils::copyRecursively( "$target/wifi/wireless-regdom", '/etc/conf.d/wireless-regdom' );
+            }
         }
     }
 
     my $destDir = UBOS::Host::config()->get( 'host.deploysitetemplatesonbootdir', undef );
     if( -d $destDir ) {
-        # site templates for all hosts into which the device is plugged
-        # copy templates and leave the original in place
-        if( -d "$target/shepherd/site-templates" ) {
-            if( opendir( DIR, "$target/shepherd/site-templates" )) {
-                while( my $entry = readdir DIR ) {
-                    if( $entry ne '.' && $entry ne '..' ) {
-                        UBOS::Utils::copyRecursively( "$target/shepherd/site-templates/$entry", "$destDir/" );
-                    }
-                }
-                closedir DIR;
-            }
-        }
-
-        # site templates only for a specific host
-        # copy templates and remove the original
         my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
-        my $templateDir    = "$target/flock/$keyFingerprint/site-templates";
-        if( -d $templateDir ) {
-            if( opendir( DIR, $templateDir )) {
-                my @done = ();
-                while( my $entry = readdir DIR ) {
-                    if( $entry ne '.' && $entry ne '..' ) {
-                        UBOS::Utils::copyRecursively( "$templateDir/$entry", "$destDir/" );
-                        push @done, "$templateDir/$entry";
+        foreach my $templateDir (
+                "$target/shepherd/site-templates",
+                "$target/flock/$keyFingerprint/site-templates" )
+                        # The host-specific templates overwrite the general ones
+        {
+            if( -d $templateDir ) {
+                if( opendir( DIR, "$templateDir" )) {
+                    while( my $entry = readdir DIR ) {
+                        if( $entry ne '.' && $entry ne '..' ) {
+                            UBOS::Utils::copyRecursively( "$templateDir/$entry", "$destDir/" );
+                        }
                     }
+                    closedir DIR;
                 }
-                closedir DIR;
-                UBOS::Utils::deleteFile( @done );
             }
         }
     }
@@ -466,7 +477,7 @@ sub mountDevice {
     my $targetDir = $$targetP->dirname;
     my $errors    = 0;
 
-    debugAndSuspend( 'Mount configuration device', $device, 'to', $targetDir );
+    debugAndSuspend( 'Mount staff device', $device, 'to', $targetDir );
     if( UBOS::Utils::myexec( "mount -t vfat '$device' '$targetDir'" )) {
         ++$errors;
     }

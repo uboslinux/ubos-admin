@@ -23,14 +23,14 @@
 use strict;
 use warnings;
 
-use UBOS::ConfigurationManager;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::ResourceManager;
+use UBOS::StaffManager;
 
 UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-initialize', 0, '/etc/ubos/log-system.conf' );
 
-UBOS::ConfigurationManager::performBootActions();
+UBOS::StaffManager::performBootActions();
 UBOS::Host::ensureSnapperConfig();
 UBOS::Host::runAfterBootCommandsIfNeeded();
 UBOS::Host::deploySiteTemplatesIfNeeded();

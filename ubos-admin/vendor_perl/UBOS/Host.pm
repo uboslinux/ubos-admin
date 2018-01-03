@@ -312,6 +312,22 @@ sub findAppConfigurationByPartialId {
 }
 
 ##
+# Obtain the hostnames of the deployed sites
+# return: hash of hostname to hostname
+sub hostnamesOfSites {
+
+    my $sites = sites();
+    my $existingHostnames = {};
+
+    foreach my $siteId ( keys %$sites ) {
+        my $hostname = $sites->{$siteId}->hostname();
+        $existingHostnames->{$hostname} = $hostname;
+    }
+
+    return $existingHostnames;
+}
+
+##
 # A site has been deployed.
 # $site: the newly deployed or updated site
 sub siteDeployed {
@@ -1006,13 +1022,21 @@ sub deploySiteTemplatesIfNeeded {
         return;
     }
     my @templateFiles = <$destDir/*.json>;
-    unless( @templateFiles ) {
+
+    # skip the ones whose hostname we have already
+    my $existingHostnames = hostnamesOfSites();
+    my @templateFilesToDeploy = grep {
+        my $site = UBOS::Site->new( UBOS::Utils::readJsonFromFile( $_, 1 ));
+        return !exists( $existingHostnames->{$site->hostname() });
+    } @templateFiles;
+    
+    unless( @templateFilesToDeploy ) {
         return;
     }
-    my $cmd = 'ubos-admin deploy --skip-check-ready --template' . join( '', map { " --file '$_'" } @templateFiles );
+    my $cmd = 'ubos-admin deploy --skip-check-ready --template' . join( '', map { " --file '$_'" } @templateFilesToDeploy );
     my $out;
     my $err;
-    debugAndSuspend( 'Deploy site templates', @templateFiles );
+    debugAndSuspend( 'Deploy site templates', @templateFilesToDeploy );
     if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
         error( "Problems with attempting to install site templates from $destDir:\n" . $cmd, "\nout: " . $out . "\nerr: " . $err );
         # if error, leave templates in place
