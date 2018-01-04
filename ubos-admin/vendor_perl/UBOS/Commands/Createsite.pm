@@ -520,12 +520,11 @@ sub run {
     }
 
     my $ret = 1;
-    if( $dryRun ) {
-        if( $out ) {
-            UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
-        } else {
-            print UBOS::Utils::writeJsonToString( $newSiteJson );
-        }
+    if( $out ) {
+        UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+
+    } elsif( $dryRun ) {
+        print UBOS::Utils::writeJsonToString( $newSiteJson );
 
     } else {
         my $newSite = UBOS::Site->new( $newSiteJson );
