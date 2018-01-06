@@ -247,7 +247,7 @@ sub createDiskLayout {
                             },
                             '/' => {
                                 'index' => 2,
-                                'fs'    => 'btrfs'
+                                'fs'    => 'btrfs',
                                 'label' => 'UBOS root'
                                 # default partition type
                             },
