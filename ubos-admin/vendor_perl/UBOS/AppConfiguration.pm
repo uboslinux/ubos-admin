@@ -414,8 +414,8 @@ sub deployOrCheck {
             foreach my $key ( $vars->keys() ) {
                 if( $key =~ m!^installable\.customizationpoints\.([^\.]+)\.filename$! ) {
                     my $custPointName  = $1;
-                    my $custPointFile  = $vars->{$key};
-                    my $custPointValue = $vars->{"installable.customizationpoints.$custPointName.value"};
+                    my $custPointFile  = $vars->get( $key );
+                    my $custPointValue = $vars->get( "installable.customizationpoints.$custPointName.value" );
 
                     UBOS::Utils::saveFile( $custPointFile, $custPointValue );
                 }
