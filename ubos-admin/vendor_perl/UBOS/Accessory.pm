@@ -27,6 +27,8 @@ package UBOS::Accessory;
 use base qw( UBOS::Installable );
 use fields;
 
+use UBOS::Host;
+
 ##
 # Constructor.
 # $packageName: unique identifier of the package
@@ -44,7 +46,7 @@ sub new {
     }
     $self->SUPER::new( $packageName, $manifestFileReader );
 
-    if( $self->{config}->get( 'host.checkmanifest', 1 )) {
+    if( UBOS::Host::vars()->get( 'host.checkmanifest', 1 )) {
         $self->checkManifest( 'accessory', $skipFilesystemChecks );
         $self->checkManifestAccessoryInfo();
     }
@@ -53,7 +55,7 @@ sub new {
             ? $self->{json}->{accessoryinfo}->{accessoryid}
             : $packageName; # This is optional; always have a value
 
-    $self->{config}->put(
+    $self->vars()->put(
                 "package.name"                            => $packageName,
                 "installable.accessoryinfo.appid"         => $self->{json}->{accessoryinfo}->{appid},
                 "installable.accessoryinfo.accessoryid"   => $accessoryId,

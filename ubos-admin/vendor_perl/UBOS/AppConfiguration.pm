@@ -24,18 +24,15 @@ use warnings;
 
 package UBOS::AppConfiguration;
 
-use UBOS::Accessory;
-use UBOS::App;
-use UBOS::Configuration;
-use UBOS::Host;
-use UBOS::Logging;
-use UBOS::Subconfiguration;
 use JSON;
 use MIME::Base64;
+use UBOS::Accessory;
+use UBOS::App;
+use UBOS::Host;
+use UBOS::Logging;
+use UBOS::Variables;
 
-use fields qw{json skipFilesystemChecks manifestFileReader site app accessories config subconfigs};
-
-my $APPCONFIGPARSDIR = '/var/lib/ubos/appconfigpars';
+use fields qw{json skipFilesystemChecks manifestFileReader site app accessories vars};
 
 ##
 # Constructor.
@@ -59,8 +56,7 @@ sub new {
     $self->{skipFilesystemChecks} = $skipFilesystemChecks;
     $self->{manifestFileReader}   = $manifestFileReader;
     $self->{site}                 = $site;
-    $self->{config}               = undef; # initialized when needed
-    $self->{subconfigs}           = {};
+    $self->{vars}                 = undef; # initialized when needed
 
     # No checking required, UBOS::Site::new has done that already
     return $self;
@@ -268,7 +264,7 @@ sub resolvedCustomizationPoints {
                 } elsif( defined( $custPointDef->{default}->{value} )) {
                     $ret->{$packageName}->{$custPointName}->{value} = $custPointDef->{default}->{value};
                 } else {
-                    $ret->{$packageName}->{$custPointName}->{value} = $self->config->replaceVariables( $custPointDef->{default}->{expression} );
+                    $ret->{$packageName}->{$custPointName}->{value} = $self->vars()->replaceVariables( $custPointDef->{default}->{expression} );
                 }
             }
         }
@@ -300,19 +296,19 @@ sub customizationPointDefinition {
 }
 
 ##
-# Obtain the Configuration object
-# return: the Configuration object
-sub config {
+# Obtain the Variables object
+# $vars: the Variables object that knows about symbolic names and variables
+sub vars {
     my $self = shift;
 
-    unless( $self->{config} ) {
+    unless( $self->{vars} ) {
         my $site        = $self->site();
         my $appConfigId = $self->appConfigId();
 
         my $appId        = $self->{json}->{appid};
         my $accessoryIds = $self->{json}->{accessoryids};
 
-        $self->{config} = UBOS::Configuration->new(
+        $self->{vars} = UBOS::Variables->new(
                     "AppConfiguration=$appConfigId",
                     {
                         "appconfig.appid"                => $appId,
@@ -324,30 +320,7 @@ sub config {
                     },
                     $site );
     }
-    return $self->{config};
-}
-
-##
-# Smart factory to always return the same sub-Configuration objects.
-# $name: name of the sub-configuration; must be consistent as it is used as the key
-# @delegates: more objects that have config() methods that may be used to resolve unknown variables
-# return: new or reused Configuration object
-sub obtainSubconfig {
-    my $self      = shift;
-    my $name      = shift;
-    my @delegates = @_;
-
-    my $ret;
-    if( exists( $self->{subconfigs}->{$name} )) {
-        $ret = $self->{subconfigs}->{$name};
-    } else {
-        $ret = UBOS::Subconfiguration->new(
-                "$name,AppConfiguration=" . $self->appConfigId,
-                $self,
-                @delegates );
-        $self->{subconfigs}->{$name} = $ret;
-    }
-    return $ret;
+    return $self->{vars};
 }
 
 ##
@@ -402,9 +375,11 @@ sub deployOrCheck {
 
     my $ret = 1;
 
-    my $appConfigId = $self->appConfigId;
+    my $appConfigId      = $self->appConfigId;
+    my $appConfigParsDir = $self->vars()->get( 'host.appconfigparsdir' );
+
     if( $doIt ) {
-        UBOS::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
+        UBOS::Utils::mkdir( "$appConfigParsDir/$appConfigId" );
     }
 
     # make sure we don't deploy to an invalid context
@@ -430,22 +405,27 @@ sub deployOrCheck {
             }
         }
 
-        my $config = $self->obtainSubconfig(
-                "Installable=$packageName",
-                $installable );
-
-        # Customization points for this Installable at this AppConfiguration
-
         if( $doIt ) {
-            UBOS::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId/$packageName" );
+            UBOS::Utils::mkdir( "$appConfigParsDir/$appConfigId/$packageName" );
         }
 
-        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable, $doIt );
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, $doIt );
+        if( $doIt ) {
+            foreach my $key ( $vars->keys() ) {
+                if( $key =~ m!^installable\.customizationpoints\.([^\.]+)\.filename$! ) {
+                    my $custPointName  = $1;
+                    my $custPointFile  = $vars->{$key};
+                    my $custPointValue = $vars->{"installable.customizationpoints.$custPointName.value"};
 
+                    UBOS::Utils::saveFile( $custPointFile, $custPointValue );
+                }
+            }
+        }
+            
         # Now for all the roles
         foreach my $role ( @rolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->deployOrCheck( $doIt, $self, $installable, $appConfigInstallableConfig );
+                $ret &= $role->deployOrCheck( $doIt, $self, $installable, $vars );
             }
         }
     }
@@ -469,28 +449,23 @@ sub undeployOrCheck {
 
     my $ret = 1;
 
-    my $appConfigId = $self->appConfigId;
+    my $appConfigId      = $self->appConfigId;
+    my $appConfigParsDir = $self->vars()->get( 'host.appconfigparsdir' );
 
     # faster to do a simple recursive delete, instead of going point by point
     if( $doIt ) {
-        UBOS::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
+        UBOS::Utils::deleteRecursively( "$appConfigParsDir/$appConfigId" );
     }
 
     my @reverseRolesOnHost  = reverse UBOS::Host::rolesOnHostInSequence();
     my @reverseInstallables = reverse $self->installables();
     foreach my $installable ( @reverseInstallables ) {
-        my $packageName = $installable->packageName;
-
-        my $config = $self->obtainSubconfig(
-                "Installable=$packageName",
-                $installable );
-
-        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, $doIt );
 
         # Now for all the roles
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $appConfigInstallableConfig );
+                $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $vars );
             }
         }
     }
@@ -516,18 +491,12 @@ sub suspend {
     my @reverseRolesOnHost  = reverse UBOS::Host::rolesOnHostInSequence();
     my @reverseInstallables = reverse $self->installables();
     foreach my $installable ( @reverseInstallables ) {
-        my $packageName = $installable->packageName;
-
-        my $config = $self->obtainSubconfig(
-                "Installable=$packageName",
-                $installable );
-
-        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, 1 );
 
         # Now for all the roles
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->suspend( $self, $installable, $appConfigInstallableConfig );
+                $ret &= $role->suspend( $self, $installable, $vars );
             }
         }
     }
@@ -553,18 +522,12 @@ sub resume {
     my @rolesOnHost  = UBOS::Host::rolesOnHostInSequence();
     my @installables = $self->installables();
     foreach my $installable ( @installables ) {
-        my $packageName = $installable->packageName;
-
-        my $config = $self->obtainSubconfig(
-                "Installable=$packageName",
-                $installable );
-
-        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, 1 );
 
         # Now for all the roles
         foreach my $role ( @rolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->resume( $self, $installable, $appConfigInstallableConfig );
+                $ret &= $role->resume( $self, $installable, $vars );
             }
         }
     }
@@ -612,13 +575,7 @@ sub _runPostDeploy {
     my @installables = $self->installables();
 
     foreach my $installable ( @installables ) {
-        my $packageName = $installable->packageName;
-
-        my $config = $self->obtainSubconfig(
-                "Installable=$packageName",
-                $installable );
-
-        my $appConfigInstallableConfig = $self->_createAppConfigInstallableConfiguration( $installable );
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, 1 );
 
         foreach my $role ( @rolesOnHost ) {
             if( $self->needsRole( $role )) {
@@ -629,8 +586,8 @@ sub _runPostDeploy {
                     next;
                 }
 
-                my $codeDir = $config->getResolve( 'package.codedir' );
-                my $dir     = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+                my $codeDir = $vars->getResolve( 'package.codedir' );
+                my $dir     = $vars->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                 my $itemCount = 0;
                 foreach my $itemJson ( @$itemsJson ) {
@@ -644,7 +601,7 @@ sub _runPostDeploy {
                                 'with role',              $role,
                                 'of installable',         $installable,
                                 'at appconfig',           $appConfigId );
-                        $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $appConfigInstallableConfig );
+                        $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $vars );
                     }
                     ++$itemCount;
                 }
@@ -677,67 +634,6 @@ sub _initialize {
     }
 
     return 1;
-}
-
-##
-# Internal helper to add the applicable customization point values to the $config object.
-# This is factored out because it is used in several places.
-# $installable: the installable whose customization points values are to be added
-# $save: if true, save the value to the file as well
-sub _createAppConfigInstallableConfiguration {
-    my $self        = shift;
-    my $installable = shift;
-    my $save        = shift || 0;
-
-    my $params = {};
-
-    my $installableCustPoints = $installable->customizationPoints;
-    if( $installableCustPoints ) {
-        my $packageName         = $installable->packageName;
-        my $appConfigId         = $self->appConfigId;
-        my $appConfigCustPoints = $self->customizationPoints();
-
-        foreach my $custPointName ( keys %$installableCustPoints ) {
-            my $custPointDef = $installableCustPoints->{$custPointName};
-
-            my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
-
-            unless( defined( $value ) && defined( $value->{value} )) {
-                # use default instead
-                $value = $custPointDef->{default};
-            }
-            if( defined( $value )) {
-                my $data = undef;
-                if( exists( $value->{value} )) {
-                    $data = $value->{value};
-                    if( defined( $data )) { # value might be null
-                        if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
-                            $data = decode_base64( $data );
-                        }
-                    }
-
-                } elsif( exists( $value->{expression} )) {
-                    $data = $value->{expression};
-                    $data = $self->config->replaceVariables( $data );
-                }
-                if( defined( $data ) && ( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} )) {
-                    # do not generate the file in case of null data, or if customizationpoint is declared private
-                    my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
-                    if( $save ) {
-                        UBOS::Utils::saveFile( $filename, $data );
-                    }
-                    $params->{'installable.customizationpoints.' . $custPointName . '.filename'} = $filename;
-                }
-                $params->{'installable.customizationpoints.' . $custPointName . '.value'} = $data;
-            }
-        }
-    }
-    my $appConfigId = $self->appConfigId();
-    return UBOS::Configuration->new(
-            "AppConfiguration=$appConfigId,Installable=$installable",
-            $params,
-            $self,
-            $installable );
 }
 
 ##

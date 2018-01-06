@@ -27,6 +27,8 @@ package UBOS::App;
 use base qw( UBOS::Installable );
 use fields;
 
+use UBOS::Host;
+
 ##
 # Constructor.
 # $packageName: unique identifier of the package
@@ -44,7 +46,7 @@ sub new {
     }
     $self->SUPER::new( $packageName, $manifestFileReader );
 
-    if( $self->{config}->get( 'host.checkmanifest', 1 )) {
+    if( UBOS::Host::vars()->get( 'host.checkmanifest', 1 )) {
         $self->checkManifest( 'app', $skipFilesystemChecks );
     }
 

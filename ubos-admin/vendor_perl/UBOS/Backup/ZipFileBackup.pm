@@ -166,9 +166,7 @@ sub create {
             my $packageName = $installable->packageName;
             $ret &= ( $zip->addDirectory( "$zipFileAppConfigsEntry/$appConfigId/$packageName/" ) ? 1 : 0 );
 
-            my $config = $appConfig->obtainSubconfig(
-                    "Installable=$packageName",
-                    $installable );
+            my $vars = $installable->obtainInstallableAtAppconfigVars( $appConfig, 1 );
 
             foreach my $roleName ( @{$installable->roleNames} ) {
                 my $role = $rolesOnHost->{$roleName};
@@ -176,7 +174,7 @@ sub create {
                     my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
                     $ret &= ( $zip->addDirectory( "$appConfigPathInZip/" ) ? 1 : 0 );
 
-                    my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+                    my $dir = $vars->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                     my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                     if( $appConfigItems ) {
@@ -190,7 +188,7 @@ sub create {
                                 my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                                 if( $item ) {
                                     debugAndSuspend( 'Backup item', $itemCount, 'role', $roleName, 'installable', $packageName, 'appConfig', $appConfigId );
-                                    $ret &= $item->backup( $dir, $config, $backupContext, \@filesToDelete );
+                                    $ret &= $item->backup( $dir, $vars, $backupContext, \@filesToDelete );
                                 }
                             }
                             ++$itemCount;
@@ -316,9 +314,7 @@ sub restoreAppConfiguration {
             next;
         }
 
-        my $config = $appConfigOnHost->obtainSubconfig(
-                "Installable=$packageNameInBackup" . ( $packageNameOnHost ne $packageNameInBackup ? "->$packageNameOnHost" : '' ),
-                $installableOnHost );
+        my $vars = $installableOnHost->obtainInstallableAtAppconfigVars( $appConfigOnHost, 1 );
 
         foreach my $roleName ( @{$installableOnHost->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
@@ -330,7 +326,7 @@ sub restoreAppConfiguration {
 
                 my $appConfigItems = $installableOnHost->appConfigItemsInRole( $roleName );
                 if( $appConfigItems ) {
-                    my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+                    my $dir = $vars->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                     my $backupContext = UBOS::Backup::ZipFileBackupContext->new( $self, $appConfigPathInZip );
 
@@ -346,7 +342,7 @@ sub restoreAppConfiguration {
                                         'role',         $roleName,
                                         'installable',  $packageNameInBackup, '=>', $packageNameOnHost,
                                         'appConfig',    $appConfigIdInBackup, '=>', $appConfigIdOnHost );
-                                $ret &= $item->restore( $dir, $config, $backupContext );
+                                $ret &= $item->restore( $dir, $vars, $backupContext );
                             }
                         }
                         ++$itemCount;

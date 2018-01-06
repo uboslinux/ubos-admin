@@ -79,14 +79,14 @@ sub isAlwaysNeeded {
 # $doIt: if 1, deploy; if 0, only check
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
     my $appConfig   = shift;
     my $installable = shift;
-    my $config      = shift;
+    my $vars        = shift;
 
     # skip dependencies: done already
     my $ret      = 1;
@@ -95,9 +95,9 @@ sub deployOrCheck {
     trace( 'Role::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
 
     if( ref( $installable ) =~ m!App! ) {
-        my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
+        my $siteDocumentDir = $appConfig->vars()->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
         if( $doIt && $siteDocumentDir ) {
-            my $dir      = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $dir      = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             if( $dir && $dir ne $siteDocumentDir ) {
                 UBOS::Utils::mkdir( $dir, 0755 );
             }
@@ -108,8 +108,8 @@ sub deployOrCheck {
     if( $installableRoleJson ) {
         my $appConfigItems = $installableRoleJson->{appconfigitems};
         if( $appConfigItems ) {
-            my $codeDir   = $config->getResolve( 'package.codedir' );
-            my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir   = $vars->getResolve( 'package.codedir' );
+            my $dir       = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             my $itemIndex = 0;
             foreach my $appConfigItem ( @$appConfigItems ) {
                 if( $doIt ) {
@@ -124,7 +124,7 @@ sub deployOrCheck {
                                 'of installable', $installable->packageName,
                                 'at appconfig',   $appConfig->appConfigId );
                     }
-                    $ret &= $item->deployOrCheck( $doIt, $codeDir, $dir, $config );
+                    $ret &= $item->deployOrCheck( $doIt, $codeDir, $dir, $vars );
                 }
                 ++$itemIndex;
             }
@@ -140,14 +140,14 @@ sub deployOrCheck {
 # $doIt: if 1, undeploy; if 0, only check
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
     my $appConfig   = shift;
     my $installable = shift;
-    my $config      = shift;
+    my $vars        = shift;
 
     my $ret      = 1;
     my $roleName = $self->name();
@@ -159,8 +159,8 @@ sub undeployOrCheck {
     if( $installableRoleJson ) {
         my $appConfigItems = $installableRoleJson->{appconfigitems};
         if( $appConfigItems ) {
-            my $codeDir = $config->getResolve( 'package.codedir' );
-            my $dir     = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir = $vars->getResolve( 'package.codedir' );
+            my $dir     = $vars->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
             my $itemIndex = @$appConfigItems-1;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
@@ -176,7 +176,7 @@ sub undeployOrCheck {
                                 'of installable', $installable->packageName,
                                 'at appconfig',   $appConfig->appConfigId );
                     }
-                    $ret &= $item->undeployOrCheck( $doIt, $codeDir, $dir, $config );
+                    $ret &= $item->undeployOrCheck( $doIt, $codeDir, $dir, $vars );
                 }
                 --$itemIndex;
             }
@@ -184,8 +184,8 @@ sub undeployOrCheck {
     }
 
     if( $doIt && ref( $installable ) =~ m!App! ) {
-        my $siteDocumentDir = $appConfig->config->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
-        my $dir             = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        my $siteDocumentDir = $appConfig->vars()->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
+        my $dir             = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
         if( $dir && $dir ne $siteDocumentDir ) {
             UBOS::Utils::rmdir( $dir );
@@ -199,12 +199,12 @@ sub undeployOrCheck {
 # Suspend an installable in an AppConfiguration in this Role.
 # $appConfig: the AppConfiguration to suspend
 # $installable: the Installable
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub suspend {
     my $self        = shift;
     my $appConfig   = shift;
     my $installable = shift;
-    my $config      = shift;
+    my $vars        = shift;
 
     my $ret      = 1;
     my $roleName = $self->name();
@@ -215,8 +215,8 @@ sub suspend {
     if( $installableRoleJson ) {
         my $appConfigItems = $installableRoleJson->{appconfigitems};
         if( $appConfigItems ) {
-            my $codeDir   = $config->getResolve( 'package.codedir' );
-            my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir   = $vars->getResolve( 'package.codedir' );
+            my $dir       = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             my $itemIndex = 0;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
                 trace( 'Role::suspend', $appConfig->appConfigId, $itemIndex );
@@ -229,7 +229,7 @@ sub suspend {
                             'of installable', $installable->packageName,
                             'at appconfig',   $appConfig->appConfigId );
 
-                    $ret &= $item->suspend( $codeDir, $dir, $config );
+                    $ret &= $item->suspend( $codeDir, $dir, $vars );
                 }
                 ++$itemIndex;
             }
@@ -242,12 +242,12 @@ sub suspend {
 # Resume an installable in an AppConfiguration in this Role.
 # $appConfig: the AppConfiguration to resume
 # $installable: the Installable
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub resume {
     my $self        = shift;
     my $appConfig   = shift;
     my $installable = shift;
-    my $config      = shift;
+    my $vars        = shift;
 
     my $ret      = 1;
     my $roleName = $self->name();
@@ -258,8 +258,8 @@ sub resume {
     if( $installableRoleJson ) {
         my $appConfigItems = $installableRoleJson->{appconfigitems};
         if( $appConfigItems ) {
-            my $codeDir   = $config->getResolve( 'package.codedir' );
-            my $dir       = $appConfig->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir   = $vars->getResolve( 'package.codedir' );
+            my $dir       = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             my $itemIndex = 0;
             foreach my $appConfigItem ( @$appConfigItems ) {
                 trace( 'Role::resume', $appConfig->appConfigId, $itemIndex );
@@ -272,7 +272,7 @@ sub resume {
                             'of installable', $installable->packageName,
                             'at appconfig',   $appConfig->appConfigId );
 
-                    $ret &= $item->resume( $codeDir, $dir, $config );
+                    $ret &= $item->resume( $codeDir, $dir, $vars );
                 }
                 ++$itemIndex;
             }
@@ -446,7 +446,7 @@ sub removeLetsEncryptCertificate {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkAppManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -454,9 +454,9 @@ sub checkAppManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
-    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $vars );
 }
 
 ##
@@ -467,7 +467,7 @@ sub checkAppManifestForRole {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkAccessoryManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -475,9 +475,9 @@ sub checkAccessoryManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
-    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $vars );
 }
 
 ##
@@ -488,7 +488,7 @@ sub checkAccessoryManifestForRole {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkInstallableManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -496,7 +496,7 @@ sub checkInstallableManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
     $installable->myFatal( "roles section implementation errror: role $roleName does not define checkInstallableManifestForRole, checkAppManifestForRole or checkAccessoryManifestForRole" );
 }
@@ -506,13 +506,13 @@ sub checkInstallableManifestForRole {
 # $roleName: name of this role, passed for efficiency
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkManifestForRoleGenericDepends {
     my $self         = shift;
     my $roleName     = shift;
     my $installable  = shift;
     my $jsonFragment = shift;
-    my $config       = shift;
+    my $vars         = shift;
 
     if( exists( $jsonFragment->{depends} )) {
         unless( ref( $jsonFragment->{depends} ) eq 'ARRAY' ) {
@@ -540,7 +540,7 @@ sub checkManifestForRoleGenericDepends {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkManifestForRoleGenericAppConfigItems {
     my $self                 = shift;
     my $roleName             = shift;
@@ -549,13 +549,13 @@ sub checkManifestForRoleGenericAppConfigItems {
     my $allowedTypes         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
     if( exists( $jsonFragment->{appconfigitems} )) {
         unless( ref( $jsonFragment->{appconfigitems} ) eq 'ARRAY' ) {
             $installable->myFatal( "roles section: role $roleName: not an array" );
         }
-        my $codeDir = $config->getResolve( 'package.codedir' );
+        my $codeDir = $vars->getResolve( 'package.codedir' );
 
         my %databaseNames = ();
 
@@ -577,7 +577,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                 if( ref( $appConfigItem->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
                 }
-                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ))) {
+                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ))) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid source: " . $appConfigItem->{source} );
                 }
                 if( exists( $appConfigItem->{name} ) && ref( $appConfigItem->{name} )) {
@@ -602,7 +602,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{source} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'source' must be string" );
                     }
-                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ))) {
+                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ))) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid source: " . $appConfigItem->{source} );
                     }
                 } elsif( $appConfigItem->{template} ) {
@@ -612,7 +612,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{template} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript': field 'template' must be string" );
                     }
-                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{template} ))) {
+                    if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{template} ))) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'sqlscript' has invalid template: " . $appConfigItem->{template} );
                     }
                     if( ref( $appConfigItem->{templatelang} )) {
@@ -683,7 +683,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'source' must be string" );
                         }
                         foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ), $name )) {
+                            unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
@@ -696,7 +696,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         }
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{template} ), $name )) {
+                                unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{template} ), $name )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
                                 }
                             }
@@ -722,7 +722,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     }
                     unless( $skipFilesystemChecks ) {
                         foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ), $name )) {
+                            unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
@@ -739,7 +739,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         # Symlinks get to have variables in their sources
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                unless( $name  && UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $appConfigItem->{source} ), $name )) {
+                                unless( $name  && UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
                                 }
                             }
@@ -771,7 +771,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{uname} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be string" );
                     }
-                    unless( $config->replaceVariables( $appConfigItem->{uname} ) =~ m!^[-a-z0-9]+$! ) {
+                    unless( $vars->replaceVariables( $appConfigItem->{uname} ) =~ m!^[-a-z0-9]+$! ) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid uname: " . $appConfigItem->{uname} );
                     }
                     unless( $appConfigItem->{gname} ) {
@@ -782,7 +782,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     if( ref( $appConfigItem->{gname} )) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be string" );
                     }
-                    unless( $config->replaceVariables( $appConfigItem->{gname} ) =~ m!^[-a-z0-9]+$! ) {
+                    unless( $vars->replaceVariables( $appConfigItem->{gname} ) =~ m!^[-a-z0-9]+$! ) {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid gname: " . $appConfigItem->{gname} );
                     }
                     unless( $appConfigItem->{uname} ) {
@@ -795,7 +795,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                             if( ref( $appConfigItem->{$f} )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field '$f' must be string (octal)" );
                             }
-                            unless( $config->replaceVariables( $appConfigItem->{$f} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
+                            unless( $vars->replaceVariables( $appConfigItem->{$f} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid $f: " . $appConfigItem->{$f} );
                             }
                         }
@@ -808,7 +808,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         if( ref( $appConfigItem->{permissions} )) {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'permissions' must be string (octal)" );
                         }
-                        unless( $config->replaceVariables( $appConfigItem->{permissions} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
+                        unless( $vars->replaceVariables( $appConfigItem->{permissions} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid permissions (need octal, no leading zero): " . $appConfigItem->{permissions} );
                         }
                     }
@@ -832,14 +832,14 @@ sub checkManifestForRoleGenericAppConfigItems {
 # $roleName: name of this role, passed for efficiency
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkManifestForRoleGenericTriggersActivate {
     my $self         = shift;
     my $roleName     = shift;
     my $installable  = shift;
     my $jsonFragment = shift;
     my $allowedTypes = shift;
-    my $config       = shift;
+    my $vars         = shift;
 
     if( exists( $jsonFragment->{triggersactivate} )) {
         unless( ref( $jsonFragment->{triggersactivate} ) eq 'ARRAY' ) {
@@ -870,16 +870,16 @@ sub checkManifestForRoleGenericTriggersActivate {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $allowedTypes: hash of allowed types
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkManifestForRoleGenericInstallersEtc {
     my $self         = shift;
     my $roleName     = shift;
     my $installable  = shift;
     my $jsonFragment = shift;
     my $allowedTypes = shift;
-    my $config       = shift;
+    my $vars         = shift;
 
-    my $codeDir = $config->getResolve( 'package.codedir' );
+    my $codeDir = $vars->getResolve( 'package.codedir' );
 
     foreach my $postInstallCategory ( 'installers', 'uninstallers', 'upgraders' ) {
         unless( defined( $jsonFragment->{$postInstallCategory} )) {
@@ -903,14 +903,14 @@ sub checkManifestForRoleGenericInstallersEtc {
                 if( ref( $item->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'source' must be string" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $item->{source} ))) {
+                unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $item->{source} ))) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid source" );
                 }
             } else {
                 unless( $item->{template} ) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $config->replaceVariables( $item->{template} ))) {
+                unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $item->{template} ))) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid template" );
                 }
                 if( ref( $item->{templatelang} )) {

@@ -78,7 +78,7 @@ sub setupSiteOrCheck {
 
     trace( 'tomcat8::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
-    my $siteDocumentDir = $site->config->getResolve( 'site.tomcat8.sitedocumentdir' );
+    my $siteDocumentDir = $site->vars()->getResolve( 'site.tomcat8.sitedocumentdir' );
 
     if( $doIt ) {
         UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
@@ -94,8 +94,8 @@ sub setupSiteOrCheck {
         my $siteContextDir  = "$contextDir/$hostname";
         my $webappsDir      = "$sitesAppsDir/$siteId";
         my $siteDocumentDir = "$sitesDir/$siteId";
-        my $tomcatUser      = $site->config->getResolve( 'tomcat8.uname' );
-        my $tomcatGroup     = $site->config->getResolve( 'tomcat8.gname' );
+        my $tomcatUser      = $site->vars()->getResolve( 'tomcat8.uname' );
+        my $tomcatGroup     = $site->vars()->getResolve( 'tomcat8.gname' );
 
         trace( 'tomcat8::setupSite', $siteId );
 
@@ -237,7 +237,7 @@ END
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkInstallableManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -245,7 +245,7 @@ sub checkInstallableManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
     my $noDatabase = {
         'directory'       => 1,
@@ -261,10 +261,10 @@ sub checkInstallableManifestForRole {
         'perlscript' => 1
     };
 
-    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $config );
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $config );
-    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $config );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $config );
+    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $vars );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $vars );
+    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $vars );
 }
 
 1;

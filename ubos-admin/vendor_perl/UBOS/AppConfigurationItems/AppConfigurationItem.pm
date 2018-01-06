@@ -60,24 +60,24 @@ sub new {
 # $methodName: the type of post-install
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret = 1;
     if( 'install' eq $methodName ) {
-        $ret &= $self->runInstallScript( $defaultFromDir, $defaultToDir, $config );
+        $ret &= $self->runInstallScript( $defaultFromDir, $defaultToDir, $vars );
 
     } elsif( 'uninstall' eq $methodName ) {
-        $ret &= $self->runUninstallScript( $defaultFromDir, $defaultToDir, $config );
+        $ret &= $self->runUninstallScript( $defaultFromDir, $defaultToDir, $vars );
 
     } elsif( 'upgrade' eq $methodName ) {
-        $ret &= $self->runUpgradeScript( $defaultFromDir, $defaultToDir, $config );
+        $ret &= $self->runUpgradeScript( $defaultFromDir, $defaultToDir, $vars );
 
     } else {
         error( 'AppConfigurationItem::runPostDeployScript: cannot perform', $methodName, 'on', $self );
@@ -90,13 +90,13 @@ sub runPostDeployScript {
 # Run a post-deploy Perl install script. May be overridden.
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub runInstallScript {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     error( 'AppConfigurationItem::runInstallScript: cannot perform', $self );
 
@@ -107,13 +107,13 @@ sub runInstallScript {
 # Run a pre-undeploy Perl uninstall script. May be overridden.
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub runUninstallScript {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     error( 'AppConfigurationItem::runUninstallScript: cannot perform', $self );
 
@@ -124,13 +124,13 @@ sub runUninstallScript {
 # Run a post-deploy Perl upgrade script. May be overridden.
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub runUpgradeScript {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     error( 'AppConfigurationItem::runUpgradeScript: cannot perform', $self );
 
@@ -143,14 +143,14 @@ sub runUpgradeScript {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     return 1; # nothing on this level
 }
@@ -160,14 +160,14 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     return 1; # nothing on this level
 }
@@ -176,13 +176,13 @@ sub undeployOrCheck {
 # Default implementation to suspend this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub suspend {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     return 1; # nothing on this level
 }
@@ -191,13 +191,13 @@ sub suspend {
 # Default implementation to resume this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub resume {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     return 1; # nothing on this level
 }
@@ -205,13 +205,13 @@ sub resume {
 ##
 # Default implementation to back this item up.
 # $dir: the directory in which the app was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 sub backup {
     my $self          = shift;
     my $dir           = shift;
-    my $config        = shift;
+    my $vars          = shift;
     my $backupContext = shift;
     my $filesToDelete = shift;
 
@@ -223,13 +223,13 @@ sub backup {
 ##
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
-    my $config        = shift;
+    my $vars          = shift;
     my $backupContext = shift;
 
     error( 'AppConfigurationItem::restore: cannot perform', $self );

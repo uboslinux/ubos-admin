@@ -1,5 +1,6 @@
 {
     "host" : {
+        "appconfigparsdir"             : "/var/lib/ubos/appconfigpars",
         "cachedir"                     : "/var/cache",
         "checkmanifest"                : true,
         "readstaffonboot"              : true,

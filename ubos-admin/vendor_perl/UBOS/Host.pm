@@ -25,7 +25,6 @@ use warnings;
 package UBOS::Host;
 
 use UBOS::Apache2;
-use UBOS::Configuration;
 use UBOS::Logging;
 use UBOS::Roles::apache2;
 use UBOS::Roles::generic;
@@ -35,6 +34,7 @@ use UBOS::Roles::tomcat8;
 use UBOS::Site;
 use UBOS::Tor;
 use UBOS::Utils qw( readJsonFromFile myexec );
+use UBOS::Variables;
 use Socket;
 use Sys::Hostname qw();
 
@@ -45,7 +45,7 @@ my $READY_FILE             = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
 
-my $_hostConf              = undef; # allocated as needed
+my $_hostVars              = undef; # allocated as needed
 my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
@@ -55,10 +55,10 @@ my $_physicalNics          = undef; # allocated as needed
 my $_gpgHostKeyFingerprint = undef; # allocated as needed
 
 ##
-# Obtain the host Configuration object.
-# return: Configuration object
-sub config {
-    unless( $_hostConf ) {
+# Obtain the Variables object for the Host.
+# return: Variables object
+sub vars {
+    unless( $_hostVars ) {
         my $raw = readJsonFromFile( $HOST_CONF_FILE );
         unless( $raw ) {
             fatal();
@@ -69,9 +69,14 @@ sub config {
         $raw->{now}->{unixtime} = $now;
         $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $now );
 
-        $_hostConf = UBOS::Configuration->new( 'Host', $raw );
+        unless( exists( $raw->{host}->{appconfigparsdir} )) {
+            # for older config files
+            $raw->{host}->{appconfigparsdir} = '/var/lib/ubos/appconfigpars';
+        }
+
+        $_hostVars = UBOS::Variables->new( 'Host', $raw );
     }
-    return $_hostConf;
+    return $_hostVars;
 }
 
 ##
@@ -121,7 +126,7 @@ sub kernelPackageName {
 # Determine this host's hostname.
 # return: hostname
 sub hostname {
-    return config()->get( 'hostname' );
+    return vars()->get( 'hostname' );
 }
 
 ##
@@ -1014,10 +1019,10 @@ sub runAfterBootCommandsIfNeeded {
 # Deploy any site templates
 sub deploySiteTemplatesIfNeeded {
 
-    unless( config()->get( 'host.deploysitetemplatesonboot', 0 )) {
+    unless( vars()->get( 'host.deploysitetemplatesonboot', 0 )) {
         return;
     }
-    my $destDir = config()->get( 'host.deploysitetemplatesonbootdir', undef );
+    my $destDir = vars()->get( 'host.deploysitetemplatesonbootdir', undef );
     if( !defined( $destDir ) || !$destDir || !-d $destDir ) {
         return;
     }
@@ -1171,7 +1176,7 @@ sub ipAddressesOnNic {
 sub defaultManifestFileReader {
     my $packageIdentifier = shift;
 
-    my $file = UBOS::Host::config()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
+    my $file = vars()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
     return readJsonFromFile( $file );
 }
 

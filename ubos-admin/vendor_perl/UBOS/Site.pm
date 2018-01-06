@@ -31,7 +31,7 @@ use UBOS::Utils;
 use JSON;
 use MIME::Base64;
 
-use fields qw( json manifestFileReader appConfigs config);
+use fields qw( json manifestFileReader appConfigs vars);
 
 my $WILDCARDHOSTNAME = "__wildcard";
 
@@ -228,16 +228,16 @@ sub protocol {
 }
 
 ##
-# Obtain the Configuration object
-# return: the Configuration object
-sub config {
+# Obtain the Variables object for the Site
+# return: the Variables object
+sub vars {
     my $self = shift;
 
-    unless( $self->{config} ) {
+    unless( $self->{vars} ) {
         my $siteId    = $self->siteId();
         my $adminJson = $self->{json}->{admin};
 
-        $self->{config} = UBOS::Configuration->new(
+        $self->{vars} = UBOS::Variables->new(
                     "Site=$siteId",
                     {
                         "site.hostname"                 => $self->hostname(),
@@ -254,7 +254,7 @@ sub config {
                     },
                     'UBOS::Host' );
     }
-    return $self->{config};
+    return $self->{vars};
 }
 
 ##
@@ -729,7 +729,7 @@ sub _deployOrCheck {
             # generate the key before continuing
             UBOS::Tor::restart();
 
-            my $siteTorDir = $self->config->getResolve( 'site.apache2.sitetordir' );
+            my $siteTorDir = $self->vars()->getResolve( 'site.apache2.sitetordir' );
             if( -e "$siteTorDir/private_key" ) {
                 my $privateKey = UBOS::Utils::slurpFile( "$siteTorDir/private_key" );
                 $privateKey =~ s!^\s+!!;
@@ -742,7 +742,7 @@ sub _deployOrCheck {
                 $hostname =~ s!\s+$!!;
                 $self->{json}->{hostname} = $hostname;
             }
-            delete $self->{config}; # will regenerate with correct hostname when needed
+            delete $self->{vars}; # will regenerate with correct hostname when needed
         }
         UBOS::Host::siteDeployed( $self );
     }
@@ -920,8 +920,8 @@ sub addDeployAppConfiguration {
 sub clearCaches {
     my $self = shift;
 
-    $self->{config}     = undef;
     $self->{appConfigs} = undef;
+    $self->{vars}       = undef;
 
     return $self;
 }

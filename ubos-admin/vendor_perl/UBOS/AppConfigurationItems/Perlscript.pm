@@ -57,14 +57,14 @@ sub new {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $source = $self->{json}->{source};
 
@@ -99,21 +99,21 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $source = $self->{json}->{source};
 
     trace( 'Perlscript::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source );
 
     my $script = $source;
-    $script = $config->replaceVariables( $script );
+    $script = $vars->replaceVariables( $script );
 
     unless( $script =~ m#^/# ) {
         $script = "$defaultFromDir/$script";
@@ -143,14 +143,14 @@ sub undeployOrCheck {
 # $methodName: the type of post-install
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $source = $self->{json}->{source};
 

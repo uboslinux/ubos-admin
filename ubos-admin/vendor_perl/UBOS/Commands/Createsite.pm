@@ -162,13 +162,21 @@ sub run {
     my $adminEmail;
 
     while( 1 ) {
-        $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
-        if( $adminCredential =~ m!s3cr3t!i ) {
-            print "Not that one!\n";
-        } elsif( $adminCredential eq $adminUserId ) {
-            print "Password must be different from username.\n";
-        } elsif( length( $adminCredential ) < 6 ) {
-            print "At least 6 characters please.\n";
+        while( 1 ) {
+            $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
+            if( $adminCredential =~ m!s3cr3t!i ) {
+                print "Not that one!\n";
+            } elsif( $adminCredential eq $adminUserId ) {
+                print "Password must be different from username.\n";
+            } elsif( length( $adminCredential ) < 6 ) {
+                print "At least 6 characters please.\n";
+            } else {
+                last;
+            }
+        }
+        my $adminCredential2 = ask( 'Repeat site admin user password: ', undef, undef, 1 );
+        if( $adminCredential ne $adminCredential2 ) {
+            print "Passwords did not match!\n";
         } else {
             last;
         }
@@ -197,7 +205,7 @@ sub run {
                 print "Generating TLS keys...\n";
             }
 
-            my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+            my $tmpDir = UBOS::Host()->vars( 'host.tmp', '/tmp' );
             my $dir    = File::Temp->newdir( DIR => $tmpDir );
             chmod 0700, $dir;
 
@@ -526,7 +534,8 @@ sub run {
     } elsif( $dryRun ) {
         print UBOS::Utils::writeJsonToString( $newSiteJson );
 
-    } else {
+    }
+    unless( $dryRun ) {
         my $newSite = UBOS::Site->new( $newSiteJson );
 
         my $prerequisites = {};

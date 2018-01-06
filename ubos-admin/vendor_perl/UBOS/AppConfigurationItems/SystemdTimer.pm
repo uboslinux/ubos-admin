@@ -56,20 +56,20 @@ sub new {
 # Suspend this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub suspend {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
     trace( 'SystemdTimer::suspend', $defaultFromDir, $defaultToDir, $name );
 
-    $name = $config->replaceVariables( $name );
+    $name = $vars->replaceVariables( $name );
 
     my $out;
     my $err;
@@ -90,20 +90,20 @@ sub suspend {
 # Resume this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub resume {
     my $self           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret  = 1;
     my $name = $self->{json}->{name};
 
     trace( 'SystemdTimer::resume', $defaultFromDir, $defaultToDir, $name );
 
-    $name = $config->replaceVariables( $name );
+    $name = $vars->replaceVariables( $name );
 
     my $out;
     my $err;

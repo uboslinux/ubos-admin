@@ -62,14 +62,14 @@ sub new {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $name   = $self->{json}->{name};
     my $scope  = $self->{json}->{scope};
@@ -94,11 +94,11 @@ sub deployOrCheck {
             $port = 9999;
         }
     }
-    # now insert those values into the config object
+    # now insert those values into the vars object
     if( 'tcp' eq $self->{portType} ) {
-        $config->put( "appconfig.tcpport.$name", $port );
+        $vars->put( "appconfig.tcpport.$name", $port );
     } elsif( 'udp' eq $self->{portType} ) {
-        $config->put( "appconfig.udpport.$name", $port );
+        $vars->put( "appconfig.udpport.$name", $port );
     } else {
         error( 'Unknown port type:', $self->{portType} );
     }
@@ -111,14 +111,14 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $name   = $self->{json}->{name};
     my $scope  = $self->{json}->{scope};

@@ -59,14 +59,14 @@ sub new {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $name   = $self->{json}->{name};
     my $dbType = $self->{role}->name();
@@ -100,12 +100,12 @@ sub deployOrCheck {
                     = ( 'placeholderDbName', 'placeholderDbHost', '9999', 'placeholderUserLid', 'placeholderUserLidCredential', 'simple-password' );
         }
     }
-    # now insert those values into the config object
-    $config->put( "appconfig.$dbType.dbname.$name",           $dbName );
-    $config->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
-    $config->put( "appconfig.$dbType.dbport.$name",           $dbPort );
-    $config->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
-    $config->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
+    # now insert those values into the vars object
+    $vars->put( "appconfig.$dbType.dbname.$name",           $dbName );
+    $vars->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
+    $vars->put( "appconfig.$dbType.dbport.$name",           $dbPort );
+    $vars->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
+    $vars->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
 
     return $dbName ? 1 : 0;
 }
@@ -115,14 +115,14 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $name   = $self->{json}->{name};
     my $dbType = $self->{role}->name();
@@ -142,20 +142,20 @@ sub undeployOrCheck {
 ##
 # Back this item up.
 # $dir: the directory in which the app was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 # return: success or fail
 sub backup {
     my $self          = shift;
     my $dir           = shift;
-    my $config        = shift;
+    my $vars          = shift;
     my $backupContext = shift;
     my $filesToDelete = shift;
 
     my $bucket = $self->{json}->{retentionbucket};
     my $name   = $self->{json}->{name};
-    my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
+    my $tmpDir = $vars->getResolve( 'host.tmpdir', '/tmp' );
 
     trace( 'Database::backup', $bucket, $name );
 
@@ -178,18 +178,18 @@ sub backup {
 ##
 # Restore this item from backup.
 # $dir: the directory in which the app was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
-    my $config        = shift;
+    my $vars          = shift;
     my $backupContext = shift;
 
     my $bucket = $self->{json}->{retentionbucket};
     my $name   = $self->{json}->{name};
-    my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
+    my $tmpDir = $vars->getResolve( 'host.tmpdir', '/tmp' );
 
     trace( 'Database::restore', $bucket, $name );
 
@@ -209,12 +209,12 @@ sub restore {
                     $tmp->filename );
     if( $dbName ) {
         my $dbType = $self->{role}->name();
-        # now insert those values into the config object
-        $config->put( "appconfig.$dbType.dbname.$name",           $dbName );
-        $config->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
-        $config->put( "appconfig.$dbType.dbport.$name",           $dbPort );
-        $config->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
-        $config->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
+        # now insert those values into the vars object
+        $vars->put( "appconfig.$dbType.dbname.$name",           $dbName );
+        $vars->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
+        $vars->put( "appconfig.$dbType.dbport.$name",           $dbPort );
+        $vars->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
+        $vars->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
 
     } else {
         $ret = 0;

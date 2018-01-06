@@ -57,14 +57,14 @@ sub new {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret   = 1;
     my $names = $self->{json}->{names};
@@ -75,10 +75,10 @@ sub deployOrCheck {
 
     trace( 'DirectoryTree::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $source, @$names );
 
-    my $filepermissions = $config->replaceVariables( $self->{json}->{filepermissions} );
-    my $dirpermissions  = $config->replaceVariables( $self->{json}->{dirpermissions} );
-    my $uname           = $config->replaceVariables( $self->{json}->{uname} );
-    my $gname           = $config->replaceVariables( $self->{json}->{gname} );
+    my $filepermissions = $vars->replaceVariables( $self->{json}->{filepermissions} );
+    my $dirpermissions  = $vars->replaceVariables( $self->{json}->{dirpermissions} );
+    my $uname           = $vars->replaceVariables( $self->{json}->{uname} );
+    my $gname           = $vars->replaceVariables( $self->{json}->{gname} );
     my $uid             = UBOS::Utils::getUid( $uname );
     my $gid             = UBOS::Utils::getGid( $gname );
     my $filemode        = ( defined( $filepermissions ) && $filepermissions eq 'preserve' ) ? -1 : $self->permissionToMode( $filepermissions, 0644 );
@@ -91,10 +91,10 @@ sub deployOrCheck {
         my $fromName = $source;
         $fromName =~ s!\$1!$name!g;      # $1: name
         $fromName =~ s!\$2!$localName!g; # $2: just the name without directories
-        $fromName = $config->replaceVariables( $fromName );
+        $fromName = $vars->replaceVariables( $fromName );
 
         my $toName = $name;
-        $toName = $config->replaceVariables( $toName );
+        $toName = $vars->replaceVariables( $toName );
 
         unless( $fromName =~ m#^/# ) {
             $fromName = "$defaultFromDir/$fromName";
@@ -133,14 +133,14 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret   = 1;
     my $names = $self->{json}->{names};
@@ -153,7 +153,7 @@ sub undeployOrCheck {
     foreach my $name ( reverse @$names ) {
         my $toName = $name;
 
-        $toName = $config->replaceVariables( $toName );
+        $toName = $vars->replaceVariables( $toName );
 
         unless( $toName =~ m#^/# ) {
             $toName = "$defaultToDir/$toName";
@@ -168,14 +168,14 @@ sub undeployOrCheck {
 ##
 # Back this item up.
 # $dir: the directory in which the app was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
 # return: success or fail
 sub backup {
     my $self          = shift;
     my $dir           = shift;
-    my $config        = shift;
+    my $vars          = shift;
     my $backupContext = shift;
     my $filesToDelete = shift;
 
@@ -192,7 +192,7 @@ sub backup {
         return 0;
     }
 
-    my $fullName = $config->replaceVariables( $names->[0] );
+    my $fullName = $vars->replaceVariables( $names->[0] );
     unless( $fullName =~ m#^/# ) {
         $fullName = "$dir/$fullName";
     }
@@ -203,13 +203,13 @@ sub backup {
 ##
 # Default implementation to restore this item from backup.
 # $dir: the directory in which the app was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # return: success or fail
 sub restore {
     my $self          = shift;
     my $dir           = shift;
-    my $config        = shift;
+    my $vars          = shift;
     my $backupContext = shift;
 
     my $bucket = $self->{json}->{retentionbucket};
@@ -225,15 +225,15 @@ sub restore {
         return 0;
     }
 
-    my $fullName = $config->replaceVariables( $names->[0] );
+    my $fullName = $vars->replaceVariables( $names->[0] );
     unless( $fullName =~ m#^/# ) {
         $fullName = "$dir/$fullName";
     }
 
-    my $filepermissions = $config->replaceVariables( $self->{json}->{filepermissions} );
-    my $dirpermissions  = $config->replaceVariables( $self->{json}->{dirpermissions} );
-    my $uname           = $config->replaceVariables( $self->{json}->{uname} );
-    my $gname           = $config->replaceVariables( $self->{json}->{gname} );
+    my $filepermissions = $vars->replaceVariables( $self->{json}->{filepermissions} );
+    my $dirpermissions  = $vars->replaceVariables( $self->{json}->{dirpermissions} );
+    my $uname           = $vars->replaceVariables( $self->{json}->{uname} );
+    my $gname           = $vars->replaceVariables( $self->{json}->{gname} );
     my $uid             = UBOS::Utils::getUid( $uname );
     my $gid             = UBOS::Utils::getGid( $gname );
     my $filemode        = ( defined( $filepermissions ) && $filepermissions eq 'preserve' ) ? -1 : $self->permissionToMode( $filepermissions, 0644 );

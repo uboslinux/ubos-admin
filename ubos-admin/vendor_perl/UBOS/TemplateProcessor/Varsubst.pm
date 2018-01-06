@@ -44,16 +44,16 @@ sub new {
 ##
 # Process content
 # $raw: the input content
-# $config: the applicable Configuration object
+# $vars: the Variables object that knows about symbolic names and variables
 # $rawFileName: the source of the $raw content
 # return: the output content
 sub process {
     my $self        = shift;
     my $raw         = shift;
-    my $config      = shift;
+    my $vars        = shift;
     my $rawFileName = shift;
 
-    my $ret = $config->replaceVariables( $raw );
+    my $ret = $vars->replaceVariables( $raw );
 
     return $ret;
 }

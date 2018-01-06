@@ -80,14 +80,14 @@ sub isAlwaysNeeded {
 # $doIt: if 1, deploy; if 0, only check
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
-# $config: the Configuration to use
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
     my $appConfig   = shift;
     my $installable = shift;
-    my $config      = shift;
+    my $vars        = shift;
 
     my $roleName = $self->name();
 
@@ -111,7 +111,7 @@ sub deployOrCheck {
             UBOS::Apache2::restart(); # reload seems to be insufficient
         }
     }
-    return $self->SUPER::deployOrCheck( $doIt, $appConfig, $installable, $config );
+    return $self->SUPER::deployOrCheck( $doIt, $appConfig, $installable, $vars );
 }
 
 ##
@@ -128,9 +128,9 @@ sub setupSiteOrCheck {
 
     trace( 'apache2::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
-    my $siteDocumentDir     = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
-    my $siteTorDir          = $site->config->getResolve( 'site.apache2.sitetordir' );
-    my $siteTorFragmentFile = $site->config->getResolve( 'site.apache2.sitetorfragmentfile' );
+    my $siteDocumentDir     = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir          = $site->vars()->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
 
     if( $doIt ) {
         trace( 'apache2::_setupSite', $self->name(), $site->siteId );
@@ -164,7 +164,7 @@ sub setupSiteOrCheck {
 HiddenServiceDir $siteTorDir/
 CONTENT
 
-            my $siteTorDir = $site->config->getResolve( 'site.apache2.sitetordir' );
+            my $siteTorDir = $site->vars()->getResolve( 'site.apache2.sitetordir' );
             unless( -d $siteTorDir ) {
                 UBOS::Utils::mkdir( $siteTorDir, 0700, 'tor', 'tor' );
             }
@@ -312,12 +312,12 @@ $serverDeclaration
 </VirtualHost>
 CONTENT
 
-        $sslDir       = $site->config->getResolve( 'apache2.ssldir' );
+        $sslDir       = $site->vars()->getResolve( 'apache2.ssldir' );
         $sslKey       = $site->tlsKey;
         $sslCert      = $site->tlsCert;
         $sslCaCert    = $site->tlsCaCert;
 
-        my $group = $site->config->getResolve( 'apache2.gname' );
+        my $group = $site->vars()->getResolve( 'apache2.gname' );
 
         if( $sslKey ) {
             UBOS::Utils::saveFile( "$sslDir/$siteId.key",      $sslKey,       0440, 'root', $group ); # avoid overwrite by apache
@@ -357,7 +357,7 @@ CONTENT
 CONTENT
 
         if( $site->hasLetsEncryptTls ) {
-            my $letsEncryptLiveDir = $site->config->getResolve( 'apache2.letsencrypt.livedir' );
+            my $letsEncryptLiveDir = $site->vars()->getResolve( 'apache2.letsencrypt.livedir' );
 
             $siteFileContent .= <<CONTENT;
 
@@ -463,16 +463,16 @@ sub removeSite {
 
     trace( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
 
-    my $siteDocumentDir     = $site->config->getResolve( 'site.apache2.sitedocumentdir' );
-    my $siteTorDir          = $site->config->getResolve( 'site.apache2.sitetordir' );
-    my $siteTorFragmentFile = $site->config->getResolve( 'site.apache2.sitetorfragmentfile' );
+    my $siteDocumentDir     = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir          = $site->vars()->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
     my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
-    my $sslDir            = $site->config->getResolve( 'apache2.ssldir' );
+    my $sslDir            = $site->vars()->getResolve( 'apache2.ssldir' );
 
     trace( 'apache2::removeSite', $siteId, $doIt );
 
@@ -523,7 +523,7 @@ sub hasLetsEncryptCerts {
     my $site = shift;
 
     my $hostname           = $site->hostname;
-    my $letsEncryptLiveDir = $site->config->getResolve( 'apache2.letsencrypt.livedir' );
+    my $letsEncryptLiveDir = $site->vars()->getResolve( 'apache2.letsencrypt.livedir' );
 
     return    ( -e "$letsEncryptLiveDir/$hostname/privkey.pem" )
            && ( -e "$letsEncryptLiveDir/$hostname/cert.pem" )
@@ -606,7 +606,7 @@ sub removeLetsEncryptCertificate {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkAppManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -614,7 +614,7 @@ sub checkAppManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
     if( $installable->isa( 'UBOS::App' )) {
         if( defined( $jsonFragment->{defaultcontext} )) {
@@ -644,7 +644,7 @@ sub checkAppManifestForRole {
         $installable->myFatal( "roles section: role $roleName: only provide field 'fixedcontext' for apps" );
     }
 
-    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $config );
+    $self->checkInstallableManifestForRole( $roleName, $installable, $jsonFragment, $retentionBuckets, $skipFilesystemChecks, $vars );
 }
 
 ##
@@ -655,7 +655,7 @@ sub checkAppManifestForRole {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkInstallableManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -663,7 +663,7 @@ sub checkInstallableManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
     if( $jsonFragment->{apache2modules} ) {
         unless( ref( $jsonFragment->{apache2modules} ) eq 'ARRAY' ) {
@@ -710,10 +710,10 @@ sub checkInstallableManifestForRole {
         'perlscript' => 1
     };
 
-    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $config );
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $config );
-    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $config );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $config );
+    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $vars );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $vars );
+    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $vars );
 }
 
 1;

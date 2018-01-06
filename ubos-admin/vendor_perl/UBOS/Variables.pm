@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Abstract superclass for run-time configuration objects.
+# Variables that can be looked up by to-be-installed apps etc.
 #
 # This file is part of ubos-admin.
 # (C) 2012-2017 Indie Computing Corp.
@@ -9,6 +9,7 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
+#
 #
 # ubos-admin is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,12 +23,12 @@
 use strict;
 use warnings;
 
-package UBOS::AbstractConfiguration;
+package UBOS::Variables;
 
 use UBOS::Logging;
 use UBOS::Utils;
 use JSON;
-use fields qw( name delegates );
+use fields qw( name hierarchicalMap flatMap delegates );
 
 my $knownFunctions = {
     'escapeSquote'     => \&UBOS::Utils::escapeSquote,
@@ -39,26 +40,39 @@ my $knownFunctions = {
     'randomPassword'   => \&UBOS::Utils::randomPassword
 };
 
+my $cache = {}; # cache previously generated Variables objects
+                # this allows Variables objects augmented "further down" (like in
+                # Database AppConfigurationItems) to be reused in later calls
+
 ##
 # Constructor.
-# $name: name for this Configuration object. This helps with debugging.
-# @delegates: more objects olding Configuration objects which may be used to resolve unknown variables
+# $name: name for this Variables object. This is used as a cache keys and helps with debugging.
+# $hierarchicalMap: map of name to value (which may be another map)
+# @delegates: more objects holding Configuration objects which may be used to resolve unknown variables
 sub new {
     my $self            = shift;
     my $name            = shift;
+    my $hierarchicalMap = shift;
     my @delegates       = @_;
+
+    if( exists( $cache->{$name} )) {
+        return $cache->{$name};
+    }
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{name}      = $name;
-    $self->{delegates} = \@delegates;
+    $self->{name}            = $name;
+    $self->{hierarchicalMap} = $hierarchicalMap;
+    $self->{flatMap}         = _flatten( $hierarchicalMap );
+    $self->{delegates}       = \@delegates;
+
+    $cache->{$name} = $self;
 
     return $self;
 }
 
-##
-# Get name of the configuration.
+# Get name of the Variables object.
 # return: name
 sub name {
     my $self = shift;
@@ -67,9 +81,11 @@ sub name {
 }
 
 ##
-# Obtain a configuration value. This will not resolve symbolic references in the value.
-# $name: name of the configuration value
-# $default: value returned if the configuration value has not been set
+# Obtain a value for a named variable. This will not resolve symbolic references in
+# the value.
+# $name: name of the variable
+# $default: value returned if the variable has not been set
+# $remainingDepth: recursively evaluate, unless this value is 
 # return: the value, or default value
 sub get {
     my $self           = shift;
@@ -78,37 +94,29 @@ sub get {
     my $remainingDepth = shift || 16;
 
     my $ret;
-    foreach my $delegate ( @{$self->{delegates}} ) {
-        $ret = $delegate->config()->get( $name, undef, $remainingDepth-1 );
-        if( defined( $ret )) {
-            last;
+    my $found = $self->{flatMap}->{$name};
+    if( defined( $found )) {
+        $ret = $found;
+
+    } else {
+        foreach my $delegate ( @{$self->{delegates}} ) {
+            $ret = $delegate->vars()->get( $name, undef, $remainingDepth-1 );
+            if( defined( $ret )) {
+                last;
+            }
+        }
+        unless( defined( $ret )) {
+            $ret = $default;
         }
     }
-    unless( defined( $ret )) {
-        $ret = $default;
-    }
-
     return $ret;
 }
 
 ##
-# Add an additional configuration value. This will fail if the name exists already.
+# Obtain a variable value, and recursively resolve symbolic references in the value.
 # $name: name of the configuration value
-# $value: value of the configuration value
-sub put {
-    my $self  = shift;
-    my $name  = shift;
-    my $value = shift;
-
-    error( 'Cannot perform put', $name, 'at this level; implement put() in', ref( $self ) );
-}
-
-##
-# Obtain a configuration value, and recursively resolve symbolic references in the value.
-# $name: name of the configuration value
-# $default: value returned if the configuration value has not been set
+# $default: value returned if the variable has not been set
 # $map: location of additional name-value pairs
-# $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
 # $remainingDepth: remaining recursion levels before abortion
 # return: the value, or default value
 sub getResolve {
@@ -149,10 +157,9 @@ sub getResolve {
 }
 
 ##
-# Obtain a configuration value, and recursively resolve symbolic references in the value.
-# $name: name of the configuration value
-# $default: value returned if the configuration value has not been set
-# $map: location of additional name-value pairs
+# Obtain a variable value, and recursively resolve symbolic references in the value.
+# $name: name of the variable
+# $default: value returned if the variable has not been set
 # $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
 # $remainingDepth: remaining recursion levels before abortion
 # return: the value, or default value
@@ -194,12 +201,39 @@ sub getResolveOrNull {
 }
 
 ##
+# Add an additional configuration value. This will fail if the name exists already.
+# $pairs: name-value pairs
+sub put {
+    my $self  = shift;
+    my %pairs = @_;
+
+    foreach my $name ( keys %pairs ) {
+        my $value = $pairs{$name};
+        if( !defined( $self->{flatMap}->{$name} )) {
+            $self->{flatMap}->{$name} = $value;
+
+        } elsif( $self->{flatMap}->{$name} ne $value ) {
+            error( 'Have different value already for', $name, 'was:', $self->{flatMap}->{$name}, ', new:', $value );
+        }
+    }
+}
+
+##
 # Obtain the keys in this Configuration object.
 # return: the keys
 sub keys {
     my $self = shift;
 
-    error( 'Cannot perform keys at this level; subclass' );
+    my $uniq = {};
+    foreach my $key ( CORE::keys %{$self->{flatMap}} ) {
+        $uniq->{$key} = 1;
+    }
+    foreach my $delegate ( @{$self->{delegates}} ) {
+        foreach my $key ( $delegate->vars()->keys() ) {
+            $uniq->{$key} = 1;
+        }
+    }
+    return CORE::keys %$uniq;
 }
 
 ##
@@ -243,7 +277,8 @@ sub replaceVariables {
 }
 
 ##
-# Dump this Configuration to string
+# Dump this Variables object to string, for debugging
+# return: string
 sub dump {
     my $self = shift;
 
@@ -269,6 +304,33 @@ sub dump {
                 "    $_ => <undef>\n";
             }
         } sort $self->keys() ) . ")";
+    return $ret;
+}
+
+##
+# Recursive helper to flatten JSON into hierarchical variable names
+# $map: JSON, or sub-JSON
+# return: array of hierarchical variables names (may be sub-hierarchy)
+sub _flatten {
+    my $map = shift;
+    my $ret = {};
+
+    foreach my $key ( CORE::keys %$map ) {
+        my $value = $map->{$key};
+
+        if( ref( $value ) eq 'HASH' ) {
+            my $subRet = _flatten( $value );
+
+            foreach my $foundKey ( CORE::keys %$subRet ) {
+                my $foundValue = $subRet->{$foundKey};
+
+                $ret->{"$key.$foundKey"} = $foundValue;
+            }
+        } else {
+            $ret->{$key} = $value;
+        }
+    }
+
     return $ret;
 }
 

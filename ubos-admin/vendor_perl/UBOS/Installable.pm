@@ -24,7 +24,7 @@ use warnings;
 
 package UBOS::Installable;
 
-use fields qw(json config packageName);
+use fields qw(json packageName atAppConfigVarsAtCheck atAppConfigVars );
 
 use UBOS::Host;
 use UBOS::Logging;
@@ -179,24 +179,78 @@ sub new {
 
     my $json = $manifestFileReader->( $packageName );
 
-    $self->{config} = UBOS::Configuration->new(
-            "Installable=$packageName",
-            { "package.name" => $packageName },
-            'UBOS::Host' );
-
-    $self->{json}        = $json;
-    $self->{packageName} = $packageName;
+    $self->{json}                   = $json;
+    $self->{packageName}            = $packageName;
+    $self->{atAppConfigVars}        = {};
+    $self->{atAppConfigVarsAtCheck} = {};
 
     return $self;
 }
 
 ##
-# Obtain the Configuration object
-# return: the Configuration object
-sub config {
-    my $self = shift;
+# Obtain a Variables object for this Installable at a particular AppConfiguration.
+# $appConfig: the AppConfiguration
+# $doIt: if 1, deploy; if 0, only check. We keep two separate Variables objects
+#        around so placeholder values during check do not contaminate the deploy
+# return: the Variables object
+sub obtainInstallableAtAppconfigVars {
+    my $self      = shift;
+    my $appConfig = shift;
+    my $doIt      = shift;
 
-    return $self->{config};
+    my $entry = $doIt ? 'atAppConfigVars' : 'atAppConfigVarsAtCheck';
+
+    my $appConfigId = $appConfig->appConfigId();
+    unless( exists( $self->{$entry}->{$appConfigId} )) {
+        my $packageName     = $self->packageName;
+        my $hierarchicalMap = {
+            "package.name" => $packageName,
+        };
+
+        my $installableCustPoints = $self->customizationPoints;
+        if( $installableCustPoints ) {
+            my $appConfigCustPoints = $appConfig->customizationPoints();
+            my $appConfigParsDir    = $appConfig->vars()->get( 'host.appconfigparsdir' );
+
+            foreach my $custPointName ( keys %$installableCustPoints ) {
+                my $custPointDef = $installableCustPoints->{$custPointName};
+
+                my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
+
+                unless( defined( $value ) && defined( $value->{value} )) {
+                    # use default instead
+                    $value = $custPointDef->{default};
+                }
+                if( defined( $value )) {
+                    my $data = undef;
+                    if( exists( $value->{value} )) {
+                        $data = $value->{value};
+                        if( defined( $data )) { # value might be null
+                            if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
+                                $data = decode_base64( $data );
+                            }
+                        }
+
+                    } elsif( exists( $value->{expression} )) {
+                        $data = $value->{expression};
+                        $data = $appConfig->vars()->replaceVariables( $data );
+                    }
+                    if( defined( $data ) && ( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} )) {
+                        # do not generate the file in case of null data, or if customizationpoint is declared private
+                        my $filename = "$appConfigParsDir/$appConfigId/$packageName/$custPointName";
+                        $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{filename} = $filename;
+                    }
+                    $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{value} = $data;
+                }
+            }
+        }
+
+        $self->{$entry}->{$appConfigId} = UBOS::Variables->new(
+                $appConfig->vars()->name() . ",Installable=" . $self->packageName() . "($entry)",
+                $hierarchicalMap,
+                $appConfig );
+    }
+    return $self->{$entry}->{$appConfigId};
 }
 
 ##
@@ -360,24 +414,32 @@ sub checkManifest {
 
     trace( 'Checking manifest for', $self->packageName );
 
-    $self->checkManifestStructure( $skipFilesystemChecks );
+    my $packageName = $self->packageName();
+    my $vars = UBOS::Variables->new(
+            "Installable=$packageName(Manifest-check)",
+            {   'package.name' => $packageName },
+            'UBOS::Host' );
+
+    $self->checkManifestStructure( $vars, $skipFilesystemChecks );
 
     my $json = $self->{json};
     unless( $json->{type} eq $type ) {
         $self->myFatal( 'type must be', $type, 'is:', $json->{type} );
     }
 
-    $self->checkManifestRolesSection( $skipFilesystemChecks );
-    $self->checkManifestCustomizationPointsSection( $skipFilesystemChecks );
+    $self->checkManifestRolesSection( $vars, $skipFilesystemChecks );
+    $self->checkManifestCustomizationPointsSection( $vars, $skipFilesystemChecks );
 }
 
 ##
 # Check validity of the manifest JSON's structure.
+# $vars: the Variables object to check with
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with fatal error
 sub checkManifestStructure {
     my $self                 = shift;
+    my $vars                 = shift;
     my $skipFilesystemChecks = shift;
 
     my $json = $self->{json};
@@ -395,15 +457,17 @@ sub checkManifestStructure {
 
 ##
 # Check validity of the manifest JSON's roles section.
+# $vars: the Variables object to check with
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with fatal error
 sub checkManifestRolesSection {
     my $self                 = shift;
+    my $vars                 = shift;
     my $skipFilesystemChecks = shift;
 
-    my $json   = $self->{json};
-    my $config = $self->{config};
+    my $json = $self->{json};
+
     if( $json->{roles} ) {
         my $rolesOnHost = UBOS::Host::rolesOnHost();
         my $retentionBuckets = {};
@@ -413,7 +477,7 @@ sub checkManifestRolesSection {
 
             my $role = $rolesOnHost->{$roleName};
             if( $role ) {
-                $role->checkAppManifestForRole( $roleName, $self, $roleJson, $retentionBuckets, $skipFilesystemChecks, $config );
+                $role->checkAppManifestForRole( $roleName, $self, $roleJson, $retentionBuckets, $skipFilesystemChecks, $vars );
             } # else we ignore roles we don't know
         }
     }
@@ -421,15 +485,16 @@ sub checkManifestRolesSection {
 
 ##
 # Check validity of the manifest JSON's info section.
+# $vars: the Variables object to check with
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
 # return: 1 or exits with fatal error
 sub checkManifestCustomizationPointsSection {
     my $self                 = shift;
+    my $vars                 = shift;
     my $skipFilesystemChecks = shift;
 
-    my $json   = $self->{json};
-    my $config = $self->{config};
+    my $json = $self->{json};
 
     if( exists( $json->{customizationpoints} )) {
         unless( ref( $json->{customizationpoints} ) eq 'HASH' ) {

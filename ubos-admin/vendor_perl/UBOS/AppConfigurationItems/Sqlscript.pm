@@ -60,18 +60,18 @@ sub new {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     trace( 'Sqlscript::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
 
-    return $self->_runIt( $doIt, $defaultFromDir, $defaultToDir, $config );
+    return $self->_runIt( $doIt, $defaultFromDir, $defaultToDir, $vars );
 }
 
 ##
@@ -79,14 +79,14 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     # do nothing
 
@@ -100,16 +100,16 @@ sub undeployOrCheck {
 # $methodName: the type of post-install
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
-    return $self->_runIt( 1, $defaultFromDir, $defaultToDir, $config );
+    return $self->_runIt( 1, $defaultFromDir, $defaultToDir, $vars );
 }
 
 ##
@@ -119,7 +119,7 @@ sub _runIt {
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret              = 1;
     my $sourceOrTemplate = $self->{json}->{template};
@@ -143,7 +143,7 @@ sub _runIt {
         my $content           = slurpFile( $sourceOrTemplate );
         my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
 
-        my $sql    = $templateProcessor->process( $content, $config, $sourceOrTemplate );
+        my $sql    = $templateProcessor->process( $content, $vars, $sourceOrTemplate );
         my $dbType = $self->{role}->name();
 
         my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )

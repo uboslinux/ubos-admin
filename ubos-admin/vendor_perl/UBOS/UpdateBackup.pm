@@ -100,9 +100,7 @@ sub create {
 
                 UBOS::Utils::mkdir( "$updateBackupDir/$appConfigId/$packageName", 0700 );
 
-                my $config = $appConfig->obtainSubconfig(
-                        "Installable=$packageName",
-                        $installable );
+                my $vars = $installable->obtainInstallableAtAppconfigVars( $appConfig, 1 );
 
                 foreach my $roleName ( @{$installable->roleNames} ) {
                     my $role = $rolesOnHost->{$roleName};
@@ -111,7 +109,7 @@ sub create {
 
                         UBOS::Utils::mkdir( $appConfigPathInBackup, 0700 );
 
-                        my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+                        my $dir = $vars->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                         my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                         if( $appConfigItems ) {
@@ -125,7 +123,7 @@ sub create {
                                 }
                                 my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                                 if( $item ) {
-                                    $ret &= $item->backup( $dir, $config, $backupContext, \@filesToDelete );
+                                    $ret &= $item->backup( $dir, $vars, $backupContext, \@filesToDelete );
                                 }
                             }
                         }
@@ -193,9 +191,7 @@ sub restoreAppConfiguration {
             next;
         }
 
-        my $config = $appConfigOnHost->obtainSubconfig(
-                "Installable=$packageName",
-                $installable );
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $appConfigOnHost, 1 );
 
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
@@ -207,7 +203,7 @@ sub restoreAppConfiguration {
 
                 my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                 if( $appConfigItems ) {
-                    my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+                    my $dir = $vars->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                     my $backupContext = UBOS::UpdateBackupContext->new( $self, $appConfigPathInBackup );
 
@@ -218,7 +214,7 @@ sub restoreAppConfiguration {
                         }
                         my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfigOnHost, $installable );
                         if( $item ) {
-                            $ret &= $item->restore( $dir, $config, $backupContext );
+                            $ret &= $item->restore( $dir, $vars, $backupContext );
                         }
                     }
                 }

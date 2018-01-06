@@ -58,7 +58,7 @@ sub name {
 # $retentionBuckets: keep track of retention buckets, so there's no overlap
 # $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
 #       This is needed when reading Site JSON files in (old) backups
-# $config: the Configuration object to use
+# $vars: the Variables object that knows about symbolic names and variables
 sub checkInstallableManifestForRole {
     my $self                 = shift;
     my $roleName             = shift;
@@ -66,7 +66,7 @@ sub checkInstallableManifestForRole {
     my $jsonFragment         = shift;
     my $retentionBuckets     = shift;
     my $skipFilesystemChecks = shift;
-    my $config               = shift;
+    my $vars                 = shift;
 
     if( $jsonFragment->{depends} ) {
         $installable->myFatal( "roles section: role $roleName: depends not allowed here" );
@@ -82,8 +82,8 @@ sub checkInstallableManifestForRole {
         'udpport'         => 1
     };
 
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $scriptAndPorts, $retentionBuckets, $skipFilesystemChecks, $config );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $scriptAndPorts, $config );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $scriptAndPorts, $retentionBuckets, $skipFilesystemChecks, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $scriptAndPorts, $vars );
 }
 
 1;

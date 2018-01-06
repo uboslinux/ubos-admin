@@ -171,7 +171,7 @@ sub run {
         }
         $file = $in;
     } else {
-        my $tmpDir = UBOS::Host()->config( 'host.tmp', '/tmp' );
+        my $tmpDir = UBOS::Host()->vars( 'host.tmp', '/tmp' );
 
         $tmpFile = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
         close $tmpFile;
@@ -365,7 +365,7 @@ sub restoreAppConfigs {
     info( 'Updating site(s)' );
 
     my $deployUndeployTriggers = {};
-    my %newAppConfigs          = (); # new appconfig id => new app config
+    my %newAppConfigs          = (); # new appconfig id => new appconfig
     foreach my $siteId ( keys %siteIdsToAppConfigIds ) {
         my $site = $sites->{$siteId};
 

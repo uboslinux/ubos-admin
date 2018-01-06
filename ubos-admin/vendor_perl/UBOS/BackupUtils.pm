@@ -59,7 +59,7 @@ sub performBackup {
             fatal( $@ );
         }
         if( exists( $appConfigs->{$appConfig->appConfigId} )) {
-            fatal( 'App config id specified more than once:', $appConfig->appConfigId );
+            fatal( 'Appconfigid specified more than once:', $appConfig->appConfigId );
         }
         $appConfigs->{$appConfig->appConfigId} = $appConfig;
     }
@@ -69,7 +69,7 @@ sub performBackup {
             fatal( $@ );
         }
         if( exists( $sites->{$site->siteId} )) {
-            fatal( 'Site id specified more than once:', $site->siteId );
+            fatal( 'Siteid specified more than once:', $site->siteId );
         }
         $sites->{$site->siteId} = $site;
     }
@@ -82,7 +82,7 @@ sub performBackup {
 
         foreach my $appConfig ( @$appConfigsAtSite ) {
             if( exists( $appConfigs->{$appConfig->appConfigId} )) {
-                fatal( 'App config id', $appConfig->appConfigId . 'is also part of site:', $site->siteId );
+                fatal( 'Appconfigid', $appConfig->appConfigId . 'is also part of site:', $site->siteId );
             }
             $appConfigs->{$appConfig->appConfigId} = $appConfig;
         }

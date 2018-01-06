@@ -56,14 +56,14 @@ sub new {
 # $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub deployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret   = 1;
     my $names = $self->{json}->{names};
@@ -85,10 +85,10 @@ sub deployOrCheck {
         $fromName =~ s!\$1!$name!g;      # $1: name
         $fromName =~ s!\$2!$localName!g; # $2: just the name without directories
 
-        $fromName = $config->replaceVariables( $fromName );
+        $fromName = $vars->replaceVariables( $fromName );
 
         my $toName = $name;
-        $toName = $config->replaceVariables( $toName );
+        $toName = $vars->replaceVariables( $toName );
 
         unless( $fromName =~ m#^/# ) {
             $fromName = "$defaultFromDir/$fromName";
@@ -123,14 +123,14 @@ sub deployOrCheck {
 # $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
+# $vars: the Variables object that knows about symbolic names and variables
 # return: success or fail
 sub undeployOrCheck {
     my $self           = shift;
     my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
-    my $config         = shift;
+    my $vars           = shift;
 
     my $ret   = 1;
     my $names = $self->{json}->{names};
@@ -143,7 +143,7 @@ sub undeployOrCheck {
 
     foreach my $name ( @$names ) {
         my $toName = $name;
-        $toName = $config->replaceVariables( $toName );
+        $toName = $vars->replaceVariables( $toName );
 
         unless( $toName =~ m#^/# ) {
             $toName = "$defaultToDir/$toName";
