@@ -84,6 +84,8 @@ sub deployOrCheck {
         my $scriptcontent = slurpFile( $script );
         my $operation = 'deploy';
 
+        my $config = $vars; # for backwards compatibility
+
         trace( 'Perlscript::deployOrCheck: running eval', $script, $operation );
 
         unless( eval $scriptcontent ) {
@@ -128,6 +130,8 @@ sub undeployOrCheck {
         my $scriptcontent = slurpFile( $script );
         my $operation = 'undeploy';
 
+        my $config = $vars; # for backwards compatibility
+
         trace( 'Perlscript::undeployOrCheck: running eval', $script, $operation );
 
         unless( eval $scriptcontent ) {
@@ -166,6 +170,8 @@ sub runPostDeployScript {
 
     my $scriptcontent = slurpFile( $script );
     my $operation     = $methodName;
+
+    my $config = $vars; # for backwards compatibility
 
     trace( 'Perlscript::runPostDeployScript: running eval', $script, $operation );
 

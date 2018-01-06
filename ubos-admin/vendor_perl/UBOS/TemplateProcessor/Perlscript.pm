@@ -54,6 +54,8 @@ sub process {
     my $vars        = shift;
     my $rawFileName = shift;
 
+    my $config = $vars; # for backwards compatibility
+
     my $ret = eval $raw;
     unless( $ret ) {
         error( "Error when attempting to eval file $rawFileName:", $@ );
