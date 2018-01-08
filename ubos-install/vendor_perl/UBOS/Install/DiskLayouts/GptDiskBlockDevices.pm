@@ -92,18 +92,14 @@ sub createDisks {
             }
             
             $errors += UBOS::Install::PartitionUtils::changeGptPartitionType( $data->{gptparttype}, $index, $disk );
-
-            unless( exists( $data->{devices} )) {
-                $data->{devices} = [];
-            }
-
-            push @{$data->{devices}}, "$disk$index"; # augment $self->{devicetable}
         }
     }
 
-    if( UBOS::Utils::myexec( "partprobe" )) {
+    if( UBOS::Utils::myexec( "partprobe " . join( ' ', @{$self->{disks}} ))) {
         ++$errors;
     }
+
+    $errors += $self->_augmentDeviceTableWithPartitions();
 
     return $errors;
 }

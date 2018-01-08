@@ -88,7 +88,7 @@ sub createDisks {
         $errors += UBOS::Install::PartitionUtils::changeGptPartitionType( $data->{gptparttype}, $index, $self->{image} );
     }
 
-    if( UBOS::Utils::myexec( "partprobe" )) {
+    if( UBOS::Utils::myexec( "partprobe " . $self->{image} )) {
         ++$errors;
     }
 

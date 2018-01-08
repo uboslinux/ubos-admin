@@ -95,13 +95,6 @@ END
         }
 
         $fdiskScript .= UBOS::Install::PartitionUtils::appendFdiskChangePartitionType( $data->{mbrparttype}, $index );
-
-        unless( exists( $data->{devices} )) {
-            $data->{devices} = [];
-        }
-        foreach my $disk ( @{$self->{disks}} ) {
-            push @{$data->{devices}}, "$disk$index"; # augment $self->{devicetable}
-        }
     }
     $fdiskScript .= <<END;
 w
@@ -119,9 +112,12 @@ END
         }
     }
 
-    if( UBOS::Utils::myexec( "partprobe" )) {
+    if( UBOS::Utils::myexec( "partprobe " . join( ' ', @{$self->{disks}} ))) {
         ++$errors;
     }
+
+    $errors += $self->_augmentDeviceTableWithPartitions();
+
     return $errors;
 }
 
