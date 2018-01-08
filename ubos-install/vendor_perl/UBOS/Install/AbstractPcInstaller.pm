@@ -190,12 +190,17 @@ default ubos
 CONTENT
 
     my $rootPartUuid = UBOS::Install::AbstractDiskLayout::determinePartUuid( $diskLayout->getRootDeviceNames() );
+    my $addParString = '';
+
+    if( defined( $self->{additionalkernelparameters} ) && @{$self->{additionalkernelparameters}} ) {
+        map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
+    }
 
     UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT );
 title UBOS
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
-options root=PARTUUID=$rootPartUuid rw
+options root=PARTUUID=$rootPartUuid rw $addParString
 CONTENT
 
     return 0;

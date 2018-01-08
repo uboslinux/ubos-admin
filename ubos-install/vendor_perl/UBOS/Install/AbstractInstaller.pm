@@ -109,6 +109,9 @@ sub new {
         $self->{partitioningscheme} = 'mbr'; # default
     }
 
+    push @{$self->{additionalkernelparameters}}, 'init=/usr/lib/systemd/systemd';
+    # We are not installing systemd-sysvcompat any more
+
     return $self;
 }
 
