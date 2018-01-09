@@ -67,7 +67,7 @@ sub _augmentDeviceTableWithPartitions {
             ++$errors;
 
         } else {
-            my $json = UBOS::Utils::parseJsonFromString( $out );
+            my $json = UBOS::Utils::readJsonFromString( $out );
 
             foreach my $child ( @{$json->{blockdevices}->[0]->{children}} ) {
                 my $childName = $child->{name};
