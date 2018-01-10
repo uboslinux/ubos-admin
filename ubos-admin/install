@@ -73,6 +73,9 @@ post_upgrade() {
     systemctl enable ubos-ready.service snapper-timeline.timer snapper-cleanup.timer
     systemctl start ubos-ready.service  snapper-timeline.timer snapper-cleanup.timer
 
+    # fix old device classes -- works for both rpi and rpi2
+    perl -pi -e 's/UBOS_DEVICECLASS="raspberry-pi/UBOS_DEVICECLASS="rpi/' /etc/os-release
+
     if [ -x /usr/share/ubos-admin/bin/post-upgrade ]; then /usr/share/ubos-admin/bin/post-upgrade; fi
 }
 
