@@ -50,7 +50,6 @@ t
 $mbrparttype
 END
     }
-print "*** appendFdiskChangePartitionType returning '$script'\n";
     return $script;
 }
 
