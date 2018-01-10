@@ -59,7 +59,7 @@ my %removePackageDbs    = ();
 my %disablePackageDbs   = ();
 my $mbr                 = undef;
 my $gpt                 = undef;
-my $noswap              = 1;
+my $noswap              = 0;
 my $checkSignatures     = 'required';
 my $help                = 0;
 

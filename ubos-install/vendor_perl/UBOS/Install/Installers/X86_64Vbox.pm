@@ -75,9 +75,9 @@ sub new {
 # $argvp: remaining command-line arguments
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self  = shift;
+    my $self   = shift;
     my $noswap = shift;
-    my $argvp = shift;
+    my $argvp  = shift;
 
     if( 'gpt' eq $self->{partitioningscheme} ) {
         fatal( 'Partitioning scheme GPT is not yet supported for deviceclass', $self->deviceClass );
