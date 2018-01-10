@@ -119,7 +119,7 @@ sub createDiskLayout {
                     'fs'    => 'btrfs'
                     # default partition type
                 }
-            } );
+            };
             unless( $noswap ) {
                 $deviceTable->{swap} = {
                     'index'       => 1,
