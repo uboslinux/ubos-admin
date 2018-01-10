@@ -537,6 +537,9 @@ sub run {
     }
     unless( $dryRun ) {
         my $newSite = UBOS::Site->new( $newSiteJson );
+        unless( $newSite ) {
+            fatal( $@ );
+        }
 
         my $prerequisites = {};
         if( $tor ) {

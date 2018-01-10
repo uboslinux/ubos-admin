@@ -97,13 +97,17 @@ sub run {
 
     my $newSitesHash = {};
 
-   foreach my $json ( @jsons ) {
-       my $site   = UBOS::Site->new( $json, $useAsTemplate );
-       my $siteId = $site->siteId;
-       if( $newSitesHash->{$siteId} ) {
-           fatal( "Duplicate site definition: $siteId" );
-       }
-       $newSitesHash->{$siteId} = $site;
+    foreach my $json ( @jsons ) {
+        my $site = UBOS::Site->new( $json, $useAsTemplate );
+        unless( $site ) {
+            fatal( $@ );
+        }
+
+        my $siteId = $site->siteId;
+        if( $newSitesHash->{$siteId} ) {
+            fatal( "Duplicate site definition: $siteId" );
+        }
+        $newSitesHash->{$siteId} = $site;
     }
 
     my $oldSites = UBOS::Host::sites();
@@ -182,7 +186,6 @@ sub run {
                     }
                 }
             }
-
         }
 
         my $oldSite = $oldSites->{$newSiteId};

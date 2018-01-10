@@ -94,10 +94,11 @@ sub run {
         }
 
         my $site = UBOS::Site->new( $json, 1 );
-
+        unless( $site ) {
+            fatal( $@ );
+        }
         $siteTemplates->{$shortsiteTemplateName} = $json;
     }
-
 
     foreach my $wifiString ( @wifiStrings ) {
         my $w = _parseWifiString( $wifiString );

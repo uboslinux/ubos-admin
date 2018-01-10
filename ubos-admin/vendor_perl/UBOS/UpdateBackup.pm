@@ -154,8 +154,11 @@ sub read {
         my $siteJson = UBOS::Utils::readJsonFromFile( $siteJsonFile );
         if( $siteJson ) {
             my $site = UBOS::Site->new( $siteJson );
-
-            $self->{sites}->{$site->siteId()} = $site;
+            if( $site ) {
+                $self->{sites}->{$site->siteId()} = $site;
+            } else {
+                error( $@ );
+            }
         }
     }
 

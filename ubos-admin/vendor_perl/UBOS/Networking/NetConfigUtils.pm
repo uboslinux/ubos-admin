@@ -790,7 +790,9 @@ END
         my $callbackContent = 'UBOS::HostnameCallbacks::UpdateEtcHosts ' . join( ' ', @appNics ) . "\n";
         UBOS::Utils::saveFile( '/etc/ubos/hostname-callbacks/etchosts', $callbackContent );
     } else {
-        UBOS::Utils::deleteFile( '/etc/ubos/hostname-callbacks/etchosts' );
+        if( -e '/etc/ubos/hostname-callbacks/etchosts' ) {
+            UBOS::Utils::deleteFile( '/etc/ubos/hostname-callbacks/etchosts' );
+        }
     }
 
     # Start / stop / restart / enable / disable services

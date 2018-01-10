@@ -44,6 +44,7 @@ my $AFTER_BOOT_FILE        = '/var/lib/ubos/after-boot'; # put this into /var, s
 my $READY_FILE             = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
+my $STATE_CALLBACKS_DIR    = '/etc/ubos/state-callbacks';
 
 my $_hostVars              = undef; # allocated as needed
 my $_rolesOnHostInSequence = undef; # allocated as needed
@@ -53,6 +54,7 @@ my $_osReleaseInfo         = undef; # allocated as needed
 my $_allNics               = undef; # allocated as needed
 my $_physicalNics          = undef; # allocated as needed
 my $_gpgHostKeyFingerprint = undef; # allocated as needed
+my $_currentState          = undef;
 
 ##
 # Obtain the Variables object for the Host.
@@ -142,7 +144,11 @@ sub sites {
                 my $siteJson = readJsonFromFile( $f );
                 if( $siteJson ) {
                     my $site = UBOS::Site->new( $siteJson );
-                    $_sites->{$site->siteId()} = $site;
+                    if( $site ) {
+                        $_sites->{$site->siteId()} = $site;
+                    } else {
+                        fatal( $@ );
+                    }
                 } else {
                     fatal();
                 }
@@ -151,8 +157,12 @@ sub sites {
             foreach my $f ( <"$SITES_DIR/*-world.json"> ) {
                 my $siteJson = readJsonFromFile( $f );
                 if( $siteJson ) {
-                    my $site     = UBOS::Site->new( $siteJson );
-                    $_sites->{$site->siteId()} = $site;
+                    my $site = UBOS::Site->new( $siteJson );
+                    if( $site ) {
+                        $_sites->{$site->siteId()} = $site;
+                    } else {
+                        fatal( $@ );
+                    }
                 } else {
                     fatal();
                 }
@@ -510,6 +520,19 @@ sub executeTriggers {
 }
 
 ##
+# Set the system state
+# $newState: name of the new state
+sub setState {
+    my $newState = shift;
+
+    trace( 'Host::setState', $newState );
+
+    $_currentState = $newState;
+
+    UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 'stateChanged', $newState );
+}
+
+##
 # Update all the code currently installed on this host.
 # $syncFirst: if true, perform a pacman -Sy; otherwise only a pacman -Su
 # $showPackages: if true, show the package files that were installed
@@ -518,7 +541,7 @@ sub updateCode {
     my $syncFirst    = shift;
     my $showPackages = shift;
 
-    trace( 'Host::UpdateCode', $syncFirst, $showPackages );
+    trace( 'Host::updateCode', $syncFirst, $showPackages );
 
     my $ret = 0;
     my $cmd;
@@ -843,6 +866,8 @@ sub postSnapshot {
 ##
 # Prevent interruptions of this script
 sub preventInterruptions {
+    setState( 'InMaintenance' );
+
     $SIG{'HUP'}  = 'IGNORE';
     $SIG{'INT'}  = 'IGNORE';
     $SIG{'QUIT'} = 'IGNORE';
@@ -1012,43 +1037,6 @@ sub runAfterBootCommandsIfNeeded {
             }
         }
         UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
-    }
-}
-
-##
-# Deploy any site templates
-sub deploySiteTemplatesIfNeeded {
-
-    unless( vars()->get( 'host.deploysitetemplatesonboot', 0 )) {
-        return;
-    }
-    my $destDir = vars()->get( 'host.deploysitetemplatesonbootdir', undef );
-    if( !defined( $destDir ) || !$destDir || !-d $destDir ) {
-        return;
-    }
-    my @templateFiles = <$destDir/*.json>;
-
-    # skip the ones whose hostname we have already
-    my $existingHostnames = hostnamesOfSites();
-    my @templateFilesToDeploy = grep {
-        my $site = UBOS::Site->new( UBOS::Utils::readJsonFromFile( $_, 1 ));
-        return !exists( $existingHostnames->{$site->hostname() });
-    } @templateFiles;
-    
-    unless( @templateFilesToDeploy ) {
-        return;
-    }
-    my $cmd = 'ubos-admin deploy --skip-check-ready --template' . join( '', map { " --file '$_'" } @templateFilesToDeploy );
-    my $out;
-    my $err;
-    debugAndSuspend( 'Deploy site templates', @templateFilesToDeploy );
-    if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
-        error( "Problems with attempting to install site templates from $destDir:\n" . $cmd, "\nout: " . $out . "\nerr: " . $err );
-        # if error, leave templates in place
-
-    } else {
-        debugAndSuspend( 'Delete site templates', @templateFiles );
-        UBOS::Utils::deleteFile( @templateFiles );
     }
 }
 
@@ -1258,6 +1246,14 @@ sub lastUpdated {
         $ret = undef;
     }
     return $ret;
+}
+
+##
+# Set state back to Operational
+END {
+    if( defined( $_currentState ) && 'InMaintenance' eq $_currentState ) {
+        UBOS::Host::setState( 'Operational' );
+    }
 }
 
 1;

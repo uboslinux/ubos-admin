@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 #
-# Configure or reconfigure ubos-admin when the ubos-admin.service
-# is started.
+# Invoked when ubos-ready.service is stopped
 #
 # This file is part of ubos-admin.
 # (C) 2012-2017 Indie Computing Corp.
@@ -25,14 +24,8 @@ use warnings;
 
 use UBOS::Host;
 use UBOS::Logging;
-use UBOS::ResourceManager;
-use UBOS::StaffManager;
 
 UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-initialize', 0, '/etc/ubos/log-system.conf' );
-
-UBOS::StaffManager::performBootActions();
-UBOS::Host::ensureSnapperConfig();
-UBOS::Host::runAfterBootCommandsIfNeeded();
-UBOS::Host::deploySiteTemplatesIfNeeded();
+UBOS::Host::setState( 'BootingOrShuttingDown' );
 
 1;

@@ -38,14 +38,14 @@ my $WILDCARDHOSTNAME = "__wildcard";
 ##
 # Constructor.
 # $json: JSON object containing Site JSON
-# $assignIdsIfNeeded: usually false. If true, instead of complaining about missing siteId and
-#       appConfigIds, silently assign new values
+# $fillInTemplate: usually false. If true, instead of complaining about missing siteId and
+#       appConfigIds and the like, silently assign new values
 # $manifestFileReader: pointer to a method that knows how to read manifest files
 # return: Site object
 sub new {
     my $self               = shift;
     my $json               = shift;
-    my $assignIdsIfNeeded  = shift || 0;
+    my $fillInTemplate     = shift || 0;
     my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
@@ -59,7 +59,9 @@ sub new {
     $self->{json}               = $json;
     $self->{manifestFileReader} = $manifestFileReader;
 
-    $self->_checkJson( $assignIdsIfNeeded );
+    unless( $self->_checkJson( $fillInTemplate )) {
+        return undef;
+    }
 
     return $self;
 }
@@ -984,218 +986,271 @@ sub removeLetsEncryptCertificate {
 
 ##
 # Check validity of the Site JSON
-# $assignIdsIfNeeded: if true, instead of complaining about missing siteId and
-#       appConfigIds, silently assign new values
-# return: 1 or exits with fatal error
+# $fillInTemplate: usually false. If true, instead of complaining about missing siteId and
+#       appConfigIds and the like, silently assign new values
+# return: 1 if ok
 sub _checkJson {
-    my $self              = shift;
-    my $assignIdsIfNeeded = shift;
+    my $self           = shift;
+    my $fillInTemplate = shift;
 
     my $json = $self->{json};
     unless( $json ) {
-        fatal( 'No Site JSON present' );
+        $@ = 'No Site JSON present';
+        return 0;
     }
-    $self->_checkJsonValidKeys( $json, [] );
+    unless( $self->_checkJsonValidKeys( $json, [] )) {
+        return 0;
+    }
 
     unless( $json->{siteid} ) {
-        if( $assignIdsIfNeeded ) {
+        if( $fillInTemplate ) {
             $json->{siteid} = UBOS::Host::createNewSiteId();
         } else {
-            fatal( 'Site JSON: missing siteid' );
+            $@ = 'Site JSON: missing siteid';
+            return 0;
         }
     }
     unless( UBOS::Host::isValidSiteId( $json->{siteid} )) {
-        fatal( 'Site JSON: invalid siteid, must be s followed by 40 hex chars, is', $json->{siteid} );
+        $@ = 'Site JSON: invalid siteid, must be s followed by 40 hex chars, is: ' . $json->{siteid};
+        return 0;
     }
     unless( exists( $json->{tor} )) {
         unless( $json->{hostname} ) {
-            fatal( 'Site JSON: missing hostname' );
+            $@ = 'Site JSON: missing hostname';
+            return 0;
         }
         unless( UBOS::Host::isValidHostname( $json->{hostname} )) {
-            fatal( 'Site JSON: invalid hostname, is', $json->{hostname} );
+            $@ = 'Site JSON: invalid hostname, is: ' . $json->{hostname};
+            return 0;
         }
     }
 
     unless( $json->{admin} ) {
-        fatal( 'Site JSON: admin section is now required' );
+        $@ = 'Site JSON: admin section is now required';
+        return 0;
     }
     unless( ref( $json->{admin} ) eq 'HASH' ) {
-        fatal( 'Site JSON: admin section: not a JSON object' );
+        $@ = 'Site JSON: admin section: not a JSON object';
+        return 0;
     }
     unless( $json->{admin}->{userid} ) {
-        fatal( 'Site JSON: admin section: missing userid' );
+        $@ = 'Site JSON: admin section: missing userid';
+        return 0;
     }
     if( ref( $json->{admin}->{userid} ) || $json->{admin}->{userid} !~ m!^[a-z0-9]+$! ) {
-        fatal( 'Site JSON: admin section: invalid userid, must be string without white space, is', $json->{admin}->{userid} );
+        $@ = 'Site JSON: admin section: invalid userid, must be string without white space, is: ' . $json->{admin}->{userid};
+        return 0;
     }
     unless( $json->{admin}->{username} ) {
-        fatal( 'Site JSON: admin section: missing username' );
+        $@ = 'Site JSON: admin section: missing username';
+        return 0;
     }
     if( ref( $json->{admin}->{username} ) ) {
-        fatal( 'Site JSON: admin section: invalid username, must be string' );
+        $@ = 'Site JSON: admin section: invalid username, must be string';
+        return 0;
     }
     if ( $< == 0 ) {
         # only root has access to this
         unless( $json->{admin}->{credential} ) {
-            fatal( 'Site JSON: admin section: missing credential' );
+            if( $fillInTemplate ) {
+                $json->{admin}->{credential} = UBOS::Utils::randomPassword();
+            } else {
+                $@ = 'Site JSON: admin section: missing credential';
+                return 0;
+            }
         }
         if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} =~ m!^\s! || $json->{admin}->{credential} =~ m!\s$! ) {
-            fatal( 'Site JSON: admin section: invalid credential, must be string without leading or trailing white space' );
+            $@ = 'Site JSON: admin section: invalid credential, must be string without leading or trailing white space';
+            return 0;
         }
     }
     unless( $json->{admin}->{email} ) {
-        fatal( 'Site JSON: admin section: missing email' );
+        $@ = 'Site JSON: admin section: missing email';
+        return 0;
     }
     if( ref( $json->{admin}->{email} ) || $json->{admin}->{email} !~ m/^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i ) {
-        fatal( 'Site JSON: admin section: invalid email, is', $json->{admin}->{email} );
+        $@ = 'Site JSON: admin section: invalid email, is: ' . $json->{admin}->{email};
+        return 0;
     }
 
     if( exists( $json->{tls} )) {
         unless( ref( $json->{tls} ) eq 'HASH' ) {
-            fatal( 'Site JSON: tls section: not a JSON object' );
+            $@ = 'Site JSON: tls section: not a JSON object';
+            return 0;
         }
         if( exists( $json->{tls}->{letsencrypt} )) {
             unless( $json->{tls}->{letsencrypt} == JSON::true ) {
-                fatal( 'Site JSON: tls section: letsencrypt, if given, must be true' );
+                $@ = 'Site JSON: tls section: letsencrypt, if given, must be true';
+                return 0;
             }
             if( exists( $json->{tls}->{key} )) {
-                fatal( 'Site JSON: tls section: key must not be given if letsencrypt is set' );
+                $@ = 'Site JSON: tls section: key must not be given if letsencrypt is set';
+                return 0;
             }
             if( exists( $json->{tls}->{crt} )) {
-                fatal( 'Site JSON: tls section: crt must not be given if letsencrypt is set' );
+                $@ = 'Site JSON: tls section: crt must not be given if letsencrypt is set';
+                return 0;
             }
             if( exists( $json->{tls}->{cacrt} )) {
-                fatal( 'Site JSON: tls section: cacrt must not be given if letsencrypt is set' );
+                $@ = 'Site JSON: tls section: cacrt must not be given if letsencrypt is set';
+                return 0;
             }
         } else {
             unless( $json->{tls}->{key} || !ref( $json->{tls}->{key} )) {
-                fatal( 'Site JSON: tls section: missing or invalid key' );
+                $@ = 'Site JSON: tls section: missing or invalid key';
+                return 0;
             }
             unless( $json->{tls}->{crt} || !ref( $json->{tls}->{crt} )) {
-                fatal( 'Site JSON: tls section: missing or invalid crt' );
+                $@ = 'Site JSON: tls section: missing or invalid crt';
+                return 0;
             }
             if( $json->{tls}->{crtchain} ) {
                 # migrate
                 if( ref( $json->{tls}->{crtchain} )) {
-                    fatal( 'Site JSON: tls section: missing or invalid crtchain' );
+                    $@ = 'Site JSON: tls section: missing or invalid crtchain';
+                    return 0;
                 }
                 $json->{tls}->{crt} .= "\n" . $json->{tls}->{crtchain};
                 delete $json->{tls}->{crtchain};
             }
             if( $json->{tls}->{cacrt} && ref( $json->{tls}->{cacrt} )) {
-                fatal( 'Site JSON: tls section: invalid cacrt' );
+                $@ = 'Site JSON: tls section: invalid cacrt';
+                return 0;
             }
         }
     }
 
     if( exists( $json->{wellknown} )) {
         unless( ref( $json->{wellknown} ) eq 'HASH' ) {
-            fatal( 'Site JSON: wellknown section: not a JSON object' );
+            $@ = 'Site JSON: wellknown section: not a JSON object';
+            return 0;
         }
         if( exists( $json->{wellknown}->{robotstxt} )) {
             if( ref( $json->{wellknown}->{robotstxt} )) {
-                fatal( 'Site JSON: wellknown section: invalid robotstxt' );
+                $@ = 'Site JSON: wellknown section: invalid robotstxt';
+                return 0;
             }
             if( exists( $json->{wellknown}->{robotstxtprefix} )) {
-                fatal( 'Site JSON: wellknown section: specifiy robotstxt or robotstxtprefix, not both' );
+                $@ = 'Site JSON: wellknown section: specifiy robotstxt or robotstxtprefix, not both';
+                return 0;
             }
         }
         if( exists( $json->{wellknown}->{robotstxtprefix} )) {
             if( ref( $json->{wellknown}->{robotstxtprefix} )) {
-                fatal( 'Site JSON: wellknown section: invalid robotstxtprefix' );
+                $@ = 'Site JSON: wellknown section: invalid robotstxtprefix';
+                return 0;
             }
         }
         if(    exists( $json->{wellknown}->{sitemapxml} )
             && (    ref( $json->{wellknown}->{sitemapxml} )
                  || $json->{wellknown}->{sitemapxml} !~ m!^<\?xml! ))
         {
-            fatal( 'Site JSON: wellknown section: invalid sitemapxml' );
+            $@ = 'Site JSON: wellknown section: invalid sitemapxml';
+            return 0;
         }
         if( exists( $json->{wellknown}->{faviconicobase64} ) && ref( $json->{wellknown}->{faviconicobase64} )) {
-            fatal( 'Site JSON: wellknown section: invalid faviconicobase64' );
+            $@ = 'Site JSON: wellknown section: invalid faviconicobase64';
+            return 0;
         }
     }
 
     if( exists( $json->{tor} )) {
         unless( ref( $json->{tor} ) eq 'HASH' ) {
-            fatal( 'Site JSON: tor section: not a JSON hash' );
+            $@ = 'Site JSON: tor section: not a JSON hash';
+            return 0;
         }
         if( keys %{$json->{tor}} > 0 ) {
             # allowed to be empty
             unless( exists( $json->{tor}->{privatekey} )) {
-                fatal( 'Site JSON: tor section: missing privatekey' );
+                $@ = 'Site JSON: tor section: missing privatekey';
+                return 0;
             }
             if( ref( $json->{tor}->{privatekey} ) || $json->{tor}->{privatekey} !~ m!\S+! ) {
-                fatal( 'Site JSON: tor section: privatekey must be a string' );
+                $@ = 'Site JSON: tor section: privatekey must be a string';
+                return 0;
             }
         }
     }
 
     if( exists( $json->{appconfigs} )) {
         unless( ref( $json->{appconfigs} ) eq 'ARRAY' ) {
-            fatal( 'Site JSON: appconfigs section: not a JSON array' );
+            $@ = 'Site JSON: appconfigs section: not a JSON array';
+            return 0;
         }
 
         my $i=0;
         foreach my $appConfigJson ( @{$json->{appconfigs}} ) {
             unless( $appConfigJson->{appconfigid} ) {
-                if( $assignIdsIfNeeded ) {
+                if( $fillInTemplate ) {
                     $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
                 } else {
-                    fatal( "Site JSON: appconfig $i: missing appconfigid" );
+                    $@ = "Site JSON: appconfig $i: missing appconfigid";
+                    return 0;
                 }
             }
             unless( UBOS::Host::isValidAppConfigId( $appConfigJson->{appconfigid} )) {
-                fatal( "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars, is", $appConfigJson->{appconfigid} );
+                $@ = "Site JSON: appconfig $i: invalid appconfigid, must be a followed by 40 hex chars, is: " . $appConfigJson->{appconfigid};
+                return 0;
             }
             if(    $appConfigJson->{context}
                 && ( ref( $appConfigJson->{context} ) || !UBOS::AppConfiguration::isValidContext( $appConfigJson->{context} )))
             {
-                fatal( "Site JSON: appconfig $i: invalid context, must be valid context URL without trailing slash, is", $appConfigJson->{context} );
+                $@ = "Site JSON: appconfig $i: invalid context, must be valid context URL without trailing slash, is: " . $appConfigJson->{context};
+                return 0;
             }
             if( defined( $appConfigJson->{isdefault} ) && !JSON::is_bool( $appConfigJson->{isdefault} )) {
-                fatal( "Site JSON: appconfig $i: invalid isdefault, must be true or false" );
+                $@ = "Site JSON: appconfig $i: invalid isdefault, must be true or false";
+                return 0;
             }
             unless( UBOS::Installable::isValidPackageName( $appConfigJson->{appid} )) {
-                fatal( "Site JSON: appconfig $i: invalid appid, is", $appConfigJson->{appid} );
+                $@ = "Site JSON: appconfig $i: invalid appid, is: " . $appConfigJson->{appid};
+                return 0;
             }
             my %installables = ();
             $installables{$appConfigJson->{appid}} = 1;
 
             if( exists( $appConfigJson->{accessoryids} )) {
                 unless( ref( $appConfigJson->{accessoryids} ) eq 'ARRAY' ) {
-                    fatal( "Site JSON: appconfig $i, accessoryids: not a JSON array, is", $appConfigJson->{accessoryids} );
+                    $@ = "Site JSON: appconfig $i, accessoryids: not a JSON array, is: " . $appConfigJson->{accessoryids};
+                    return 0;
                 }
                 foreach my $accessoryId ( @{$appConfigJson->{accessoryids}} ) {
                     unless( UBOS::Installable::isValidPackageName( $accessoryId )) {
-                        fatal( "Site JSON: appconfig $i: invalid accessoryid, is", $accessoryId );
+                        $@ = "Site JSON: appconfig $i: invalid accessoryid, is: " . $accessoryId;
+                        return 0;
                     }
                     $installables{$accessoryId} = 1;
                 }
             }
             if( exists( $appConfigJson->{customizationpoints} )) {
                 if( ref( $appConfigJson->{customizationpoints} ) ne 'HASH' ) {
-                    fatal( 'Site JSON: customizationpoints section: not a JSON HASH' );
+                    $@ = 'Site JSON: customizationpoints section: not a JSON HASH';
+                    return 0;
                 }
                 foreach my $packageName ( keys %{$appConfigJson->{customizationpoints}} ) {
                     unless( $installables{$packageName} ) {
-                        fatal( 'Site JSON: customizationpoint specified for non-installed installable', $packageName, ', installed:', keys %installables );
+                        $@ = 'Site JSON: customizationpoint specified for non-installed installable ' . $packageName . ', installed: ' . join( ' ', keys %installables );
+                        return 0;
                     }
                     my $custPointsForPackage = $appConfigJson->{customizationpoints}->{$packageName};
                     if( !$custPointsForPackage || ref( $custPointsForPackage ) ne 'HASH' ) {
-                        fatal( 'Site JSON: customizationpoints for package ' . $packageName . ' must be a JSON hash' );
+                        $@ = 'Site JSON: customizationpoints for package ' . $packageName . ' must be a JSON hash';
+                        return 0;
                     }
                     foreach my $pointName ( keys %$custPointsForPackage ) {
                         unless( $pointName =~ m!^[a-z][a-z0-9_]*$! ) {
-                            fatal( 'Site JSON: invalid name for customizationpoint, is', $pointName );
+                            $@ = 'Site JSON: invalid name for customizationpoint, is: ' . $pointName;
+                            return 0;
                         }
                         my $pointValue = $custPointsForPackage->{$pointName};
                         if( !$pointValue || ref( $pointValue ) ne 'HASH' ) {
-                            fatal( 'Site JSON: customizationpoint values for package ' . $packageName . ', point ' . $pointName . ' must be a JSON hash' );
+                            $@ = 'Site JSON: customizationpoint values for package ' . $packageName . ', point ' . $pointName . ' must be a JSON hash';
+                            return 0;
                         }
                         my $valueEncoding = $pointValue->{encoding};
                         if( $valueEncoding && $valueEncoding ne 'base64' ) {
-                            fatal( 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' invalid encoding' );
+                            $@ = 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' invalid encoding';
+                            return 0;
                         }
                     }
                 }
@@ -1211,6 +1266,7 @@ sub _checkJson {
 # Recursive check that Site JSON only has valid keys. This catches typos.
 # $json: the JSON, or JSON sub-tree
 # $context: the name of the current section, if any
+# return: 1 if ok
 sub _checkJsonValidKeys {
     my $self    = shift;
     my $json    = shift;
@@ -1223,9 +1279,12 @@ sub _checkJsonValidKeys {
                 my $value = $json->{$key};
 
                 unless( $key =~ m!^[a-z][-_a-z0-9]*$! ) {
-                    fatal( 'Site JSON: invalid key (1) in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                    $@ = 'Site JSON: invalid key (1) in JSON: ' . "'$key'" . ' context: ' . ( join( ' / ', @$context ) || '(top)' );
+                    return 0;
                 }
-                $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
+                unless( $self->_checkJsonValidKeys( $value, [ @$context, $key ] )) {
+                    return 0;
+                }
             }
         } elsif( @$context >= 2 && $context->[-2] eq 'customizationpoints' ) {
             # This is a customization point name, which has laxer rules
@@ -1233,23 +1292,31 @@ sub _checkJsonValidKeys {
                 my $value = $json->{$key};
 
                 unless( $key =~ m!^[a-z][_a-z0-9]*$! ) {
-                    fatal( 'Site JSON: invalid key (2) in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                    $@ = 'Site JSON: invalid key (2) in JSON: ' . "'$key'" . ' context: ' . ( join( ' / ', @$context ) || '(top)' );
+                    return 0;
                 }
-                $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
+                unless( $self->_checkJsonValidKeys( $value, [ @$context, $key ] )) {
+                    return 0;
+                }
             }
         } else {
             foreach my $key ( keys %$json ) {
                 my $value = $json->{$key};
 
                 unless( $key =~ m!^[a-z][a-z0-9]*$! ) {
-                    fatal( 'Site JSON: invalid key (3) in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                    $@ = 'Site JSON: invalid key (3) in JSON: ' . "'$key'" . ' context: ' . ( join( ' / ', @$context ) || '(top)' );
+                    return 0;
                 }
-                $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
+                unless( $self->_checkJsonValidKeys( $value, [ @$context, $key ] )) {
+                    return 0;
+                }
             }
         }
     } elsif( ref( $json ) eq 'ARRAY' ) {
         foreach my $element ( @$json ) {
-            $self->_checkJsonValidKeys( $element, $context );
+            unless( $self->_checkJsonValidKeys( $element, $context )) {
+                return 0;
+            }
         }
     }
 }

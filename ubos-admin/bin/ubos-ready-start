@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+#
+# Invoked when ubos-ready.service is started
+#
+# This file is part of ubos-admin.
+# (C) 2012-2017 Indie Computing Corp.
+#
+# ubos-admin is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ubos-admin is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ubos-admin.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use strict;
+use warnings;
+
+use UBOS::Host;
+use UBOS::Logging;
+use UBOS::StaffManager;
+
+UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-start', 0, '/etc/ubos/log-system.conf' );
+
+UBOS::Host::ensureSnapperConfig();
+UBOS::Host::runAfterBootCommandsIfNeeded();
+UBOS::StaffManager::performBootActions();
+
+UBOS::Host::setState( 'Operational' );
+
+1;

@@ -223,7 +223,7 @@ sub run {
         UBOS::Host::addAfterBootCommands( $afterBoot );
 
         debugAndSuspend( 'Reboot now' );
-        exec( 'shutdown -r now' ) || fatal( 'Failed to issue reboot command' );
+        exec( 'systemctl reboot' ) || fatal( 'Failed to issue reboot command' );
 
     } else {
         # Reload systemd first, as .service files might have been updated

@@ -2,8 +2,8 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.240
-pkgrel=4
+pkgver=0.241
+pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
 license=('GPL')
@@ -54,7 +54,6 @@ package() {
     for f in ${startdir}/vendor_perl/UBOS/*.pm; do
         install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/
     done
-    mkdir -p ${pkgdir}${_vendor_perl}/UBOS/HostnameCallbacks
 
     install -D -m755 ${startdir}/bin/* -t ${pkgdir}/usr/share/${pkgname}/bin/
 
@@ -146,7 +145,7 @@ package() {
 # Other config files
     install -D -m644 ${startdir}/etc/php/conf.d/*.ini -t ${pkgdir}/etc/php/conf.d/
     install -D -m644 ${startdir}/etc/ubos/open-ports.d/* -t ${pkgdir}/etc/ubos/open-ports.d/
-    mkdir -p ${pkgdir}/etc/ubos/hostname-callbacks
+    mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
 
 # A directory to mount a UBOS staff to in a container
     mkdir -p -m 755 ${pkgdir}/UBOS-STAFF

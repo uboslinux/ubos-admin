@@ -581,10 +581,14 @@ sub restoreSites {
         }
 
         my $newSite = UBOS::Site->new( $siteJsonNew );
-        if( $noTls ) {
-            $newSite->deleteTlsInfo();
+        if( $newSite ) {
+            if( $noTls ) {
+                $newSite->deleteTlsInfo();
+            }
+            push @sitesNew, $newSite;
+        } else {
+            fatal( $@ );
         }
-        push @sitesNew, $newSite;
     }
     if( @noTorHostname ) {
         fatal( 'Too many --notorhostname arguments given for the sites to be restored' );

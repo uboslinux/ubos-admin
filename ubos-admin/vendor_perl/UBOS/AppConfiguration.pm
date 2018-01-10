@@ -651,7 +651,7 @@ sub isValidContext {
 
 ##
 # Check that all required customization point values have been specified.
-# If not, fatal out.
+# return: 1 if ok
 sub checkCustomizationPointValues {
     my $self = shift;
 
@@ -676,18 +676,20 @@ sub checkCustomizationPointValues {
                         # checked earlier that this is non-null
                         my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
                         unless( $ok ) {
-                            fatal(   'AppConfiguration ' . $self->appConfigId
+                            $@ = 'AppConfiguration ' . $self->appConfigId
                                    . ', package ' . $packageName
                                    . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
-                                   . ', is ' . ( ref( $value ) || $value ));
+                                   . ', is ' . ( ref( $value ) || $value );
+                            return 0;
                         }
 
                         if( exists( $custPointDef->{regex} )) {
                             unless( $value =~ $custPointDef->{regex} ) {
-                                fatal(   'AppConfiguration ' . $self->appConfigId
+                                $@ = 'AppConfiguration ' . $self->appConfigId
                                        . ', package ' . $packageName
                                        . ', invalid value, regex is ' . $custPointDef->{regex} . ': ' . $custPointName
-                                       . ', is ' . ( ref( $value ) || $value ));
+                                       . ', is ' . ( ref( $value ) || $value );
+                                return 0;
                             }
                         }
                     }
@@ -701,15 +703,16 @@ sub checkCustomizationPointValues {
                     || !( defined( $custPointDef->{default}->{value} ) || defined( $custPointDef->{default}->{expression} ))) {
                     # make sure the Site JSON file provided one
                     unless( defined( $value )) {
-                        fatal(   'AppConfiguration ' . $self->appConfigId
+                        $@ = 'AppConfiguration ' . $self->appConfigId
                                . ', package ' . $packageName
-                               . ', required value not provided for customizationpoint: ' .  $custPointName );
+                               . ', required value not provided for customizationpoint: ' .  $custPointName;
+                        return 0;
                     }
                 }
             }
         }
     }
-    1;
+    return 1;
 }
 
 ##

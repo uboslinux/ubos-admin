@@ -35,6 +35,7 @@ package UBOS::StaffManager;
 use File::Temp;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Networking::NetConfigUtils;
 use UBOS::Utils;
 
 my $LABEL = 'UBOS-STAFF';
@@ -352,18 +353,47 @@ sub loadCurrentConfiguration {
 
     trace( 'StaffManager::loadCurrentConfiguration', $target );
 
+    my $errors = 0;
+    
+    $errors += _loadCurrentSshConfiguration( $target );
+    $errors += _loadCurrentWiFiConfiguration( $target );
+    $errors += _deploySiteTemplates( $target );
+
+    return $errors;
+}
+
+##
+# Load SSH configuration from this directory
+# $target: the target directory from which to read (root directory of stick)
+# return: number of errors
+sub _loadCurrentSshConfiguration {
+    my $target =shift;
+    
     if( -e "$target/shepherd/ssh/id_rsa.pub" ) {
         my $sshKey = UBOS::Utils::slurpFile( "$target/shepherd/ssh/id_rsa.pub" );
         $sshKey =~ s!^\s+!!;
         $sshKey =~ s!\s+$!!;
 
-        setupUpdateShepherd( 0, $sshKey );
+        unless( setupUpdateShepherd( 0, $sshKey )) {
+            return 1;
+        }
     }
+    return 0;
+}
 
+##
+# Load WiFi configuration from this directory
+# $target: the target directory from which to read (root directory of stick)
+# return: number of errors
+sub _loadCurrentWiFiConfiguration {
+    my $target = shift;
+
+    my $errors = 0;
     if( -d "$target/wifi" ) {
         my $out;
         if( UBOS::Utils::myexec( "pacman -Qi wpa_supplicant", undef, \$out, \$out )) {
             error( 'Cannot provision WiFi from staff device: package wpa_supplicant is not installed' );
+            ++$errors;
 
         } else {
             my $confs    = UBOS::Utils::readFilesInDirectory( "$target/wifi", '*.conf' );
@@ -371,7 +401,9 @@ sub loadCurrentConfiguration {
 
             if(( keys %$confs ) && ( keys %$wlanNics )) {
                 unless( -d "$target/etc/wpa_supplicant" ) {
-                    UBOS::Utils::mkdir( "$target/etc/wpa_supplicant" );
+                    unless( UBOS::Utils::mkdir( "$target/etc/wpa_supplicant" )) {
+                        ++$errors;
+                    }
                 }
                 my $content = <<CONTENT;
 eapol_version=1
@@ -381,23 +413,45 @@ fast_reauth=1
 CONTENT
                 $content .= join( "\n", map { "network={\n" . $_ . "}\n" } values %$confs );
                 foreach my $nic ( keys %$wlanNics ) {
-                    UBOS::Utils::saveFile( "$target/etc/wpa_supplicant-$nic.conf", $content );
+                    unless( UBOS::Utils::saveFile( "$target/etc/wpa_supplicant-$nic.conf", $content )) {
+                        ++$errors;
+                    }
 
-                    UBOS::Utils::myexec( 'systemctl is-enabled wpa_supplicant@' . $nic . ' > /dev/null || systemctl enable wpa_supplicant@' . $nic, undef, \$out, \$out );
-                    UBOS::Utils::myexec( 'systemctl is-active  wpa_supplicant@' . $nic . ' > /dev/null || systemctl start  wpa_supplicant@' . $nic, undef, \$out, \$out );
+                    if( UBOS::Utils::myexec( 'systemctl is-enabled wpa_supplicant@' . $nic . ' > /dev/null || systemctl enable wpa_supplicant@' . $nic, undef, \$out, \$out )) {
+                        ++$errors;
+                    }
+                    if( UBOS::Utils::myexec( 'systemctl is-active  wpa_supplicant@' . $nic . ' > /dev/null || systemctl start  wpa_supplicant@' . $nic, undef, \$out, \$out )) {
+                        ++$errors;
+                    }
                 }
             }
 
             # Update regulatory domain
             if( -e "$target/wifi/wireless-regdom" ) {
-                UBOS::Utils::copyRecursively( "$target/wifi/wireless-regdom", '/etc/conf.d/wireless-regdom' );
+                unless( UBOS::Utils::copyRecursively( "$target/wifi/wireless-regdom", '/etc/conf.d/wireless-regdom' )) {
+                    ++$errors;
+                }
             }
         }
     }
+    return $errors;
+}
 
-    my $destDir = UBOS::Host::vars()->get( 'host.deploysitetemplatesonbootdir', undef );
-    if( -d $destDir ) {
+##
+# Deploy Site templates found below this directory. If anything goes
+# wrong, we don't do anything at all.
+# $target: the target directory from which to read (root directory of stick)
+# return: number of errors
+sub _deploySiteTemplates {
+    my $target = shift;
+
+    my $errors = 0;
+    my $ret    = 1;
+
+    if( UBOS::Host::vars()->get( 'host.deploysitetemplatesonboot', 1 )) {
         my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
+
+        my @templateFiles = ();
         foreach my $templateDir (
                 "$target/shepherd/site-templates",
                 "$target/flock/$keyFingerprint/site-templates" )
@@ -406,22 +460,277 @@ CONTENT
             if( -d $templateDir ) {
                 if( opendir( DIR, "$templateDir" )) {
                     while( my $entry = readdir DIR ) {
-                        if( $entry ne '.' && $entry ne '..' ) {
-                            UBOS::Utils::copyRecursively( "$templateDir/$entry", "$destDir/" );
+                        if( $entry ne '.' && $entry ne '..' && $entry =~ m!\.json$! ) {
+                            push @templateFiles, "$templateDir/$entry";
                         }
                     }
                     closedir DIR;
+                } else {
+                    error( 'Cannot read from directory:', $templateDir );
                 }
             }
         }
+
+        my @sitesFromTemplates = (); # Some may be already deployed, we skip those
+        foreach my $templateFile ( @templateFiles ) {
+            my $json = readJsonFromFile( $templateFile );
+            if( $json ) { 
+                my $newSite = UBOS::Site->new( $json, 1 );
+
+                if( $newSite ) {
+                    push @sitesFromTemplates, $newSite;
+                } else {
+                    error( 'Failed to create site from:', $templateFile );
+                    ++$errors;
+                }
+            } else {
+                ++$errors;
+            }
+        }
+        if( $errors ) {
+            return $errors;
+        }
+
+        my $oldSites = UBOS::Host::sites();
+
+        # make sure AppConfigIds, SiteIds and hostnames are unique, and that all Sites are deployable
+        my $haveIdAlready      = {}; # it's okay that we have an old site by this id
+        my $haveHostAlready    = {}; # it's not okay that we have an old site by this hostname if site id is different
+        my $haveAnyHostAlready = 0; # true if we have the * (any) host
+
+        foreach my $oldSite ( values %$oldSites ) {
+            $haveHostAlready->{$oldSite->hostname} = $oldSite;
+            if( '*' eq $oldSite->hostname ) {
+                $haveAnyHostAlready = 1;
+            }
+        }
+
+        my @newSites = (); # only those that had no error
+        foreach my $newSite ( @sitesFromTemplates ) {
+            my $newSiteId = $newSite->siteId;
+            if( $haveIdAlready->{$newSiteId} ) {
+                # skip
+                next;
+            }
+            $haveIdAlready->{$newSiteId} = $newSite;
+
+            my $newSiteHostName = $newSite->hostname;
+            if( defined( $oldSites->{$newSiteId} )) {
+                # do not redeploy
+                next;
+
+            } elsif( !$newSite->isTor() ) {
+                # site is new and not tor
+                if( $newSiteHostName eq '*' ) {
+                    if( keys %$oldSites > 0 ) {
+                        error( "You can only create a site with hostname * (any) if no other sites exist." );
+                        ++$errors;
+                        return $errors;
+                    }
+
+                } else {
+                    if( $haveAnyHostAlready ) {
+                        error( "There is already a site with hostname * (any), so no other site can be created." );
+                        ++$errors;
+                        return $errors;
+                    }
+                    if( $haveHostAlready->{$newSiteHostName} ) {
+                        error( 'There is already a different site with hostname', $newSiteHostName );
+                        ++$errors;
+                        return $errors;
+                    }
+                }
+            }
+            if( defined( $newSiteHostName )) {
+                # not tor
+                $haveHostAlready->{$newSiteHostName} = $newSite;
+            }
+
+            foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
+                my $newAppConfigId = $newAppConfig->appConfigId;
+                if( $haveIdAlready->{$newAppConfigId} ) {
+                    error( 'More than one site or appconfig with id', $newAppConfigId );
+                    ++$errors;
+                    return $errors;
+                }
+                $haveIdAlready->{$newSiteId} = $newSite;
+
+                foreach my $oldSite ( values %$oldSites ) {
+                    foreach my $oldAppConfig ( @{$oldSite->appConfigs} ) {
+                        if( $newAppConfigId eq $oldAppConfig->appConfigId ) {
+                            if( $newSiteId ne $oldSite->siteId ) {
+                                error(    'Non-unique appconfigid ' . $newAppConfigId
+                                        . ' in sites ' . $newSiteId . ' and ' . $oldSite->siteId );
+                                ++$errors;
+                                return $errors;
+                            }
+                        }
+                    }
+                }
+            }
+            push @newSites, $newSite;
+        }
+
+        # May not be interrupted, bad things may happen if it is
+        UBOS::Host::preventInterruptions();
+
+        # No backup needed, we aren't redeploying
+
+        info( 'Installing prerequisites' );
+
+        # This is a two-step process: first we need to install the applications that haven't been
+        # installed yet, and then we need to install their dependencies
+
+        my $prerequisites = {};
+        foreach my $site ( @newSites ) {
+            $site->addInstallablesToPrerequisites( $prerequisites );
+            if( $site->isTor() ) {
+                $prerequisites->{'tor'} = 'tor';
+            }
+        }
+        if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
+            error( $@ );
+            ++$errors;
+            return $errors;
+        }
+
+        $prerequisites = {};
+        foreach my $site ( @newSites ) {
+            $site->addDependenciesToPrerequisites( $prerequisites );
+        }
+        if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
+            error( $@ );
+            ++$errors;
+            return $errors;
+        }
+
+        trace( 'Checking context paths and customization points', $ret );
+
+        foreach my $newSite ( @newSites ) {
+            my %contexts = ();
+            foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
+                # check contexts
+                my $context = $newAppConfig->context();
+                if( defined( $context )) { # amazonses may not
+                    if( exists( $contexts{$context} )) {
+                        error(   'Site ' . $newSite->siteId . ': more than one appconfig with context ' . $context );
+                        ++$errors;
+                        return $errors;
+                    }
+                }
+                if( keys %contexts ) {
+                    if( $context eq '' || defined( $contexts{''} ) ) {
+                        error(   'Site ' . $newSite->siteId . ': cannot deploy app at root context if other apps are deployed at other contexts' );
+                        ++$errors;
+                        return $errors;
+                    }
+                }
+                unless( $newAppConfig->checkCustomizationPointValues()) {
+                    error( $@ );
+                    ++$errors;
+                    return $errors;
+                }
+
+                my $appPackage = $newAppConfig->app()->packageName();
+                foreach my $acc ( $newAppConfig->accessories() ) {
+                    if( $appPackage ne $acc->belongsToApp() ) {
+                        error( 'Accessory', $acc->packageName(), 'cannot be used in appconfig', $newAppConfig->appConfigId(), 'as it does not belong to app', $appPackage );
+                        ++$errors;
+                        return $errors;
+                    }
+                }
+
+                $contexts{$context} = $newAppConfig;
+            }
+        }
+
+        # Now that we have prerequisites, we can check whether the site is deployable
+        foreach my $newSite ( @newSites ) {
+            unless( $newSite->checkDeployable()) {
+                error( 'New site is not deployable:', $newSite );
+                ++$errors;
+                return $errors;
+            }
+        }
+
+        info( 'Setting up placeholder sites or suspending existing sites' );
+
+        my $suspendTriggers = {};
+        foreach my $site ( @newSites ) {
+            my $oldSite = $oldSites->{$site->siteId};
+            if( $oldSite ) {
+                debugAndSuspend( 'Suspend site', $oldSite->siteId() );
+                $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+            } else {
+                debugAndSuspend( 'Setup placeholder for site', $site->siteId() );
+                $ret &= $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+            }
+        }
+        debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
+        UBOS::Host::executeTriggers( $suspendTriggers );
+
+        my @letsEncryptCertsNeededSites = grep { $_->hasLetsEncryptTls() && !$_->hasLetsEncryptCerts() } @newSites;
+        if( @letsEncryptCertsNeededSites ) {
+            if( @letsEncryptCertsNeededSites > 1 ) {
+                info( 'Obtaining letsencrypt certificates' );
+            } else {
+                info( 'Obtaining letsencrypt certificate' );
+            }
+            foreach my $site ( @letsEncryptCertsNeededSites ) {
+                debugAndSuspend( 'Obtain letsencrypt certificate for site', $site->siteId() );
+                my $success = $site->obtainLetsEncryptCertificate();
+                unless( $success ) {
+                    warning( 'Failed to obtain letsencrypt certificate for site', $site->hostname, '(', $site->siteId, '). Deploying site without TLS.' );
+                    $site->unsetLetsEncryptTls;
+                }
+                $ret &= $success;
+            }
+        }
+
+        info( 'Backing up, undeploying and redeploying' );
+
+        my $deployUndeployTriggers = {};
+        foreach my $site ( @newSites ) {
+            debugAndSuspend( 'Deploying site', $site->siteId() );
+            $ret &= $site->deploy( $deployUndeployTriggers );
+        }
+        UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
+        debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
+        UBOS::Host::executeTriggers( $deployUndeployTriggers );
+
+        info( 'Resuming sites' );
+
+        my $resumeTriggers = {};
+        foreach my $site ( @newSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
+
+        info( 'Running installers/upgraders' );
+
+        foreach my $site ( @newSites ) {
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
+                $ret &= $appConfig->runInstallers();
+            }
+        }
     }
-    return 0;
+
+    if( $errors ) {
+        return $errors;
+    } else {
+        return $ret ? 0 : 1; # kludge
+    }
 }
 
 ##
 # Create or update the shepherd user
 # $add: if true, add the keys
 # @keys: the public ssh keys that are allowed to log on, if any
+# return: 1 if ok
 sub setupUpdateShepherd {
     my $add  = shift;
     my @keys = @_;
@@ -443,14 +752,12 @@ sub setupUpdateShepherd {
             UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
         }
 
-        UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' );
+        if( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
 shepherd ALL = NOPASSWD: \
     /usr/bin/journalctl *, \
     /usr/bin/mkdir *, \
     /usr/bin/mount *, \
     /usr/bin/pacman *, \
-    /usr/bin/reboot *, \
-    /usr/bin/shutdown *, \
     /usr/bin/smartctl *, \
     /usr/bin/systemctl *, \
     /usr/bin/ubos-admin *, \
@@ -460,7 +767,10 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/su *, \
     /bin/bash *
 CONTENT
+            return 0;
+        }
     }
+    return 1;
 }
 
 ##

@@ -1,13 +1,12 @@
 {
     "host" : {
-        "appconfigparsdir"             : "/var/lib/ubos/appconfigpars",
-        "cachedir"                     : "/var/cache",
-        "checkmanifest"                : true,
-        "readstaffonboot"              : true,
-        "deploysitetemplatesonboot"    : true,
-        "deploysitetemplatesonbootdir" : "/var/lib/ubos/deploy-site-templates-on-boot",
-        "snapshotonupgrade"            : false,
-        "tmpdir"                       : "/tmp"
+        "appconfigparsdir"          : "/var/lib/ubos/appconfigpars",
+        "cachedir"                  : "/var/cache",
+        "checkmanifest"             : true,
+        "readstaffonboot"           : true,
+        "deploysitetemplatesonboot" : true,
+        "snapshotonupgrade"         : true,
+        "tmpdir"                    : "/tmp"
     },
 
     "package" : {

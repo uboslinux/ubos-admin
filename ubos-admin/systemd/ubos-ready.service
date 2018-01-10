@@ -7,7 +7,7 @@ After=ubos-admin.service ubos-httpd.service ubos-mysqld.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-ready
-ExecStart=/usr/share/ubos-admin/bin/ubos-ready-initialize
+ExecStart=/usr/share/ubos-admin/bin/ubos-ready-start
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-ready
 
 [Install]
