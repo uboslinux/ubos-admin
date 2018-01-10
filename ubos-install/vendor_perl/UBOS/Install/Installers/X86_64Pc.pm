@@ -72,9 +72,12 @@ sub new {
 
 ##
 # Create a DiskLayout object that goes with this Installer.
+# $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# return: the DiskLayout object
 sub createDiskLayout {
     my $self  = shift;
+    my $noswap = shift;
     my $argvp = shift;
 
     # Option 1: a single image file
@@ -118,7 +121,10 @@ sub createDiskLayout {
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
         # Option 4
-        if( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions || @$argvp ) {
+        if( $noswap ) {
+            error( 'Invalid invocation: --noswap cannot be used if installing to a directory' );
+            $ret = undef;
+        } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions || @$argvp ) {
             error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
             $ret = undef;
         } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
@@ -134,11 +140,15 @@ sub createDiskLayout {
 
     } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions ) {
         # Option 3
-        if( 'gpt' eq $self->{partitioningscheme} ) {
-            fatal( 'Partitioning scheme GPT is not yet supported for this configuration' );
+        if( $noswap ) {
+            error( 'Invalid invocation: --noswap cannot be used if specifying partitions' );
+            $ret = undef;
         }
-
-        if( @$argvp ) {
+        if( $ret && 'gpt' eq $self->{partitioningscheme} ) {
+            error( 'Partitioning scheme GPT is not yet supported for this configuration' );
+            $ret = undef;
+        }
+        if( $ret && @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
             $ret = undef;
         }
@@ -225,7 +235,10 @@ sub createDiskLayout {
             my $first = $argvp->[0];
             if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
                 # Option 1
-                if( @$argvp>1 ) {
+                if( $noswap ) {
+                    error( 'Invalid invocation: --noswap cannot be used when installing to a file' );
+                    $ret = undef;
+                } elsif( @$argvp>1 ) {
                     error( 'Do not specify more than one disk image; cannot RAID disk images' );
                     $ret = undef;
                 } else {
@@ -286,53 +299,63 @@ sub createDiskLayout {
                 }
                 if( $ret ) {
                     if( 'gpt' eq $self->{partitioningscheme} ) {
+                        my $deviceTable = {
+                            '/boot' => {
+                                'index'   => 1,
+                                'fs'      => 'vfat',
+                                'size'    => '500M',
+                                'mkfsflags'   => '-F32',
+                                'gptparttype' => 'EF00',
+                                'label'       => 'UBOS boot'
+                            },
+                            '/' => {
+                                'index' => $noswap ? 2 : 3,
+                                'fs'    => 'btrfs',
+                                'label' => 'UBOS root'
+                                # default partition type
+                            }
+                        };
+                        unless( $noswap ) {
+                            $deviceTable->{swap} = {
+                                'index'       => 2,
+                                'fs'          => 'swap',
+                                'size'        => '4G',
+                                'mbrparttype' => '82',
+                                'gptparttype' => '8200',
+                                'label'       => 'swap'
+                            };
+                        }
                         $ret = UBOS::Install::DiskLayouts::GptDiskBlockDevices->new(
                                 $argvp,
-                                {   '/boot' => {
-                                        'index'   => 1,
-                                        'fs'      => 'vfat',
-                                        'size'    => '500M',
-                                        'mkfsflags'   => '-F32',
-                                        'gptparttype' => 'EF00',
-                                        'label'       => 'UBOS boot'
-                                    },
-                                    'swap' => {
-                                        'index'       => 2,
-                                        'fs'          => 'swap',
-                                        'size'        => '4G',
-                                        'gptparttype' => '8200',
-                                        'label'       => 'swap'
-                                    },
-                                    '/' => {
-                                        'index' => 3,
-                                        'fs'    => 'btrfs',
-                                        'label' => 'UBOS root'
-                                        # default partition type
-                                    }
-                                } );
+                                $deviceTable );
                     } else {
+                        my $deviceTable = {
+                            '/boot' => {
+                                'index'   => 1,
+                                'fs'      => 'ext4',
+                                'size'    => '100M',
+                                'mbrboot' => 1
+                                # default partition type
+                            },
+                            '/' => {
+                                'index' => $noswap ? 2 : 3,
+                                'fs'    => 'btrfs'
+                                # default partition type
+                            }
+                        };
+                        unless( $noswap ) {
+                            $deviceTable->{swap} = {
+                                'index'       => 2,
+                                'fs'          => 'swap',
+                                'size'        => '4G',
+                                'mbrparttype' => '82',
+                                'gptparttype' => '8200'
+                            };
+                        }
+
                         $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
                                 $argvp,
-                                {   '/boot' => {
-                                        'index'   => 1,
-                                        'fs'      => 'ext4',
-                                        'size'    => '100M',
-                                        'mbrboot' => 1
-                                        # default partition type
-                                    },
-                                    'swap' => {
-                                        'index'       => 2,
-                                        'fs'          => 'swap',
-                                        'size'        => '4G',
-                                        'mbrparttype' => '82',
-                                        'gptparttype' => '8200'
-                                    },
-                                    '/' => {
-                                        'index' => 3,
-                                        'fs'    => 'btrfs'
-                                        # default partition type
-                                    }
-                                } );
+                                $deviceTable );
                     }
                 }
             } elsif( $ret ) {

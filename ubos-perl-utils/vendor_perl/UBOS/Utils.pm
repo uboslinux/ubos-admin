@@ -552,6 +552,7 @@ sub deleteRecursively {
 # Copy a directory tree recursively to some other place
 # $from: source directory
 # $to: destination directory
+# return: 1 if success
 sub copyRecursively {
     my $from = shift;
     my $to   = shift;

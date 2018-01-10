@@ -71,9 +71,12 @@ sub new {
 
 ##
 # Create a DiskLayout object that goes with this Installer.
+# $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# return: the DiskLayout object
 sub createDiskLayout {
     my $self  = shift;
+    my $noswap = shift;
     my $argvp = shift;
 
     if( 'gpt' eq $self->{partitioningscheme} ) {
@@ -95,24 +98,42 @@ sub createDiskLayout {
         my $first = $argvp->[0];
         if( $ret && UBOS::Install::AbstractDiskLayout::isFile( $first )) {
             # Option 1
-            $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
-                    $first,
-                    {   '/' => {
-                            'index' => 1,
-                            'fs'    => 'btrfs'
-                            # default partition type
-                        },
-                    } );
+            if( $noswap ) {
+                error( 'Invalid invocation: --noswap cannot be used when installing to a file' );
+                $ret = undef;
+            } else {
+                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
+                        $first,
+                        {   '/' => {
+                                'index' => 1,
+                                'fs'    => 'btrfs'
+                                # default partition type
+                            },
+                        } );
+            }
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
             # Option 2
+            my $deviceTable = {
+                '/' => {
+                    'index' => $noswap ? 1 : 2,
+                    'fs'    => 'btrfs'
+                    # default partition type
+                }
+            } );
+            unless( $noswap ) {
+                $deviceTable->{swap} = {
+                    'index'       => 1,
+                    'fs'          => 'swap',
+                    'size'        => '4G',
+                    'mbrparttype' => '82',
+                    'gptparttype' => '8200',
+                    'label'       => 'swap'
+                };
+            }
+
             $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
                     $argvp,
-                    {   '/' => {
-                            'index' => 1,
-                            'fs'    => 'btrfs'
-                            # default partition type
-                        },
-                    } );
+                    $deviceTable );
 
         } elsif( $ret ) {
             error( 'Must be file or disk:', $first );

@@ -62,9 +62,12 @@ sub new {
 
 ##
 # Create a DiskLayout object that goes with this Installer.
+# $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# return: the DiskLayout object
 sub createDiskLayout {
     my $self  = shift;
+    my $noswap = shift;
     my $argvp = shift;
 
     # Option 1: a single image file
@@ -79,9 +82,15 @@ sub createDiskLayout {
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
-            'directory=s'        => \$directory );
+            'directory=s' => \$directory );
+
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
+        return undef;
+    }
+
+    if( $noswap ) {
+        error( 'Invalid invocation: --noswap cannot be used when installing for a container' );
         return undef;
     }
 

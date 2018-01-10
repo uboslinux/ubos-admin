@@ -117,9 +117,12 @@ sub new {
 
 ##
 # Create a DiskLayout object that goes with this Installer.
+# $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# return: the DiskLayout object
 sub createDiskLayout {
     my $self  = shift;
+    my $noswap = shift;
     my $argvp = shift;
 
     fatal( 'Must override:', ref( $self ));

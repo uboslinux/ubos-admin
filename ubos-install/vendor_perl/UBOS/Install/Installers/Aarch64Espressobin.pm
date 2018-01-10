@@ -55,7 +55,7 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-espressobin
                 ubos-networking-standalone uboot-tools archlinuxarm-keyring
-                espressobin-uboot-config
+                espressobin-uboot-config espressobin-ubos-state
                 smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
@@ -69,9 +69,12 @@ sub new {
 
 ##
 # Create a DiskLayout object that goes with this Installer.
+# $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# return: the DiskLayout object
 sub createDiskLayout {
     my $self  = shift;
+    my $noswap = shift;
     my $argvp = shift;
 
     if( 'gpt' eq $self->{partitioningscheme} ) {
@@ -105,7 +108,10 @@ sub createDiskLayout {
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
         # Option 3
-        if( $bootloaderdevice || @rootpartitions || @varpartitions || @$argvp ) {
+        if( $noswap ) {
+            error( 'Invalid invocation: --noswap cannot be used if installing to a directory' );
+            $ret = undef;
+        } elsif( $bootloaderdevice || @rootpartitions || @varpartitions || @$argvp ) {
             error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
             $ret = undef;
         } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
@@ -125,40 +131,57 @@ sub createDiskLayout {
             my $rootDiskOrImage = $argvp->[0];
             if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
                 # Option 1
-                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
-                        $rootDiskOrImage,
-                        {   '/boot' => {
-                                'index'     => 1,
-                                'fs'        => 'ext4',
-                                'size'      => '100M',
-                                'mkfsflags' => '-O ^metadata_csum,^64bit',
-                                'mbrboot'   => 1
-                                # default partition type                                
-                            },
-                            '/' => {
-                                'index' => 2,
-                                'fs'    => 'btrfs'
-                                # default partition type
-                            },
-                        } );
+                if( $noswap ) {
+                    error( 'Invalid invocation: --noswap cannot be used if installing to a file' );
+                    $ret = undef;
+                } else {
+                    $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
+                            $rootDiskOrImage,
+                            {   '/boot' => {
+                                    'index'     => 1,
+                                    'fs'        => 'ext4',
+                                    'size'      => '100M',
+                                    'mkfsflags' => '-O ^metadata_csum,^64bit',
+                                    'mbrboot'   => 1
+                                    # default partition type                                
+                                },
+                                '/' => {
+                                    'index' => 2,
+                                    'fs'    => 'btrfs'
+                                    # default partition type
+                                },
+                            } );
+                }
             } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
+                my $deviceTable = {
+                    '/boot' => {
+                        'index'     => 1,
+                        'fs'        => 'ext4',
+                        'size'      => '100M',
+                        'mkfsflags' => '-O ^metadata_csum,^64bit',
+                        'mbrboot'   => 1
+                        # default partition type
+                    },
+                    '/' => {
+                        'index' => $noswap ? 2 : 3,
+                        'fs'    => 'btrfs'
+                        # default partition type
+                    }
+                };
+                unless( $noswap ) {
+                    $deviceTable->{swap} = {
+                        'index'       => 2,
+                        'fs'          => 'swap',
+                        'size'        => '4G',
+                        'mbrparttype' => '82',
+                        'gptparttype' => '8200',
+                        'label'       => 'swap'
+                    };
+                }
                 $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
                         [   $rootDiskOrImage    ],
-                        {   '/boot' => {
-                                'index'     => 1,
-                                'fs'        => 'ext4',
-                                'size'      => '100M',
-                                'mkfsflags' => '-O ^metadata_csum,^64bit',
-                                'mbrboot'   => 1
-                                # default partition type
-                            },
-                            '/' => {
-                                'index' => 2,
-                                'fs'    => 'btrfs'
-                                # default partition type
-                            },
-                        } );
+                        $deviceTable );
             } else {
                 error( 'Must be file or disk:', $rootDiskOrImage );
                 $ret = undef;

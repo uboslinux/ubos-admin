@@ -59,6 +59,7 @@ my %removePackageDbs    = ();
 my %disablePackageDbs   = ();
 my $mbr                 = undef;
 my $gpt                 = undef;
+my $noswap              = 1;
 my $checkSignatures     = 'required';
 my $help                = 0;
 
@@ -84,6 +85,7 @@ my $parseOk = GetOptions(
         'checksignatures=s'    => \$checkSignatures,
         'mbr'                  => \$mbr,
         'gpt'                  => \$gpt,
+        'noswap'               => \$noswap,
         'h|help'               => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
@@ -194,7 +196,7 @@ if( $gpt ) {
 
 trace( 'Using installer', ref( $installer ));
 
-my $diskLayout = $installer->createDiskLayout( \@ARGV );
+my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV );
 unless( $diskLayout ) {
     synopsisHelpQuit( 0 );
 }
@@ -422,6 +424,8 @@ Optional arguments:
     --gpt
           Use GUID Partition Table format for disks. Conflicts with --mbr.
           If neither --mbr nor --gpt are given, use default for device class.
+    --noswap
+          Do not create a swap partition.
 END
     } else {
         print <<END;
