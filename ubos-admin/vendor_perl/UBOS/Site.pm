@@ -1319,6 +1319,7 @@ sub _checkJsonValidKeys {
             }
         }
     }
+    return 1;
 }
 
 1;
