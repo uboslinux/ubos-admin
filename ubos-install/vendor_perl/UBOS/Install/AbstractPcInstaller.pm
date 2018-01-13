@@ -1,21 +1,7 @@
 #
 # Abstract superclass for PC installers.
 #
-# This file is part of ubos-install.
-# (C) 2012-2015 Indie Computing Corp.
-#
-# ubos-install is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# ubos-install is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with ubos-install.  If not, see <http://www.gnu.org/licenses/>.
+# Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
 # Device-specific notes:
@@ -142,7 +128,7 @@ END
             $addParString =~ s!(["'/])!\$1!g; # escape quotes and slash
 
             $chrootScript .= <<END;
-perl -pi -e 's/GRUB_CMDLINE_LINUX_DEFAULT="(.*)"/GRUB_CMDLINE_LINUX_DEFAULT="\$1$addParString"/' /etc/default/grub
+perl -pi -e 's,GRUB_CMDLINE_LINUX_DEFAULT="(.*)",GRUB_CMDLINE_LINUX_DEFAULT="\$1$addParString",' /etc/default/grub
 END
         }
 
@@ -150,7 +136,9 @@ END
 grub-mkconfig -o /boot/grub/grub.cfg
 END
 
-        debugAndSuspend( 'Invoking bootloader script in chroot:', $target, "\n$chrootScript" );
+        trace( 'Chroot script:', $chrootScript );
+
+        debugAndSuspend( 'Invoking bootloader script in chroot:', $target );
 
         if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
             error( "bootloader chroot script failed:", $err, "\nwas", $chrootScript );

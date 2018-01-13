@@ -8,6 +8,7 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-ready
 ExecStart=/usr/share/ubos-admin/bin/ubos-ready-start
+ExecStop=/usr/share/ubos-admin/bin/ubos-ready-stop
 ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-ready
 
 [Install]

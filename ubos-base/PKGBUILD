@@ -2,11 +2,11 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=$developer
 pkgname=$(basename $(pwd))
-pkgver=0.17
+pkgver=0.18
 pkgrel=1
 pkgdesc="Metapackage for minimal UBOS"
 arch=('any')
-license=('GPL')
+license=('AGPL3')
 depends=(
     'apache'
     'bash'
