@@ -37,17 +37,29 @@ sub new {
         $self->checkManifestAccessoryInfo();
     }
 
+    return $self;
+}
+
+##
+# Add to the hierarchical map for obtainInstallableAtAppconfigVars.
+# $appConfig: the AppConfiguration
+sub _createHierarchicalMapAtAppconfigVars {
+    my $self      = shift;
+    my $appConfig = shift;
+
+    my $hierarchicalMap = $self->SUPER::_createHierarchicalMapAtAppconfigVars( $appConfig );
+
     my $accessoryId = exists( $self->{json}->{accessoryinfo}->{accessoryid} )
             ? $self->{json}->{accessoryinfo}->{accessoryid}
-            : $packageName; # This is optional; always have a value
+            : $self->packageName; # This is optional; always have a value
 
-    $self->vars()->put(
-                "package.name"                            => $packageName,
-                "installable.accessoryinfo.appid"         => $self->{json}->{accessoryinfo}->{appid},
-                "installable.accessoryinfo.accessoryid"   => $accessoryId,
-                "installable.accessoryinfo.accessorytype" => $self->{json}->{accessoryinfo}->{accessorytype} );
+    $hierarchicalMap->{installable}->{accessoryinfo} = {
+            'appid'         => $self->{json}->{accessoryinfo}->{appid},
+            'accessoryid'   => $accessoryId,
+            'accessorytype' => $self->{json}->{accessoryinfo}->{accessorytype}
+    };
 
-    return $self;
+    return $hierarchicalMap;
 }
 
 ##
