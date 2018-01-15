@@ -1144,6 +1144,23 @@ sub ipAddressesOnNic {
 }
 
 ##
+# Obtain the Mac address of a nic
+# $nic: the network interface
+# return: the hardware address
+sub macAddressOfNic {
+    my $nic = shift;
+
+    my $ret  = undef;
+    my $file = "/sys/class/net/$nic/address";
+    if( -e $file ) {
+        $ret = UBOS::Utils::slurpFile( $file );
+        $ret =~ s!^\s+!!;
+        $ret =~ s!\s+$!!;
+    }
+    return $ret;
+}
+
+##
 # Reads manifest files from the default location.
 # $packageIdentifier: the package identifier
 # return: JSON

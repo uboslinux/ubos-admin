@@ -31,22 +31,28 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $debug         = undef;
+    my $directory     = undef;
     my $device        = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
-            'debug'        => \$debug );
+            'debug'        => \$debug,
+            'directory=s'  => \$directory );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args > 1 || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || ( $directory && @args ) || @args > 1 || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( @args ) {
+    if( $directory ) {
+        unless( -d $directory ) {
+            fatal( 'Directory does not exist:', $directory );
+        }
+    } elsif( @args ) {
         $device = shift @args;
         debugAndSuspend( 'Check staff device', $device );
         $device = UBOS::StaffManager::checkStaffDevice( $device );
@@ -62,12 +68,16 @@ sub run {
         }
     }
 
-    my $targetDir;
     my $errors = 0;
-    
-    $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
-    $errors += UBOS::StaffManager::saveCurrentConfiguration( $targetDir->dirname() );
-    $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
+    if( $directory ) {
+        $errors += UBOS::StaffManager::saveCurrentConfiguration( $directory );
+
+    } else {
+        my $targetDir;
+        $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
+        $errors += UBOS::StaffManager::saveCurrentConfiguration( $targetDir->dirname() );
+        $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
+    }
 
     return $errors ? 0 : 1;
 }
@@ -88,6 +98,11 @@ HHH
     <ubos-staff-device>
 SSS
     Write to the provided UBOS staff device, such as /dev/sdc.
+HHH
+            <<SSS => <<HHH,
+    --directory <dir>
+SSS
+    Write to a directory instead.
 HHH
         },
         'args' => {

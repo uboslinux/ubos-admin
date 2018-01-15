@@ -71,6 +71,10 @@ sub performBootActions {
         error( 'Loading current configuration failed from', $device, $target );
     }
 
+    if( saveCurrentConfiguration( $target )) {
+        error( 'Saving current configuration failed to', $device, $target );
+    }
+
     if( $device ) {
         if( unmountDevice( $device, $target )) {
             error( 'Failed to unmount:', $device, $target );
@@ -179,21 +183,47 @@ sub saveCurrentConfiguration {
 
     my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
     my $sshDir         = "flock/$keyFingerprint/ssh";
+    my $infoDir        = "flock/$keyFingerprint/device-info";
 
     unless( -d "$target/$sshDir" ) {
         UBOS::Utils::mkdirDashP( "$target/$sshDir" );
     }
+    unless( -d "$target/$infoDir" ) {
+        UBOS::Utils::mkdirDashP( "$target/$infoDir" );
+    }
+
+    # Host ssh key info
+    foreach my $pubKeyFile ( glob "/etc/ssh/ssh_host_*.pub" ) {
 #HostKey /etc/ssh/ssh_host_rsa_key
 #HostKey /etc/ssh/ssh_host_dsa_key
 #HostKey /etc/ssh/ssh_host_ecdsa_key
 #HostKey /etc/ssh/ssh_host_ed25519_key
-    foreach my $pubKeyFile ( glob "/etc/ssh/ssh_host_*.pub" ) {
         my $shortPubKeyFile = $pubKeyFile;
         $shortPubKeyFile =~ s!^(.*/)!!;
 
         my $pubKey = UBOS::Utils::slurpFile( $pubKeyFile );
         UBOS::Utils::saveFile( "$target/$sshDir/$shortPubKeyFile", $pubKey );
     }
+
+    # Add networking info
+    my $deviceClass = UBOS::Host::deviceClass();
+    my $nics        = UBOS::Host::nics();
+    my $deviceJson  = {
+        'arch'        => UBOS::Utils::arch(),
+        'hostid'      => $keyFingerprint,
+    };
+    if( $deviceClass ) {
+        $deviceJson->{deviceclass} = $deviceClass;
+    }
+    foreach my $nic ( keys %$nics ) {
+        $deviceJson->{nics}->{$nic}->{ipv4address} = [ UBOS::Host::ipAddressesOnNic( $nic ) ];
+        $deviceJson->{nics}->{$nic}->{macaddress}  = UBOS::Host::macAddressOfNic( $nic );
+        foreach my $entry ( qw( type operational )) { # not all entries
+            $deviceJson->{nics}->{$nic}->{$entry} = $nics->{$nic}->{$entry};
+        }
+    }
+
+    UBOS::Utils::writeJsonToFile( "$target/$infoDir/device.json", $deviceJson );
 
     return 0;
 }
