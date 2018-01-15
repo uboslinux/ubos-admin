@@ -439,14 +439,15 @@ sub _deploySiteTemplates {
 
         my @templateFiles = ();
         foreach my $templateDir (
-                "$target/shepherd/site-templates",
+                "$target/site-templates",
                 "$target/flock/$keyFingerprint/site-templates" )
                         # The host-specific templates overwrite the general ones
         {
             if( -d $templateDir ) {
                 if( opendir( DIR, "$templateDir" )) {
                     while( my $entry = readdir DIR ) {
-                        if( $entry ne '.' && $entry ne '..' && $entry =~ m!\.json$! ) {
+                        if( $entry !~ m!^\.! && $entry =~ m!\.json$! ) {
+                            # ignore files that start with . (like ., .., and MacOS resource files)
                             push @templateFiles, "$templateDir/$entry";
                         }
                     }
@@ -459,6 +460,8 @@ sub _deploySiteTemplates {
 
         my @sitesFromTemplates = (); # Some may be already deployed, we skip those
         foreach my $templateFile ( @templateFiles ) {
+
+            trace( 'Reading template file:', $templateFile );
             my $json = readJsonFromFile( $templateFile );
             if( $json ) { 
                 my $newSite = UBOS::Site->new( $json, 1 );
@@ -738,7 +741,7 @@ sub setupUpdateShepherd {
             UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
         }
 
-        if( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
+        unless( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
 shepherd ALL = NOPASSWD: \
     /usr/bin/journalctl *, \
     /usr/bin/mkdir *, \
