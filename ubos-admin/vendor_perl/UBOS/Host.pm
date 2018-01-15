@@ -767,10 +767,16 @@ sub ensureSnapperConfig {
                 }
             }
         }
+
         my $err;
-        debugAndSuspend( 'Execute snapper setup-quota' );
-        if( myexec( 'snapper setup-quota', undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
-            error( 'snapper setup-quota failed:', $err );
+        debugAndSuspend( 'Detect virtualization' );
+        unless( myexec( 'systemd-detect-virt', undef, \$err, \$err )) {
+            # Don't do this in a container
+
+            debugAndSuspend( 'Execute snapper setup-quota' );
+            if( myexec( 'snapper setup-quota', undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
+                error( 'snapper setup-quota failed:', $err );
+            }
         }
     }
     1;
