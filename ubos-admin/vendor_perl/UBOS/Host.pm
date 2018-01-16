@@ -770,7 +770,7 @@ sub ensureSnapperConfig {
 
         my $err;
         debugAndSuspend( 'Detect virtualization' );
-        unless( myexec( 'systemd-detect-virt', undef, \$err, \$err )) {
+        if( myexec( 'systemd-detect-virt', undef, \$err, \$err )) {
             # Don't do this in a container
 
             debugAndSuspend( 'Execute snapper setup-quota' );
