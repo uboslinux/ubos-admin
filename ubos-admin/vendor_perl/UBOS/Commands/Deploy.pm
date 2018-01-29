@@ -232,7 +232,7 @@ sub run {
 
             my $appPackage = $newAppConfig->app()->packageName();
             foreach my $acc ( $newAppConfig->accessories() ) {
-                if( $appPackage ne $acc->belongsToApp() ) {
+                if( !$acc->canBeUsedWithApp( $appPackage ) ) {
                     fatal( 'Accessory', $acc->packageName(), 'cannot be used in appconfig', $newAppConfig->appConfigId(), 'as it does not belong to app', $appPackage );
                 }
             }

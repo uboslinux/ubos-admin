@@ -63,13 +63,37 @@ sub _createHierarchicalMapAtAppconfigVars {
 }
 
 ##
-# Obtain the app that this accessory belongs to
-# return: the package name of the app
-sub belongsToApp {
+# Obtain the app or apps that this accessory can be used with
+sub getApps {
     my $self = shift;
 
+    if( exists( $self->{json}->{accessoryinfo}->{appid} )) {
+        return [ $self->{json}->{accessoryinfo}->{appid} ];
+    } else {
+        return @{$self->{json}->{accessoryinfo}->{appids}};
+    }
+}
+
+##
+# Determine whether this accessory can be used with the given app
+# $app: the candidate app
+# return: 1 if it can
+sub canBeUsedWithApp {
+    my $self = shift;
+    my $app  = shift;
+
     # always there
-    return $self->{json}->{accessoryinfo}->{appid};
+
+    if( exists( $self->{json}->{accessoryinfo}->{appid} )) {
+        return $app eq $self->{json}->{accessoryinfo}->{appid};
+    } else {
+        foreach my $id ( @{$self->{json}->{accessoryinfo}->{appids}} ) {
+            if( $app eq $id ) {
+                return 1;
+            }
+        }
+        return 0;
+    }
 }
 
 ##
@@ -102,11 +126,24 @@ sub checkManifestAccessoryInfo {
     unless( ref( $json->{accessoryinfo} ) eq 'HASH' ) {
         $self->myFatal( "accessoryinfo is not a HASH" );
     }
-    unless( defined( $json->{accessoryinfo}->{appid} )) {
+    if( exists( $json->{accessoryinfo}->{appid} )) {
+        if( !$json->{accessoryinfo}->{appid} || ref( $json->{accessoryinfo}->{appid} ) ) {
+            $self->myFatal( "accessoryinfo section: appid must be a valid package name" );
+        }
+    } elsif( exists( $json->{accessoryinfo}->{appids} )) {
+        if( ref( $json->{accessoryinfo}->{appids} ) ne 'ARRAY' ) {
+            $self->myFatal( "accessoryinfo section: appids must be an array" );
+        } elsif( @{$json->{accessoryinfo}->{appids}} == 0 ) {
+            $self->myFatal( "accessoryinfo section: appids must contain at least one app" );
+        } else {
+            foreach my $id ( @{$json->{accessoryinfo}->{appids}} ) {
+                if( !$id || ref( $id ) ) {
+                    $self->myFatal( "accessoryinfo section: members of appids must be valid package names" );
+                }
+            }
+        }
+    } else {
         $self->myFatal( "accessoryinfo section: no appid given" );
-    }
-    if( ref( $json->{accessoryinfo}->{appid} ) || !$json->{accessoryinfo}->{appid} ) {
-        $self->myFatal( "accessoryinfo section: appid must be a valid package name" );
     }
     if( exists( $json->{accessoryinfo}->{accessoryid} ) && ref( $json->{accessoryinfo}->{accessoryid} )) {
         $self->myFatal( "accessoryinfo section: accessoryid, if provided, must be a string" );

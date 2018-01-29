@@ -428,7 +428,7 @@ sub run {
         }
 
         foreach my $acc ( values %accs ) {
-            if( $appId ne $acc->belongsToApp() ) {
+            if( !$acc->canBeUsedWithApp( $appId ) ) {
                 fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
             }
         }
