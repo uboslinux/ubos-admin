@@ -380,7 +380,7 @@ CONTENT
             if( $context ) {
                 $siteFileContent .= <<CONTENT;
 
-    RedirectMatch seeother ^/\$ $context/
+    RedirectMatch 307 ^/\$ $context/
 CONTENT
                 last;
             }
