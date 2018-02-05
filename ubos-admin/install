@@ -30,6 +30,7 @@ post_install() {
     systemd-sysusers
     [[ -f /var/shepherd ]] || mkdir -m755 /var/shepherd
     chown $(id -u shepherd):$(id -g shepherd) /var/shepherd
+    chsh -s /bin/bash shepherd
 
     perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
 }
