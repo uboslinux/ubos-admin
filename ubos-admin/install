@@ -39,6 +39,9 @@ post_install() {
 ## arg 2: the old package version
 post_upgrade() {
     systemd-sysusers
+    [[ -f /var/shepherd ]] || mkdir -m755 /var/shepherd
+    chown shepherd:shepherd /var/shepherd
+    chsh -s /bin/bash shepherd
 
     ensureChattr
 
