@@ -39,8 +39,8 @@ sub performBootActions {
 
     my $device = guessStaffDevice();
 
-    my $target = undef;
-    my $init   = 0;
+    my $target             = undef;
+    my $genKeyPairIfNeeded = 0;
     if( $device ) {
         trace( 'Staff device:', $device );
 
@@ -48,20 +48,20 @@ sub performBootActions {
             error( 'Failed to mount:', $device, $target );
             return;
         }
-        $init = 1;
+        $genKeyPairIfNeeded = 1;
 
     } else {
         # container/cloud case
         if( -d "/$LABEL" ) {
             $target = "/$LABEL";
-            # don't init
+            # don't genKeyPairIfNeeded
         } else {
             trace( 'No staff device found' );
             return;
         }
     }
 
-    if( $init && UBOS::Host::vars()->get( 'host.initializestaffonboot', 1 )) {
+    if( $genKeyPairIfNeeded && UBOS::Host::vars()->get( 'host.initializestaffonboot', 1 )) {
         if( _generateShepherdKeyPair( $target )) {
             error( 'Generation of shepherd key pair on staff device failed:', $device, $target );
         }
@@ -372,7 +372,7 @@ sub loadCurrentConfiguration {
     trace( 'StaffManager::loadCurrentConfiguration', $target );
 
     my $errors = 0;
-    
+
     $errors += _loadCurrentSshConfiguration( $target );
     $errors += _loadCurrentWiFiConfiguration( $target );
     $errors += _deploySiteTemplates( $target );
@@ -386,8 +386,11 @@ sub loadCurrentConfiguration {
 # return: number of errors
 sub _loadCurrentSshConfiguration {
     my $target =shift;
-    
+
     if( -e "$target/shepherd/ssh/id_rsa.pub" ) {
+
+        trace( 'StaffManager::_loadCurrentSshConfiguration', $target );
+
         my $sshKey = UBOS::Utils::slurpFile( "$target/shepherd/ssh/id_rsa.pub" );
         $sshKey =~ s!^\s+!!;
         $sshKey =~ s!\s+$!!;
@@ -408,6 +411,9 @@ sub _loadCurrentWiFiConfiguration {
 
     my $errors = 0;
     if( -d "$target/wifi" ) {
+
+        trace( 'StaffManager::_loadCurrentWiFiConfiguration', $target );
+
         my $out;
         if( UBOS::Utils::myexec( "pacman -Qi wpa_supplicant", undef, \$out, \$out )) {
             error( 'Cannot provision WiFi from staff device: package wpa_supplicant is not installed' );
@@ -468,6 +474,8 @@ sub _deploySiteTemplates {
 
     if( UBOS::Host::vars()->get( 'host.deploysitetemplatesonboot', 1 )) {
         my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
+
+        trace( 'StaffManager::_deploySiteTemplates', $target );
 
         my @templateFiles = ();
         foreach my $templateDir (
@@ -757,6 +765,9 @@ sub setupUpdateShepherd {
     my @keys = @_;
 
     if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', '/var/shepherd' )) {
+
+        trace( 'StaffManager::setupUpdateShepherd', $add, @keys );
+
         my $authKeyFile = '/var/shepherd/.ssh/authorized_keys';
         unless( -d '/var/shepherd/.ssh' ) {
             UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
