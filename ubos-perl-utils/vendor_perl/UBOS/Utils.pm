@@ -1137,6 +1137,36 @@ sub deviceClass {
 }
 
 ##
+# Determine whether the provided string represents an IPv4 address
+# $candidate: the candidate IP address
+# return: 0 or 1
+sub isIpv4Address {
+    my $candidate = shift;
+
+    if( $candidate =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##
+# Determine whether the provided string represents an IPv6 address.
+# This is not a very strict check, but it is enough to tell IPv6 from
+# IPv4 addresses.
+# $candidate: the candidate IP address
+# return: 0 or 1
+sub isIpv6Address {
+    my $candidate = shift;
+
+    if( $candidate =~ m!^[0-9a-fA-F:]+$! ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##
 # Check the provided directories for dangling symlinks, and if any exist, remove them.
 # @dirs: the directories to check
 # return: the number of removed symlinks
