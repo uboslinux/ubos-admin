@@ -668,10 +668,12 @@ sub restoreSites {
 
     info( 'Running upgraders' );
 
-    foreach my $newAppConfigId ( sort keys %appConfigIdTranslation ) {
-        my $newAppConfig = UBOS::Host::findAppConfigurationById( $newAppConfigId );
-        debugAndSuspend( 'Run upgraders for appconfig', $newAppConfig->appConfigId );
-        $ret &= $newAppConfig->runUpgraders();
+    foreach my $newSiteId ( keys %siteIdsToAppConfigIds ) {
+        foreach my $newAppConfigId ( @{$siteIdsToAppConfigIds{$newSiteId}} ) {
+            my $newAppConfig = UBOS::Host::findAppConfigurationById( $newAppConfigId );
+            debugAndSuspend( 'Run upgraders for appconfig', $newAppConfig->appConfigId );
+            $ret &= $newAppConfig->runUpgraders();
+        }
     }
 
     if( $showIds ) {

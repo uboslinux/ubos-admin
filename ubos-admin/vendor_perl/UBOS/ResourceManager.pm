@@ -298,8 +298,6 @@ sub _constructKey {
     my $ret = $appConfigId . '_' . $installableId . '_' . $itemType . '_' . $itemName;
     # Note: for historical reasons, this is a different sequence than the sequence of arguments.
 
-    trace( 'ResourceManager::_constructKey returns', $ret );
-
     return $ret;
 }
 
