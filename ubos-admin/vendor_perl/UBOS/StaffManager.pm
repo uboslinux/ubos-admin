@@ -216,7 +216,9 @@ sub saveCurrentConfiguration {
         $deviceJson->{deviceclass} = $deviceClass;
     }
     foreach my $nic ( keys %$nics ) {
-        $deviceJson->{nics}->{$nic}->{ipv4address} = [ UBOS::Host::ipAddressesOnNic( $nic ) ];
+        my @allIp = UBOS::Host::ipAddressesOnNic( $nic );
+        $deviceJson->{nics}->{$nic}->{ipv4address} = [ grep { UBOS::Utils::isIpv4Address( $_ ) } @allIp ];
+        $deviceJson->{nics}->{$nic}->{ipv6address} = [ grep { UBOS::Utils::isIpv6Address( $_ ) } @allIp ];
         $deviceJson->{nics}->{$nic}->{macaddress}  = UBOS::Host::macAddressOfNic( $nic );
         foreach my $entry ( qw( type operational )) { # not all entries
             $deviceJson->{nics}->{$nic}->{$entry} = $nics->{$nic}->{$entry};
