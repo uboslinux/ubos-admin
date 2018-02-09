@@ -125,7 +125,7 @@ END
         if( defined( $self->{additionalkernelparameters} ) && @{$self->{additionalkernelparameters}} ) {
             my $addParString = '';
             map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
-            $addParString =~ s!(["'/])!\$1!g; # escape quotes and slash
+            $addParString =~ s!(["'])!\\$1!g; # escape quotes
 
             $chrootScript .= <<END;
 perl -pi -e 's,GRUB_CMDLINE_LINUX_DEFAULT="(.*)",GRUB_CMDLINE_LINUX_DEFAULT="\$1$addParString",' /etc/default/grub

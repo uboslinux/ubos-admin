@@ -71,10 +71,6 @@ sub createDiskLayout {
     my $noswap = shift;
     my $argvp = shift;
 
-    if( 'gpt' eq $self->{partitioningscheme} ) {
-        fatal( 'Partitioning scheme GPT is not supported for deviceclass', $self->deviceClass );
-    }
-
     # Option 1: a single image file
     # ubos-install ... image.img
 
@@ -164,23 +160,14 @@ sub installBootLoader {
     my $diskLayout       = shift;
 
     my $errors = 0;
-    if( $self->{partitioningscheme} eq 'mbr' ) {
-        $errors += $self->installGrub(
-                $pacmanConfigFile,
-                $diskLayout,
-                {
-                    'target'         => 'i386-pc',
-                    'boot-directory' => $self->{target} . '/boot'
-                } );
+    $errors += $self->installGrub(
+            $pacmanConfigFile,
+            $diskLayout,
+            {
+                'target'         => 'i386-pc',
+                'boot-directory' => $self->{target} . '/boot'
+            } );
 
-    } elsif( $self->{partitioningscheme} eq 'gpt' ) {
-        $errors += $self->installSystemdBoot(
-                $pacmanConfigFile,
-                $diskLayout );
-
-    } else {
-        fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );
-    }
     return $errors;
 
 }

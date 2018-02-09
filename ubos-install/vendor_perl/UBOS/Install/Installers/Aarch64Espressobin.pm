@@ -63,17 +63,13 @@ sub createDiskLayout {
     my $noswap = shift;
     my $argvp = shift;
 
-    if( 'gpt' eq $self->{partitioningscheme} ) {
-        fatal( 'Partitioning scheme GPT is not supported on this platform' );
-    }
-
     # Option 1: a single image file
     # ubos-install ... image.img
 
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
-    # Option 3: a directory
+    # Option 3: a directory (invalid)
 
     my $bootloaderdevice;
     my @rootpartitions;
@@ -94,22 +90,8 @@ sub createDiskLayout {
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
         # Option 3
-        if( $noswap ) {
-            error( 'Invalid invocation: --noswap cannot be used if installing to a directory' );
-            $ret = undef;
-        } elsif( $bootloaderdevice || @rootpartitions || @varpartitions || @$argvp ) {
-            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
-            $ret = undef;
-        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
-            error( 'Invalid invocation: directory must exist and be empty:', $directory );
-            $ret = undef;
-        } elsif( $self->{target} ) {
-            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
-            $ret = undef;
-        } else {
-            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
-            $self->setTarget( $directory );
-        }
+        error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
+        $ret = undef;
 
     } else {
         # Option 1 or 2

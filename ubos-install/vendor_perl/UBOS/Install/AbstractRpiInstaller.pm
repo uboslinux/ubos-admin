@@ -68,10 +68,6 @@ sub createDiskLayout {
     my $noswap = shift;
     my $argvp = shift;
 
-    if( 'gpt' eq $self->{partitioningscheme} ) {
-        fatal( 'Partitioning scheme GPT is not supported for deviceclass', $self->deviceClass );
-    }
-
     # Option 1: a single image file
     # ubos-install ... image.img
 
@@ -84,7 +80,7 @@ sub createDiskLayout {
     # Option 4: a boot partition device, one or more root partition devices, one or more var partition devices
     # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
 
-    # Option 5: a directory
+    # Option 5: a directory (invalid)
 
     my $bootpartition;
     my @rootpartitions;
@@ -104,23 +100,9 @@ sub createDiskLayout {
 
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
-        # Option 5
-        if( $noswap ) {
-            error( 'Invalid invocation: --noswap cannot be used if installing to a directory' );
-            $ret = undef;
-        } elsif( $bootpartition || @rootpartitions || @varpartitions || @$argvp ) {
-            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
-            $ret = undef;
-        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
-            error( 'Invalid invocation: directory must exist and be empty:', $directory );
-            $ret = undef;
-        } elsif( $self->{target} ) {
-            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
-            $ret = undef;
-        } else {
-            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
-            $self->setTarget( $directory );
-        }
+        # Option 5 (invalid)
+        error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
+        $ret = undef;
 
     } elsif( $bootpartition || @rootpartitions || @varpartitions ) {
         # Option 3 or 4

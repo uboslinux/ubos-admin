@@ -252,22 +252,6 @@ sub setCheckSignatures {
 }
 
 ##
-# Use MBR instead of deviceclass-specific default.
-sub setUseMbr {
-    my $self = shift;
-
-    $self->{partitioningscheme} = 'mbr';
-}
-
-##
-# Use GPT instead of deviceclass-specific default.
-sub setUseGpt {
-    my $self = shift;
-
-    $self->{partitioningscheme} = 'gpt';
-}
-
-##
 # Install UBOS
 # $diskLayout: the disk layout to use
 sub install {

@@ -86,7 +86,7 @@ sub createDiskLayout {
     #                  --varpartition /dev/sda3 --varpartition /dev/sdb3
     #                  --swappartition /dev/sda4 --swappartition /dev/sdb4
 
-    # Option 4: a directory
+    # Option 4: a directory (invalid)
 
     my $bootloaderdevice;
     my $bootpartition;
@@ -110,34 +110,19 @@ sub createDiskLayout {
 
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
-        # Option 4
-        if( $noswap ) {
-            error( 'Invalid invocation: --noswap cannot be used if installing to a directory' );
-            $ret = undef;
-        } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions || @$argvp ) {
-            error( 'Invalid invocation: if --directory is given, do not provide other partitions or devices' );
-            $ret = undef;
-        } elsif( !-d $directory || ! UBOS::Utils::isDirEmpty( $directory )) {
-            error( 'Invalid invocation: directory must exist and be empty:', $directory );
-            $ret = undef;
-        } elsif( $self->{target} ) {
-            error( 'Invalid invocation: do not specify --target when providing --directory:', $directory );
-            $ret = undef;
-        } else {
-            $ret = UBOS::Install::DiskLayouts::Directory->new( $directory );
-            $self->setTarget( $directory );
-        }
+        # Option 4 (invalid)
+        error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
+        $ret = undef;
 
     } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions ) {
         # Option 3
+        $self->{partitioningscheme} = 'mbr';
+
         if( $noswap ) {
             error( 'Invalid invocation: --noswap cannot be used if specifying partitions' );
             $ret = undef;
         }
-        if( $ret && 'gpt' eq $self->{partitioningscheme} ) {
-            error( 'Partitioning scheme GPT is not yet supported for this configuration' );
-            $ret = undef;
-        }
+
         if( $ret && @$argvp ) {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
             $ret = undef;
@@ -235,8 +220,16 @@ sub createDiskLayout {
                     if( 'gpt' eq $self->{partitioningscheme} ) {
                         $ret = UBOS::Install::DiskLayouts::GptDiskImage->new(
                                 $first,
-                                {   '/boot' => {
+                                {
+                                    '/mbr' => {
                                         'index'       => 1,
+                                        'size'        => '1M',
+                                        'gptparttype' => 'EF02',
+                                        'label'       => 'BIOS boot'
+                                        # no filesystem, do not mount
+                                    },
+                                    '/boot' => {
+                                        'index'       => 2,
                                         'fs'          => 'vfat',
                                         'size'        => '500M',
                                         'mkfsflags'   => '-F32',
@@ -244,7 +237,7 @@ sub createDiskLayout {
                                         'label'       => 'UBOS boot'
                                     },
                                     '/' => {
-                                        'index' => 2,
+                                        'index' => 3,
                                         'fs'    => 'btrfs',
                                         'label' => 'UBOS root'
                                         # default partition type
@@ -290,16 +283,23 @@ sub createDiskLayout {
                 if( $ret ) {
                     if( 'gpt' eq $self->{partitioningscheme} ) {
                         my $deviceTable = {
+                            '/mbr' => {
+                                 'index'       => 1,
+                                 'size'        => '1M',
+                                 'gptparttype' => 'EF02',
+                                 'label'       => 'BIOS boot'
+                                 # no filesystem, do not mount
+                            },
                             '/boot' => {
-                                'index'   => 1,
-                                'fs'      => 'vfat',
-                                'size'    => '500M',
+                                'index'       => 2,
+                                'fs'          => 'vfat',
+                                'size'        => '500M',
                                 'mkfsflags'   => '-F32',
                                 'gptparttype' => 'EF00',
                                 'label'       => 'UBOS boot'
                             },
                             '/' => {
-                                'index' => $noswap ? 2 : 3,
+                                'index' => $noswap ? 3 : 4,
                                 'fs'    => 'btrfs',
                                 'label' => 'UBOS root'
                                 # default partition type
@@ -307,7 +307,7 @@ sub createDiskLayout {
                         };
                         unless( $noswap ) {
                             $deviceTable->{swap} = {
-                                'index'       => 2,
+                                'index'       => 3,
                                 'fs'          => 'swap',
                                 'size'        => '4G',
                                 'mbrparttype' => '82',
@@ -373,23 +373,19 @@ sub installBootLoader {
     my $diskLayout       = shift;
 
     my $errors = 0;
-    if( $self->{partitioningscheme} eq 'mbr' ) {
-        $errors += $self->installGrub(
-                $pacmanConfigFile,
-                $diskLayout,
-                {
-                    'target'         => 'i386-pc',
-                    'boot-directory' => $self->{target} . '/boot'
-                } );
 
-    } elsif( $self->{partitioningscheme} eq 'gpt' ) {
-        $errors += $self->installSystemdBoot(
-                $pacmanConfigFile,
-                $diskLayout );
+    $errors += $self->installGrub(
+            $pacmanConfigFile,
+            $diskLayout,
+            {
+                'target'         => 'i386-pc',
+                'boot-directory' => $self->{target} . '/boot'
+            } );
 
-    } else {
-        fatal( 'Unknown partitioningscheme:', $self->{partitioningscheme} );
-    }
+    $errors += $self->installSystemdBoot(
+            $pacmanConfigFile,
+            $diskLayout );
+
     return $errors;
 }
 
