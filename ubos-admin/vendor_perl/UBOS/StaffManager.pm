@@ -420,12 +420,12 @@ sub _loadCurrentWiFiConfiguration {
             ++$errors;
 
         } else {
-            my $confs    = UBOS::Utils::readFilesInDirectory( "$target/wifi", '*.conf' );
+            my $confs    = UBOS::Utils::readFilesInDirectory( "$target/wifi", '^[^\.].*\.conf$' );
             my $wlanNics = UBOS::Host::wlanNics();
 
             if(( keys %$confs ) && ( keys %$wlanNics )) {
-                unless( -d "$target/etc/wpa_supplicant" ) {
-                    unless( UBOS::Utils::mkdir( "$target/etc/wpa_supplicant" )) {
+                unless( -d '/etc/wpa_supplicant' ) {
+                    unless( UBOS::Utils::mkdir( '$target/etc/wpa_supplicant' )) {
                         ++$errors;
                     }
                 }
@@ -437,7 +437,7 @@ fast_reauth=1
 CONTENT
                 $content .= join( "\n", map { "network={\n" . $_ . "}\n" } values %$confs );
                 foreach my $nic ( keys %$wlanNics ) {
-                    unless( UBOS::Utils::saveFile( "$target/etc/wpa_supplicant-$nic.conf", $content )) {
+                    unless( UBOS::Utils::saveFile( "/etc/wpa_supplicant/wpa_supplicant-$nic.conf", $content )) {
                         ++$errors;
                     }
 
@@ -518,6 +518,10 @@ sub _deploySiteTemplates {
         }
         if( $errors ) {
             return $errors;
+        }
+
+        unless( @sitesFromTemplates ) {
+            return 0; # nothing to do
         }
 
         my $oldSites = UBOS::Host::sites();
