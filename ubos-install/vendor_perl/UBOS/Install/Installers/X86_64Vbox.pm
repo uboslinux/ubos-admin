@@ -150,10 +150,6 @@ sub installBootLoader {
                 'boot-directory' => $self->{target} . '/boot'
             } );
 
-    $errors += $self->installSystemdBoot(
-            $pacmanConfigFile,
-            $diskLayout );
-
     return $errors;
 }
 
