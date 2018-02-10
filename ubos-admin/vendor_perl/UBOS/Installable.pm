@@ -16,6 +16,7 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils qw( readJsonFromFile );
 use JSON;
+use MIME::Base64;
 
 ##
 # The known customization point types, validation routines, and error messages.
