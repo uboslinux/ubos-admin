@@ -354,7 +354,7 @@ sub _generateShepherdKeyPair {
 
         my $out;
         my $err;
-        if( UBOS::Utils::myexec( "ssh-keygen -N '' -f '$target/shepherd/ssh/id_rsa'", undef, \$out, \$err )) {
+        if( UBOS::Utils::myexec( "ssh-keygen -C 'UBOS shepherd' -N '' -f '$target/shepherd/ssh/id_rsa'", undef, \$out, \$err )) {
             error( 'SSH key generation failed:', $out, $err );
             $errors += 1;
         }
