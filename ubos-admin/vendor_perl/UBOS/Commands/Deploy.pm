@@ -63,9 +63,14 @@ sub run {
             }
             $json = UBOS::Utils::insertSlurpedFiles( $json, dirname( $file ) );
             if( ref( $json ) eq 'ARRAY' ) {
+                # Several site JSONs in an array
                 push @jsons, @$json;
-            } else {
+            } elsif( exists( $json->{hostname} )) {
+                # Single site JSON
                 push @jsons, $json;
+            } else {
+                # Several site JSONs in a hash as produced by listsites --json
+                push @jsons, values %$json;
             }
         }
     } else {
@@ -75,9 +80,14 @@ sub run {
         }
         $json = UBOS::Utils::insertSlurpedFiles( $json, getcwd() );
         if( ref( $json ) eq 'ARRAY' ) {
+            # Several site JSONs in an array
             push @jsons, @$json;
-        } else {
+        } elsif( exists( $json->{hostname} )) {
+            # Single site JSON
             push @jsons, $json;
+        } else {
+            # Several site JSONs in a hash as produced by listsites --json
+            push @jsons, values %$json;
         }
     }
 
@@ -124,7 +134,7 @@ sub run {
 
             # site is being redeployed
             if( $newSiteHostName eq '*' ) {
-                if( keys %$oldSites > 1 ) {
+                if(( grep { !$_->isTor() } values %$oldSites ) > 1 ) {
                     fatal( "You can only redeploy a site with hostname * (any) if no other sites exist." );
                 }
 
