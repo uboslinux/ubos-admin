@@ -664,8 +664,9 @@ sub checkCustomizationPointValues {
                         unless( $ok ) {
                             $@ = 'AppConfiguration ' . $self->appConfigId
                                    . ', package ' . $packageName
-                                   . ', ' . $custPointValidation->{valuecheckerror} . ': ' . $custPointName
-                                   . ', is ' . ( ref( $value ) || $value );
+                                   . ': value for ' . $custPointName
+                                   . ': ' . $custPointValidation->{valuecheckerror}
+                                   . ', is: ' . ( ref( $value ) || $value );
                             return 0;
                         }
 
@@ -673,8 +674,9 @@ sub checkCustomizationPointValues {
                             unless( $value =~ $custPointDef->{regex} ) {
                                 $@ = 'AppConfiguration ' . $self->appConfigId
                                        . ', package ' . $packageName
-                                       . ', invalid value, regex is ' . $custPointDef->{regex} . ': ' . $custPointName
-                                       . ', is ' . ( ref( $value ) || $value );
+                                       . ': value for ' . $custPointName
+                                       .  ' must match regex ' . $custPointDef->{regex}
+                                       . ', is: ' . ( ref( $value ) || $value );
                                 return 0;
                             }
                         }
@@ -691,7 +693,7 @@ sub checkCustomizationPointValues {
                     unless( defined( $value )) {
                         $@ = 'AppConfiguration ' . $self->appConfigId
                                . ', package ' . $packageName
-                               . ', required value not provided for customizationpoint: ' .  $custPointName;
+                               . ': customizationpoint requires a value: ' .  $custPointName;
                         return 0;
                     }
                 }

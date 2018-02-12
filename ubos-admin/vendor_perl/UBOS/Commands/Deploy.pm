@@ -238,7 +238,9 @@ sub run {
                 $contexts{$context} = $newAppConfig;
             }
 
-            $newAppConfig->checkCustomizationPointValues();
+            unless( $newAppConfig->checkCustomizationPointValues()) {
+                fatal( $@ );
+            }
 
             my $appPackage = $newAppConfig->app()->packageName();
             foreach my $acc ( $newAppConfig->accessories() ) {

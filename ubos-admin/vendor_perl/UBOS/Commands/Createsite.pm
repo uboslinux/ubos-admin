@@ -537,7 +537,9 @@ sub run {
         }
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
-            $newAppConfig->checkCustomizationPointValues();
+            unless( $newAppConfig->checkCustomizationPointValues()) {
+                fatal( $@ );
+            }
         }
 
         $newSite->checkDeployable();
@@ -638,7 +640,9 @@ sub ask {
             print "\n";
         }
         if( defined( $ret )) { # apparently ^D becomes undef
-            unless( $dontTrim ) {
+            if( $dontTrim ) { # just remove trailing \n
+                $ret =~ s!\n$!!;
+            } else {
                 $ret =~ s!\s+$!!;
                 $ret =~ s!^\s+!!;
             }

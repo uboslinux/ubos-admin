@@ -30,9 +30,7 @@ our $knownCustomizationPointTypes = {
             my $custPointJson = shift;
 
             my $ok = !ref( $v ) && $v !~ /\n/;
-            if( defined( $custPointJson->{regex} )) {
-                $ok &= ( $v =~ $custPointJson->{regex} );
-            }
+            # Don't check regex here: error reporting becomes difficult
             return ( $ok, $v );
         },
         'valuecheckerror' => 'string value without newlines required',
