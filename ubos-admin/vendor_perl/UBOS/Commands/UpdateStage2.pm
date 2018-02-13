@@ -130,6 +130,9 @@ sub finishUpdate {
     debugAndSuspend( 'Purge cache' );
     UBOS::Host::purgeCache( 1 );
 
+    trace( 'Removing obsolete packages' );
+    UBOS::Utils::myexec( 'pacman -R --noconfirm ubos-networking' );
+
     if( defined( $snapNumber ) && UBOS::Host::vars()->get( 'host.snapshotonupgrade', 0 )) {
         debugAndSuspend( 'Create filesystem snapshot' );
          UBOS::Host::postSnapshot( $snapNumber );
