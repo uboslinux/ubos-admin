@@ -498,7 +498,11 @@ sub _deploySiteTemplates {
             }
         }
 
-        my @sitesFromTemplates = (); # Some may be already deployed, we skip those
+        my @sitesFromTemplates = (); # Some may be already deployed, we skip those. Identify by hostname
+        my $existingSites      = UBOS::Host::sites();
+        my $existingHosts      = {};
+        map { $existingHosts->{$_->hostname()} = 1 } values %$existingSites;
+
         foreach my $templateFile ( @templateFiles ) {
 
             trace( 'Reading template file:', $templateFile );
@@ -506,12 +510,14 @@ sub _deploySiteTemplates {
             if( $json ) { 
                 my $newSite = UBOS::Site->new( $json, 1 );
 
-                if( $newSite ) {
-                    push @sitesFromTemplates, $newSite;
-                } else {
+                if( !$newSite ) {
                     error( 'Failed to create site from:', $templateFile );
                     ++$errors;
-                }
+
+                } elsif( !exists( $existingHosts->{$newSite->hostname()} )) {
+                    push @sitesFromTemplates, $newSite;
+
+                } # else skip, we have it already
             } else {
                 ++$errors;
             }
