@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.253
+pkgver=0.254
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -108,13 +108,16 @@ package() {
 # Tomcat
     mkdir -p -m775 ${pkgdir}/etc/tomcat8
     mkdir -p -m755 ${pkgdir}/etc/tomcat8/ubos/sites-apps
+    mkdir -p -m755 ${pkgdir}/etc/tomcat8/Catalina/__wildcard
     install -D -m644 ${startdir}/etc/tomcat8/server-ubos.xml.tmpl -t ${pkgdir}/etc/tomcat8/
     mkdir -p -m775 ${pkgdir}/var/lib/tomcat8
     mkdir -p -m755 ${pkgdir}/var/lib/tomcat8/sites
 
 # Avahi
-    install -D -m 644 ${startdir}/avahi/{http,https}.service -t ${pkgdir}/etc/avahi/services/
-    install -D -m 644 ${startdir}/avahi/systemd/*.service -t ${pkgdir}/etc/systemd/system/
+    # FIXME: remove tmp when no more ubos-networking
+    install -D -m 644 ${startdir}/avahi/http.service -t ${pkgdir}/etc/avahi/services/http-tmp.service
+    install -D -m 644 ${startdir}/avahi/https.service -t ${pkgdir}/etc/avahi/services/https-tmp.service
+    install -D -m 644 ${startdir}/avahi/systemd/*.service -t ${pkgdir}/usr/lib/systemd/system/
 
 # Mysql
     # Our mysql-ubos.service runs the mysql initialization as user mysql:mysql, and thus cannot
