@@ -197,7 +197,7 @@ sub findSiteByPartialId {
 
         } elsif( @candidates ) {
             $@ = "There is more than one site whose siteid starts with $partial:\n"
-               . join( "\n", map { $_->siteId } @candidates );
+               . join( '', map { $_->siteId . "\n" } @candidates );
             return undef;
 
         } else {
