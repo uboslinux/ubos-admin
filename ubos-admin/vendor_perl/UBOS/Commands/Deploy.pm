@@ -307,6 +307,7 @@ sub run {
 
             debugAndSuspend( 'Deploying site', $site->siteId() );
             $ret &= $site->deploy( $deployUndeployTriggers );
+
             debugAndSuspend( 'Restoring from UpdateBackup for site', $site->siteId() );
             $ret &= $backup->restoreSite( $site );
 
