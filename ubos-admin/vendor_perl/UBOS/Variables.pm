@@ -25,13 +25,9 @@ my $knownFunctions = {
     'randomPassword'   => \&UBOS::Utils::randomPassword
 };
 
-my $cache = {}; # cache previously generated Variables objects
-                # this allows Variables objects augmented "further down" (like in
-                # Database AppConfigurationItems) to be reused in later calls
-
 ##
 # Constructor.
-# $name: name for this Variables object. This is used as a cache keys and helps with debugging.
+# $name: name for this Variables object. This helps with debugging.
 # $hierarchicalMap: map of name to value (which may be another map)
 # @delegates: more objects holding Configuration objects which may be used to resolve unknown variables
 sub new {
@@ -40,10 +36,6 @@ sub new {
     my $hierarchicalMap = shift;
     my @delegates       = @_;
 
-    if( exists( $cache->{$name} )) {
-        return $cache->{$name};
-    }
-
     unless( ref $self ) {
         $self = fields::new( $self );
     }
@@ -51,8 +43,6 @@ sub new {
     $self->{hierarchicalMap} = $hierarchicalMap;
     $self->{flatMap}         = _flatten( $hierarchicalMap );
     $self->{delegates}       = \@delegates;
-
-    $cache->{$name} = $self;
 
     return $self;
 }
