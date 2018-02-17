@@ -327,23 +327,6 @@ sub needsRole {
 }
 
 ##
-# Before deploying, check whether this AppConfiguration would be deployable
-# If not, this invocation never returns
-sub checkDeployable {
-    my $self = shift;
-
-    $self->_deployOrCheck( 0 );
-}
-
-##
-# Deploy this AppConfiguration.
-sub deploy {
-    my $self = shift;
-
-    $self->_deployOrCheck( 1 );
-}
-
-##
 # Deploy this AppConfiguration, or just check whether it is deployable. Both functions
 # share the same code, so the checks get updated at the same time as the
 # actual deployment.
