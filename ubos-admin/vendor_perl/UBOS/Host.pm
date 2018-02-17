@@ -561,8 +561,14 @@ sub updateCode {
         } elsif( UBOS::Logging::isTraceActive() ) {
             print $out;
         }
-        if( $out && $out !~ m!warning.*reinstalling!i ) {
-            push @firstUpgraded, $pack;
+        if( $out ) {
+            if( $out !~ m!warning.*reinstalling!i ) {
+                push @firstUpgraded, $pack;
+            } elsif( $out =~ m!conflict.*Remove!i ) {
+                if( myexec( "yes y | pacman -S $pack || true", undef, \$out, \$out ) != 0 ) {
+                    error( 'Checking/upgrading package with conflict failed:', $pack, "\n$out" );
+                }
+            }
         }
     }
 
@@ -678,6 +684,15 @@ sub ensurePackages {
         debugAndSuspend( 'Execute pacman -S', @filteredPackageList );
         if( myexec( $cmd, undef, undef, \$err )) {
             $@ = 'Failed to install package(s). Pacman says: ' . $err;
+            if( $err =~ m!conflict.*Remove!i ) {
+                $cmd = 'yes y | pacman -S ' . join( ' ', @filteredPackageList );
+                unless( UBOS::Logging::isTraceActive() ) {
+                    $cmd .= ' > /dev/null';
+                }
+                if( myexec( $cmd, undef, undef, \$err )) {
+                    $@ = 'Failed to install package(s) with conflict. Pacman says: ' . $err;
+                }
+            }
             return -1;
         }
     }
