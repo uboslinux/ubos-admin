@@ -160,13 +160,13 @@ sub guessStaffDevice {
             next;
         }
         if( $ret ) {
-            $@ = 'More than one suitable partition found: ' . $ret . ' ' . $name;
+            $@ = 'More than one device found that is suitable as UBOS Staff: ' . $ret . ' ' . $name;
             return undef;
         }
         $ret = $name;
     }
     unless( $ret ) {
-        $@ = 'No suitable partition found.';
+        $@ = 'No device found that is suitable as a UBOS Staff.';
     }
 
     return $ret;
