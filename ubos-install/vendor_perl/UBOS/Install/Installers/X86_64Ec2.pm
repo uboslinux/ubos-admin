@@ -90,8 +90,7 @@ sub createDiskLayout {
                 error( 'Invalid invocation: --noswap cannot be used if installing to a file' );
                 $ret = undef;
             } else {
-                $ret = UBOS::Install::AbstractDiskImage::create(
-                        $self->{partitioningscheme},
+                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                         $first,
                         {   '/' => {
                                 'index' => 1,
@@ -115,12 +114,10 @@ sub createDiskLayout {
                     'fs'          => 'swap',
                     'size'        => '4G',
                     'mbrparttype' => '82',
-                    'gptparttype' => '8200',
-                    'label'       => 'swap'
+                    'gptparttype' => '8200'
                 };
             }
-            $ret = UBOS::Install::AbstractDiskBlockDevices::create(
-                    $self->{partitioningscheme},
+            $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
                     $argvp,
                     $deviceTable );
 
