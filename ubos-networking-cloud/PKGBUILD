@@ -1,12 +1,12 @@
 pkgname=$(basename $(pwd))
-pkgver=0.13
+pkgver=0.14
 pkgrel=1
 pkgdesc="UBOS Network management tools (cloud)"
 arch=('any')
 url="http://ubos.net/"
 developer=${url}
 maintainer=${url}
-license=('AGPL3')
+license=('PPL3')
 depends=('ubos-admin' 'cloud-init')
 options=('!strip')
 _vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")

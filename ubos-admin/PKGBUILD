@@ -2,11 +2,11 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.256
+pkgver=0.257
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
-license=('AGPL3')
+license=('PPL3')
 depends=(
     'apache'
     'avahi'
@@ -153,4 +153,7 @@ package() {
 
 # A directory to mount a UBOS staff to in a container
     mkdir -p -m 755 ${pkgdir}/UBOS-STAFF
+
+# License
+    install -D -m444 ${startdir}/LICENSE ${pkgdir}/usr/share/licenses/PPL3
 }
