@@ -50,7 +50,6 @@ sub new {
     $self->SUPER::new( @args );
 
     $self->{packagedbs}->{'virt'} = '$depotRoot/$channel/$arch/virt';
-    $self->{packagedbs}->{'ui'}   = '$depotRoot/$channel/$arch/ui'; # contains virt dependencies
 
     return $self;
 }
