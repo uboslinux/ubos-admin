@@ -199,7 +199,7 @@ sub run {
     if( $doReboot ) {
         my $afterBoot = 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( 0, ';
         if( defined( $snapNumber )) {
-            $afterBoot .= $snapNumber;
+            $afterBoot .= '"' . $snapNumber . '"';
         } else {
             $afterBoot .= 'undef';
         }
