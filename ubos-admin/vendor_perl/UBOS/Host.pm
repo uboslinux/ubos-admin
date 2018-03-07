@@ -1034,12 +1034,12 @@ sub runAfterBootCommandsIfNeeded {
                 my $out;
                 my $err;
                 if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
-                    error( "Problem when running after-boot commands. Bash command:\n" . $cmd . "\nout: " . $out . "\nerr: " . $err );
+                    error( "Problem when running after-boot commands. Bash command:\n$cmd\nout: $out\nerr: $err\nscript: $afterBoot");
                 }
             } elsif( $line =~ m!^perleval:(.*)$! ) {
                 my $cmd = $1;
                 unless( eval( $cmd )) {
-                    error( "Problem when running after-boot commands. Perl command:\n" . $cmd );
+                    error( "Problem when running after-boot commands. Perl command:\n$cmd\ndollar-bang: $!\ndollar-at: $@\nscript: $afterBoot" );
                 }
             }
         }
