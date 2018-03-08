@@ -82,23 +82,17 @@ sub deployOrCheck {
         unless( $toName =~ m#^/# ) {
             $toName = "$defaultToDir/$toName";
         }
-        if( -e $fromName ) {
-            if( $doIt ) {
-                unless( -e $toName ) {
-                    # These names sound a little funny for symlinks. Think "copy" instead of "link"
-                    # and they make sense. We keep the names for consistency with other items.
-                    # $fromName: the destination of the link
-                    # $toName: the source of the link
-                    UBOS::Utils::symlink( $fromName, $toName, $uname, $gname );
-                } else {
-                    error( 'Symlink::deployOrCheck: Cannot create symlink:', $toName );
-                    $ret = 0;
-                }
+        if( $doIt ) {
+            unless( -e $toName ) {
+                # These names sound a little funny for symlinks. Think "copy" instead of "link"
+                # and they make sense. We keep the names for consistency with other items.
+                # $fromName: the destination of the link
+                # $toName: the source of the link
+                UBOS::Utils::symlink( $fromName, $toName, $uname, $gname );
+            } else {
+                error( 'Symlink::deployOrCheck: Cannot create symlink:', $toName );
+                $ret = 0;
             }
-
-        } else {
-            # Cannot produce error message here, because some AppConfigItem before this one
-            # might have created it.
         }
     }
     return $ret;
@@ -136,7 +130,7 @@ sub undeployOrCheck {
         }
 
         if( $doIt ) {
-            if( -s $toName || -e $toName ) {
+            if( -l $toName || -e $toName ) {
                 $ret &= UBOS::Utils::deleteFile( $toName );
 
             } else {
