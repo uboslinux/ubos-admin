@@ -136,7 +136,7 @@ sub undeployOrCheck {
         }
 
         if( $doIt ) {
-            if( -e $toName ) {
+            if( -s $toName || -e $toName ) {
                 $ret &= UBOS::Utils::deleteFile( $toName );
 
             } else {
