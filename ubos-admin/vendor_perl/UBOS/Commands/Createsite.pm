@@ -18,6 +18,7 @@ use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Installable;
 use UBOS::Logging;
+use UBOS::Networking::NetConfigUtils;
 use UBOS::UpdateBackup;
 use UBOS::Utils;
 
@@ -83,7 +84,7 @@ sub run {
 
     if( !$tor && grep { '*' eq $_->hostname } values %$oldSites ) {
         if( $dryRun ) {
-            print "WARNING: There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device.\n";
+            warning( "There is already a site with hostname * (any). You will not be able to deploy the site you are creating on this device." );
             $starWarningDone = 1;
         } else {
             fatal( 'There is already a site with hostname * (any), so no other site can be created.' );
@@ -103,35 +104,35 @@ sub run {
                 if( %$oldSites ) {
                     if( $dryRun ) {
                         unless( $starWarningDone ) {
-                            print "WARNING: You can only create a site with hostname * (any) if no other sites exist. You will not be able to deploy the site you are creating on this device.\n";
+                            warning( "You can only create a site with hostname * (any) if no other sites exist. You will not be able to deploy the site you are creating on this device." );
                         }
                     } else {
-                        print "You can only create a site with hostname * (any) if no other sites exist.\n";
+                        error( "You can only create a site with hostname * (any) if no other sites exist." );
                         next outer;
                     }
                 }
                 if( $tls ) {
-                    print "You cannot create a site with hostname * (any) that is protected by TLS.\n";
+                    error( "You cannot create a site with hostname * (any) that is protected by TLS." );
                     next outer;
                 }
             } else {
                 if( $letsEncrypt ) {
                     if( $hostname =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
-                        print "You cannot specify an IP address as a hostname when using Letsencrypt certificates.\n";
-                        print "Use an official hostname, publicly accessible, instead.\n";
+                        error( "You cannot specify an IP address as a hostname when using Letsencrypt certificates.\n"
+                               . "Use an official hostname, publicly accessible, instead." );
                         next outer;
                     } elsif( $hostname =~ m!\.local$! ) {
-                        print "You cannot specify an mDNS (.local) as a hostname when using Letsencrypt certificates.\n";
-                        print "Use an official hostname, publicly accessible, instead.\n";
+                        error( "You cannot specify an mDNS (.local) as a hostname when using Letsencrypt certificates.\n"
+                               . "Use an official hostname, publicly accessible, instead." );
                         next outer;
                     }
                 }
                 foreach my $oldSite ( values %$oldSites ) {
                     if( $oldSite->hostname eq $hostname ) {
                         if( $dryRun ) {
-                            print "There is already a site with hostname $hostname. You will not be able to deploy the site you are creating on this device.\n";
+                            warning( "There is already a site with hostname $hostname. You will not be able to deploy the site you are creating on this device." );
                         } else {
-                            print "There is already a site with hostname $hostname.\n";
+                            error( "There is already a site with hostname $hostname." );
                             next outer;
                         }
                     }
@@ -151,18 +152,18 @@ sub run {
         while( 1 ) {
             $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
             if( $adminCredential =~ m!s3cr3t!i ) {
-                print "Not that one!\n";
+                error( "Not that one!" );
             } elsif( $adminCredential eq $adminUserId ) {
-                print "Password must be different from username.\n";
+                error( "Password must be different from username." );
             } elsif( length( $adminCredential ) < 6 ) {
-                print "At least 6 characters please.\n";
+                error( "At least 6 characters please." );
             } else {
                 last;
             }
         }
         my $adminCredential2 = ask( 'Repeat site admin user password: ', undef, undef, 1 );
         if( $adminCredential ne $adminCredential2 ) {
-            print "Passwords did not match!\n";
+            error( "Passwords did not match!" );
         } else {
             last;
         }
@@ -170,7 +171,7 @@ sub run {
     while( 1 ) {
         $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
         if( $adminEmail =~ m!foo\@bar.com! ) {
-            print "Not that one!\n";
+            error( "Not that one!" );
         } else {
             last;
         }
@@ -221,12 +222,12 @@ sub run {
                     redo;
                 }
                 unless( -r $tlsKey ) {
-                    print "Cannot find or read file $tlsKey\n";
+                    error( "Cannot find or read file $tlsKey" );
                     redo;
                 }
                 $tlsKey = UBOS::Utils::slurpFile( $tlsKey );
                 unless( $tlsKey =~ m!^-----BEGIN RSA PRIVATE KEY-----.*-----END RSA PRIVATE KEY-----\s*$!s ) {
-                    print "This file does not seem to contain a private key\n";
+                    error( "This file does not seem to contain a private key" );
                     redo;
                 }
                 last;
@@ -238,12 +239,12 @@ sub run {
                     redo;
                 }
                 unless( -r $tlsCrt ) {
-                    print "Cannot find or read file $tlsCrt\n";
+                    error( "Cannot find or read file $tlsCrt" );
                     redo;
                 }
                 $tlsCrt = UBOS::Utils::slurpFile( $tlsCrt );
                 unless( $tlsCrt =~ m!^-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----\s*$!s ) {
-                    print "This file does not seem to contain a certificate\n";
+                    error( "This file does not seem to contain a certificate" );
                     redo;
                 }
                 last;
@@ -256,12 +257,12 @@ sub run {
                     last;
                 }
                 unless( -r $tlsCrtChain ) {
-                    print "Cannot find or read file $tlsCrtChain\n";
+                    error( "Cannot find or read file $tlsCrtChain" );
                     redo;
                 }
                 $tlsCrtChain = UBOS::Utils::slurpFile( $tlsCrtChain );
                 unless( $tlsCrtChain =~ m!^-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----\s*$!s ) {
-                    print "This file does not seem to contain a certificate chain\n";
+                    error( "This file does not seem to contain a certificate chain");
                     redo;
                 }
                 last;
@@ -274,12 +275,12 @@ sub run {
                     last;
                 }
                 unless( -r $tlsCaCrt ) {
-                    print "Cannot find or read file $tlsCaCrt\n";
+                    error( "Cannot find or read file $tlsCaCrt" );
                     redo;
                 }
                 $tlsCaCrt = UBOS::Utils::slurpFile( $tlsCaCrt );
                 unless( $tlsCaCrt =~ m!^-----BEGIN CERTIFICATE-----.*-----END CERTIFICATE-----\s*$!s ) {
-                    print "This file does not seem to contain a certificate chain\n";
+                    error( "This file does not seem to contain a certificate chain" );
                     redo;
                 }
                 last;
@@ -360,11 +361,11 @@ sub run {
                 $context = ask( 'Enter context path: ' );
 
                 if( !UBOS::AppConfiguration::isValidContext( $context )) {
-                    print "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes\n";
+                    error( "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes" );
                 } elsif( $context eq '' && keys %contextPaths > 0 ) {
-                    print "Cannot put an app at the root context path if there is another app at the same site\n";
+                    error( "Cannot put an app at the root context path if there is another app at the same site" );
                 } elsif( exists( $contextPaths{$context} )) {
-                    print "There is already an app at this context path\n";
+                    error( "There is already an app at this context path" );
                 } else {
                     $contextPaths{$context} = $context;
                     last;
@@ -372,10 +373,10 @@ sub run {
             }
         } elsif( defined( $fixedContext )) {
             if( exists( $contextPaths{$fixedContext} )) {
-                print "App $appId has an unchangeable context path of $fixedContext, but another app is already at this path. Cannot install here.\n";
+                error( "App $appId has an unchangeable context path of $fixedContext, but another app is already at this path. Cannot install here." );
                 next;
             } elsif( '' eq $fixedContext && keys %contextPaths > 0 ) {
-                print "App $appId must be installed at the root of the site. This means no other app can run at this site, but at least one is here already.\n";
+                error( "App $appId must be installed at the root of the site. This means no other app can run at this site, but at least one is here already." );
                 next;
             }
             $context = $fixedContext;
@@ -388,7 +389,7 @@ sub run {
             $accessories =~ s!\s+$!!;
 
             my %currentAccs;
-            map { $currentAccs{$_} = $_ } split( /\s+,?\s*/, $accessories );
+            map { $currentAccs{$_} = $_ } split( /[\s,]+/, $accessories );
             while( %currentAccs && !$askUserAgain ) {
                 # accessories can require other accessories, and so forth
                 my %nextAccs;
@@ -649,7 +650,7 @@ sub ask {
             if( $ret =~ $regex ) {
                 last;
             } else {
-                print "(input not valid: regex is $regex)\n";
+                error( "(input not valid: regex is $regex)" );
             }
         }
     }
