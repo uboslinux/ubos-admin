@@ -400,7 +400,7 @@ sub _determineDeviceFact {
         } elsif( -b $path ) {
 
             my $out;
-            UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID --json -n '$path'", undef, \$out );
+            UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n '$path'", undef, \$out );
 
             my $deviceName = $path;
             $deviceName =~ s!(.*/)!!;
@@ -411,6 +411,7 @@ sub _determineDeviceFact {
                 if( $deviceName eq $deviceEntry->{name} ) {
                     $facts->{devicetype} = $deviceEntry->{type};
                     $facts->{partuuid}   = $deviceEntry->{partuuid};
+                    $facts->{mountpoint} = $deviceEntry->{mountpoint};
                 }
             }
         }
@@ -482,5 +483,19 @@ sub determinePartUuid {
     return $uuid;
 }
 
-1;
+##
+# Helper method to determine the MOUNTPOINT of a given device, or return undef if
+# not mounted.
+# $path: the file's name
+sub determineMountPoint {
+    my $path = shift;
 
+    my $mountPoint = _determineDeviceFact( $path, 'mountpoint' );
+    if( $mountPoint ) {
+        return $mountPoint;
+    } else {
+        return undef;
+    }
+}
+
+1;

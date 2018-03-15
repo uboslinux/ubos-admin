@@ -101,25 +101,30 @@ sub createDiskLayout {
             }
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
             # Option 2
-            my $deviceTable = {
-                '/' => {
-                    'index' => $noswap ? 1 : 2,
-                    'fs'    => 'btrfs'
-                    # default partition type
-                }
-            };
-            unless( $noswap ) {
-                $deviceTable->{swap} = {
-                    'index'       => 1,
-                    'fs'          => 'swap',
-                    'size'        => '4G',
-                    'mbrparttype' => '82',
-                    'gptparttype' => '8200'
+            if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $first )) {
+                error( 'Cannot install to mounted disk:', $first );
+                $ret = undef;
+            } else {
+                my $deviceTable = {
+                    '/' => {
+                        'index' => $noswap ? 1 : 2,
+                        'fs'    => 'btrfs'
+                        # default partition type
+                    }
                 };
+                unless( $noswap ) {
+                    $deviceTable->{swap} = {
+                        'index'       => 1,
+                        'fs'          => 'swap',
+                        'size'        => '4G',
+                        'mbrparttype' => '82',
+                        'gptparttype' => '8200'
+                    };
+                }
+                $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
+                        $argvp,
+                        $deviceTable );
             }
-            $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
-                    $argvp,
-                    $deviceTable );
 
         } elsif( $ret ) {
             error( 'Must be file or disk:', $first );

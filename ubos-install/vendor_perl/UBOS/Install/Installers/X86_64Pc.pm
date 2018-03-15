@@ -160,6 +160,11 @@ sub createDiskLayout {
                     $ret = undef;
                     last;
                 }
+                if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $part )) {
+                    error( 'Cannot install to mounted disk:', $part );
+                    $ret = undef;
+                    last;
+                }
                 $haveAlready{$part} = 1;
             }
         }
@@ -263,89 +268,94 @@ sub createDiskLayout {
                 }
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
                 # Option 2
-                my %haveAlready = ( $first => 1 );
-                foreach my $disk ( @$argvp ) {
-                    if( $first eq $disk ) {
-                        next;
-                    }
-                    if( $haveAlready{$disk} ) {
-                        error( 'Specified more than once:', $disk );
-                        $ret = undef;
-                        last;
-                    }
-                    unless( UBOS::Install::AbstractDiskLayout::isBlockDevice( $disk )) {
-                        error( 'Not a block device:', $disk );
-                        $ret = undef;
-                        last;
-                    }
-                    $haveAlready{$disk} = 1;
-                }
-                if( $ret ) {
-                    if( 'gpt' eq $self->{partitioningscheme} ) {
-                        my $deviceTable = {
-                            '/mbr' => {
-                                 'index'       => 1,
-                                 'size'        => '1M',
-                                 'gptparttype' => 'EF02',
-                                 'label'       => 'BIOS boot'
-                                 # no filesystem, do not mount
-                            },
-                            '/boot' => {
-                                'index'       => 2,
-                                'fs'          => 'vfat',
-                                'size'        => '500M',
-                                'mkfsflags'   => '-F32',
-                                'gptparttype' => 'EF00',
-                                'label'       => 'UBOS boot'
-                            },
-                            '/' => {
-                                'index' => $noswap ? 3 : 4,
-                                'fs'    => 'btrfs',
-                                'label' => 'UBOS root'
-                                # default partition type
-                            }
-                        };
-                        unless( $noswap ) {
-                            $deviceTable->{swap} = {
-                                'index'       => 3,
-                                'fs'          => 'swap',
-                                'size'        => '4G',
-                                'mbrparttype' => '82',
-                                'gptparttype' => '8200',
-                                'label'       => 'swap'
-                            };
+                if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $first )) {
+                    error( 'Cannot install to mounted disk:', $first );
+                    $ret = undef;
+                } else {
+                    my %haveAlready = ( $first => 1 );
+                    foreach my $disk ( @$argvp ) {
+                        if( $first eq $disk ) {
+                            next;
                         }
-                        $ret = UBOS::Install::DiskLayouts::GptDiskBlockDevices->new(
-                                $argvp,
-                                $deviceTable );
-                    } else {
-                        my $deviceTable = {
-                            '/boot' => {
-                                'index'   => 1,
-                                'fs'      => 'ext4',
-                                'size'    => '100M',
-                                'mbrboot' => 1
-                                # default partition type
-                            },
-                            '/' => {
-                                'index' => $noswap ? 2 : 3,
-                                'fs'    => 'btrfs'
-                                # default partition type
-                            }
-                        };
-                        unless( $noswap ) {
-                            $deviceTable->{swap} = {
-                                'index'       => 2,
-                                'fs'          => 'swap',
-                                'size'        => '4G',
-                                'mbrparttype' => '82',
-                                'gptparttype' => '8200'
-                            };
+                        if( $haveAlready{$disk} ) {
+                            error( 'Specified more than once:', $disk );
+                            $ret = undef;
+                            last;
                         }
+                        unless( UBOS::Install::AbstractDiskLayout::isBlockDevice( $disk )) {
+                            error( 'Not a block device:', $disk );
+                            $ret = undef;
+                            last;
+                        }
+                        $haveAlready{$disk} = 1;
+                    }
+                    if( $ret ) {
+                        if( 'gpt' eq $self->{partitioningscheme} ) {
+                            my $deviceTable = {
+                                '/mbr' => {
+                                     'index'       => 1,
+                                     'size'        => '1M',
+                                     'gptparttype' => 'EF02',
+                                     'label'       => 'BIOS boot'
+                                     # no filesystem, do not mount
+                                },
+                                '/boot' => {
+                                    'index'       => 2,
+                                    'fs'          => 'vfat',
+                                    'size'        => '500M',
+                                    'mkfsflags'   => '-F32',
+                                    'gptparttype' => 'EF00',
+                                    'label'       => 'UBOS boot'
+                                },
+                                '/' => {
+                                    'index' => $noswap ? 3 : 4,
+                                    'fs'    => 'btrfs',
+                                    'label' => 'UBOS root'
+                                    # default partition type
+                                }
+                            };
+                            unless( $noswap ) {
+                                $deviceTable->{swap} = {
+                                    'index'       => 3,
+                                    'fs'          => 'swap',
+                                    'size'        => '4G',
+                                    'mbrparttype' => '82',
+                                    'gptparttype' => '8200',
+                                    'label'       => 'swap'
+                                };
+                            }
+                            $ret = UBOS::Install::DiskLayouts::GptDiskBlockDevices->new(
+                                    $argvp,
+                                    $deviceTable );
+                        } else {
+                            my $deviceTable = {
+                                '/boot' => {
+                                    'index'   => 1,
+                                    'fs'      => 'ext4',
+                                    'size'    => '100M',
+                                    'mbrboot' => 1
+                                    # default partition type
+                                },
+                                '/' => {
+                                    'index' => $noswap ? 2 : 3,
+                                    'fs'    => 'btrfs'
+                                    # default partition type
+                                }
+                            };
+                            unless( $noswap ) {
+                                $deviceTable->{swap} = {
+                                    'index'       => 2,
+                                    'fs'          => 'swap',
+                                    'size'        => '4G',
+                                    'mbrparttype' => '82',
+                                    'gptparttype' => '8200'
+                                };
+                            }
 
-                        $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
-                                $argvp,
-                                $deviceTable );
+                            $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
+                                    $argvp,
+                                    $deviceTable );
+                        }
                     }
                 }
             } elsif( $ret ) {
