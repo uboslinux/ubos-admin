@@ -108,7 +108,7 @@ sub createDiskLayout {
                             {   '/boot' => {
                                     'index'     => 1,
                                     'fs'        => 'ext4',
-                                    'size'      => '100M',
+                                    'size'      => 200 * 1024, # 100M at 512/sector
                                     'mkfsflags' => '-O ^metadata_csum,^64bit',
                                     'mbrboot'   => 1
                                     # default partition type                                
@@ -130,29 +130,29 @@ sub createDiskLayout {
                         '/boot' => {
                             'index'     => 1,
                             'fs'        => 'ext4',
-                            'size'      => '100M',
+                            'size'      => 200 * 1024, # 100M at 512/sector
                             'mkfsflags' => '-O ^metadata_csum,^64bit',
                             'mbrboot'   => 1
                             # default partition type
                         },
                         '/' => {
-                            'index' => $noswap ? 2 : 3,
+                            'index' => 2,
                             'fs'    => 'btrfs'
                             # default partition type
                         }
                     };
                     unless( $noswap ) {
                         $deviceTable->{swap} = {
-                            'index'       => 2,
+                            'index'       => 3,
                             'fs'          => 'swap',
-                            'size'        => '4G',
+                            'size'        => 8192 * 1024, # 4G at 512/sector
                             'mbrparttype' => '82',
                             'gptparttype' => '8200',
                             'label'       => 'swap'
                         };
                     }
                     $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
-                            [   $rootDiskOrImage    ],
+                            [ $rootDiskOrImage ],
                             $deviceTable );
                 }
             } else {

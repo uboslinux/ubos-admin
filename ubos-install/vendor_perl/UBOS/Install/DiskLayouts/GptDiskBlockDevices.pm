@@ -40,12 +40,35 @@ sub createDisks {
 
     my $errors = 0;
 
-    # zero out the beginning does not seem to be advisable for GPT
+    # determine disk size and how many sector are left over for the main partition
+    my $remainingSectors = {};
+    foreach my $disk ( @{$self->{disks}} ) {
+        my $out;
+        if( UBOS::Utils::myexec( "sgdisk --print '$disk'", undef, \$out, \$out )) {
+            error( 'sgdisk --print:', $out );
+            ++$errors;
+        } elsif( $out =~ m!Disk.*:\s*(\d+)\s*sectors! )  {
+            my $remaining = $1;
+            $remaining -= 5; # first 2048 bytes, plus one sector more
 
-    # for all disks
-    my $out;
+            foreach my $data ( values %{$self->{devicetable}} ) {
+                if( exists( $data->{size} )) {
+                    $remaining -= $data->{size};
+                }
+            }
+            if( $remaining < 4096 * 1024 ) {
+                fatal( 'Need at least 2GB for root partition:', $disk );
+            }
+            $remainingSectors->{$disk} = $remaining;
+        } else {
+            fatal( 'Cannot determine size of disk' );
+        }
+    }
+
+    # zero out the beginning does not seem to be advisable for GPT
     foreach my $disk ( @{$self->{disks}} ) {
         # first clear out everything
+        my $out;
         if( UBOS::Utils::myexec( "sgdisk --zap-all '$disk'", undef, \$out, \$out )) {
             error( 'sgdisk --zap-all:', $out );
             ++$errors;
@@ -67,9 +90,11 @@ sub createDisks {
                 $startsector = $data->{startsector};
             }
 
-            my $size = '0'; #default
+            my $size;
             if( exists( $data->{size} )) {
-                $size  = '+' . $data->{size};
+                $size = '+' . $data->{size};
+            } else {
+                $size = '+' . $remainingSectors->{$disk};
             }
 
             if( UBOS::Utils::myexec( "sgdisk '--new=$index:$startsector:$size' '" . $disk . "'", undef, \$out, \$out )) {

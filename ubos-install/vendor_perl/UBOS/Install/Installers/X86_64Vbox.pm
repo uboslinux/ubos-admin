@@ -100,16 +100,16 @@ sub createDiskLayout {
             } else {
                 my $deviceTable = {
                     '/' => {
-                        'index' => $noswap ? 1 : 2,
+                        'index' => 1,
                         'fs'    => 'btrfs'
                         # default partition type
                     }
                 };
                 unless( $noswap ) {
                     $deviceTable->{swap} = {
-                        'index'       => 1,
+                        'index'       => 2,
                         'fs'          => 'swap',
-                        'size'        => '4G',
+                        'size'        => 8192 * 1024, # 4G at 512/sector
                         'mbrparttype' => '82',
                         'gptparttype' => '8200',
                         'label'       => 'swap'

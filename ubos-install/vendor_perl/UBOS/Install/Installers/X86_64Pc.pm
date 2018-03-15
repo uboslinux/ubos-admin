@@ -228,7 +228,7 @@ sub createDiskLayout {
                                 {
                                     '/mbr' => {
                                         'index'       => 1,
-                                        'size'        => '1M',
+                                        'size'        => 2048, # 1M at 512/sector
                                         'gptparttype' => 'EF02',
                                         'label'       => 'BIOS boot'
                                         # no filesystem, do not mount
@@ -236,7 +236,7 @@ sub createDiskLayout {
                                     '/boot' => {
                                         'index'       => 2,
                                         'fs'          => 'vfat',
-                                        'size'        => '500M',
+                                        'size'        => 1024*1024, # 512M at 512/sector
                                         'mkfsflags'   => '-F32',
                                         'gptparttype' => 'EF00',
                                         'label'       => 'UBOS boot'
@@ -254,7 +254,7 @@ sub createDiskLayout {
                                 {   '/boot' => {
                                         'index'   => 1,
                                         'fs'      => 'ext4',
-                                        'size'    => '100M',
+                                        'size'    => 200 * 1024, # 100M at 512/sector
                                         'mbrboot' => 1
                                         # default partition type
                                     },
@@ -294,7 +294,7 @@ sub createDiskLayout {
                             my $deviceTable = {
                                 '/mbr' => {
                                      'index'       => 1,
-                                     'size'        => '1M',
+                                     'size'        => 2048, # 1M at 512/sector
                                      'gptparttype' => 'EF02',
                                      'label'       => 'BIOS boot'
                                      # no filesystem, do not mount
@@ -302,13 +302,13 @@ sub createDiskLayout {
                                 '/boot' => {
                                     'index'       => 2,
                                     'fs'          => 'vfat',
-                                    'size'        => '500M',
+                                    'size'        => 1024 * 1024, # 512M at 512/sector
                                     'mkfsflags'   => '-F32',
                                     'gptparttype' => 'EF00',
                                     'label'       => 'UBOS boot'
                                 },
                                 '/' => {
-                                    'index' => $noswap ? 3 : 4,
+                                    'index' => 3,
                                     'fs'    => 'btrfs',
                                     'label' => 'UBOS root'
                                     # default partition type
@@ -316,9 +316,9 @@ sub createDiskLayout {
                             };
                             unless( $noswap ) {
                                 $deviceTable->{swap} = {
-                                    'index'       => 3,
+                                    'index'       => 4,
                                     'fs'          => 'swap',
-                                    'size'        => '4G',
+                                    'size'        => 200 * 1024, # 100M at 512/sector
                                     'mbrparttype' => '82',
                                     'gptparttype' => '8200',
                                     'label'       => 'swap'
@@ -337,16 +337,16 @@ sub createDiskLayout {
                                     # default partition type
                                 },
                                 '/' => {
-                                    'index' => $noswap ? 2 : 3,
+                                    'index' => 2,
                                     'fs'    => 'btrfs'
                                     # default partition type
                                 }
                             };
                             unless( $noswap ) {
                                 $deviceTable->{swap} = {
-                                    'index'       => 2,
+                                    'index'       => 3,
                                     'fs'          => 'swap',
-                                    'size'        => '4G',
+                                    'size'        => 8192 * 1024, # 4G at 512/sector
                                     'mbrparttype' => '82',
                                     'gptparttype' => '8200'
                                 };

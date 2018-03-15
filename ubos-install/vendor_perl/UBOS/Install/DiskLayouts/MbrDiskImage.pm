@@ -44,6 +44,30 @@ sub createDisks {
     my $self = shift;
 
     my $errors = 0;
+    my $out;
+    my $err;
+
+    # determine disk size and how many sector are left over for the main partition
+    my $remainingSectors;
+    if( UBOS::Utils::myexec( "sgdisk --print '" . $self->{image} . "'", undef, \$out, \$out )) {
+        error( 'sgdisk --print:', $out );
+        ++$errors;
+    } elsif( $out =~ m!Disk.*:\s*(\d+)\s*sectors! )  {
+        my $remaining = $1;
+        $remaining -= 5; # first 2048 bytes, plus one sector more
+
+        foreach my $data ( values %{$self->{devicetable}} ) {
+            if( exists( $data->{size} )) {
+                $remaining -= $data->{size};
+            }
+        }
+        if( $remaining < 4096 * 1024 ) {
+            fatal( 'Need at least 2GB for root partition:', $self->{image} );
+        }
+        $remainingSectors = $remaining;
+    } else {
+        fatal( 'Cannot determine size of disk' );
+    }
 
     # zero out the beginning -- sometimes there are strange leftovers
     if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8 conv=notrunc status=none" )) {
@@ -72,16 +96,15 @@ p
 $index
 $startsector
 END
+        my $size;
         if( exists( $data->{size} )) {
-            my $size  = $data->{size};
-            $fdiskScript .= <<END;
+            $size = $data->{size};
+        } else {
+            $size = $remainingSectors;
+        }
+        $fdiskScript .= <<END;
 +$size
 END
-        } else {
-            $fdiskScript .= <<END;
-
-END
-        }
         if( exists( $data->{boot} )) {
             $fdiskScript .= <<END;
 a
@@ -93,9 +116,6 @@ END
     $fdiskScript .= <<END;
 w
 END
-
-    my $out;
-    my $err;
 
     trace( 'fdisk script:', $fdiskScript );
 

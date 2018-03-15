@@ -40,6 +40,31 @@ sub createDisks {
 
     my $errors = 0;
 
+    # determine disk size and how many sector are left over for the main partition
+    my $remainingSectors = {};
+    foreach my $disk ( @{$self->{disks}} ) {
+        my $out;
+        if( UBOS::Utils::myexec( "sgdisk --print '$disk'", undef, \$out, \$out )) {
+            error( 'sgdisk --print:', $out );
+            ++$errors;
+        } elsif( $out =~ m!Disk.*:\s*(\d+)\s*sectors! )  {
+            my $remaining = $1;
+            $remaining -= 5; # first 2048 bytes, plus one sector more
+
+            foreach my $data ( values %{$self->{devicetable}} ) {
+                if( exists( $data->{size} )) {
+                    $remaining -= $data->{size};
+                }
+            }
+            if( $remaining < 4096 * 1024 ) {
+                fatal( 'Need at least 2GB for root partition:', $disk );
+            }
+            $remainingSectors->{$disk} = $remaining;
+        } else {
+            fatal( 'Cannot determine size of disk' );
+        }
+    }
+
     # zero out the beginning -- sometimes there are strange leftovers
     foreach my $disk ( @{$self->{disks}} ) {
         if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$disk' bs=1M count=8 status=none" )) {
@@ -47,50 +72,49 @@ sub createDisks {
         }
     }
 
-    my $fdiskScript = '';
-    $fdiskScript .= <<END; # first clear out everything
+    foreach my $disk ( @{$self->{disks}} ) {
+        my $out;
+        my $err;
+
+        my $fdiskScript = ''; # the disks may have slightly different sizes
+        $fdiskScript .= <<END; # first clear out everything
 o
 END
 
-    # in sequence of index
-    my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
-    foreach my $mountPath ( @mountPathIndexSequence ) {
-        my $data  = $self->{devicetable}->{$mountPath};
-        my $index = $data->{index};
+        # in sequence of index
+        my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
+        foreach my $mountPath ( @mountPathIndexSequence ) {
+            my $data  = $self->{devicetable}->{$mountPath};
+            my $index = $data->{index};
 
-        $fdiskScript .= <<END;
+            $fdiskScript .= <<END;
 n
 p
 $index
 
 END
-        if( exists( $data->{size} )) {
-            my $size  = $data->{size};
+            my $size;
+            if( exists( $data->{size} )) {
+                $size = $data->{size};
+            } else {
+                $size = $remainingSectors->{$disk};
+            }
             $fdiskScript .= <<END;
 +$size
 END
-        } else {
-            $fdiskScript .= <<END;
-
-END
-        }
-        if( exists( $data->{mbrboot} )) {
-            $fdiskScript .= <<END;
+            if( exists( $data->{mbrboot} )) {
+                $fdiskScript .= <<END;
 a
 END
-        }
+            }
 
-        $fdiskScript .= UBOS::Install::PartitionUtils::appendFdiskChangePartitionType( $data->{mbrparttype}, $index );
-    }
-    $fdiskScript .= <<END;
+            $fdiskScript .= UBOS::Install::PartitionUtils::appendFdiskChangePartitionType( $data->{mbrparttype}, $index );
+        }
+        $fdiskScript .= <<END;
 w
 END
 
-    trace( 'fdisk script:', $fdiskScript );
-
-    foreach my $disk ( @{$self->{disks}} ) {
-        my $out;
-        my $err;
+        trace( 'fdisk script for', $disk, ':', $fdiskScript );
 
         if( UBOS::Utils::myexec( "fdisk '" . $disk . "'", $fdiskScript, \$out, \$err )) {
             error( 'fdisk failed', $out, $err );
