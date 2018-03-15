@@ -544,7 +544,7 @@ sub updateCode {
     if( $syncFirst ) {
         $cmd = 'pacman -Sy --noconfirm';
         debugAndSuspend( 'Execute pacman -Sy' );
-        if( myexec( $cmd, undef, \$out ) != 0 ) {
+        if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
             error( 'Command failed:', $cmd, "\n$out" );
 
         } elsif( UBOS::Logging::isTraceActive() ) {
@@ -574,7 +574,7 @@ sub updateCode {
 
     $cmd = 'pacman -Su --noconfirm';
     debugAndSuspend( 'Execute pacman -Su' );
-    if( myexec( $cmd, undef, \$out ) != 0 ) {
+    if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
     } elsif( UBOS::Logging::isTraceActive() ) {
@@ -638,7 +638,11 @@ sub purgeCache {
         $cmd .= ' > /dev/null';
     }
     debugAndSuspend( 'Execute pacman -Sc' );
-    myexec( $cmd );
+
+    my $out;
+    if( myexec( $cmd, undef, \$out, \$out )) {
+        error( $out );
+    }
 }
 
 ##
@@ -675,22 +679,22 @@ sub ensurePackages {
         unless( $quiet ) {
             print "Downloading packages...\n";
         }
-        my $err;
+        my $out;
         my $cmd = 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
         unless( UBOS::Logging::isTraceActive() ) {
             $cmd .= ' > /dev/null';
         }
 
         debugAndSuspend( 'Execute pacman -S', @filteredPackageList );
-        if( myexec( $cmd, undef, undef, \$err )) {
-            $@ = 'Failed to install package(s). Pacman says: ' . $err;
-            if( $err =~ m!conflict.*Remove!i ) {
+        if( myexec( $cmd, undef, \$out, \$out )) {
+            $@ = 'Failed to install package(s). Pacman says: ' . $out;
+            if( $out =~ m!conflict.*Remove!i ) {
                 $cmd = 'yes y | pacman -S ' . join( ' ', @filteredPackageList );
                 unless( UBOS::Logging::isTraceActive() ) {
                     $cmd .= ' > /dev/null';
                 }
-                if( myexec( $cmd, undef, undef, \$err )) {
-                    $@ = 'Failed to install package(s) with conflict. Pacman says: ' . $err;
+                if( myexec( $cmd, undef, \$out, \$out )) {
+                    $@ = 'Failed to install package(s) with conflict. Pacman says: ' . $out;
                 }
             }
             return -1;
@@ -708,15 +712,15 @@ sub installPackageFiles {
     my $packageFiles = shift;
     my $showPackages = shift;
 
-    my $err;
+    my $out;
     my $cmd = 'pacman -U --noconfirm ' . join( ' ', @$packageFiles );
     unless( UBOS::Logging::isTraceActive() ) {
         $cmd .= ' > /dev/null';
     }
 
     debugAndSuspend( 'Execute pacman -U', @$packageFiles );
-    if( myexec( $cmd, undef, undef, \$err )) {
-        error( 'Failed to install package file(s). Pacman says:', $err );
+    if( myexec( $cmd, undef, \$out, \$out )) {
+        error( 'Failed to install package file(s). Pacman says:', $out );
         return 0;
     }
     if( $showPackages ) {
