@@ -8,7 +8,7 @@
 
 use strict;
 use warnings;
-use :utf8;
+use utf8;
 
 use CGI;
 use UBOS::Host;
@@ -24,7 +24,7 @@ if( $site ) {
     if( '*' eq $hostname ) {
         $hostname = $q->virtual_host() || $q->server_name();
     }
-    print $q->header( -type => 'text/html' );
+    print $q->header( -type => 'text/html', -charset=>'utf-8' );
     print <<HTML;
 <html>
  <head>
@@ -127,7 +127,7 @@ HTML
 </html>
 HTML
 } else {
-    print $q->header( -type => 'text/html', -status => 404 );
+    print $q->header( -type => 'text/html', -status => 404, -charset=>'utf-8' );
     print <<HTML;
 <html>
  <head>
