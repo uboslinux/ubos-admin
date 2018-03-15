@@ -8,6 +8,7 @@
 
 use strict;
 use warnings;
+use :utf8;
 
 use CGI;
 use UBOS::Host;
