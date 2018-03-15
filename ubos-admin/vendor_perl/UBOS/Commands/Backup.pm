@@ -37,6 +37,7 @@ sub run {
     my @siteIds       = ();
     my @hosts         = ();
     my @appConfigIds  = ();
+    my $context       = undef;
     my $noTls         = undef;
     my $noTorKey      = undef;
 
@@ -50,13 +51,19 @@ sub run {
             'siteid=s'      => \@siteIds,
             'hostname=s'    => \@hosts,
             'appconfigid=s' => \@appConfigIds,
+            'context=s'     => \$context,
             'notls'         => \$noTls,
             'notorkey'      => \$noTorKey );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args || !$out || ( $verbose && $logConfigFile ) ) {
+    if(    !$parseOk
+        || @args
+        || !$out
+        || ( @appConfigIds && @hosts != 1 )
+        || ( $verbose && $logConfigFile ) )
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
@@ -71,7 +78,22 @@ sub run {
         unless( $site ) {
             fatal( 'Cannot find site with hostname:', $host );
         }
-        push @siteIds, $site->siteId;
+        if( defined( $context )) {
+            my $appConfig = $site->appConfigAtContext( $context );
+            unless( $appConfig ) {
+                if( $context ) {
+                    fatal(  'Cannot find an appconfiguration at context path', $context,
+                            'for site', $site->hostname, '(' . $site->siteId . ').' );
+                } else {
+                    fatal( 'Cannot find an appconfiguration at the root context',
+                            'of site', $site->hostname, '(' . $site->siteId . ').' );
+                }
+            }
+            push @appConfigIds, $appConfig->appConfigId();
+
+        } else {
+            push @siteIds, $site->siteId;
+        }
     }
 
     # May not be interrupted, bad things may happen if it is
@@ -119,6 +141,13 @@ SSS
     Back up one or more sites identified by their hostnames <hostname>
     by saving all data from all apps and accessories at those sites into
     local file <backupfile>.
+HHH
+            <<SSS => <<HHH,
+    --out <backupfile> --hostname <hostname> --context <context> [--context <context>]...
+SSS
+    Back up one or more AppConfigurations at a site identified by its hostname <hostname>
+    and the context paths <context>, by saving all data from all apps and accessories at
+    those AppConfigurations into local file <backupfile>.
 HHH
             <<SSS => <<HHH
     --out <backupfile> --appconfigid <appconfigid> [--appconfigid <appconfigid>]...
