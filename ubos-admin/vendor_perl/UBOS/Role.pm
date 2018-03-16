@@ -13,11 +13,13 @@ package UBOS::Role;
 use UBOS::AppConfigurationItems::Database;
 use UBOS::AppConfigurationItems::Directory;
 use UBOS::AppConfigurationItems::DirectoryTree;
+use UBOS::AppConfigurationItems::Exec;
 use UBOS::AppConfigurationItems::File;
 use UBOS::AppConfigurationItems::Perlscript;
 use UBOS::AppConfigurationItems::Sqlscript;
 use UBOS::AppConfigurationItems::Symlink;
 use UBOS::AppConfigurationItems::SystemdService;
+use UBOS::AppConfigurationItems::SystemdTarget;
 use UBOS::AppConfigurationItems::SystemdTimer;
 use UBOS::AppConfigurationItems::TcpPort;
 use UBOS::AppConfigurationItems::UdpPort;
@@ -364,6 +366,8 @@ sub instantiateAppConfigurationItem {
         $ret = UBOS::AppConfigurationItems::Directory->new( $json, $self, $appConfig, $installable );
     } elsif( 'directorytree' eq $type ) {
         $ret = UBOS::AppConfigurationItems::DirectoryTree->new( $json, $self, $appConfig, $installable );
+    } elsif( 'exec' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::Exec->new( $json, $self, $appConfig, $installable );
     } elsif( 'symlink' eq $type ) {
         $ret = UBOS::AppConfigurationItems::Symlink->new( $json, $self, $appConfig, $installable );
     } elsif( 'perlscript' eq $type ) {
@@ -372,6 +376,8 @@ sub instantiateAppConfigurationItem {
         $ret = UBOS::AppConfigurationItems::Sqlscript->new( $json, $self, $appConfig, $installable );
     } elsif( 'systemd-service' eq $type ) {
         $ret = UBOS::AppConfigurationItems::SystemdService->new( $json, $self, $appConfig, $installable );
+    } elsif( 'systemd-target' eq $type ) {
+        $ret = UBOS::AppConfigurationItems::SystemdTarget->new( $json, $self, $appConfig, $installable );
     } elsif( 'systemd-timer' eq $type ) {
         $ret = UBOS::AppConfigurationItems::SystemdTimer->new( $json, $self, $appConfig, $installable );
     } elsif( 'database' eq $type ) {
@@ -611,7 +617,10 @@ sub checkManifestForRoleGenericAppConfigItems {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': must specify source or template" );
                 }
 
-            } elsif( $appConfigItem->{type} eq 'systemd-service' || $appConfigItem->{type} eq 'systemd-timer' ) {
+            } elsif(    $appConfigItem->{type} eq 'systemd-service'
+                     || $appConfigItem->{type} eq 'systemd-target'
+                     || $appConfigItem->{type} eq 'systemd-timer' )
+            {
                 if( defined( $appConfigItem->{names} )) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name; names not allowed" );
                 }
