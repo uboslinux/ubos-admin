@@ -39,6 +39,7 @@ sub run {
     my $out           = undef;
     my $force         = 0;
     my $tor           = 0;
+    my $fromTemplate  = undef;
     my $quiet         = 0;
     my $dryRun;
 
@@ -52,9 +53,10 @@ sub run {
             'selfsigned'                   => \$selfSigned,
             'letsencrypt'                  => \$letsEncrypt,
             'tor'                          => \$tor,
-            'out=s',                       => \$out,
-            'force',                       => \$force,
-            'quiet',                       => \$quiet,
+            'out=s'                        => \$out,
+            'force'                        => \$force,
+            'from-template=s'              => \$fromTemplate,
+            'quiet'                        => \$quiet,
             'dry-run|n'                    => \$dryRun );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
@@ -79,6 +81,17 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
+    my $jsonTemplate = undef;
+    if( $fromTemplate ) {
+        unless( -r $fromTemplate ) {
+            fatal( 'Template file does not exist or cannot be read:', $fromTemplate );
+        }
+        $jsonTemplate = UBOS::Utils::readJsonFromFile( $fromTemplate );
+        unless( $jsonTemplate ) {
+            fatal();
+        }
+    }
+
     my $oldSites        = UBOS::Host::sites();
     my $starWarningDone = 0;
 
@@ -91,14 +104,23 @@ sub run {
         }
     }
 
-    unless( $quiet ) {
+    if( !$fromTemplate && !$quiet ) {
         print "** First a few questions about the website that you are about to create:\n";
     }
+
+# Determine hostname
 
     my $hostname = undef;
     unless( $tor ) {
         outer: while( 1 ) {
-            $hostname = ask( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
+            if( $fromTemplate && exists( $fromTemplate->{hostname} )) {
+                $hostname = $fromTemplate->{hostname};
+                if( UBOS::Host::findSiteByHostname( $hostname )) {
+                    fatal( 'A site with this hostname is deployed already. Cannot create a new site from this template:', $hostname );
+                }
+            } else {
+                $hostname = ask( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
+            }
 
             if( '*' eq $hostname ) {
                 if( %$oldSites ) {
@@ -142,15 +164,54 @@ sub run {
         }
     }
 
-    my $siteId        = UBOS::Host::createNewSiteId();
-    my $adminUserId   = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
-    my $adminUserName = ask( 'Site admin user name (e.g. John Doe): ', '\S+' );
-    my $adminCredential;
-    my $adminEmail;
+# Determine admin user info
 
-    while( 1 ) {
+    my $siteId          = undef;
+    my $adminUserId     = undef;
+    my $adminUserName   = undef;
+    my $adminCredential = undef;
+    my $adminEmail      = undef;
+
+    if( $fromTemplate ) {
+        if( defined( $fromTemplate->{siteid} )) {
+            $siteId = $fromTemplate->{siteid};
+
+            if( $oldSites->{$siteId} ) {
+                fatal( 'A site with this siteid is deployed already. Cannot create a new site from this template:', $siteId );
+            }
+        }
+        if( defined( $fromTemplate->{admin} )) {
+            if( defined( $fromTemplate->{admin}->{userid} )) {
+                $adminUserId = $fromTemplate->{admin}->{userid};
+            }
+            if( defined( $fromTemplate->{admin}->{username} )) {
+                $adminUserName = $fromTemplate->{admin}->{username};
+            }
+            if( defined( $fromTemplate->{admin}->{credential} )) {
+                $adminCredential = $fromTemplate->{admin}->{credential};
+            }
+            if( defined( $fromTemplate->{admin}->{email} )) {
+                $adminEmail = $fromTemplate->{admin}->{email};
+            }
+        }
+    }
+    unless( $siteId ) {
+        $siteId = UBOS::Host::createNewSiteId();
+    }
+    unless( $adminUserId ) {
+        $adminUserId = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
+    }
+    unless( $adminUserName ) {
+        $adminUserName = ask( 'Site admin user name (e.g. John Doe): ', '\S+' );
+    }
+
+    while( !$adminCredential ) {
         while( 1 ) {
-            $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
+            if( $fromTemplate && defined( $fromTemplate->{admin} ) && defined( $fromTemplate->{admin}->{credential} )) {
+                $adminCredential = $fromTemplate->{admin}->{credential};
+            } else {
+                $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
+            }
             if( $adminCredential =~ m!s3cr3t!i ) {
                 error( "Not that one!" );
             } elsif( $adminCredential eq $adminUserId ) {
@@ -164,18 +225,22 @@ sub run {
         my $adminCredential2 = ask( 'Repeat site admin user password: ', undef, undef, 1 );
         if( $adminCredential ne $adminCredential2 ) {
             error( "Passwords did not match!" );
+            $adminCredential = undef;
         } else {
             last;
         }
     }
-    while( 1 ) {
+    while( !$adminEmail ) {
         $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
         if( $adminEmail =~ m!foo\@bar.com! ) {
             error( "Not that one!" );
+            $adminEmail = undef;
         } else {
             last;
         }
     }
+
+# Obtain TLS info
 
     my $tlsKey;
     my $tlsCrt;
@@ -288,6 +353,9 @@ sub run {
         }
     }
 
+# Start putting the new Site Json together -- host, admin, TLS,
+# not AppConfigurations yet
+
     my $newSiteJson = {};
     $newSiteJson->{siteid} = $siteId;
 
@@ -322,75 +390,35 @@ sub run {
         $newSiteJson->{tor} = {};
     }
 
-    unless( $quiet ) {
+    if( !$fromTemplate && !$quiet ) {
         print "** Now a few questions about the app(s) you are going to deploy to this site:\n";
     }
 
-    my %contextPaths = ();
-    my $counter = 'First';
-    while( 1 ) {
-        my $appId;
-        while( 1 ) {
-            $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
-            if( !$appId || UBOS::Host::ensurePackages( $appId, $quiet ) >= 0 ) {
-                last;
-            }
-            if( $@ =~ m!unless you are root! ) {
-                fatal( 'To download this package, you need root privileges. Please re-run as root' );
-            }
-            if( $@ =~ m!The requested URL returned error: 404! ) {
-                fatal( 'Before this package can be installed, you need to run "ubos-admin update". Then try again.' );
-            }
-            error( $@ );
-        }
-        unless( $appId ) {
-            last;
-        }
+    if( $fromTemplate && defined( $fromTemplate->{wellknown} )) {
+        $newSiteJson->{wellknown} = $fromTemplate->{wellknown};
+    }
 
-        my $app = UBOS::App->new( $appId );
+# AppConfigurations
 
-        my $context         = undef;
-        my %accs            = (); # map name->Accessory
-        my $custPointValues = {};
-
-        my $defaultContext = $app->defaultContext;
-        my $fixedContext   = $app->fixedContext;
-        if( defined( $defaultContext )) {
-            print "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n";
-            while( 1 ) {
-                $context = ask( 'Enter context path: ' );
-
-                if( !UBOS::AppConfiguration::isValidContext( $context )) {
-                    error( "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes" );
-                } elsif( $context eq '' && keys %contextPaths > 0 ) {
-                    error( "Cannot put an app at the root context path if there is another app at the same site" );
-                } elsif( exists( $contextPaths{$context} )) {
-                    error( "There is already an app at this context path" );
-                } else {
-                    $contextPaths{$context} = $context;
-                    last;
-                } # we abort the loop as soon as there's an app at the root context
+    if( $fromTemplate ) {
+        foreach my $appConfig ( @{$fromTemplate->{appconfigs}} ) {
+            my $appConfigId = $appConfig->appConfigId();
+            if( UBOS::Host::findAppConfigurationById( $appConfigId )) {
+                fatal( 'An AppConfiguration with this appconfigid is deployed already. Cannot create a new site from this template:', $hostname );
             }
-        } elsif( defined( $fixedContext )) {
-            if( exists( $contextPaths{$fixedContext} )) {
-                error( "App $appId has an unchangeable context path of $fixedContext, but another app is already at this path. Cannot install here." );
-                next;
-            } elsif( '' eq $fixedContext && keys %contextPaths > 0 ) {
-                error( "App $appId must be installed at the root of the site. This means no other app can run at this site, but at least one is here already." );
-                next;
-            }
-            $context = $fixedContext;
-        }
 
-        while( 1 ) {
-            my $askUserAgain = 0;
-            my $accessories = ask( "Any accessories for $appId? Enter list: " );
-            $accessories =~ s!^\s+!!;
-            $accessories =~ s!\s+$!!;
+            my $appId  = $appConfig->{appid};
+            my @accIds = exists( $appConfig->{accessoryids} ) ? @{$appConfig->{accessoryids}} : ();
+            if( UBOS::Host::ensurePackages( [ $appId, @accIds ], $quiet ) < 0 ) {
+                fatal( 'Cannot find installable:', $@ );
+            }
+            my $app             = UBOS::App->new( $appId );
+            my $custPointValues = {};
+            my %accs            = (); # map name->Accessory
 
             my %currentAccs;
-            map { $currentAccs{$_} = $_ } split( /[\s,]+/, $accessories );
-            while( %currentAccs && !$askUserAgain ) {
+            map { $currentAccs{$_} = $_ } @accIds;
+            while( %currentAccs ) {
                 # accessories can require other accessories, and so forth
                 my %nextAccs;
 
@@ -410,109 +438,180 @@ sub run {
                     }
                     %currentAccs = %nextAccs;
                     %nextAccs    = ();
-
-                } else {
-                    if( $@ =~ m!unless you are root! ) {
-                        fatal( 'To download a needed package, you need root privileges. Please re-run as root' );
-                    }
-                    if( $@ =~ m!The requested URL returned error: 404! ) {
-                        fatal( 'Before this package can be installed, you need to run "ubos-admin update". Then try again.' );
-                    }
-                    error( $@ );
-                    $askUserAgain = 1;
                 }
             }
+            foreach my $acc ( values %accs ) {
+                if( !$acc->canBeUsedWithApp( $appId ) ) {
+                    fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+                }
+            }
+            _askForCustomizationPoints( $custPointValues, undef, [ $app, values %accs ], $askAll );
 
-            unless( $askUserAgain ) {
+            my $appConfigJson = {};
+            $appConfigJson->{appconfigid} = $appConfigId;
+            $appConfigJson->{appid}       = $appId;
+
+            if( defined( $fromTemplate->{context} )) {
+                $appConfigJson->{context} = $fromTemplate->{context};
+            } elsif( defined( $app->defaultContext() )) {
+                $appConfigJson->{context} = $app->defaultContext();
+            } elsif( defined( $app->fixedContex() )) {
+                $appConfigJson->{context} = $app->fixedContext();
+            }
+
+            if( %accs ) {
+                $appConfigJson->{accessoryids} = [];
+                map { push @{$appConfigJson->{accessoryids}}, $_; } keys %accs;
+            }
+
+            if( keys %$custPointValues ) {
+                $appConfigJson->{customizationpoints} = $custPointValues;
+            }
+            unless( exists( $newSiteJson->{appconfigs} )) {
+                $newSiteJson->{appconfigs} = [];
+            }
+            push @{$newSiteJson->{appconfigs}}, $appConfigJson;
+        }
+    } else {
+        # not from template
+        my $counter = 'First';
+        my %contextPaths = ();
+        my $appId;
+        my %accs = ();
+
+        while( 1 ) {
+            while( 1 ) {
+                $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
+                if( !$appId || UBOS::Host::ensurePackages( $appId, $quiet ) >= 0 ) {
+                    last;
+                }
+                if( $@ =~ m!unless you are root! ) {
+                    fatal( 'To download this package, you need root privileges. Please re-run as root' );
+                }
+                if( $@ =~ m!The requested URL returned error: 404! ) {
+                    fatal( 'Before this package can be installed, you need to run "ubos-admin update". Then try again.' );
+                }
+                error( $@ );
+            }
+            unless( $appId ) {
                 last;
             }
-        }
 
-        foreach my $acc ( values %accs ) {
-            if( !$acc->canBeUsedWithApp( $appId ) ) {
-                fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+            my $app = UBOS::App->new( $appId );
+
+            my $context         = undef;
+            my $custPointValues = {};
+
+            my $defaultContext = $app->defaultContext;
+            my $fixedContext   = $app->fixedContext;
+            if( defined( $defaultContext )) {
+                print "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n";
+                while( 1 ) {
+                    $context = ask( 'Enter context path: ' );
+
+                    if( !UBOS::AppConfiguration::isValidContext( $context )) {
+                        error( "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes" );
+                    } elsif( $context eq '' && keys %contextPaths > 0 ) {
+                        error( "Cannot put an app at the root context path if there is another app at the same site" );
+                    } elsif( exists( $contextPaths{$context} )) {
+                        error( "There is already an app at this context path" );
+                    } else {
+                        $contextPaths{$context} = $context;
+                        last;
+                    } # we abort the loop as soon as there's an app at the root context
+                }
+            } elsif( defined( $fixedContext )) {
+                if( exists( $contextPaths{$fixedContext} )) {
+                    error( "App $appId has an unchangeable context path of $fixedContext, but another app is already at this path. Cannot install here." );
+                    next;
+                } elsif( '' eq $fixedContext && keys %contextPaths > 0 ) {
+                    error( "App $appId must be installed at the root of the site. This means no other app can run at this site, but at least one is here already." );
+                    next;
+                }
+                $context = $fixedContext;
             }
-        }
 
-        foreach my $installable ( $app, values %accs ) {
-            my $custPoints = $installable->customizationPoints;
-            if( $custPoints ) {
-                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
-                my @sortedCustPointNames         = _sortCustomizationPoints( $custPoints );
+            while( 1 ) {
+                my $askUserAgain = 0;
+                my $accessories = ask( "Any accessories for $appId? Enter list: " );
+                $accessories =~ s!^\s+!!;
+                $accessories =~ s!\s+$!!;
 
-                foreach my $custPointName ( @sortedCustPointNames ) {
-                    my $custPointDef = $custPoints->{$custPointName};
+                my %currentAccs;
+                map { $currentAccs{$_} = $_ } split( /[\s,]+/, $accessories );
+                while( %currentAccs && !$askUserAgain ) {
+                    # accessories can require other accessories, and so forth
+                    my %nextAccs;
 
-                    if( !$askAll && !$custPointDef->{required} ) {
-                        next;
-                    }
-                    my $isFile = $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile};
-                    while( 1 ) {
-                        my $blank =    ( 'password' eq $custPointDef->{type} )
-                                    || ( exists( $custPointDef->{private} ) && $custPointDef->{private} );
+                    my @currentAccList = keys %currentAccs;
+                    if( UBOS::Host::ensurePackages( \@currentAccList, $quiet ) >= 0 ) {
+                        foreach my $currentAccId ( @currentAccList ) {
+                            my $acc = UBOS::Accessory->new( $currentAccId );
 
-                        my $value = ask(
-                                (( $installable == $app ) ? 'App ' : 'Accessory ' )
-                                . $installable->packageName
-                                . ( $askAll ? ' allows' : ' requires' )
-                                . " customization for $custPointName"
-                                . ( $isFile ? ' (enter filename)' : ' (enter value)' )
-                                . ': ',
-                                exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef,
-                                $blank,
-                                $blank );
+                            # don't repeat accessories
+                            map {
+                                unless( exists( $accs{$_} )) {
+                                    $nextAccs{$_} = $_;
+                                }
+                            } $acc->requires;
 
-                        if( !$value && !$custPointDef->{required} ) {
-                            # allow defaults for non-required values
-                            last;
+                            $accs{$acc->packageName} = $acc;
                         }
+                        %currentAccs = %nextAccs;
+                        %nextAccs    = ();
 
-                        if( $isFile ) {
-                            unless( -r $value ) {
-                                error( 'Cannot read file:', $value );
-                                next;
-                            }
-                            $value = UBOS::Utils::slurpFile( $value );
+                    } else {
+                        if( $@ =~ m!unless you are root! ) {
+                            fatal( 'To download a needed package, you need root privileges. Please re-run as root' );
                         }
-
-                        my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                        my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
-                        if( $ok ) {
-                            $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $cleanValue;
-                            last;
-                        } else {
-                            error( $custPointValidation->{valuecheckerror} );
+                        if( $@ =~ m!The requested URL returned error: 404! ) {
+                            fatal( 'Before this package can be installed, you need to run "ubos-admin update". Then try again.' );
                         }
+                        error( $@ );
+                        $askUserAgain = 1;
                     }
                 }
+
+                unless( $askUserAgain ) {
+                    last;
+                }
             }
-        }
 
-        my $appConfigJson = {};
-        $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
-        $appConfigJson->{appid}       = $appId;
+            foreach my $acc ( values %accs ) {
+                if( !$acc->canBeUsedWithApp( $appId ) ) {
+                    fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+                }
+            }
+            _askForCustomizationPoints( $custPointValues, undef, [ $app, values %accs ], $askAll );
 
-        if( defined( $context )) {
-            $appConfigJson->{context} = $context;
-        }
-        if( %accs ) {
-            $appConfigJson->{accessoryids} = [];
-            map { push @{$appConfigJson->{accessoryids}}, $_; } keys %accs;
-        }
+            my $appConfigJson = {};
+            $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
+            $appConfigJson->{appid}       = $appId;
 
-        if( keys %$custPointValues ) {
-            $appConfigJson->{customizationpoints} = $custPointValues;
-        }
-        unless( exists( $newSiteJson->{appconfigs} )) {
-            $newSiteJson->{appconfigs} = [];
-        }
-        push @{$newSiteJson->{appconfigs}}, $appConfigJson;
+            if( defined( $context )) {
+                $appConfigJson->{context} = $context;
+            }
+            if( %accs ) {
+                $appConfigJson->{accessoryids} = [];
+                map { push @{$appConfigJson->{accessoryids}}, $_; } keys %accs;
+            }
 
-        if( defined( $context ) && $context eq '' ) {
-            last;
+            if( keys %$custPointValues ) {
+                $appConfigJson->{customizationpoints} = $custPointValues;
+            }
+            unless( exists( $newSiteJson->{appconfigs} )) {
+                $newSiteJson->{appconfigs} = [];
+            }
+            push @{$newSiteJson->{appconfigs}}, $appConfigJson;
+
+            if( defined( $context ) && $context eq '' ) {
+                last;
+            }
+            $counter = 'Next';
         }
-        $counter = 'Next';
     }
+
+# Output JSON
 
     my $ret = 1;
     if( $out ) {
@@ -522,6 +621,9 @@ sub run {
         print UBOS::Utils::writeJsonToString( $newSiteJson );
 
     }
+
+# Deploy
+
     unless( $dryRun ) {
         my $newSite = UBOS::Site->new( $newSiteJson );
         unless( $newSite ) {
@@ -658,6 +760,89 @@ sub ask {
 }
 
 ##
+# Handle customization points
+# $custPointValues: insert into this Site JSON fragment here
+# $custPointValuesFromTemplate: if defined, holds values from the provided site template
+# $installables: all the installables at this AppConfiguration
+# $askAll: 1 if asking for all customization points
+sub _askForCustomizationPoints {
+    my $custPointValues             = shift;
+    my $custPointValuesFromTemplate = shift;
+    my $installables                = shift;
+    my $askAll                      = shift;
+
+    foreach my $installable ( @$installables ) {
+        my $packageName = $installable->packageName();
+        my $custPoints  = $installable->customizationPoints();
+
+        if( $custPoints ) {
+            my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+            my @sortedCustPointNames         = _sortCustomizationPoints( $custPoints );
+
+            foreach my $custPointName ( @sortedCustPointNames ) {
+                my $custPointDef = $custPoints->{$custPointName};
+
+                if(    $custPointValuesFromTemplate
+                    && defined( $custPointValuesFromTemplate->{$packageName} )
+                    && defined( $custPointValuesFromTemplate->{$packageName}->{$custPointName} ))
+                {
+                    my $value = $custPointValuesFromTemplate->{$packageName}->{$custPointName};
+                    my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                    my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
+                    unless( $ok ) {
+                        fatal( 'Cannot create a site based on this template:', $custPointValidation->{valuecheckerror} );
+                    }
+                    $custPointValues->{$packageName}->{$custPointName} = $cleanValue;
+                    next;
+                }
+
+                if( !$askAll && !$custPointDef->{required} ) {
+                    next;
+                }
+                my $isFile = $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile};
+                while( 1 ) {
+                    my $blank =    ( 'password' eq $custPointDef->{type} )
+                                || ( exists( $custPointDef->{private} ) && $custPointDef->{private} );
+
+                    my $value = ask(
+                            (( ref( $installable ) =~ m!App! ) ? 'App ' : 'Accessory ' )
+                            . $installable->packageName
+                            . ( $askAll ? ' allows' : ' requires' )
+                            . " customization for $custPointName"
+                            . ( $isFile ? ' (enter filename)' : ' (enter value)' )
+                            . ': ',
+                            exists( $custPointDef->{regex} ) ? $custPointDef->{regex} : undef,
+                            $blank,
+                            $blank );
+
+                    if( !$value && !$custPointDef->{required} ) {
+                        # allow defaults for non-required values
+                        last;
+                    }
+
+                    if( $isFile ) {
+                        unless( -r $value ) {
+                            error( 'Cannot read file:', $value );
+                            next;
+                        }
+                        $value = UBOS::Utils::slurpFile( $value );
+                    }
+
+                    my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+                    my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
+                    if( $ok ) {
+                        $custPointValues->{$installable->packageName}->{$custPointName}->{value} = $cleanValue;
+                        last;
+                    } else {
+                        error( $custPointValidation->{valuecheckerror} );
+                    }
+                }
+            }
+        }
+    }
+}
+
+##
 # Helper method to sort customization points
 # $custPoints: hash of customization point name to info
 # return: array of customization points names
@@ -748,6 +933,10 @@ HHH
             '--askForAllCustomizationPoints' => <<HHH,
     Ask the user for values for all customization points, not just the
     ones that are required and have no default value.
+HHH
+            '--from-template <file>' => <<HHH,
+    Use the provided Site JSON file template as a template and only ask
+    for those pieces of information not already provided in the template.
 HHH
             '--out <file>' => <<HHH,
     Save the generated Site JSON file locally to file <file>.

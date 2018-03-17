@@ -1,18 +1,26 @@
 {
     "host" : {
-        "appconfigparsdir"          : "/var/lib/ubos/appconfigpars",
+        "appconfigparsdir"          : "/ubos/lib/ubos/appconfigpars",
         "cachedir"                  : "/var/cache",
+        "resourcesdir"              : "/ubos/lib/ubos/resources",
+        "pinnedresourcesdir"        : "/ubos/lib/ubos/pinnedresources",
+        "sitesdir"                  : "/ubos/lib/ubos/sites",
+        "afterbootfile"             : "/ubos/lib/ubos/after-boot",
         "checkmanifest"             : true,
         "readstaffonboot"           : true,
         "deploysitetemplatesonboot" : true,
         "snapshotonupgrade"         : true,
-        "tmpdir"                    : "/tmp"
+        "tmpdir"                    : "/tmp",
+        "homeshepherd"              : "/var/shepherd",
+        "sitesdocumentrootdir"      : "/ubos/http/sites",
+        "siteswellknowndir"         : "/ubos/http/wellknown",
+        "placeholdersitesdocumentrootdir" : "/srv/http/placeholders"
     },
 
     "package" : {
-        "codedir"     : "/usr/share/${package.name}",
-        "datadir"     : "/var/lib/${package.name}",
-        "manifestdir" : "/var/lib/ubos/manifests"
+        "codedir"     : "/ubos/share/${package.name}",
+        "datadir"     : "/ubos/lib/${package.name}",
+        "manifestdir" : "/ubos/lib/ubos/manifests"
     },
 
     "apache2" : {
@@ -21,7 +29,7 @@
 
         "sitefragmentdir"      : "/etc/httpd/ubos/sites",
         "appconfigfragmentdir" : "/etc/httpd/ubos/appconfigs",
-        "sitesdir"             : "/srv/http/sites",
+        "sitesdir"             : "/ubos/http/sites",
         "ssldir"               : "/etc/httpd/ubos/ssl",
         "letsencrypt" : {
             "livedir" : "/etc/letsencrypt/live"
@@ -32,13 +40,22 @@
         "uname" : "tomcat8",
         "gname" : "tomcat8",
 
-        "sitesdir"    : "/var/lib/tomcat8/sites",
-        "contextsdir" : "/etc/tomcat8/Catalina"
+        "sitesdir"     : "/ubos/lib/tomcat8/sites",
+        "sitesappsdir" : "/etc/tomcat8/ubos/sites-apps",
+        "contextsdir"  : "/etc/tomcat8/Catalina"
+    },
+
+    "mysql" : {
+        "datadir" : "/ubos/lib/mysql"
+    },
+
+    "postgresql" : {
+        "datadir" : "/ubos/lib/postgresql/data"
     },
 
     "tor" : {
-        "sitefragmentdir" : "/etc/tor/ubos-sites.d",
-        "sitesdir"        : "/var/lib/tor/sites"
+        "sitefragmentdir" : "/etc/tor/sites.d",
+        "sitesdir"        : "/ubos/lib/tor/sites"
     },
 
     "site" : {

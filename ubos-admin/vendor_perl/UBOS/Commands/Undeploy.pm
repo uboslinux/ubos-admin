@@ -36,6 +36,10 @@ sub run {
     my @hosts         = ();
     my $all           = 0;
     my $file          = undef;
+    my $backupFile    = undef;
+    my $force         = 0;
+    my $noTls         = undef;
+    my $noTorKey      = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -45,19 +49,30 @@ sub run {
             'siteid=s'    => \@siteIds,
             'hostname=s'  => \@hosts,
             'all'         => \$all,
-            'file=s'      => \$file );
+            'file=s'      => \$file,
+            'backup=s'    => \$backupFile,
+            'force',      => \$force,
+            'notls'       => \$noTls,
+            'notorkey'    => \$noTorKey );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args || ( !@siteIds && !@hosts && !$all && !$file )
-                           || ( @siteIds && @hosts )
-                           || ( @siteIds && $file )
-                           || ( @hosts && $file )
-                           || ( $all && ( @siteIds || @hosts || $file ))
-                           || ( $verbose && $logConfigFile ))
+    if(    !$parseOk
+        || @args
+        || ( !@siteIds && !@hosts && !$all && !$file )
+        || ( @siteIds && @hosts )
+        || ( @siteIds && $file )
+        || ( @hosts && $file )
+        || ( $all && ( @siteIds || @hosts || $file ))
+        || (( $force || $noTls || $noTorKey ) && !$backupFile )
+        || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $backupFile && -e $backupFile && !$force ) {
+        fatal( 'Backup file exists already. Use --force to overwrite.' );
     }
 
     trace( 'Looking for site(s)' );
@@ -131,36 +146,63 @@ sub run {
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    trace( 'Disabling site(s)' );
+    my $backupFailed = 0;
+    if( $backupFile ) {
+        info( 'Backing up' );
+        my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
+        trace( 'ZipFileBackup of sites:', @siteIdsToBackup );
 
-    my $disableTriggers = {};
-    foreach my $oldSite ( values %$oldSites ) {
-        debugAndSuspend( 'Disable site', $oldSite->siteId );
-        $ret &= $oldSite->disable( $disableTriggers ); # replace with "404 page"
-    }
-    debugAndSuspend( 'Execute triggers', keys %$disableTriggers );
-    UBOS::Host::executeTriggers( $disableTriggers );
-
-    info( 'Undeploying' );
-
-    my $undeployTriggers = {};
-    foreach my $oldSite ( values %$oldSites ) {
-        debugAndSuspend( 'Undeploy site', $oldSite->siteId );
-        $ret &= $oldSite->undeploy( $undeployTriggers );
-
-        if( $oldSite->hasLetsEncryptTls()) {
-            # If we don't do this, a new site with the same hostname may be deployed, and then things get messy
-            $ret &= $oldSite->removeLetsEncryptCertificate();
+        my $backup = UBOS::Backup::ZipFileBackup->new();
+        my $status = UBOS::BackupUtils::performBackup( $backup, $backupFile, \@siteIds, [], $noTls, $noTorKey );
+        unless( $status ) {
+            warning( 'Backup failed. Not undeploying sites.', $@ );
+            $backupFailed = 1;
         }
     }
 
-    UBOS::Networking::NetConfigUtils::updateOpenPorts();
+    if( $backupFailed ) {
+        trace( 'Disabling site(s)' );
 
-    debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
-    UBOS::Host::executeTriggers( $undeployTriggers );
+        my $disableTriggers = {};
+        foreach my $oldSite ( values %$oldSites ) {
+            debugAndSuspend( 'Disable site', $oldSite->siteId );
+            $ret &= $oldSite->disable( $disableTriggers ); # replace with "404 page"
+        }
+        debugAndSuspend( 'Execute triggers', keys %$disableTriggers );
+        UBOS::Host::executeTriggers( $disableTriggers );
 
-    unless( $ret ) {
-        error( "Undeploy failed." );
+        info( 'Undeploying' );
+
+        my $undeployTriggers = {};
+        foreach my $oldSite ( values %$oldSites ) {
+            debugAndSuspend( 'Undeploy site', $oldSite->siteId );
+            $ret &= $oldSite->undeploy( $undeployTriggers );
+
+            if( $oldSite->hasLetsEncryptTls()) {
+                # If we don't do this, a new site with the same hostname may be deployed, and then things get messy
+                $ret &= $oldSite->removeLetsEncryptCertificate();
+            }
+        }
+
+        UBOS::Networking::NetConfigUtils::updateOpenPorts();
+
+        debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
+        UBOS::Host::executeTriggers( $undeployTriggers );
+
+        unless( $ret ) {
+            error( "Undeploy failed." );
+        }
+    } else {
+        info( 'Resuming sites' );
+
+        my $resumeTriggers = {};
+        foreach my $site ( %$oldSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
+        $ret = 0;
     }
     return $ret;
 }
@@ -204,6 +246,23 @@ SSS
 HHH
         },
         'args' => {
+            '--backup <backupfile>' => <<HHH,
+    Before updating the site(s), back up all data from all affected sites
+    by saving all data from all apps and accessories at those sites into
+    local file <backupfile>.
+HHH
+            '--force' => <<HHH,
+    If a backup is to be created, and the backup file exists already,
+    overwrite instead of aborting.
+HHH
+            '--notls' => <<HHH,
+    If a backup is to be created, and a site uses TLS, do not put the TLS
+    key and certificate into the backup.
+HHH
+            '--notorkey' => <<HHH,
+    If a backup is to be created, and a site is on the Tor network, do
+    not put the Tor key into the backup.
+HHH
             '--verbose' => <<HHH,
     Display extra output. May be repeated for even more output.
 HHH

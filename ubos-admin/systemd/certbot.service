@@ -6,4 +6,4 @@ ConditionPathExists=/usr/bin/certbot
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/certbot renew --quiet --agree-tos --post-hook "/usr/bin/systemctl restart ubos-httpd.service"
+ExecStart=/usr/bin/certbot renew --quiet --agree-tos --post-hook "/usr/bin/systemctl restart httpd.service"

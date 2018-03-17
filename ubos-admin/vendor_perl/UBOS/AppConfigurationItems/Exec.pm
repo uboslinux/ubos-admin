@@ -92,7 +92,7 @@ sub runPostDeployScript {
     my $defaultToDir   = shift;
     my $vars           = shift;
 
-    return $self->_runIt( $doIt, $methodName, $defaultFromDir, $defaultToDir, $vars );
+    return $self->_runIt( 1, $methodName, $defaultFromDir, $defaultToDir, $vars );
 }
 
 ##
@@ -100,7 +100,7 @@ sub runPostDeployScript {
 sub _runIt {
     my $self           = shift;
     my $doIt           = shift;
-    my $methodName     = shift;
+    my $operation      = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $vars           = shift;

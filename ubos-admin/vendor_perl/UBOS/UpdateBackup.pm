@@ -33,7 +33,7 @@ sub checkReadyOrQuit {
     if( @found ) {
         fatal( <<MSG );
 Cannot create a temporary backup; the backup directory is not empty.
-Did a previous ubos-admin operation fail? If so, please log a bug at
+Did a previous ubos-admin operation fail? If so, please create an issue at
     https://github.com/uboslinux/ubos-admin/issues/new
 To restore your data, run:
     ubos-admin update-stage2
@@ -224,6 +224,3 @@ sub delete {
 }
 
 1;
-
-
-

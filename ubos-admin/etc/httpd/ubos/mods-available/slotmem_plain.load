@@ -1,1 +1,0 @@
-LoadModule slotmem_plain_module modules/mod_slotmem_plain.so

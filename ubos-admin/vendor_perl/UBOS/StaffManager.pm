@@ -774,13 +774,14 @@ sub setupUpdateShepherd {
     my $add  = shift;
     my @keys = @_;
 
-    if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', '/var/shepherd' )) {
+    my $homeShepherd = UBOS::Host::vars()->get( 'host.homeshepherd', '/ubos/shepherd' );
+    if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
 
         trace( 'StaffManager::setupUpdateShepherd', $add, @keys );
 
-        my $authKeyFile = '/var/shepherd/.ssh/authorized_keys';
-        unless( -d '/var/shepherd/.ssh' ) {
-            UBOS::Utils::mkdir( "/var/shepherd/.ssh", 0700, 'shepherd', 'shepherd' );
+        my $authKeyFile = "$homeShepherd/.ssh/authorized_keys";
+        unless( -d "$homeShepherd/.ssh" ) {
+            UBOS::Utils::mkdir( "$homeShepherd/.ssh", 0700, 'shepherd', 'shepherd' );
         }
         my $authorizedKeys;
         if( $add && -e $authKeyFile ) {

@@ -31,11 +31,17 @@ sub ensureRunning {
         return 1;
     }
 
+    my $dataDir = UBOS::Host::vars()->get( 'postgresql.datadir' );
+    unless( -d $dataDir ) {
+        UBOS::Utils::mkdirDashP( $dataDir );
+        chmod 0700, $dataDir;
+
+        UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
+    }
+
     if( UBOS::Host::ensurePackages( 'postgresql' ) < 0 ) {
         warning( $@ );
     }
-
-    my $dataDir = '/var/lib/postgres/data';
 
     unless( -d $dataDir ) {
         # somehow that directory has disappeared; package postgresql puts it there

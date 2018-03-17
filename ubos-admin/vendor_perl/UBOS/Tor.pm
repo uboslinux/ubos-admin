@@ -14,7 +14,7 @@ use Time::HiRes qw( gettimeofday );
 use UBOS::Logging;
 
 my $running = 0;
-my $pidDir  = '/run/ubos-tor';
+my $pidDir  = '/run/tor';
 my $pidFile = "$pidDir/pidfile";
 
 ##
@@ -35,9 +35,9 @@ sub _ensureTor {
 
     my $out;
     my $err;
-    debugAndSuspend( 'Check that ubos-tor.service is running' );
-    UBOS::Utils::myexec( 'systemctl enable ubos-tor',   undef, \$out, \$err );
-    UBOS::Utils::myexec( "systemctl $command ubos-tor", undef, \$out, \$err );
+    debugAndSuspend( 'Check that tor.service is running' );
+    UBOS::Utils::myexec( 'systemctl enable tor',   undef, \$out, \$err );
+    UBOS::Utils::myexec( "systemctl $command tor", undef, \$out, \$err );
 
     my $max  = 15;
     my $poll = 0.2;
@@ -50,11 +50,6 @@ sub _ensureTor {
             sleep( 2 ); # two more seconds
             trace( 'Detected Tor restart' );
             last;
-        }
-        unless( -d $pidDir ) {
-            # need to create here: cannot create in package (/run gets recreated at each boot)
-            # and writable by the tor:tor daemon
-            UBOS::Utils::mkdir( $pidDir, 0755, 'tor', 'tor' );
         }
 
         ( $seconds, $microseconds ) = gettimeofday;

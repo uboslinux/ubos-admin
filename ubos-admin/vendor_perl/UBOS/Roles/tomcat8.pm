@@ -18,17 +18,6 @@ use UBOS::Logging;
 use UBOS::Tomcat8;
 use UBOS::Utils;
 
-my $sitesDir     = '/var/lib/tomcat8/sites';
-my $sitesAppsDir = '/etc/tomcat8/ubos/sites-apps';
-my $contextDir   = '/etc/tomcat8/Catalina';
-
-# $sitesDir: contains one directory per site with name $siteId, each of which contains
-#   one directory per AppConfiguration at this site, with name $appConfigId, which is that
-#   AppConfig's "home dir"
-# $sitesAppsDir: contains one directory per site with name $siteId. This is the 'webapps' directory
-#   for that virtual host
-# $contextDir: contains one directory per site with name $hostname. This is where we drop the
-#   the context.xml files for all the AppConfigurations at this virtual host
 ##
 # Constructor
 sub new {
@@ -65,9 +54,12 @@ sub setupSiteOrCheck {
     trace( 'tomcat8::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
     my $siteDocumentDir = $site->vars()->getResolve( 'site.tomcat8.sitedocumentdir' );
+    my $sitesDir        = UBOS::Host::vars()->get( 'tomcat8.sitesdir' );
+    my $sitesAppsDir    = UBOS::Host::vars()->get( 'tomcat8.sitesappsdir' );
+    my $contextDir      = UBOS::Host::vars()->get( 'tomcat8.contextsdir' );
 
     if( $doIt ) {
-        UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
+        UBOS::Utils::mkdirDashP( $siteDocumentDir, 0755 );
 
         trace( 'tomcat8::_setupSite', $self->name(), $site->siteId );
 
@@ -149,6 +141,10 @@ sub removeSite {
 
     trace( 'tomcat8::removeSite', $self->name(), $doIt, $site->siteId );
 
+    my $sitesDir        = UBOS::Host::vars()->get( 'tomcat8.sitesdir' );
+    my $sitesAppsDir    = UBOS::Host::vars()->get( 'tomcat8.sitesappsdir' );
+    my $contextDir      = UBOS::Host::vars()->get( 'tomcat8.contextsdir' );
+
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostnameorwildcard;
     my $siteContextDir  = "$contextDir/$hostname";
@@ -173,6 +169,8 @@ sub removeSite {
 # The list of relevant sites has been updated.
 sub sitesUpdated {
     my $self = shift;
+
+    my $sitesAppsDir    = UBOS::Host::vars()->get( 'tomcat8.sitesappsdir' );
 
     my $sites        = UBOS::Host::sites();
     my $hostsSection = <<END;
@@ -240,6 +238,8 @@ sub checkInstallableManifestForRole {
         'perlscript'      => 1,
         'symlink'         => 1,
         'systemd-service' => 1,
+        'systemd-target'  => 1,
+        'systemd-timer'   => 1,
         'tcpport'         => 1,
         'udpport'         => 1
     };

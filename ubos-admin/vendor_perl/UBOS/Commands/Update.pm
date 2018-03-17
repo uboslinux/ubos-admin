@@ -38,6 +38,10 @@ sub run {
     my $debug         = undef;
     my $restIsPackages   = 0;
     my @packageFiles     = ();
+    my $backupFile    = undef;
+    my $force         = 0;
+    my $noTls         = undef;
+    my $noTorKey      = undef;
     my $reboot           = 0;
     my $noreboot         = 0;
     my $nosync           = 0;
@@ -52,6 +56,10 @@ sub run {
             'logConfig=s'      => \$logConfigFile,
             'debug'            => \$debug,
             'pkgFiles'         => \$restIsPackages,
+            'backup=s'         => \$backupFile,
+            'force',           => \$force,
+            'notls'            => \$noTls,
+            'notorkey'         => \$noTorKey,
             'reboot'           => \$reboot,
             'noreboot'         => \$noreboot,
             'nosynchronize'    => \$nosync,
@@ -68,8 +76,18 @@ sub run {
         @args         = ();
     }
 
-    if( !$parseOk || @args || ( $verbose && $logConfigFile ) || ( @packageFiles && $noPackageUpgrade ) || ( $reboot && $noreboot )) {
+    if(    !$parseOk
+        || @args
+        || ( @packageFiles && $noPackageUpgrade )
+        || ( $reboot && $noreboot )
+        || (( $force || $noTls || $noTorKey ) && !$backupFile )
+        || ( $verbose && $logConfigFile ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $backupFile && -e $backupFile && !$force ) {
+        fatal( 'Backup file exists already. Use --force to overwrite.' );
     }
 
     # Need to keep a copy of the logConfigFile, new package may not have it any more
@@ -104,6 +122,8 @@ sub run {
 
     UBOS::UpdateBackup::checkReadyOrQuit();
 
+    my $backupFailed = 0;
+
     if( keys %$oldSites ) {
         info( 'Suspending sites' );
 
@@ -116,110 +136,143 @@ sub run {
         UBOS::Host::executeTriggers( $suspendTriggers );
 
         info( 'Backing up' );
+        
+        if( $backupFile ) {
+            my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
+            trace( 'ZipFileBackup of sites:', @siteIdsToBackup );
 
-        my $backup = UBOS::UpdateBackup->new();
-        debugAndSuspend( 'Backup old sites', keys %$oldSites );
-        $ret &= $backup->create( $oldSites );
+            my $backup = UBOS::Backup::ZipFileBackup->new();
+            my $status = UBOS::BackupUtils::performBackup( $backup, $backupFile, \@siteIdsToBackup, [], $noTls, $noTorKey );
+            unless( $status ) {
+                error( 'Backup failed. Not updating.', $@ );
+                $backupFailed = 1;
+            }
+        }
 
-        info( 'Undeploying' );
+        unless( $backupFailed ) {
+            my $updateBackup = UBOS::UpdateBackup->new();
+            debugAndSuspend( 'Backup old sites', keys %$oldSites );
+            $ret &= $updateBackup->create( $oldSites );
 
-        my $adminBackups = {};
-        my $undeployTriggers = {};
+            info( 'Undeploying' );
+
+            my $adminBackups = {};
+            my $undeployTriggers = {};
+            foreach my $site ( values %$oldSites ) {
+                debugAndSuspend( 'Undeploy site', $site->siteId );
+                $ret &= $site->undeploy( $undeployTriggers );
+            }
+            debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
+            UBOS::Host::executeTriggers( $undeployTriggers );
+        }
+
+    } else {
+        if( $backupFile ) {
+            info( 'No need to suspend or backup sites, none deployed' );
+        } else {
+            info( 'No need to suspend sites, none deployed' );
+        }
+    }
+
+    if( $backupFailed ) {
+        info( 'Resuming sites' );
+
+        my $resumeTriggers = {};
         foreach my $site ( values %$oldSites ) {
-            debugAndSuspend( 'Undeploy site', $site->siteId );
-            $ret &= $site->undeploy( $undeployTriggers );
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
         }
-        debugAndSuspend( 'Execute triggers', keys %$undeployTriggers );
-        UBOS::Host::executeTriggers( $undeployTriggers );
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
+        $ret = 0;
+
     } else {
-        info( 'No need to suspend sites, none deployed' );
-    }
+        debugAndSuspend( 'Regenerate pacman.conf' );
+        UBOS::Utils::regeneratePacmanConf();
+        debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/ubos/mods-enabled' );
+        UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
 
-    debugAndSuspend( 'Regenerate pacman.conf' );
-    UBOS::Utils::regeneratePacmanConf();
-    debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/ubos/mods-enabled' );
-    UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
-
-    my $stage2Cmd = 'ubos-admin update-stage2';
-    if( defined( $snapNumber )) {
-        $stage2Cmd .= ' --snapnumber ' . $snapNumber;
-    }
-    for( my $i=0 ; $i<$verbose ; ++$i ) {
-        $stage2Cmd .= ' -v';
-    }
-    if( $stage2LogConfigFile ) {
-        $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
-    }
-    unless( $ret ) {
-        $stage2Cmd .= ' --stage1exit 1';
-    }
-
-    if( $stage1Only ) {
-        print "Stopping after stage 1 as requested. To complete the update:\n";
-        print "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n";
-        print "2. If you installed a new kernel: reboot. Stage 2 of the update will run automatically\n";
-        print "3. If you did not reboot: manually run stage 2: $stage2Cmd\n";
-        exit 0;
-    }
-
-    info( 'Updating code' );
-
-    my $rebootHeuristics = 0;
-    if( $noPackageUpgrade ) {
-        # do nothing
-    } elsif( @packageFiles ) {
-        UBOS::Host::installPackageFiles( \@packageFiles, $showPackages );
-    } else {
-        if( UBOS::Host::updateCode( $nosync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive() ) == -1 ) {
-            $rebootHeuristics = 1;
+        my $stage2Cmd = 'ubos-admin update-stage2';
+        if( defined( $snapNumber )) {
+            $stage2Cmd .= ' --snapnumber ' . $snapNumber;
         }
-    }
+        for( my $i=0 ; $i<$verbose ; ++$i ) {
+            $stage2Cmd .= ' -v';
+        }
+        if( $stage2LogConfigFile ) {
+            $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
+        }
+        unless( $ret ) {
+            $stage2Cmd .= ' --stage1exit 1';
+        }
 
-    my $doReboot;
-    if( $reboot ) {
-        info( 'Rebooting.' );
-        $doReboot = 1;
+        if( $stage1Only ) {
+            print "Stopping after stage 1 as requested. To complete the update:\n";
+            print "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n";
+            print "2. If you installed a new kernel: reboot. Stage 2 of the update will run automatically\n";
+            print "3. If you did not reboot: manually run stage 2: $stage2Cmd\n";
+            exit 0;
+        }
 
-    } elsif( $rebootHeuristics ) {
-        if( $noreboot ) {
-            info( 'Reboot recommended, but --noreboot was specified. Not rebooting.' );
+        info( 'Updating code' );
+
+        my $rebootHeuristics = 0;
+        if( $noPackageUpgrade ) {
+            # do nothing
+        } elsif( @packageFiles ) {
+            UBOS::Host::installPackageFiles( \@packageFiles, $showPackages );
+        } else {
+            if( UBOS::Host::updateCode( $nosync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive() ) == -1 ) {
+                $rebootHeuristics = 1;
+            }
+        }
+
+        my $doReboot;
+        if( $reboot ) {
+            info( 'Rebooting.' );
+            $doReboot = 1;
+
+        } elsif( $rebootHeuristics ) {
+            if( $noreboot ) {
+                info( 'Reboot recommended, but --noreboot was specified. Not rebooting.' );
+                trace( 'Handing over to update-stage2:', $stage2Cmd );
+                $doReboot = 0;
+
+            } else {
+                info( 'Detected updates that recommend a reboot. Rebooting.' );
+                $doReboot = 1;
+            }
+
+        } else {
             trace( 'Handing over to update-stage2:', $stage2Cmd );
             $doReboot = 0;
-
-        } else {
-            info( 'Detected updates that recommend a reboot. Rebooting.' );
-            $doReboot = 1;
         }
 
-    } else {
-        trace( 'Handing over to update-stage2:', $stage2Cmd );
-        $doReboot = 0;
-    }
+        if( $doReboot ) {
+            my $afterBoot = 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( 0, ';
+            if( defined( $snapNumber )) {
+                $afterBoot .= '"' . $snapNumber . '"';
+            } else {
+                $afterBoot .= 'undef';
+            }
+            $afterBoot .= ' );';
 
-    if( $doReboot ) {
-        my $afterBoot = 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( 0, ';
-        if( defined( $snapNumber )) {
-            $afterBoot .= '"' . $snapNumber . '"';
+            debugAndSuspend( 'Add after-boot commands', $afterBoot );
+            UBOS::Host::addAfterBootCommands( $afterBoot );
+
+            debugAndSuspend( 'Reboot now' );
+            exec( 'systemctl reboot' ) || fatal( 'Failed to issue reboot command' );
+
         } else {
-            $afterBoot .= 'undef';
+            # Reload systemd first, as .service files might have been updated
+            debugAndSuspend( 'systemctl daemon-reload' );
+            UBOS::Utils::myexec( 'systemctl daemon-reload' );
+
+            debugAndSuspend( 'Hand over to stage2' );
+            exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
         }
-        $afterBoot .= ' );';
-
-        debugAndSuspend( 'Add after-boot commands', $afterBoot );
-        UBOS::Host::addAfterBootCommands( $afterBoot );
-
-        debugAndSuspend( 'Reboot now' );
-        exec( 'systemctl reboot' ) || fatal( 'Failed to issue reboot command' );
-
-    } else {
-        # Reload systemd first, as .service files might have been updated
-        debugAndSuspend( 'systemctl daemon-reload' );
-        UBOS::Utils::myexec( 'systemctl daemon-reload' );
-
-        debugAndSuspend( 'Hand over to stage2' );
-        exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
+        # Never gets here
     }
-    # Never gets here
 }
 
 ##
@@ -264,11 +317,22 @@ SSS
 HHH
         },
         'args' => {
-            '--verbose' => <<HHH,
-    Display extra output. May be repeated for even more output.
+            '--backup <backupfile>' => <<HHH,
+    Before updating the device, back up all data from all deployed sites
+    by saving all data from all apps and accessories into local file
+    <backupfile>.
 HHH
-            '--logConfig <file>' => <<HHH,
-    Use an alternate log configuration file for this command.
+            '--force' => <<HHH,
+    If a backup is to be created, and the backup file exists already,
+    overwrite instead of aborting.
+HHH
+            '--notls' => <<HHH,
+    If a backup is to be created, and a site uses TLS, do not put the TLS
+    key and certificate into the backup.
+HHH
+            '--notorkey' => <<HHH,
+    If a backup is to be created, and a site is on the Tor network, do
+    not put the Tor key into the backup.
 HHH
             '--reboot' => <<HHH,
     Skip the reboot heuristics, and always reboot.
@@ -279,10 +343,15 @@ HHH
             '--nosnapshot' => <<HHH,
     Do not create filesystem shapshots before and after the upgrade.
 HHH
-            '--showpackages' => <<HHH
+            '--showpackages' => <<HHH,
     Print the names of the packages that were upgraded.
 HHH
-
+            '--verbose' => <<HHH,
+    Display extra output. May be repeated for even more output.
+HHH
+            '--logConfig <file>' => <<HHH,
+    Use an alternate log configuration file for this command.
+HHH
         }
     };
 }

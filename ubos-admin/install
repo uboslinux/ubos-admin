@@ -71,14 +71,6 @@ post_upgrade() {
     if [ -x /usr/share/ubos-admin/bin/post-upgrade ]; then /usr/share/ubos-admin/bin/post-upgrade; fi
 }
 
-pre_upgrade() {
-    # Fix directory permissions to avoid warning from pacman
-    [ -d /var/lib/ubos/appconfigpars ] && chmod 755 /var/lib/ubos/appconfigpars
-}
-
 ensureChattr() {
-    # set btrfs nocow attributes for databases
-    ( [ -d /var/lib/mysql      ] || mkdir /var/lib/mysql      ) && chmod 700 /var/lib/mysql      && chattr +C /var/lib/mysql
-    ( [ -d /var/lib/postgresql ] || mkdir /var/lib/postgresql ) && chmod 700 /var/lib/postgresql && chattr +C /var/lib/postgresql
-    ( [ -d /var/log/journal    ] || mkdir /var/log/journal    ) && chattr +C /var/log/journal
+    ( [ -d /var/log/journal ] || mkdir /var/log/journal ) && chattr +C /var/log/journal
 }

@@ -13,21 +13,14 @@ package UBOS::Roles::apache2;
 use base qw( UBOS::Role );
 use fields;
 
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
 my $sitesDir         = '/etc/httpd/ubos/sites';
 my $defaultSitesDir  = '/etc/httpd/ubos/defaultsites';
 my $appConfigsDir    = '/etc/httpd/ubos/appconfigs';
-my $sitesDocumentRootDir            = '/srv/http/sites';
-my $sitesWellknownDir               = '/srv/http/wellknown';
-my $placeholderSitesDocumentRootDir = '/srv/http/placeholders';
 my @forErrors = ( '_errors', '_common' );
-
-# $sitesDir: contains one config file per virtual host, which includes files from $appConfigsDir/$siteId
-# $appConfigsDir: contains one directory per site with name $siteId. Each of those contains
-#   one config file per AppConfiguration at this site, with name $appConfigId.conf
-# $sitesDocumentRootDir: contains one directory per site with name $siteId, which is that Site's DocumentRoot
 
 ##
 # Constructor
@@ -117,6 +110,7 @@ sub setupSiteOrCheck {
     my $siteDocumentDir     = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
     my $siteTorDir          = $site->vars()->getResolve( 'site.apache2.sitetordir' );
     my $siteTorFragmentFile = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
+    my $sitesWellknownDir   = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
 
     if( $doIt ) {
         trace( 'apache2::_setupSite', $self->name(), $site->siteId );
@@ -149,11 +143,6 @@ sub setupSiteOrCheck {
             UBOS::Utils::saveFile( $siteTorFragmentFile, <<CONTENT );
 HiddenServiceDir $siteTorDir/
 CONTENT
-
-            my $siteTorDir = $site->vars()->getResolve( 'site.apache2.sitetordir' );
-            unless( -d $siteTorDir ) {
-                UBOS::Utils::mkdir( $siteTorDir, 0700, 'tor', 'tor' );
-            }
 
             my $privateKey = $site->torPrivateKey();
             my $hostname   = $site->hostname();
@@ -197,6 +186,9 @@ sub setupPlaceholderSite {
     my $triggers        = shift;
 
     trace( 'apache2::setupPlaceholderSite', $self->name(), $site->siteId );
+
+    my $sitesWellknownDir = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
+    my $placeholderSitesDocumentRootDir = UBOS::Host::vars()->get( 'host.placeholdersitesdocumentrootdir' );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -248,6 +240,8 @@ sub resumeSite {
 
     trace( 'apache2::resumeSite', $self->name(), $site->siteId );
 
+    my $sitesDocumentRootDir = UBOS::Host::vars()->get( 'host.sitesdocumentrootdir' );
+    my $sitesWellknownDir    = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
     my $port              = $site->port;
@@ -304,13 +298,13 @@ CONTENT
         my $group = $site->vars()->getResolve( 'apache2.gname' );
 
         if( $sslKey ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.key",      $sslKey,       0440, 'root', $group ); # avoid overwrite by apache
+            UBOS::Utils::saveFile( "$sslDir/$siteId.key",   $sslKey,    0440, 'root', $group ); # avoid overwrite by apache
         }
         if( $sslCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.crt",      $sslCert,      0440, 'root', $group );
+            UBOS::Utils::saveFile( "$sslDir/$siteId.crt",   $sslCert,   0440, 'root', $group );
         }
         if( $sslCaCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt",    $sslCaCert,    0040, 'root', $group );
+            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
         }
 
     } # else No SSL
@@ -450,6 +444,7 @@ sub removeSite {
     my $siteDocumentDir     = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
     my $siteTorDir          = $site->vars()->getResolve( 'site.apache2.sitetordir' );
     my $siteTorFragmentFile = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
+    my $sitesWellknownDir   = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -521,6 +516,8 @@ sub hasLetsEncryptCerts {
 sub obtainLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
+
+    my $sitesWellknownDir = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
 
     my $adminHash        = $site->obtainSiteAdminHash;
     my $siteId           = $site->siteId;
@@ -687,6 +684,8 @@ sub checkInstallableManifestForRole {
         'perlscript'      => 1,
         'symlink'         => 1,
         'systemd-service' => 1,
+        'systemd-target'  => 1,
+        'systemd-timer'   => 1,
         'tcpport'         => 1,
         'udpport'         => 1
     };

@@ -1,1 +1,0 @@
-LoadModule lbmethod_bytraffic_modules modules/mod_lbmethod_bytraffic.so

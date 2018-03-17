@@ -334,4 +334,42 @@ sub _applyFunc {
     return $ret;
 }
 
+##
+# Obtain the resolved variables, recursively to delegates, as JSON.
+# return: JSON hash
+sub asJson {
+    my $self = shift;
+
+    my $ret = {};
+
+    $self->_addToJson( $self->{hierarchicalMap}, $ret );
+    foreach my $delegate ( @{$self->{delegates}} ) {
+        $delegate->_addToJson( $delegate->{hierarchicalMap}, $ret );
+    }
+    return $ret;
+}
+
+##
+# Add the resolved variables to this hash.
+#
+# $map: the current level in the traversal
+# $h: the hash
+sub _addToJson {
+    my $self = shift;
+    my $map  = shift;
+    my $h    = shift;
+
+    foreach my $key ( CORE::keys %$map ) {
+        my $value = $map->{$key};
+        if( ref( $value )) {
+            unless( exists( $h->{$key} )) {
+                $h->{$key} = {};
+            }
+            $self->_addToJson( $value, $h->{$key} );
+        } else {
+            $h->{$key} = $self->getResolve( $value );
+        }
+    }
+}
+
 1;

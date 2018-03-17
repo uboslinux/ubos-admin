@@ -30,8 +30,6 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $RESOURCES_DIR  = '/var/lib/ubos/resources';
-my $PINNED_DIR     = '/var/lib/ubos/pinned';
 my $resourcesCache = undef; # Need to read all files, so we can find unused port
 my $pinnedCache    = undef;
 
@@ -311,11 +309,14 @@ sub _readCachesIfNeeded {
 
     trace( 'ResourceManager::_readCachesIfNeeded' );
 
+    my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
+    my $pinnedDir    = UBOS::Host::vars()->get( 'host.pinnedresourcesdir' );
+
     $resourcesCache = {};
-    if( opendir( DIR, $RESOURCES_DIR )) {
+    if( opendir( DIR, $resourcesDir )) {
         while( my $entry = readdir DIR ) {
             if( $entry ne '.' && $entry ne '..' ) {
-                my $json = UBOS::Utils::readJsonFromFile( "$RESOURCES_DIR/$entry" );
+                my $json = UBOS::Utils::readJsonFromFile( "$resourcesDir/$entry" );
                 if( $json ) {
                     my $entryBase = $entry;
                     $entryBase =~ s!\.json$!!;
@@ -325,14 +326,14 @@ sub _readCachesIfNeeded {
         }
         closedir DIR;
     } else {
-        error( 'Cannot read directory:', $RESOURCES_DIR );
+        error( 'Cannot read directory:', $resourcesDir );
     }
 
     $pinnedCache = {};
-    if( opendir( DIR, $PINNED_DIR )) {
+    if( opendir( DIR, $pinnedDir )) {
         while( my $entry = readdir DIR ) {
             if( $entry ne '.' && $entry ne '..' ) {
-                my $json = UBOS::Utils::readJsonFromFile( "$PINNED_DIR/$entry" );
+                my $json = UBOS::Utils::readJsonFromFile( "$pinnedDir/$entry" );
                 if( $json ) {
                     my $entryBase = $entry;
                     $entryBase =~ s!\.json$!!;
@@ -342,7 +343,7 @@ sub _readCachesIfNeeded {
         }
         closedir DIR;
     } else {
-        error( 'Cannot read directory:', $PINNED_DIR );
+        error( 'Cannot read directory:', $pinnedDir );
     }
 
     return 1;
@@ -359,7 +360,9 @@ sub _updateResourcesCacheEntry {
 
     trace( 'ResourceManager::_updateResourcesCacheEntry', $key );
 
-    my $file = $RESOURCES_DIR . '/' . $key . '.json';
+    my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
+
+    my $file = $resourcesDir . '/' . $key . '.json';
     UBOS::Utils::writeJsonToFile( $file, $json, 0600 );
 
     $resourcesCache->{$key} = $json;
@@ -373,7 +376,9 @@ sub _deleteResourcesCacheEntry {
 
     trace( 'ResourceManager::_deleteResourcesCacheEntry', $key );
 
-    my $file = $RESOURCES_DIR . '/' . $key . '.json';
+    my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
+
+    my $file = $resourcesDir . '/' . $key . '.json';
     UBOS::Utils::deleteFile( $file );
 
     delete $resourcesCache->{$key};

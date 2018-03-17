@@ -13,7 +13,7 @@ package UBOS::Tomcat8;
 use UBOS::Logging;
 
 my $mainServerXmlFile    = '/etc/tomcat8/server.xml';
-my $ourServerXmlTemplate = '/etc/tomcat8/server-ubos.xml.tmpl';
+my $ourServerXmlTemplate = '/etc/tomcat8/server.xml.tmpl';
 
 my $running = 0;
 

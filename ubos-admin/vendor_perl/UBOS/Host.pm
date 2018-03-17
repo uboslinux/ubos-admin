@@ -24,9 +24,10 @@ use UBOS::Variables;
 use Socket;
 use Sys::Hostname qw();
 
-my $SITES_DIR              = '/var/lib/ubos/sites';
 my $HOST_CONF_FILE         = '/etc/ubos/config.json';
-my $AFTER_BOOT_FILE        = '/var/lib/ubos/after-boot'; # put this into /var, so it stays on the partition
+
+my $SITES_DIR              = vars()->get( 'host.sitesdir' );
+my $AFTER_BOOT_FILE        = vars()->get( 'host.afterbootfile' );
 my $READY_FILE             = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
@@ -56,11 +57,6 @@ sub vars {
         $raw->{hostname}        = Sys::Hostname::hostname;
         $raw->{now}->{unixtime} = $now;
         $raw->{now}->{tstamp}   = UBOS::Utils::time2string( $now );
-
-        unless( exists( $raw->{host}->{appconfigparsdir} )) {
-            # for older config files
-            $raw->{host}->{appconfigparsdir} = '/var/lib/ubos/appconfigpars';
-        }
 
         $_hostVars = UBOS::Variables->new( 'Host', $raw );
     }
@@ -392,7 +388,6 @@ sub rolesOnHostInSequence {
         $_rolesOnHostInSequence = [
                 UBOS::Roles::mysql->new,
                 UBOS::Roles::postgresql->new,
-                # UBOS::Roles::mongo->new,
                 UBOS::Roles::generic->new,
                 UBOS::Roles::tomcat8->new,
                 UBOS::Roles::apache2->new ];
@@ -698,6 +693,13 @@ sub ensurePackages {
                 }
             }
             return -1;
+        }
+    }
+    if( @filteredPackageList ) {
+        my $cmd = 'systemd-sysusers';
+        my $out;
+        if( myexec( $cmd, undef, \$out, \$out )) {
+            error( 'Command failed:', $cmd, $out );
         }
     }
     return 0 + @filteredPackageList;
@@ -1193,6 +1195,10 @@ sub defaultManifestFileReader {
     my $packageIdentifier = shift;
 
     my $file = vars()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
+    unless( -e $file ) {
+        # Upgrade path
+        $file = "/var/lib/ubos/manifests/$packageIdentifier.json";
+    }
     return readJsonFromFile( $file );
 }
 

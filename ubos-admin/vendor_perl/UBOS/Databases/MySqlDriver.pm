@@ -33,15 +33,11 @@ sub ensureRunning {
         return 1;
     }
 
-    if( UBOS::Host::ensurePackages( [ 'mariadb', 'perl-dbd-mysql' ] ) < 0 ) {
-        warning( $@ );
-    }
-
     my $out;
     my $err;
     debugAndSuspend( 'Check that ubos-mysqld.service is running' );
-    UBOS::Utils::myexec( 'systemctl is-enabled ubos-mysqld > /dev/null || systemctl enable ubos-mysqld', undef, \$out, \$err );
-    UBOS::Utils::myexec( 'systemctl is-active  ubos-mysqld > /dev/null || systemctl start  ubos-mysqld', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl is-enabled mysqld > /dev/null || systemctl enable mysqld', undef, \$out, \$err );
+    UBOS::Utils::myexec( 'systemctl is-active  mysqld > /dev/null || systemctl start  mysqld', undef, \$out, \$err );
 
     unless( -e $rootConfiguration ) {
 

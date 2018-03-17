@@ -28,12 +28,6 @@ provides=('ubos-networking')
 conflicts=('ubos-networking')
 backup=(
     'etc/ubos/config.json'
-    'etc/httpd/ubos/defaults.conf'
-    'etc/httpd/ubos/defaultsites/fallback.conf'
-    'etc/httpd/ubos/errors.conf'
-    'etc/httpd/ubos/logging.conf'
-    'etc/httpd/ubos/usersettings.conf'
-    'etc/mysql/conf.d/50-replication.cnf'
 )
 
 _vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
@@ -58,38 +52,19 @@ package() {
 
     install -D -m755 ${startdir}/bin/* -t ${pkgdir}/usr/share/${pkgname}/bin/
 
+# Data directory / mount point
+    mkdir -p -m755 ${pkgdir}/ubos
+
 # Config files
     install -D -m644 ${startdir}/etc/ubos/config.json -t ${pkgdir}/etc/ubos/
 
-# Site files and AppConfiguration parameter files
-    mkdir -p -m755 ${pkgdir}/var/lib/ubos/{sites,appconfigpars,deploy-site-templates-on-boot}
-
-# Manifest files
+# Manifest files -- TODO to be moved
     mkdir -p m755 ${pkgdir}/var/lib/ubos/manifests
 
-# Backup files
-    mkdir -p -m700 ${pkgdir}/var/lib/ubos/backups/update
-
-# Resource management
-    mkdir -p -m755 ${pkgdir}/var/lib/ubos/{pinned,resources}
-
-# Web server config files
-    mkdir -p -m755 ${pkgdir}/etc/httpd/ubos/{appconfigs,defaultsites,mods-available,mods-enabled,revocations,sites,ssl}
-    install -D -m644 ${startdir}/etc/httpd/conf/httpd-ubos.conf -t ${pkgdir}/etc/httpd/conf/
-    for f in ${startdir}/etc/httpd/ubos/*.conf; do
-        install -D -m644 ${f} -t ${pkgdir}/etc/httpd/ubos/
-    done
-    for f in ${startdir}/etc/httpd/ubos/defaultsites/*; do
-        install -D -m644 ${f} -t ${pkgdir}/etc/httpd/ubos/defaultsites/
-    done
-    for f in ${startdir}/etc/httpd/ubos/mods-available/*.load; do
-        install -D -m644 ${f} -t $pkgdir/etc/httpd/ubos/mods-available/
-    done
-
 # Web server content files
-    install -D -m644 ${startdir}/www/_common/css/*.css -t ${pkgdir}/srv/http/_common/css/
+    install -D -m644 ${startdir}/www/_common/css/*.css    -t ${pkgdir}/srv/http/_common/css/
     install -D -m644 ${startdir}/www/_common/images/*.png -t ${pkgdir}/srv/http/_common/images/
-    install -D -m644 ${startdir}/www/_errors/*.html -t ${pkgdir}/srv/http/_errors/
+    install -D -m644 ${startdir}/www/_errors/*.html       -t ${pkgdir}/srv/http/_errors/
 
     install -D -m644 ${startdir}/www/_appicons/default/{72x72,144x144}.png -t ${pkgdir}/srv/http/_appicons/default/
 
@@ -101,47 +76,18 @@ package() {
         ln -s /srv/http/_common ${pkgdir}/srv/http/placeholders/$d/_common
     done
 
+    # TODO to be moved
     mkdir -p -m755 ${pkgdir}/srv/http/{sites,wellknown}
 
 # CGI files
     install -D -m755 ${startdir}/cgi-bin/{show-apps,render-appicon}.pl -t ${pkgdir}/usr/share/ubos/cgi-bin/
 
-# Tomcat
-    mkdir -p -m775 ${pkgdir}/etc/tomcat8
-    mkdir -p -m755 ${pkgdir}/etc/tomcat8/ubos/sites-apps
-    mkdir -p -m755 ${pkgdir}/etc/tomcat8/Catalina/__wildcard
-    install -D -m644 ${startdir}/etc/tomcat8/server-ubos.xml.tmpl -t ${pkgdir}/etc/tomcat8/
-    mkdir -p -m775 ${pkgdir}/var/lib/tomcat8
-    mkdir -p -m755 ${pkgdir}/var/lib/tomcat8/sites
-
-# Avahi
-    install -D -m 644 ${startdir}/avahi/http.service -t ${pkgdir}/etc/avahi/services/http.service
-    install -D -m 644 ${startdir}/avahi/https.service -t ${pkgdir}/etc/avahi/services/https.service
-    install -D -m 644 ${startdir}/avahi/systemd/*.service -t ${pkgdir}/etc/systemd/system/
-
-# Mysql
-    # Our mysql-ubos.service runs the mysql initialization as user mysql:mysql, and thus cannot
-    # create /var/lib/mysql
-    mkdir -p -m 700 ${pkgdir}/var/lib/mysql
-    chown 89:1 ${pkgdir}/var/lib/mysql
-    mkdir -p -m 755 ${pkgdir}/etc/mysql/conf.d
-    install -D -m644 ${startdir}/etc/mysql/mysql-ubos.cnf -t ${pkgdir}/etc/mysql/
-    install -D -m644 ${startdir}/etc/mysql/conf.d/50-replication.cnf -t ${pkgdir}/etc/mysql/conf.d/
-
-# Postgresql
-    mkdir -p -m 700 ${pkgdir}/var/lib/postgresql
-
 # Systemd
-    install -D -m 644 ${startdir}/systemd/*.{service,timer} -t ${pkgdir}/usr/lib/systemd/system/
-    install -D -m 644 ${startdir}/systemd/ubos-admin.conf -t ${pkgdir}/usr/lib/sysusers.d/
+    install -D -m644 ${startdir}/systemd/*.{service,timer} -t ${pkgdir}/usr/lib/systemd/system/
+    install -D -m644 ${startdir}/systemd/ubos-admin.conf -t ${pkgdir}/usr/lib/sysusers.d/
 
 # Snapper
-    install -D -m 644 ${startdir}/etc/snapper/config-templates/ubos-default -t ${pkgdir}/etc/snapper/config-templates/
-
-# Tor
-    # don't create ${pkgdir}/var/lib/tor/sites here -- need tor user for it, and we don't have that here
-    mkdir -p -m 755 ${pkgdir}/etc/tor/ubos-sites.d
-    install -D -m 644 ${startdir}/etc/tor/ubos-{pre,post}fix -t ${pkgdir}/etc/tor/
+    install -D -m644 ${startdir}/etc/snapper/config-templates/ubos-default -t ${pkgdir}/etc/snapper/config-templates/
 
 # Repositories
     mkdir -p ${pkgdir}/etc/pacman.d/repositories.d/
@@ -152,7 +98,7 @@ package() {
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
 
 # A directory to mount a UBOS staff to in a container
-    mkdir -p -m 755 ${pkgdir}/UBOS-STAFF
+    mkdir -p -m755 ${pkgdir}/UBOS-STAFF
 
 # License
     install -D -m444 ${startdir}/LICENSE ${pkgdir}/usr/share/licenses/PPL3
