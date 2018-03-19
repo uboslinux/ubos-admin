@@ -52,9 +52,12 @@ sub createDisks {
     if( UBOS::Utils::myexec( "sgdisk --print '" . $self->{image} . "'", undef, \$out, \$out )) {
         error( 'sgdisk --print:', $out );
         ++$errors;
-    } elsif( $out =~ m!Disk.*:\s*(\d+)\s*sectors! )  {
-        my $remaining = $1;
-        $remaining -= 5; # first 2048 bytes, plus one sector more
+
+    } elsif( $out =~ m!First\s+usable\s+sector\s+is\s+(\d+),\s+last\s+usable\s+sector\s+is\s+(\d+)\s+!s )  {
+        my $firstSector = $1;
+        my $lastSector  = $2;
+        my $remaining   = $lastSector-$firstSector;
+        $remaining -= 2049; # first 2048 sectors, plus one sector more
 
         foreach my $data ( values %{$self->{devicetable}} ) {
             if( exists( $data->{size} )) {
@@ -65,6 +68,7 @@ sub createDisks {
             fatal( 'Need at least 2GB for root partition:', $self->{image} );
         }
         $remainingSectors = $remaining;
+
     } else {
         fatal( 'Cannot determine size of disk' );
     }
