@@ -347,7 +347,13 @@ sub run {
                 debugAndSuspend( 'Restoring from UpdateBackup for site', $site->siteId() );
                 $ret &= $updateBackup->restoreSite( $site );
 
-                $updateBackup->delete();
+                if( $ret ) {
+                    trace( 'Deleting update backup for site', $site->siteId );
+                    debugAndSuspend( 'Delete update backup' );
+                    $updateBackup->delete();
+                } else {
+                    warning( 'Something went wrong during restore of update backup. Not deleting update backup for site', $site->siteId );
+                }
 
             } else {
                 debugAndSuspend( 'Deploying site', $site->siteId() );

@@ -122,9 +122,13 @@ sub finishUpdate {
         }
     }
 
-    trace( 'Deleting update backup' );
-    debugAndSuspend( 'Delete update backup' );
-    $backup->delete();
+    if( $ret ) {
+        trace( 'Deleting update backup' );
+        debugAndSuspend( 'Delete update backup' );
+        $backup->delete();
+    } else {
+        warning( 'Something went wrong during restore of update backup. Not deleting update backup.' );
+    }
 
     trace( 'Purging cache' );
 
