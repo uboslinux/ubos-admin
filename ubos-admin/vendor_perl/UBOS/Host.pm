@@ -1223,7 +1223,7 @@ END
         return undef;
     }
 
-    my @services = qw( ubos-admin ubos-httpd ubos-ready );
+    my @services = qw( ubos-admin httpd ubos-ready );
 
     foreach my $service ( @services ) {
         if( myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {

@@ -35,7 +35,7 @@ sub ensureRunning {
 
     my $out;
     my $err;
-    debugAndSuspend( 'Check that ubos-mysqld.service is running' );
+    debugAndSuspend( 'Check that mysqld.service is running' );
     UBOS::Utils::myexec( 'systemctl is-enabled mysqld > /dev/null || systemctl enable mysqld', undef, \$out, \$err );
     UBOS::Utils::myexec( 'systemctl is-active  mysqld > /dev/null || systemctl start  mysqld', undef, \$out, \$err );
 

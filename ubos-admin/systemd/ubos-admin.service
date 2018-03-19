@@ -1,8 +1,8 @@
 [Unit]
 Description=ubos-admin configuration
-Wants=network.target cronie.service ubos-httpd.service
+Wants=network.target cronie.service httpd.service
 # ubos-admin wants to change the Apache config, so start Apache later
-Before=ubos-httpd.service
+Before=httpd.service
 
 [Service]
 Type=oneshot

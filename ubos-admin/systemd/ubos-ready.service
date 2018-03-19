@@ -1,7 +1,7 @@
 [Unit]
 Description=ubos-ready configuration
-Wants=network.target cronie.service ubos-httpd.service certbot.timer
-After=ubos-admin.service ubos-httpd.service ubos-mysqld.service
+Wants=network.target cronie.service httpd.service certbot.timer
+After=ubos-admin.service httpd.service mysqld.service
 
 [Service]
 Type=oneshot

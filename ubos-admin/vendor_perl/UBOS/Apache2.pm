@@ -62,7 +62,7 @@ sub _syncApacheCtl {
     my $lastPos = sysseek( FH, 0, SEEK_END );
     close( FH );
 
-    UBOS::Utils::myexec( "systemctl $command ubos-httpd" );
+    UBOS::Utils::myexec( "systemctl $command httpd" );
 
     my( $seconds, $microseconds ) = gettimeofday;
     my $until = $seconds + 0.000001 * $microseconds + $max;
