@@ -1195,10 +1195,7 @@ sub defaultManifestFileReader {
     my $packageIdentifier = shift;
 
     my $file = vars()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
-    unless( -e $file ) {
-        # Upgrade path
-        $file = "/var/lib/ubos/manifests/$packageIdentifier.json";
-    }
+
     return readJsonFromFile( $file );
 }
 

@@ -114,4 +114,3 @@ sub _writeEtcHosts {
 }
 
 1;
-

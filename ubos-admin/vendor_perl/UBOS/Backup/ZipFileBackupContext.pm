@@ -161,7 +161,7 @@ sub _addRecursive {
 
     } else {
         warning( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
-        # Probably not worth settin $ret = 0 -- could be a socket
+        # Probably not worth setting $ret = 0 -- could be a socket
     }
 
     return $ret;

@@ -58,9 +58,6 @@ package() {
 # Config files
     install -D -m644 ${startdir}/etc/ubos/config.json -t ${pkgdir}/etc/ubos/
 
-# Manifest files -- TODO to be moved
-    mkdir -p m755 ${pkgdir}/var/lib/ubos/manifests
-
 # Web server content files
     install -D -m644 ${startdir}/www/_common/css/*.css    -t ${pkgdir}/srv/http/_common/css/
     install -D -m644 ${startdir}/www/_common/images/*.png -t ${pkgdir}/srv/http/_common/images/

@@ -33,6 +33,14 @@ sub ensureRunning {
         return 1;
     }
 
+    my $dataDir = UBOS::Host::vars()->get( 'mysql.datadir' );
+    unless( -d $dataDir ) {
+        UBOS::Utils::mkdirDashP( $dataDir );
+        chmod 0700, $dataDir;
+
+        UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
+    }
+
     my $out;
     my $err;
     debugAndSuspend( 'Check that mysqld.service is running' );

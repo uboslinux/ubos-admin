@@ -23,12 +23,13 @@ use UBOS::Utils;
 # a directory that may be erased during reboot as upgrades may involve
 # reboots.
 
-our $updateBackupDir = '/var/lib/ubos/backups/update';
+our $updateBackupDir         = '/ubos/backups/update';
+our $previousUpdateBackupDir = '/var/lib/ubos/backups/update';
 
 ##
 # Check that there is no old backup. If there is, emit error message and quit.
 sub checkReadyOrQuit {
-    my @found = <$updateBackupDir/*>;
+    my @found = ( <$updateBackupDir/*>, <$previousUpdateBackupDir/*>;
 
     if( @found ) {
         fatal( <<MSG );
@@ -65,6 +66,10 @@ sub create {
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{sites}      = $sites;
+
+    unless( -d $updateBackupDir ) {
+        UBOS::Utils::mkdirDashP( $updateBackupDir, 0700 );
+    }
 
     my @filesToDelete = ();
 
@@ -136,7 +141,7 @@ sub read {
 
     $self->{sites} = {};
 
-    foreach my $siteJsonFile ( <$updateBackupDir/*.json> ) {
+    foreach my $siteJsonFile ( <$updateBackupDir/*.json>, <$previousUpdateBackupDir/*.java> ) {
         my $siteJson = UBOS::Utils::readJsonFromFile( $siteJsonFile );
         if( $siteJson ) {
             my $site = UBOS::Site->new( $siteJson );
@@ -176,7 +181,11 @@ sub restoreAppConfiguration {
     foreach my $installable ( $appConfigInBackup->installables ) {
         my $packageName = $installable->packageName;
 
-        unless( -d "$updateBackupDir/$appConfigIdInBackup/$packageName" ) {
+        my $updateBackupPackageDir = "$updateBackupDir/$appConfigIdInBackup/$packageName";
+        unless( -d $updateBackupPackageDir ) {
+            $updateBackupPackageDir = "$previousUpdateBackupDir/$appConfigIdInBackup/$packageName";
+        }
+        unless( -d $updateBackupPackageDir ) {
             next;
         }
 
@@ -185,7 +194,7 @@ sub restoreAppConfiguration {
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $role = $rolesOnHost->{$roleName};
             if( $role ) { # don't attempt to restore anything not installed on this host
-                my $appConfigPathInBackup = "$updateBackupDir/$appConfigIdInBackup/$packageName/$roleName";
+                my $appConfigPathInBackup = "$updateBackupPackageDir/$roleName";
                 unless( -d $appConfigPathInBackup ) {
                     next;
                 }
@@ -220,7 +229,7 @@ sub delete {
 
     trace( 'UpdateBackup::delete' );
 
-    UBOS::Utils::deleteRecursively( <$updateBackupDir/*> );
+    UBOS::Utils::deleteRecursively( <$updateBackupDir/*>, <$previousUpdateBackupDir/*> );
 }
 
 1;

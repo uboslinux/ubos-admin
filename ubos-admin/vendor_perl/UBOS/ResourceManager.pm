@@ -5,7 +5,7 @@
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
-# In directory /var/lib/ubos/resources, resource files are named:
+# In the respective directory, resource files are named:
 # <appconfigid>_<installableId>_<type>_<itemName>.json
 # e.g.
 #   a1234.._wordpress_mysql_maindb.json

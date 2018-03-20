@@ -37,10 +37,10 @@ post_install() {
 
 pre_upgrade() {
     # Services were renamed
-    systemctl stop ubos-httpd.service > /dev/null 2>&1
+    systemctl stop    ubos-httpd.service > /dev/null 2>&1
     systemctl disable ubos-httpd.service > /dev/null 2>&1
 
-    systemctl stop ubos-mysqld.service > /dev/null 2>&1
+    systemctl stop    ubos-mysqld.service > /dev/null 2>&1
     systemctl disable ubos-mysqld.service > /dev/null 2>&1
 }
 
@@ -72,7 +72,7 @@ post_upgrade() {
     perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
 
     systemctl enable ubos-ready.service snapper-timeline.timer snapper-cleanup.timer
-    systemctl start ubos-ready.service  snapper-timeline.timer snapper-cleanup.timer
+    systemctl start  ubos-ready.service snapper-timeline.timer snapper-cleanup.timer
 
     # fix old device classes -- works for both rpi and rpi2
     perl -pi -e 's/UBOS_DEVICECLASS="raspberry-pi/UBOS_DEVICECLASS="rpi/' /etc/os-release

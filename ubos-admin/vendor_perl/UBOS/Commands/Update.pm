@@ -189,8 +189,8 @@ sub run {
     } else {
         debugAndSuspend( 'Regenerate pacman.conf' );
         UBOS::Utils::regeneratePacmanConf();
-        debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/ubos/mods-enabled' );
-        UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/ubos/mods-enabled' );
+        debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/mods-enabled' );
+        UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/mods-enabled' );
 
         my $stage2Cmd = 'ubos-admin update-stage2';
         if( defined( $snapNumber )) {

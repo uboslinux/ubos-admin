@@ -27,10 +27,10 @@
         "uname" : "http",
         "gname" : "http",
 
-        "sitefragmentdir"      : "/etc/httpd/ubos/sites",
-        "appconfigfragmentdir" : "/etc/httpd/ubos/appconfigs",
+        "sitefragmentdir"      : "/etc/httpd/sites",
+        "appconfigfragmentdir" : "/etc/httpd/appconfigs",
         "sitesdir"             : "/ubos/http/sites",
-        "ssldir"               : "/etc/httpd/ubos/ssl",
+        "ssldir"               : "/etc/httpd/ssl",
         "letsencrypt" : {
             "livedir" : "/etc/letsencrypt/live"
         }

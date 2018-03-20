@@ -18,11 +18,16 @@ my $mime;
 
 # This regex must be consistent with the one in the Apache config file
 if( $u =~ m!/_appicons/([-a-z0-9]+)/([0-9]+x[0-9]+|license)\.(png|txt)$! ) {
-    $filename = "/srv/http/_appicons/$1/$2.$3";
+    my $dir   = $1;
+    my $file  = $2;
     my $ext   = $3;
 
+    $filename = "/ubos/http/_appicons/$dir/$file.$ext";
     unless( -r $filename ) {
-        $filename = "/srv/http/_appicons/default/$2.$3";
+        $filename = "/srv/http/_appicons/$dir/$file.$ext";
+    }
+    unless( -r $filename ) {
+        $filename = "/srv/http/_appicons/default/$file.$ext";
     }
     if( $ext eq 'txt' ) {
         $mime = 'text/plain';

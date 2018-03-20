@@ -17,9 +17,9 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $sitesDir         = '/etc/httpd/ubos/sites';
-my $defaultSitesDir  = '/etc/httpd/ubos/defaultsites';
-my $appConfigsDir    = '/etc/httpd/ubos/appconfigs';
+my $sitesDir         = '/etc/httpd/sites';
+my $defaultSitesDir  = '/etc/httpd/defaultsites';
+my $appConfigsDir    = '/etc/httpd/appconfigs';
 my @forErrors = ( '_errors', '_common' );
 
 ##
