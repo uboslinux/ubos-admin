@@ -15,8 +15,8 @@ use UBOS::Logging;
 use UBOS::Utils;
 use Time::HiRes qw( gettimeofday );
 
-my $modsAvailableDir  = '/etc/httpd/ubos/mods-available';
-my $modsEnabledDir    = '/etc/httpd/ubos/mods-enabled';
+my $modsAvailableDir  = '/etc/httpd/mods-available';
+my $modsEnabledDir    = '/etc/httpd/mods-enabled';
 my $phpModulesDir     = '/usr/lib/php/modules';
 my $phpModulesConfDir = '/etc/php/conf.d';
 
