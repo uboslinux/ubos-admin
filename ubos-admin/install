@@ -37,11 +37,11 @@ post_install() {
 
 pre_upgrade() {
     # Services were renamed
-    systemctl stop    ubos-httpd.service > /dev/null 2>&1
-    systemctl disable ubos-httpd.service > /dev/null 2>&1
+    systemctl stop    ubos-httpd.service > /dev/null 2>&1 || true
+    systemctl disable ubos-httpd.service > /dev/null 2>&1 || true
 
-    systemctl stop    ubos-mysqld.service > /dev/null 2>&1
-    systemctl disable ubos-mysqld.service > /dev/null 2>&1
+    systemctl stop    ubos-mysqld.service > /dev/null 2>&1 || true
+    systemctl disable ubos-mysqld.service > /dev/null 2>&1 || true
 }
 
 ## arg 1: the new package version

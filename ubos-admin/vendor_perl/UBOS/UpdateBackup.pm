@@ -29,7 +29,7 @@ our $previousUpdateBackupDir = '/var/lib/ubos/backups/update';
 ##
 # Check that there is no old backup. If there is, emit error message and quit.
 sub checkReadyOrQuit {
-    my @found = ( <$updateBackupDir/*>, <$previousUpdateBackupDir/*>;
+    my @found = ( <$updateBackupDir/*>, <$previousUpdateBackupDir/*> );
 
     if( @found ) {
         fatal( <<MSG );
