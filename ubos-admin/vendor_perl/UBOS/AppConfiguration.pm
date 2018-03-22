@@ -348,7 +348,7 @@ sub deployOrCheck {
     my $appConfigParsDir = $self->vars()->get( 'host.appconfigparsdir' );
 
     if( $doIt ) {
-        UBOS::Utils::mkdir( "$appConfigParsDir/$appConfigId" );
+        UBOS::Utils::mkdirDashP( "$appConfigParsDir/$appConfigId" );
     }
 
     # make sure we don't deploy to an invalid context

@@ -68,7 +68,7 @@ sub create {
     $self->{sites}      = $sites;
 
     unless( -d $updateBackupDir ) {
-        UBOS::Utils::mkdirDashP( $updateBackupDir, 0700 );
+        UBOS::Utils::mkdirDashP( $updateBackupDir, 0700, undef, undef, 0755 );
     }
 
     my @filesToDelete = ();

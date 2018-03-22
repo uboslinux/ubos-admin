@@ -26,7 +26,7 @@ use Sys::Hostname qw();
 
 my $HOST_CONF_FILE         = '/etc/ubos/config.json';
 
-my $SITES_DIR              = vars()->get( 'host.sitesdir' );
+my $SITE_JSON_DIR          = vars()->get( 'host.sitejsondir' );
 my $AFTER_BOOT_FILE        = vars()->get( 'host.afterbootfile' );
 my $READY_FILE             = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
@@ -120,33 +120,35 @@ sub sites {
     unless( $_sites ) {
         $_sites = {};
 
-        if ( $< == 0 ) {
-            # If we are root, we read the full files, otherwise the public files
-            foreach my $f ( <"$SITES_DIR/*-full.json"> ) {
-                my $siteJson = readJsonFromFile( $f );
-                if( $siteJson ) {
-                    my $site = UBOS::Site->new( $siteJson );
-                    if( $site ) {
-                        $_sites->{$site->siteId()} = $site;
+        if( -d $SITE_JSON_DIR ) {
+            if ( $< == 0 ) {
+                # If we are root, we read the full files, otherwise the public files
+                foreach my $f ( <"$SITE_JSON_DIR/*-full.json"> ) {
+                    my $siteJson = readJsonFromFile( $f );
+                    if( $siteJson ) {
+                        my $site = UBOS::Site->new( $siteJson );
+                        if( $site ) {
+                            $_sites->{$site->siteId()} = $site;
+                        } else {
+                            fatal( $@ );
+                        }
                     } else {
-                        fatal( $@ );
+                        fatal();
                     }
-                } else {
-                    fatal();
                 }
-            }
-        } else {
-            foreach my $f ( <"$SITES_DIR/*-world.json"> ) {
-                my $siteJson = readJsonFromFile( $f );
-                if( $siteJson ) {
-                    my $site = UBOS::Site->new( $siteJson );
-                    if( $site ) {
-                        $_sites->{$site->siteId()} = $site;
+            } else {
+                foreach my $f ( <"$SITE_JSON_DIR/*-world.json"> ) {
+                    my $siteJson = readJsonFromFile( $f );
+                    if( $siteJson ) {
+                        my $site = UBOS::Site->new( $siteJson );
+                        if( $site ) {
+                            $_sites->{$site->siteId()} = $site;
+                        } else {
+                            fatal( $@ );
+                        }
                     } else {
-                        fatal( $@ );
+                        fatal();
                     }
-                } else {
-                    fatal();
                 }
             }
         }
@@ -337,8 +339,12 @@ sub siteDeployed {
 
     trace( 'Host::siteDeployed', $siteId );
 
-    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
-    UBOS::Utils::writeJsonToFile( "$SITES_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
+    unless( -d $SITE_JSON_DIR ) {
+        UBOS::Utils::mkdirDashP( $SITE_JSON_DIR );
+    }
+
+    UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
+    UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
 
     UBOS::Utils::invokeCallbacks( "$HOSTNAME_CALLBACKS_DIR", 'deployed', $siteId, $hostname );
 
@@ -356,8 +362,8 @@ sub siteUndeployed {
 
     trace( 'Host::siteUndeployed', $siteId );
 
-    UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-world.json" );
-    UBOS::Utils::deleteFile( "$SITES_DIR/$siteId-full.json" );
+    UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-world.json" );
+    UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-full.json" );
 
     UBOS::Utils::invokeCallbacks( "$HOSTNAME_CALLBACKS_DIR", 'undeployed', $siteId, $hostname );
 
@@ -682,7 +688,7 @@ sub ensurePackages {
 
         debugAndSuspend( 'Execute pacman -S', @filteredPackageList );
         if( myexec( $cmd, undef, \$out, \$out )) {
-            $@ = 'Failed to install package(s). Pacman says: ' . $out;
+            $@ = 'Failed to install package(s): ' . join( ' ', @filteredPackageList ) . '. Pacman says: ' . $out;
             if( $out =~ m!conflict.*Remove!i ) {
                 $cmd = 'yes y | pacman -S ' . join( ' ', @filteredPackageList );
                 unless( UBOS::Logging::isTraceActive() ) {

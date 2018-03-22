@@ -301,7 +301,7 @@ sub _constructKey {
 
 ##
 # Helper method to populate the caches.
-# return: 1 if the cache was actually ready, 0 if the cache was in memory already
+# return: 1 if the cache was actually read, 0 if the cache was in memory already
 sub _readCachesIfNeeded {
     if( defined( $resourcesCache )) {
         return 0;
@@ -313,37 +313,42 @@ sub _readCachesIfNeeded {
     my $pinnedDir    = UBOS::Host::vars()->get( 'host.pinnedresourcesdir' );
 
     $resourcesCache = {};
-    if( opendir( DIR, $resourcesDir )) {
-        while( my $entry = readdir DIR ) {
-            if( $entry ne '.' && $entry ne '..' ) {
-                my $json = UBOS::Utils::readJsonFromFile( "$resourcesDir/$entry" );
-                if( $json ) {
-                    my $entryBase = $entry;
-                    $entryBase =~ s!\.json$!!;
-                    $resourcesCache->{$entryBase} = $json;
+    $pinnedCache    = {};
+
+    if( -d $resourcesDir ) {
+        if( opendir( DIR, $resourcesDir )) {
+            while( my $entry = readdir DIR ) {
+                if( $entry ne '.' && $entry ne '..' ) {
+                    my $json = UBOS::Utils::readJsonFromFile( "$resourcesDir/$entry" );
+                    if( $json ) {
+                        my $entryBase = $entry;
+                        $entryBase =~ s!\.json$!!;
+                        $resourcesCache->{$entryBase} = $json;
+                    }
                 }
             }
+            closedir DIR;
+        } else {
+            error( 'Cannot read directory:', $resourcesDir );
         }
-        closedir DIR;
-    } else {
-        error( 'Cannot read directory:', $resourcesDir );
     }
 
-    $pinnedCache = {};
-    if( opendir( DIR, $pinnedDir )) {
-        while( my $entry = readdir DIR ) {
-            if( $entry ne '.' && $entry ne '..' ) {
-                my $json = UBOS::Utils::readJsonFromFile( "$pinnedDir/$entry" );
-                if( $json ) {
-                    my $entryBase = $entry;
-                    $entryBase =~ s!\.json$!!;
-                    $pinnedCache->{$entryBase} = $json;
+    if( -d $pinnedDir ) {
+        if( opendir( DIR, $pinnedDir )) {
+            while( my $entry = readdir DIR ) {
+                if( $entry ne '.' && $entry ne '..' ) {
+                    my $json = UBOS::Utils::readJsonFromFile( "$pinnedDir/$entry" );
+                    if( $json ) {
+                        my $entryBase = $entry;
+                        $entryBase =~ s!\.json$!!;
+                        $pinnedCache->{$entryBase} = $json;
+                    }
                 }
             }
+            closedir DIR;
+        } else {
+            error( 'Cannot read directory:', $pinnedDir );
         }
-        closedir DIR;
-    } else {
-        error( 'Cannot read directory:', $pinnedDir );
     }
 
     return 1;
@@ -362,6 +367,9 @@ sub _updateResourcesCacheEntry {
 
     my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
 
+    unless( -d $resourcesDir ) {
+        UBOS::Utils::mkdirDashP( $resourcesDir, 0700, undef, undef, 0755 );
+    }
     my $file = $resourcesDir . '/' . $key . '.json';
     UBOS::Utils::writeJsonToFile( $file, $json, 0600 );
 

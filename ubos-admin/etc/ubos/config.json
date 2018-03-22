@@ -4,17 +4,14 @@
         "cachedir"                  : "/var/cache",
         "resourcesdir"              : "/ubos/lib/ubos/resources",
         "pinnedresourcesdir"        : "/ubos/lib/ubos/pinnedresources",
-        "sitesdir"                  : "/ubos/lib/ubos/sites",
-        "afterbootfile"             : "/ubos/lib/ubos/after-boot",
+        "sitejsondir"               : "/ubos/lib/ubos/sites",
+        "afterbootfile"             : "/var/lib/ubos/after-boot",
         "checkmanifest"             : true,
         "readstaffonboot"           : true,
         "deploysitetemplatesonboot" : true,
         "snapshotonupgrade"         : true,
         "tmpdir"                    : "/tmp",
-        "homeshepherd"              : "/var/shepherd",
-        "sitesdocumentrootdir"      : "/ubos/http/sites",
-        "siteswellknowndir"         : "/ubos/http/wellknown",
-        "placeholdersitesdocumentrootdir" : "/srv/http/placeholders"
+        "homeshepherd"              : "/var/shepherd"
     },
 
     "package" : {
@@ -27,10 +24,15 @@
         "uname" : "http",
         "gname" : "http",
 
-        "sitefragmentdir"      : "/etc/httpd/sites",
-        "appconfigfragmentdir" : "/etc/httpd/appconfigs",
-        "sitesdir"             : "/ubos/http/sites",
-        "ssldir"               : "/etc/httpd/ssl",
+        "sitefragmentdir"        : "/etc/httpd/sites",
+        "defaultsitefragmentdir" : "/etc/httpd/defaultsites",
+        "appconfigfragmentdir"   : "/etc/httpd/appconfigs",
+        "sitesdir"               : "/ubos/http/sites",
+        "ssldir"                 : "/etc/httpd/ssl",
+        "siteswellknowndir"      : "/ubos/http/wellknown",
+        "placeholdersitesdir"    : "/srv/http/placeholders"
+
+
         "letsencrypt" : {
             "livedir" : "/etc/letsencrypt/live"
         }

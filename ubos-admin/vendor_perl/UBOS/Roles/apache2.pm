@@ -17,9 +17,6 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $sitesDir         = '/etc/httpd/sites';
-my $defaultSitesDir  = '/etc/httpd/defaultsites';
-my $appConfigsDir    = '/etc/httpd/appconfigs';
 my @forErrors = ( '_errors', '_common' );
 
 ##
@@ -107,10 +104,11 @@ sub setupSiteOrCheck {
 
     trace( 'apache2::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
-    my $siteDocumentDir     = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
-    my $siteTorDir          = $site->vars()->getResolve( 'site.apache2.sitetordir' );
-    my $siteTorFragmentFile = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
-    my $sitesWellknownDir   = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
+    my $siteDocumentDir      = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir           = $site->vars()->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile  = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
+    my $appConfigFragmentDir = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
+    my $sitesWellknownDir    = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
 
     if( $doIt ) {
         trace( 'apache2::_setupSite', $self->name(), $site->siteId );
@@ -125,7 +123,7 @@ sub setupSiteOrCheck {
         }
 
         my $siteId            = $site->siteId;
-        my $appConfigFilesDir = "$appConfigsDir/$siteId";
+        my $appConfigFilesDir = "$appConfigFragmentDir/$siteId";
         my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
 
         trace( 'apache2::setupSite', $siteId );
@@ -138,7 +136,7 @@ sub setupSiteOrCheck {
         }
 
         if( $site->isTor() ) {
-            UBOS::Utils::mkdirDashP( $siteTorDir, 0700, 'tor', 'tor' );
+            UBOS::Utils::mkdirDashP( $siteTorDir, 0700, 'tor', 'tor', 0755, 'root', 'root' );
 
             UBOS::Utils::saveFile( $siteTorFragmentFile, <<CONTENT );
 HiddenServiceDir $siteTorDir/
@@ -187,12 +185,14 @@ sub setupPlaceholderSite {
 
     trace( 'apache2::setupPlaceholderSite', $self->name(), $site->siteId );
 
-    my $sitesWellknownDir = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
-    my $placeholderSitesDocumentRootDir = UBOS::Host::vars()->get( 'host.placeholdersitesdocumentrootdir' );
+    my $siteFragmentDir                 = UBOS::Host::vars()->get( 'apache2.sitefragmentdir' );
+    my $defaultSiteFragmentDir          = UBOS::Host::vars()->get( 'apache2.defaultsitefragmentdir' );
+    my $sitesWellknownDir               = UBOS::Host::vars()->get( 'apache2.siteswellknowndir' );
+    my $placeholderSitesDocumentRootDir = UBOS::Host::vars()->get( 'apache2.placeholdersitesdir' );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
-    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
+    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
     my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
@@ -240,20 +240,30 @@ sub resumeSite {
 
     trace( 'apache2::resumeSite', $self->name(), $site->siteId );
 
-    my $sitesDocumentRootDir = UBOS::Host::vars()->get( 'host.sitesdocumentrootdir' );
-    my $sitesWellknownDir    = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
-    my $siteId            = $site->siteId;
-    my $hostname          = $site->hostname;
-    my $port              = $site->port;
-    my $appConfigFilesDir = "$appConfigsDir/$siteId";
-    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
-    my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
-    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
-    my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
+    my $siteFragmentDir        = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
+    my $defaultSiteFragmentDir = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
+    my $sitesDocumentRootDir   = UBOS::Host::vars()->getResolve( 'apache2.sitesdir' );
+    my $sitesWellknownDir      = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $appConfigFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
+    my $siteId                 = $site->siteId;
+    my $hostname               = $site->hostname;
+    my $port                   = $site->port;
+    my $appConfigFilesDir      = "$appConfigFragmentDir/$siteId";
+    my $siteFile               = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
+    my $siteDocumentRoot       = "$sitesDocumentRootDir/$siteId";
+    my $siteWellKnownDir       = "$sitesWellknownDir/$siteId";
+    my $serverDeclaration      = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
     my $robotsTxt  = $site->robotsTxt();
     my $sitemapXml = $site->sitemapXml();
     my $faviconIco = $site->faviconIco();
+
+    unless( -d $sitesDocumentRootDir ) {
+        UBOS::Utils::mkdirDashP( $sitesDocumentRootDir );
+    }
+    unless( -d $sitesWellknownDir ) {
+        UBOS::Utils::mkdirDashP( $sitesDocumentRootDir );
+    }
 
     if( $robotsTxt ) {
         UBOS::Utils::saveFile( "$siteWellKnownDir/robots.txt", $robotsTxt );
@@ -441,15 +451,18 @@ sub removeSite {
 
     trace( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
 
-    my $siteDocumentDir     = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
-    my $siteTorDir          = $site->vars()->getResolve( 'site.apache2.sitetordir' );
-    my $siteTorFragmentFile = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
-    my $sitesWellknownDir   = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
+    my $siteFragmentDir        = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
+    my $defaultSiteFragmentDir = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
+    my $appConfigFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
+    my $sitesWellknownDir      = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $siteDocumentDir        = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir             = $site->vars()->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile    = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
-    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSitesDir/any.conf" : "$sitesDir/$siteId.conf";
-    my $appConfigFilesDir = "$appConfigsDir/$siteId";
+    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
+    my $appConfigFilesDir = "$appConfigFragmentDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
     my $sslDir            = $site->vars()->getResolve( 'apache2.ssldir' );
 
@@ -517,7 +530,7 @@ sub obtainLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 
-    my $sitesWellknownDir = UBOS::Host::vars()->get( 'host.siteswellknowndir' );
+    my $sitesWellknownDir = UBOS::Host::vars()->get( 'apache2.siteswellknowndir' );
 
     my $adminHash        = $site->obtainSiteAdminHash;
     my $siteId           = $site->siteId;

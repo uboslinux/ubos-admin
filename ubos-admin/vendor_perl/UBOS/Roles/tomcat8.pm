@@ -54,9 +54,9 @@ sub setupSiteOrCheck {
     trace( 'tomcat8::setupSiteOrCheck', $self->name(), $doIt, $site->siteId );
 
     my $siteDocumentDir = $site->vars()->getResolve( 'site.tomcat8.sitedocumentdir' );
-    my $sitesDir        = UBOS::Host::vars()->get( 'tomcat8.sitesdir' );
-    my $sitesAppsDir    = UBOS::Host::vars()->get( 'tomcat8.sitesappsdir' );
-    my $contextDir      = UBOS::Host::vars()->get( 'tomcat8.contextsdir' );
+    my $sitesDir        = UBOS::Host::vars()->getResolve( 'tomcat8.sitesdir' );
+    my $sitesAppsDir    = UBOS::Host::vars()->getResolve( 'tomcat8.sitesappsdir' );
+    my $contextDir      = UBOS::Host::vars()->getResolve( 'tomcat8.contextsdir' );
 
     if( $doIt ) {
         UBOS::Utils::mkdirDashP( $siteDocumentDir, 0755 );
@@ -78,13 +78,13 @@ sub setupSiteOrCheck {
         trace( 'tomcat8::setupSite', $siteId );
 
         unless( -d $siteContextDir ) {
-            UBOS::Utils::mkdir( $siteContextDir );
+            UBOS::Utils::mkdirDashP( $siteContextDir );
         }
         unless( -d $webappsDir ) {
-            UBOS::Utils::mkdir( $webappsDir, 0755, $tomcatUser, $tomcatGroup );
+            UBOS::Utils::mkdirDashP( $webappsDir, 0755, $tomcatUser, $tomcatGroup, 0755, 'root', 'root' );
         }
         unless( -d $siteDocumentDir ) {
-            UBOS::Utils::mkdir( $siteDocumentDir );
+            UBOS::Utils::mkdirDashP( $siteDocumentDir );
         }
 
         return 1;

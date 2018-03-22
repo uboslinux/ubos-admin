@@ -33,8 +33,7 @@ sub ensureRunning {
 
     my $dataDir = UBOS::Host::vars()->get( 'postgresql.datadir' );
     unless( -d $dataDir ) {
-        UBOS::Utils::mkdirDashP( $dataDir );
-        chmod 0700, $dataDir;
+        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'postgres', 'postgres', '0755', 'root', 'root' );
 
         UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
     }
@@ -43,10 +42,6 @@ sub ensureRunning {
         warning( $@ );
     }
 
-    unless( -d $dataDir ) {
-        # somehow that directory has disappeared; package postgresql puts it there
-        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'postgres', 'postgres' );
-    }
     $running = 1; # need to set this here, so executeCmdAsAdmin can be done
 
     if( UBOS::Utils::isDirEmpty( $dataDir )) {
