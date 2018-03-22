@@ -412,17 +412,36 @@ sub mkdir {
 # Make a directory, and parent directories if needed
 # $filename: path to the directory
 # $mask: permissions on the directory
-# $uname: owner of the directory
-# $gname: group of the directory
+# $uid: owner of the directory (name or uid)
+# $gid: group of the directory (name or gid)
+# $parentMask: permissions on any created parent directories
+# $parentUid: owner of any created parent directories (name or uid)
+# $parentGid: group of any created parent directories (name or gid)
 # return: 1 if successful, or if the directory existed already
 sub mkdirDashP {
-    my $filename = shift;
-    my $mask     = shift;
-    my $uid      = getUid( shift );
-    my $gid      = getGid( shift );
+    my $filename   = shift;
+    my $mask       = shift;
+    my $uid        = getUid( shift );
+    my $gid        = getGid( shift );
+    my $parentMask = shift;
+    my $parentUid  = shift;
+    my $parentGid  = shift;
 
     unless( defined( $mask )) {
         $mask = 0755;
+    }
+    unless( defined( $parentMask )) {
+        $parentMask = $mask;
+    }
+    if( defined( $parentUid )) {
+        $parentUid = getUid( $parentUid );
+    } else {
+        $parentUid = $uid;
+    }
+    if( defined( $parentGid )) {
+        $parentGid = getGid( $parentGid );
+    } else {
+        $parentGid = $gid;
     }
 
     if( -d $filename ) {
@@ -455,10 +474,18 @@ sub mkdirDashP {
                 return $ret;
             }
 
-            chmod $mask, $soFar;
+            if( $filename eq $soFar ) {
+                chmod $mask, $soFar;
 
-            if( $uid >= 0 || $gid >= 0 ) {
-                chown $uid, $gid, $soFar;
+                if( $uid >= 0 || $gid >= 0 ) {
+                    chown $uid, $gid, $soFar;
+                }
+            } else {
+                chmod $parentMask, $soFar;
+
+                if( $parentUid >= 0 || $parentGid >= 0 ) {
+                    chown $parentUid, $parentGid, $soFar;
+                }
             }
         }
     }
