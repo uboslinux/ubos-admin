@@ -478,13 +478,13 @@ sub mkdirDashP {
                 chmod $mask, $soFar;
 
                 if( $uid >= 0 || $gid >= 0 ) {
-                    chown $uid, $gid, $soFar;
+                    chown defined( $uid ) ? $uid : -1, defined( $gid ) ? $gid : -1, $soFar;
                 }
             } else {
                 chmod $parentMask, $soFar;
 
                 if( $parentUid >= 0 || $parentGid >= 0 ) {
-                    chown $parentUid, $parentGid, $soFar;
+                    chown defined( $parentUid ) ? $parentUid : -1, defined( $parentGid ) ? $parentGid : -1, $soFar;
                 }
             }
         }
