@@ -257,7 +257,7 @@ sub run {
                 print "Generating TLS keys...\n";
             }
 
-            my $tmpDir = UBOS::Host::vars()->get( 'host.tmp', '/tmp' );
+            my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
             my $dir    = File::Temp->newdir( DIR => $tmpDir );
             chmod 0700, $dir;
 

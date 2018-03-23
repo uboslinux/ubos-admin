@@ -309,8 +309,8 @@ sub _readCachesIfNeeded {
 
     trace( 'ResourceManager::_readCachesIfNeeded' );
 
-    my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
-    my $pinnedDir    = UBOS::Host::vars()->get( 'host.pinnedresourcesdir' );
+    my $resourcesDir = UBOS::Host::vars()->getResolve( 'host.resourcesdir' );
+    my $pinnedDir    = UBOS::Host::vars()->getResolve( 'host.pinnedresourcesdir' );
 
     $resourcesCache = {};
     $pinnedCache    = {};
@@ -365,7 +365,7 @@ sub _updateResourcesCacheEntry {
 
     trace( 'ResourceManager::_updateResourcesCacheEntry', $key );
 
-    my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
+    my $resourcesDir = UBOS::Host::vars()->getResolve( 'host.resourcesdir' );
 
     unless( -d $resourcesDir ) {
         UBOS::Utils::mkdirDashP( $resourcesDir, 0700, undef, undef, 0755 );
@@ -384,7 +384,7 @@ sub _deleteResourcesCacheEntry {
 
     trace( 'ResourceManager::_deleteResourcesCacheEntry', $key );
 
-    my $resourcesDir = UBOS::Host::vars()->get( 'host.resourcesdir' );
+    my $resourcesDir = UBOS::Host::vars()->getResolve( 'host.resourcesdir' );
 
     my $file = $resourcesDir . '/' . $key . '.json';
     UBOS::Utils::deleteFile( $file );

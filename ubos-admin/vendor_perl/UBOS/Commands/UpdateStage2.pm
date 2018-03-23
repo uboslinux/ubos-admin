@@ -139,7 +139,7 @@ sub finishUpdate {
     my $out;
     UBOS::Utils::myexec( 'pacman -R --noconfirm ubos-networking', undef, \$out, \$out );
 
-    if( defined( $snapNumber ) && UBOS::Host::vars()->get( 'host.snapshotonupgrade', 0 )) {
+    if( defined( $snapNumber ) && UBOS::Host::vars()->getResolve( 'host.snapshotonupgrade', 0 )) {
         debugAndSuspend( 'Create filesystem snapshot' );
          UBOS::Host::postSnapshot( $snapNumber );
     }

@@ -93,7 +93,7 @@ sub run {
     # Need to keep a copy of the logConfigFile, new package may not have it any more
     my $stage2LogConfigFile;
     if( $logConfigFile ) {
-        my $tmpDir = UBOS::Host::vars()->get( 'host.tmp', '/tmp' );
+        my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
 
         my $tmp = File::Temp->new( DIR => $tmpDir, UNLINK => 0, SUFFIX => '.conf' );
         $stage2LogConfigFile = $tmp->filename;
@@ -115,7 +115,7 @@ sub run {
     my $ret = 1;
 
     my $snapNumber = undef;
-    if( !$noSnap && UBOS::Host::vars()->get( 'host.snapshotonupgrade', 0 )) {
+    if( !$noSnap && UBOS::Host::vars()->getResolve( 'host.snapshotonupgrade', 0 )) {
         debugAndSuspend( 'Create filesystem snapshot' );
         $snapNumber = UBOS::Host::preSnapshot()
     }

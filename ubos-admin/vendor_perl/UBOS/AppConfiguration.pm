@@ -345,7 +345,7 @@ sub deployOrCheck {
     my $ret = 1;
 
     my $appConfigId      = $self->appConfigId;
-    my $appConfigParsDir = $self->vars()->get( 'host.appconfigparsdir' );
+    my $appConfigParsDir = $self->vars()->getResolve( 'host.appconfigparsdir' );
 
     if( $doIt ) {
         UBOS::Utils::mkdirDashP( "$appConfigParsDir/$appConfigId" );
@@ -419,7 +419,7 @@ sub undeployOrCheck {
     my $ret = 1;
 
     my $appConfigId      = $self->appConfigId;
-    my $appConfigParsDir = $self->vars()->get( 'host.appconfigparsdir' );
+    my $appConfigParsDir = $self->vars()->getResolve( 'host.appconfigparsdir' );
 
     # faster to do a simple recursive delete, instead of going point by point
     if( $doIt ) {

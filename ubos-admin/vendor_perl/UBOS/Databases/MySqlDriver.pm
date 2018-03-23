@@ -33,12 +33,14 @@ sub ensureRunning {
         return 1;
     }
 
-    my $dataDir = UBOS::Host::vars()->get( 'mysql.datadir' );
+    if( UBOS::Host::ensurePackages( [ 'mariadb', 'perl-dbd-mysql' ] ) < 0 ) {
+        warning( $@ );
+    }
+    my $dataDir = UBOS::Host::vars()->getResolve( 'mysql.datadir' );
     unless( -d $dataDir ) {
         UBOS::Utils::mkdirDashP( $dataDir, '0700', 'mysql', 'mysql', '0755', 'root', 'root' );
-
-        UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
     }
+    UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
 
     my $out;
     my $err;

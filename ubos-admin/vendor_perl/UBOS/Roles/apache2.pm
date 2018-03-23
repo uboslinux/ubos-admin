@@ -111,10 +111,8 @@ sub setupSiteOrCheck {
     my $sitesWellknownDir    = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
 
     if( $doIt ) {
-        trace( 'apache2::_setupSite', $self->name(), $site->siteId );
-
         unless( -d $siteDocumentDir ) {
-            UBOS::Utils::mkdir( $siteDocumentDir, 0755 );
+            UBOS::Utils::mkdirDashP( $siteDocumentDir, 0755 );
 
             # Allow Apache to find the error documents for this site
             foreach my $forError( @forErrors ) {
@@ -185,10 +183,10 @@ sub setupPlaceholderSite {
 
     trace( 'apache2::setupPlaceholderSite', $self->name(), $site->siteId );
 
-    my $siteFragmentDir                 = UBOS::Host::vars()->get( 'apache2.sitefragmentdir' );
-    my $defaultSiteFragmentDir          = UBOS::Host::vars()->get( 'apache2.defaultsitefragmentdir' );
-    my $sitesWellknownDir               = UBOS::Host::vars()->get( 'apache2.siteswellknowndir' );
-    my $placeholderSitesDocumentRootDir = UBOS::Host::vars()->get( 'apache2.placeholdersitesdir' );
+    my $siteFragmentDir                 = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
+    my $defaultSiteFragmentDir          = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
+    my $sitesWellknownDir               = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $placeholderSitesDocumentRootDir = UBOS::Host::vars()->getResolve( 'apache2.placeholdersitesdir' );
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
@@ -258,11 +256,14 @@ sub resumeSite {
     my $sitemapXml = $site->sitemapXml();
     my $faviconIco = $site->faviconIco();
 
-    unless( -d $sitesDocumentRootDir ) {
-        UBOS::Utils::mkdirDashP( $sitesDocumentRootDir );
+    unless( -d $siteDocumentRoot ) {
+        UBOS::Utils::mkdirDashP( $siteDocumentRoot );
     }
     unless( -d $sitesWellknownDir ) {
-        UBOS::Utils::mkdirDashP( $sitesDocumentRootDir );
+        UBOS::Utils::mkdirDashP( $sitesWellknownDir );
+    }
+    unless( -d $siteFragmentDir ) {
+        UBOS::Utils::mkdirDashP( $siteFragmentDir );
     }
 
     if( $robotsTxt ) {
@@ -530,7 +531,7 @@ sub obtainLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 
-    my $sitesWellknownDir = UBOS::Host::vars()->get( 'apache2.siteswellknowndir' );
+    my $sitesWellknownDir = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
 
     my $adminHash        = $site->obtainSiteAdminHash;
     my $siteId           = $site->siteId;

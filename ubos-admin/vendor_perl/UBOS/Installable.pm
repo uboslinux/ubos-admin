@@ -216,7 +216,7 @@ sub _createHierarchicalMapAtAppconfigVars {
     my $installableCustPoints = $self->customizationPoints;
     if( $installableCustPoints ) {
         my $appConfigCustPoints = $appConfig->customizationPoints();
-        my $appConfigParsDir    = $appConfig->vars()->get( 'host.appconfigparsdir' );
+        my $appConfigParsDir    = $appConfig->vars()->getResolve( 'host.appconfigparsdir' );
 
         foreach my $custPointName ( keys %$installableCustPoints ) {
             my $custPointDef = $installableCustPoints->{$custPointName};

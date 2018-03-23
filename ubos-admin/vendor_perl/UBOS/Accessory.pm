@@ -32,7 +32,7 @@ sub new {
     }
     $self->SUPER::new( $packageName, $manifestFileReader );
 
-    if( UBOS::Host::vars()->get( 'host.checkmanifest', 1 )) {
+    if( UBOS::Host::vars()->getResolve( 'host.checkmanifest', 1 )) {
         $self->checkManifest( 'accessory', $skipFilesystemChecks );
         $self->checkManifestAccessoryInfo();
     }

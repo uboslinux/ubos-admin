@@ -31,16 +31,16 @@ sub ensureRunning {
         return 1;
     }
 
-    my $dataDir = UBOS::Host::vars()->get( 'postgresql.datadir' );
-    unless( -d $dataDir ) {
-        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'postgres', 'postgres', '0755', 'root', 'root' );
-
-        UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
-    }
-
     if( UBOS::Host::ensurePackages( 'postgresql' ) < 0 ) {
         warning( $@ );
     }
+
+    my $dataDir = UBOS::Host::vars()->getResolve( 'postgresql.datadir' );
+    unless( -d $dataDir ) {
+        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'postgres', 'postgres', '0755', 'root', 'root' );
+
+    }
+    UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
 
     $running = 1; # need to set this here, so executeCmdAsAdmin can be done
 

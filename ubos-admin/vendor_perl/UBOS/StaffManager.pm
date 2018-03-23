@@ -33,7 +33,7 @@ my $LABEL = 'UBOS-STAFF';
 sub performBootActions {
     trace( 'StaffManager::initializeIfNeeded' );
 
-    unless( UBOS::Host::vars()->get( 'host.readstaffonboot', 1 )) {
+    unless( UBOS::Host::vars()->getResolve( 'host.readstaffonboot', 1 )) {
         return;
     }
 
@@ -61,7 +61,7 @@ sub performBootActions {
         }
     }
 
-    if( $genKeyPairIfNeeded && UBOS::Host::vars()->get( 'host.initializestaffonboot', 1 )) {
+    if( $genKeyPairIfNeeded && UBOS::Host::vars()->getResolve( 'host.initializestaffonboot', 1 )) {
         if( _generateShepherdKeyPair( $target )) {
             error( 'Generation of shepherd key pair on staff device failed:', $device, $target );
         }
@@ -472,7 +472,7 @@ sub _deploySiteTemplates {
     my $errors = 0;
     my $ret    = 1;
 
-    if( UBOS::Host::vars()->get( 'host.deploysitetemplatesonboot', 1 )) {
+    if( UBOS::Host::vars()->getResolve( 'host.deploysitetemplatesonboot', 1 )) {
         my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
 
         trace( 'StaffManager::_deploySiteTemplates', $target );
@@ -774,7 +774,7 @@ sub setupUpdateShepherd {
     my $add  = shift;
     my @keys = @_;
 
-    my $homeShepherd = UBOS::Host::vars()->get( 'host.homeshepherd', '/ubos/shepherd' );
+    my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/ubos/shepherd' );
     if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
 
         trace( 'StaffManager::setupUpdateShepherd', $add, @keys );
@@ -825,7 +825,7 @@ sub mountDevice {
     my $device  = shift;
     my $targetP = shift;
     
-    my $tmpDir    = UBOS::Host::vars()->get( 'host.tmp', '/tmp' );
+    my $tmpDir    = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
     $$targetP     = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
     my $targetDir = $$targetP->dirname;
     my $errors    = 0;

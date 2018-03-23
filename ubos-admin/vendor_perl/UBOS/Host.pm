@@ -26,8 +26,8 @@ use Sys::Hostname qw();
 
 my $HOST_CONF_FILE         = '/etc/ubos/config.json';
 
-my $SITE_JSON_DIR          = vars()->get( 'host.sitejsondir' );
-my $AFTER_BOOT_FILE        = vars()->get( 'host.afterbootfile' );
+my $SITE_JSON_DIR          = vars()->getResolve( 'host.sitejsondir' );
+my $AFTER_BOOT_FILE        = vars()->getResolve( 'host.afterbootfile' );
 my $READY_FILE             = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
@@ -110,7 +110,7 @@ sub kernelPackageName {
 # Determine this host's hostname.
 # return: hostname
 sub hostname {
-    return vars()->get( 'hostname' );
+    return vars()->getResolve( 'hostname' );
 }
 
 ##
@@ -1200,7 +1200,7 @@ sub macAddressOfNic {
 sub defaultManifestFileReader {
     my $packageIdentifier = shift;
 
-    my $file = vars()->get( 'package.manifestdir' ) . "/$packageIdentifier.json";
+    my $file = vars()->getResolve( 'package.manifestdir' ) . "/$packageIdentifier.json";
 
     return readJsonFromFile( $file );
 }

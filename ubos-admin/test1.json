@@ -1,0 +1,17 @@
+{
+   "siteid" : "sa610ba1b41bbd974a38abd4a7d47cc1d5f6364ae",
+   "appconfigs" : [
+      {
+         "appid" : "gladiwashere-php-mysql",
+         "appconfigid" : "aaa8e33b40f93b52db0c49fdc6ed601c10bfd57d0",
+         "context" : "/book"
+      }
+   ],
+   "hostname" : "test1",
+   "admin" : {
+      "username" : "admin",
+      "userid" : "admin",
+      "credential" : "qwerqwer",
+      "email" : "test@ubos.net"
+   }
+}

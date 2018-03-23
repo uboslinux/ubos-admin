@@ -141,9 +141,9 @@ sub removeSite {
 
     trace( 'tomcat8::removeSite', $self->name(), $doIt, $site->siteId );
 
-    my $sitesDir        = UBOS::Host::vars()->get( 'tomcat8.sitesdir' );
-    my $sitesAppsDir    = UBOS::Host::vars()->get( 'tomcat8.sitesappsdir' );
-    my $contextDir      = UBOS::Host::vars()->get( 'tomcat8.contextsdir' );
+    my $sitesDir        = UBOS::Host::vars()->getResolve( 'tomcat8.sitesdir' );
+    my $sitesAppsDir    = UBOS::Host::vars()->getResolve( 'tomcat8.sitesappsdir' );
+    my $contextDir      = UBOS::Host::vars()->getResolve( 'tomcat8.contextsdir' );
 
     my $siteId          = $site->siteId;
     my $hostname        = $site->hostnameorwildcard;
@@ -170,7 +170,7 @@ sub removeSite {
 sub sitesUpdated {
     my $self = shift;
 
-    my $sitesAppsDir    = UBOS::Host::vars()->get( 'tomcat8.sitesappsdir' );
+    my $sitesAppsDir    = UBOS::Host::vars()->getResolve( 'tomcat8.sitesappsdir' );
 
     my $sites        = UBOS::Host::sites();
     my $hostsSection = <<END;
