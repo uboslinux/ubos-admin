@@ -161,6 +161,18 @@ sub run {
     }
 
     if( $backupFailed ) {
+        info( 'Resuming sites' );
+
+        my $resumeTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
+        $ret = 0;
+
+    } else {
         trace( 'Disabling site(s)' );
 
         my $disableTriggers = {};
@@ -192,17 +204,6 @@ sub run {
         unless( $ret ) {
             error( "Undeploy failed." );
         }
-    } else {
-        info( 'Resuming sites' );
-
-        my $resumeTriggers = {};
-        foreach my $site ( values %$oldSites ) {
-            debugAndSuspend( 'Resuming site', $site->siteId() );
-            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-        }
-        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-        UBOS::Host::executeTriggers( $resumeTriggers );
-        $ret = 0;
     }
     return $ret;
 }
