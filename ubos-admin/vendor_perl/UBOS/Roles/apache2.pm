@@ -127,7 +127,7 @@ sub setupSiteOrCheck {
         trace( 'apache2::setupSite', $siteId );
 
         unless( -d $siteWellKnownDir ) {
-            UBOS::Utils::mkdir( $siteWellKnownDir );
+            UBOS::Utils::mkdirDashP( $siteWellKnownDir );
         }
         unless( -d $appConfigFilesDir ) {
             UBOS::Utils::mkdir( $appConfigFilesDir );
@@ -334,7 +334,7 @@ $serverDeclaration
         AllowOverride All
 
         <IfModule php7_module>
-            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/
+            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/ubos/share/
         </IfModule>
     </Directory>
 CONTENT

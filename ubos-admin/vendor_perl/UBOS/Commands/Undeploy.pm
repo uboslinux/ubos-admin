@@ -196,7 +196,7 @@ sub run {
         info( 'Resuming sites' );
 
         my $resumeTriggers = {};
-        foreach my $site ( %$oldSites ) {
+        foreach my $site ( values %$oldSites ) {
             debugAndSuspend( 'Resuming site', $site->siteId() );
             $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
         }
