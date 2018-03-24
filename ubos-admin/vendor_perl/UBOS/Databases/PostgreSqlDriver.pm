@@ -37,7 +37,7 @@ sub ensureRunning {
 
     my $dataDir = UBOS::Host::vars()->getResolve( 'postgresql.datadir' );
     unless( -d $dataDir ) {
-        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'postgres', 'postgres', '0755', 'root', 'root' );
+        UBOS::Utils::mkdirDashP( $dataDir, 0700, 'postgres', 'postgres', 0755, 'root', 'root' );
 
     }
     UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs

@@ -38,7 +38,7 @@ sub ensureRunning {
     }
     my $dataDir = UBOS::Host::vars()->getResolve( 'mysql.datadir' );
     unless( -d $dataDir ) {
-        UBOS::Utils::mkdirDashP( $dataDir, '0700', 'mysql', 'mysql', '0755', 'root', 'root' );
+        UBOS::Utils::mkdirDashP( $dataDir, 0700, 'mysql', 'mysql', 0755, 'root', 'root' );
     }
     UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
 

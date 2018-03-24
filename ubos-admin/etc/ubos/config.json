@@ -51,7 +51,7 @@
     },
 
     "postgresql" : {
-        "datadir" : "/ubos/lib/postgresql/data"
+        "datadir" : "/ubos/lib/postgres/data"
     },
 
     "tor" : {
