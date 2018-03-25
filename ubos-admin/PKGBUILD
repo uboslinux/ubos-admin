@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.268
+pkgver=0.269
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -90,8 +90,9 @@ package() {
     mkdir -p ${pkgdir}/etc/pacman.d/repositories.d/
 
 # Other config files
-    install -D -m644 ${startdir}/etc/php/conf.d/*.ini -t ${pkgdir}/etc/php/conf.d/
+    install -D -m644 ${startdir}/etc/php/conf.d/*.ini    -t ${pkgdir}/etc/php/conf.d/
     install -D -m644 ${startdir}/etc/ubos/open-ports.d/* -t ${pkgdir}/etc/ubos/open-ports.d/
+    install -D -m644 ${startdir}/etc/diet4j/diet4j.conf  -t ${pkgdir}/etc/diet4j/
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
 
 # A directory to mount a UBOS staff to in a container
