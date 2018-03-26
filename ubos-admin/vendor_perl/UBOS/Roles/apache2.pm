@@ -696,6 +696,7 @@ sub checkInstallableManifestForRole {
         'directorytree'   => 1,
         'file'            => 1,
         'perlscript'      => 1,
+        'exec'            => 1,
         'symlink'         => 1,
         'systemd-service' => 1,
         'systemd-target'  => 1,
@@ -704,7 +705,8 @@ sub checkInstallableManifestForRole {
         'udpport'         => 1
     };
     my $perlOnly = {
-        'perlscript' => 1
+        'perlscript' => 1,
+        'exec'       => 1
     };
 
     $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $vars );

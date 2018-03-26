@@ -61,11 +61,13 @@ sub checkInstallableManifestForRole {
     my $databaseOrScript = {
         'database'   => 1,
         'perlscript' => 1,
-        'sqlscript'  => 1
+        'sqlscript'  => 1,
+        'exec'       => 1
     };
     my $perlOrSql = {
         'perlscript' => 1,
-        'sqlscript'  => 1
+        'sqlscript'  => 1,
+        'exec'       => 1
     };
     
     $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $databaseOrScript, $retentionBuckets, $skipFilesystemChecks, $vars );
