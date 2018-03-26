@@ -63,7 +63,7 @@ sub checkInstallableManifestForRole {
 
     my $scriptAndPorts = {
         'perlscript'      => 1,
-        'exec'            => 1
+        'exec'            => 1,
         'systemd-service' => 1,
         'systemd-target'  => 1,
         'systemd-timer'   => 1,
