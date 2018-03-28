@@ -128,12 +128,11 @@ sub _runIt {
 
         my $cmd = "$source $operation $parFile";
 
-        my $out;
-        if( myexec( $cmd, undef, \$out, \$out)) {
-            error( 'Exec::_runIt: running', $source, $operation, 'failed:', $out );
+        if( myexec( $cmd )) {
+            error( 'Exec::_runIt: running', $source, $operation, 'failed' );
             $ret = 0;
         } else {
-            trace( 'Exec::_runIt: running', $source, $operation, 'produced:', $out );
+            trace( 'Exec::_runIt: running', $source, $operation, 'succeeded' );
         }
     }
     return $ret;
