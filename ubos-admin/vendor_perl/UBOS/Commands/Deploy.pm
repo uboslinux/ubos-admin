@@ -47,10 +47,10 @@ sub run {
             'logConfig=s' => \$logConfigFile,
             'debug'       => \$debug,
             'template'    => \$useAsTemplate,
+            'force',      => \$force,
             'files=s'     => \@files,
             'stdin'       => \$stdin,
             'backup=s'    => \$backupFile,
-            'force',      => \$force,
             'notls'       => \$noTls,
             'notorkey'    => \$noTorKey );
 
