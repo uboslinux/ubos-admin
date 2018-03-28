@@ -297,12 +297,14 @@ sub vars {
         $self->{vars} = UBOS::Variables->new(
                     "AppConfiguration=$appConfigId",
                     {
-                        "appconfig.appid"                => $appId,
-                        "appconfig.accessoryids"         => defined( $accessoryIds ) ? join( ',', @$accessoryIds ) : '',
-                        "appconfig.appconfigid"          => $appConfigId,
-                        "appconfig.context"              => $self->context(),
-                        "appconfig.contextorslash"       => $self->contextOrSlash(),
-                        "appconfig.contextnoslashorroot" => $self->contextNoSlashOrRoot()
+                        "appconfig" => {
+                            "appid"                => $appId,
+                            "accessoryids"         => defined( $accessoryIds ) ? join( ',', @$accessoryIds ) : '',
+                            "appconfigid"          => $appConfigId,
+                            "context"              => $self->context(),
+                            "contextorslash"       => $self->contextOrSlash(),
+                            "contextnoslashorroot" => $self->contextNoSlashOrRoot()
+                        }
                     },
                     $site );
     }

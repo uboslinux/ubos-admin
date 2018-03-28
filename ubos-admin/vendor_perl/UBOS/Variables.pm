@@ -336,16 +336,20 @@ sub _applyFunc {
 
 ##
 # Obtain the resolved variables, recursively to delegates, as JSON.
+#
+# $resolveAgainst: when invoked in the recursion, pointer to the outermost vars object
+# $ret: when involved in the recursion, aggregates results
 # return: JSON hash
 sub asJson {
-    my $self = shift;
+    my $self           = shift;
+    my $resolveAgainst = shift || $self;
+    my $ret            = shift || {};
 
-    my $ret = {};
-
-    $self->_addToJson( $self->{hierarchicalMap}, $ret );
     foreach my $delegate ( @{$self->{delegates}} ) {
-        $delegate->_addToJson( $delegate->{hierarchicalMap}, $ret );
+        $delegate->vars()->asJson( $resolveAgainst, $ret );
     }
+    $self->_addToJson( $self->{hierarchicalMap}, $resolveAgainst, $ret );
+
     return $ret;
 }
 
@@ -353,21 +357,25 @@ sub asJson {
 # Add the resolved variables to this hash.
 #
 # $map: the current level in the traversal
-# $h: the hash
+# $resolveAgainst: pointer to the outermost vars object
+# $h: where to aggregate results
 sub _addToJson {
-    my $self = shift;
-    my $map  = shift;
-    my $h    = shift;
+    my $self           = shift;
+    my $map            = shift;
+    my $resolveAgainst = shift;
+    my $h              = shift;
 
     foreach my $key ( CORE::keys %$map ) {
-        my $value = $map->{$key};
-        if( ref( $value )) {
+        my $value    = $map->{$key};
+        my $valueRef = ref( $value );
+
+        if( $valueRef && $valueRef !~ m!^JSON::PP! ) {
             unless( exists( $h->{$key} )) {
                 $h->{$key} = {};
             }
-            $self->_addToJson( $value, $h->{$key} );
+            $self->_addToJson( $value, $resolveAgainst, $h->{$key} );
         } else {
-            $h->{$key} = $self->getResolve( $value );
+            $h->{$key} = $resolveAgainst->replaceVariables( $value );
         }
     }
 }

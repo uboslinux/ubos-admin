@@ -417,7 +417,11 @@ sub checkManifest {
     my $packageName = $self->packageName();
     my $vars = UBOS::Variables->new(
             "Installable=$packageName(Manifest-check)",
-            {   'package.name' => $packageName },
+            {
+                'package' => {
+                    'name' => $packageName
+                }
+            },
             'UBOS::Host' );
 
     $self->checkManifestStructure( $vars, $skipFilesystemChecks );

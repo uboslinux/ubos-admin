@@ -228,17 +228,21 @@ sub vars {
         $self->{vars} = UBOS::Variables->new(
                     "Site=$siteId",
                     {
-                        "site.hostname"                 => $self->hostname(),
-                        "site.hostnameorwildcard"       => $self->hostnameorwildcard(),
-                        "site.hostnameorsystemhostname" => $self->hostnameorsystemhostname(),
-                        "site.port"                     => $self->port(),
-                        "site.protocol"                 => $self->protocol(),
-                        "site.protocolport"             => ( 'http' eq $self->protocol() ? 80 : 443 ),
-                        "site.siteid"                   => $siteId,
-                        "site.admin.userid"             => $adminJson->{userid},
-                        "site.admin.username"           => $adminJson->{username},
-                        "site.admin.credential"         => $adminJson->{credential},
-                        "site.admin.email"              => $adminJson->{email}
+                        "site" => {
+                            "hostname"                 => $self->hostname(),
+                            "hostnameorwildcard"       => $self->hostnameorwildcard(),
+                            "hostnameorsystemhostname" => $self->hostnameorsystemhostname(),
+                            "port"                     => $self->port(),
+                            "protocol"                 => $self->protocol(),
+                            "protocolport"             => ( 'http' eq $self->protocol() ? 80 : 443 ),
+                            "siteid"                   => $siteId,
+                            "admin" => {
+                                "userid"               => $adminJson->{userid},
+                                "username"             => $adminJson->{username},
+                                "credential"           => $adminJson->{credential},
+                                "email"                => $adminJson->{email}
+                            }
+                        }
                     },
                     'UBOS::Host' );
     }

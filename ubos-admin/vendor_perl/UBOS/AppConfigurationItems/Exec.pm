@@ -123,7 +123,7 @@ sub _runIt {
 
         my $json = $vars->asJson();
 
-        print $parFile, UBOS::Utils::writeJsonToString( $json );
+        print $parFile UBOS::Utils::writeJsonToString( $json );
         close $parFile;
 
         my $cmd = "$source $operation $parFile";

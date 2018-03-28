@@ -561,8 +561,8 @@ sub checkManifestForRoleGenericAppConfigItems {
                                            . ". Allowed types are: " . join( ', ', sort keys %$allowedTypes ) );
             }
 
-            if( $appConfigItem->{type} eq 'perlscript' ) {
-                # perlscript only gets to have source, not template
+            if( $appConfigItem->{type} eq 'perlscript' || $appConfigItem->{type} eq 'exec' ) {
+                # perlscript and exec only gets to have source, not template
                 unless( $appConfigItem->{source} ) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": must specify source" );
                 }
@@ -757,7 +757,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be given" );
                     }
 
-                } else { # perlscript and sqlscript handled above
+                } else { # perlscript, exec and sqlscript handled above
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type (1): " . $appConfigItem->{type}
                                               . ". Allowed types are: " . join( ', ', sort keys %$allowedTypes ) );
                 }
