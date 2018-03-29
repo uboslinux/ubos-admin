@@ -35,13 +35,13 @@ sub run {
 
     my $verbose          = 0;
     my $logConfigFile    = undef;
-    my $debug         = undef;
+    my $debug            = undef;
     my $restIsPackages   = 0;
     my @packageFiles     = ();
-    my $backupFile    = undef;
-    my $force         = 0;
-    my $noTls         = undef;
-    my $noTorKey      = undef;
+    my $backupFile       = undef;
+    my $force            = 0;
+    my $noTls            = undef;
+    my $noTorKey         = undef;
     my $reboot           = 0;
     my $noreboot         = 0;
     my $nosync           = 0;
@@ -201,6 +201,9 @@ sub run {
         }
         if( $stage2LogConfigFile ) {
             $stage2Cmd .= ' --logConfig ' . $stage2LogConfigFile;
+        }
+        if( $debug ) {
+            $stage2Cmd .= ' --debug';
         }
         unless( $ret ) {
             $stage2Cmd .= ' --stage1exit 1';
