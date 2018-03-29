@@ -141,7 +141,7 @@ sub read {
 
     $self->{sites} = {};
 
-    foreach my $siteJsonFile ( <$updateBackupDir/*.json>, <$previousUpdateBackupDir/*.java> ) {
+    foreach my $siteJsonFile ( <$updateBackupDir/*.json>, <$previousUpdateBackupDir/*.json> ) {
         my $siteJson = UBOS::Utils::readJsonFromFile( $siteJsonFile );
         if( $siteJson ) {
             my $site = UBOS::Site->new( $siteJson );
