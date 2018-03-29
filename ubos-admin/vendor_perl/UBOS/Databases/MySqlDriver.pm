@@ -18,7 +18,8 @@ use fields qw( dbHost dbPort );
 
 my $running = 0;
 
-my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
+my $rootConfiguration         = '/etc/mysql/root-defaults-ubos.cnf';
+my $previousRootConfiguration = '/etc/mysql/root-defaults.cnf';
 
 ## Note that this driver has both 'static' and 'instance' methods
 
@@ -78,6 +79,10 @@ SQL
             $sth->execute();
 
             $dbh->disconnect();
+
+            if( -e $previousRootConfiguration ) {
+                UBOS::Utils::deleteFile( $previousRootConfiguration );
+            }
         }
     }
     $running = 1;
