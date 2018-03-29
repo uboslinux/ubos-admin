@@ -121,7 +121,7 @@ sub run {
             if( $site ) {
                 $oldSites->{$site->siteId} = $site;
             } else {
-                fatal( "$@Not undeploying any site." );
+                fatal( "$@ Not undeploying any site." );
             }
         }
     }
