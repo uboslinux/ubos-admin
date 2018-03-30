@@ -221,7 +221,7 @@ sub _constructMsg {
 
     my @args2 = map { my $a = $_; ref( $a ) eq 'CODE' ? $a->() : $a; } @args;
 
-    my $ret = join( ' ', map { defined( $_ ) ? $_ : '<undef>' } @args2 );
+    my $ret = 'DEBUG: ' . join( ' ', map { defined( $_ ) ? $_ : '<undef>' } @args2 );
     return $ret;
 }
 
