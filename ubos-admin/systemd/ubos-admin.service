@@ -5,11 +5,12 @@ Wants=network.target cronie.service httpd.service
 Before=httpd.service
 
 [Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-admin
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-admin
+
 Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-admin
 ExecStart=/usr/share/ubos-admin/bin/ubos-admin-initialize
-ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-admin
 
 [Install]
 WantedBy=multi-user.target

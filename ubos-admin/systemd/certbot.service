@@ -5,5 +5,8 @@ ConditionPathExists=/usr/bin/certbot
 # letsencrypt site is installed
 
 [Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart certbot
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop certbot
+
 Type=oneshot
 ExecStart=/usr/bin/certbot renew --quiet --agree-tos --post-hook "/usr/bin/systemctl restart httpd.service"

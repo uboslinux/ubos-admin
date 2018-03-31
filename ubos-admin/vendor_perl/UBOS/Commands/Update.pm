@@ -271,9 +271,9 @@ sub run {
             exec( 'systemctl reboot' ) || fatal( 'Failed to issue reboot command' );
 
         } else {
-            # Reload systemd first, as .service files might have been updated
-            debugAndSuspend( 'systemctl daemon-reload' );
-            UBOS::Utils::myexec( 'systemctl daemon-reload' );
+            # .service files and/or systemd might have been updated
+            debugAndSuspend( 'systemctl daemon-reexec' );
+            UBOS::Utils::myexec( 'systemctl daemon-reexec' );
 
             debugAndSuspend( 'Hand over to stage2' );
             exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );

@@ -135,9 +135,15 @@ sub finishUpdate {
     debugAndSuspend( 'Purge cache' );
     UBOS::Host::purgeCache( 1 );
 
-    trace( 'Removing obsolete packages' );
+    trace( 'Removing obsolete packages and directories' );
     my $out;
     UBOS::Utils::myexec( 'pacman -R --noconfirm ubos-networking', undef, \$out, \$out );
+
+    UBOS::Utils::deleteFile( qw(
+            /etc/httpd/ubos
+            /etc/httpd/appconfigs
+            /var/lib/ubos
+            /srv/http/wellknown ));
 
     if( defined( $snapNumber ) && UBOS::Host::vars()->getResolve( 'host.snapshotonupgrade', 0 )) {
         debugAndSuspend( 'Create filesystem snapshot' );

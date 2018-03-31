@@ -4,12 +4,13 @@ Wants=network.target cronie.service httpd.service certbot.timer
 After=ubos-admin.service httpd.service mysqld.service
 
 [Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-ready
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-ready
+
 Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-ready
 ExecStart=/usr/share/ubos-admin/bin/ubos-ready-start
 ExecStop=/usr/share/ubos-admin/bin/ubos-ready-stop
-ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-ready
 
 [Install]
 WantedBy=multi-user.target
