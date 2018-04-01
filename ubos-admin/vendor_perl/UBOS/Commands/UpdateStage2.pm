@@ -143,7 +143,6 @@ sub finishUpdate {
             grep { -e $_ }
             qw(
                 /etc/httpd/ubos
-                /etc/httpd/appconfigs
                 /var/lib/ubos
                 /srv/http/wellknown )
             );
