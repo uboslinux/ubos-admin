@@ -554,7 +554,7 @@ sub deleteRecursively {
     if( @files ) {
         trace( 'Recursively delete files:', @files );
 
-        if( myexec( 'rm -rf ' . join( ' ', grep { -e $_ } map { "'$_'" } @files ))) {
+        if( myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ))) {
             $ret = 0;
         }
     }
