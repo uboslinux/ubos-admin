@@ -204,7 +204,7 @@ sub debugAndSuspend {
 
     if( $DEBUG ) {
         if( @msg ) {
-            print STDERR _constructMsg( @msg ) ."\n";
+            print STDERR ( "DEBUG: " . _constructMsg( @msg ) ."\n" );
         }
         print STDERR "** Hit return to continue. ***\n";
         getc();
@@ -221,7 +221,7 @@ sub _constructMsg {
 
     my @args2 = map { my $a = $_; ref( $a ) eq 'CODE' ? $a->() : $a; } @args;
 
-    my $ret = 'DEBUG: ' . join( ' ', map { defined( $_ ) ? $_ : '<undef>' } @args2 );
+    my $ret = join( ' ', map { defined( $_ ) ? $_ : '<undef>' } @args2 );
     return $ret;
 }
 
