@@ -241,8 +241,8 @@ sub _createHierarchicalMapAtAppconfigVars {
                     $data = $value->{expression};
                     $data = $appConfig->vars()->replaceVariables( $data );
                 }
-                if( defined( $data ) && ( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} )) {
-                    # do not generate the file in case of null data, or if customizationpoint is declared private
+                if( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} ) {
+                    # do not generate the file if customizationpoint is declared private
                     my $filename = "$appConfigParsDir/$appConfigId/$packageName/$custPointName";
                     $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{filename} = $filename;
                 }
