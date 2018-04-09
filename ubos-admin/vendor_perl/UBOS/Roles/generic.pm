@@ -57,9 +57,6 @@ sub checkInstallableManifestForRole {
     if( $jsonFragment->{depends} ) {
         $installable->myFatal( "roles section: role $roleName: depends not allowed here" );
     }
-    if( $jsonFragment->{triggersactivate} ) {
-        $installable->myFatal( "roles section: role $roleName: triggersactivate not allowed here" );
-    }
 
     my $scriptAndPorts = {
         'perlscript'      => 1,

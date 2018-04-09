@@ -70,9 +70,8 @@ sub checkInstallableManifestForRole {
         'exec'       => 1
     };
     
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $databaseOrScript, $retentionBuckets, $skipFilesystemChecks, $vars );
-    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $vars );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOrSql, $vars );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems( $roleName, $installable, $jsonFragment, $databaseOrScript, $retentionBuckets, $skipFilesystemChecks, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(  $roleName, $installable, $jsonFragment, $perlOrSql, $vars );
 }
 
 1;

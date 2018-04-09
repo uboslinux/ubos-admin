@@ -823,42 +823,6 @@ sub checkManifestForRoleGenericAppConfigItems {
 }
 
 ##
-# Check the part of a manifest that deals with this role and the generic 'triggersactivate'.
-# $roleName: name of this role, passed for efficiency
-# $installable: the installable whose manifest is being checked
-# $jsonFragment: the JSON fragment that deals with this role
-# $vars: the Variables object that knows about symbolic names and variables
-sub checkManifestForRoleGenericTriggersActivate {
-    my $self         = shift;
-    my $roleName     = shift;
-    my $installable  = shift;
-    my $jsonFragment = shift;
-    my $allowedTypes = shift;
-    my $vars         = shift;
-
-    if( exists( $jsonFragment->{triggersactivate} )) {
-        unless( ref( $jsonFragment->{triggersactivate} ) eq 'ARRAY' ) {
-            $installable->myFatal( "roles section: role $roleName: triggersactivate: not an array" );
-        }
-        my $triggersIndex = 0;
-        my %triggers = ();
-        foreach my $triggersJson ( @{$jsonFragment->{triggersactivate}} ) {
-            if( ref( $triggersJson )) {
-                $installable->myFatal( "roles section: role $roleName: triggersactivate[$triggersIndex]: not an array" );
-            }
-            unless( $triggersJson =~ m/^[a-z][-a-z0-9]*$/ ) {
-                $installable->myFatal( "roles section: role $roleName: triggersactivate[$triggersIndex]: invalid trigger name: $triggersJson" );
-            }
-            if( $triggers{$triggersJson} ) {
-                $installable->myFatal( "roles section: role $roleName: triggersactivate[$triggersIndex] is not unique: $triggersJson" );
-                $triggers{$triggersJson} = 1;
-            }
-            ++$triggersIndex;
-        }
-    }
-}
-
-##
 # Check the part of a manifest that deals with this role and the generic 'installers',
 # 'uninstallers' and 'upgraders'.
 # $roleName: name of this role, passed for efficiency

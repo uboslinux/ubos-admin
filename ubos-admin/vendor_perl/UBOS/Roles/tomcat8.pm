@@ -249,10 +249,9 @@ sub checkInstallableManifestForRole {
         'exec'       => 1
     };
 
-    $self->SUPER::checkManifestForRoleGenericDepends(          $roleName, $installable, $jsonFragment, $vars );
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $vars );
-    $self->SUPER::checkManifestForRoleGenericTriggersActivate( $roleName, $installable, $jsonFragment, $vars );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $perlOnly, $vars );
+    $self->SUPER::checkManifestForRoleGenericDepends(        $roleName, $installable, $jsonFragment, $vars );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems( $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(  $roleName, $installable, $jsonFragment, $perlOnly, $vars );
 }
 
 1;
