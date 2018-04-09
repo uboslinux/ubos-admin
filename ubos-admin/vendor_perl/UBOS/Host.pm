@@ -485,6 +485,13 @@ sub executeTriggers {
         fatal( 'Unexpected type:', $triggers );
     }
 
+    # if we do restart, don't also do a reload
+    foreach my $s ( 'httpd', 'tomcat8', 'tor' ) {
+        if( grep { m!^$s-restart@! } @triggerList ) {
+            @triggerList = grep { ! m!$s-reload$! } @triggerList;
+        }
+    }
+
     trace( 'Host::executeTriggers:', @triggerList );
 
     foreach my $trigger ( @triggerList ) {

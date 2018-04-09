@@ -94,6 +94,8 @@ sub finishUpdate {
             UBOS::Host::siteDeployed( $site );
         }
         if( $restartServices ) {
+            $deployTriggers->{'httpd-restart'} = 1;
+
             debugAndSuspend( 'Execute triggers', keys %$deployTriggers );
             UBOS::Host::executeTriggers( $deployTriggers );
         }
