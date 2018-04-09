@@ -58,9 +58,13 @@ sub checkInstallableManifestForRole {
         $installable->myFatal( "roles section: role $roleName: depends not allowed here" );
     }
 
-    my $scriptAndPorts = {
+    my $noDatabase = {
+        'directory'       => 1,
+        'directorytree'   => 1,
+        'file'            => 1,
         'perlscript'      => 1,
         'exec'            => 1,
+        'symlink'         => 1,
         'systemd-service' => 1,
         'systemd-target'  => 1,
         'systemd-timer'   => 1,
@@ -68,8 +72,8 @@ sub checkInstallableManifestForRole {
         'udpport'         => 1
     };
 
-    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $scriptAndPorts, $retentionBuckets, $skipFilesystemChecks, $vars );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $scriptAndPorts, $vars );
+    $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $noDatabase, $vars );
 }
 
 1;
