@@ -823,8 +823,8 @@ sub checkManifestForRoleGenericAppConfigItems {
 }
 
 ##
-# Check the part of a manifest that deals with this role and the generic 'installers',
-# 'uninstallers' and 'upgraders'.
+# Check the part of a manifest that deals with this role and the generic 'installers'
+# and 'upgraders'.
 # $roleName: name of this role, passed for efficiency
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
@@ -840,7 +840,7 @@ sub checkManifestForRoleGenericInstallersEtc {
 
     my $codeDir = $vars->getResolve( 'package.codedir' );
 
-    foreach my $postInstallCategory ( 'installers', 'uninstallers', 'upgraders' ) {
+    foreach my $postInstallCategory ( 'installers', 'upgraders' ) {
         unless( defined( $jsonFragment->{$postInstallCategory} )) {
             next;
         }

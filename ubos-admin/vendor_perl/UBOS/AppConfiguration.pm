@@ -527,7 +527,7 @@ sub runUpgraders {
 }
 
 ##
-# Common code for running installers, uninstallers and upgraders
+# Common code for running installers and upgraders.
 # $jsonSection: name of the JSON section that holds the script(s)
 # $methodName: name of the method on AppConfigurationItem to invoke
 # return: success or fail
