@@ -47,17 +47,29 @@ sub createDisks {
     my $out;
     my $err;
 
+    # clear the partition table
+    if( UBOS::Utils::myexec( "sgdisk --clear '" . $self->{image} . "'", undef, \$out, \$out )) {
+        fatal( 'Cannot clear out partition table: sgdisk --clear:', $out );
+    }
+
+    # zero out the beginning -- sometimes there are strange leftovers
+    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8 conv=notrunc status=none" )) {
+        ++$errors;
+    }
+
     # determine disk size and how many sector are left over for the main partition
     my $remainingSectors;
     if( UBOS::Utils::myexec( "sgdisk --print '" . $self->{image} . "'", undef, \$out, \$out )) {
-        error( 'sgdisk --print:', $out );
-        ++$errors;
+        fatal( 'Cannot determine size of disk: sgdisk --print:', $out );
 
     } elsif( $out =~ m!First\s+usable\s+sector\s+is\s+(\d+),\s+last\s+usable\s+sector\s+is\s+(\d+)\s+!s )  {
         my $firstSector = $1;
         my $lastSector  = $2;
         my $remaining   = $lastSector-$firstSector;
-        $remaining -= 2049; # first 2048 sectors, plus one sector more
+        $remaining -= 4096 * ( 0 + keys %{$self->{devicetable}} );
+            # first 4096 sectors, for each partition
+            # this is probably too much, but there seem to be alignment calculations with
+            # the recommended start of a new partition
 
         foreach my $data ( values %{$self->{devicetable}} ) {
             if( exists( $data->{size} )) {
@@ -71,11 +83,6 @@ sub createDisks {
 
     } else {
         fatal( 'Cannot determine size of disk' );
-    }
-
-    # zero out the beginning -- sometimes there are strange leftovers
-    if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8 conv=notrunc status=none" )) {
-        ++$errors;
     }
 
     my $fdiskScript = '';

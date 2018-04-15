@@ -153,6 +153,7 @@ sub createDiskLayout {
                             'index'       => 1,
                             'fs'          => 'vfat',
                             'devices'     => [ $bootpartition ],
+                            'mkfsflags'   => '-F32',
                             'mbrboot'     => 1,
                             'mbrparttype' => 'c'
                             # default partition type for gpt
@@ -171,6 +172,7 @@ sub createDiskLayout {
                             'index'       => 1,
                             'fs'          => 'vfat',
                             'devices'     => [ $bootpartition ],
+                            'mkfsflags'   => '-F32',
                             'mbrboot'     => 1,
                             'mbrparttype' => 'c'
                             # default partition type for gpt
@@ -206,6 +208,7 @@ sub createDiskLayout {
                                     'index'       => 1,
                                     'fs'          => 'vfat',
                                     'size'        => 200 * 1024, # 100M at 512/sector
+                                    'mkfsflags'   => '-F32',
                                     'mbrparttype' => 'c'
                                     # default partition type for gpt
                                 },
@@ -223,6 +226,7 @@ sub createDiskLayout {
                         'index'       => 1,
                         'fs'          => 'vfat',
                         'size'        => 200 * 1024, # 100M at 512/sector
+                        'mkfsflags'   => '-F32',
                         'mbrparttype' => 'c',
                         'label'       => 'UBOS boot'
                         # default partition type for gpt
@@ -246,7 +250,7 @@ sub createDiskLayout {
                 }
 
                 $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
-                        [   $rootDiskOrImage    ],
+                        $rootDiskOrImage,
                         $deviceTable );
             } elsif( $ret ) {
                 error( 'Must be file or disk:', $rootDiskOrImage );
