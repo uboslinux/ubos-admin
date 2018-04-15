@@ -47,14 +47,15 @@ sub createDisks {
     my $out;
     my $err;
 
-    # clear the partition table
-    if( UBOS::Utils::myexec( "sgdisk --clear '" . $self->{image} . "'", undef, \$out, \$out )) {
-        fatal( 'Cannot clear out partition table: sgdisk --clear:', $out );
-    }
-
     # zero out the beginning -- sometimes there are strange leftovers
     if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8 conv=notrunc status=none" )) {
         ++$errors;
+    }
+
+    # clear the partition table -- this returns exit code even if it announces it was successful
+    UBOS::Utils::myexec( "sgdisk --clear '" . $self->{image} . "'", undef, \$out, \$out );
+    unless( $out =~ m!The operation has completed successfully! ) {
+        fatal( 'Cannot clear out partition table: sgdisk --clear:', $out );
     }
 
     # determine disk size and how many sector are left over for the main partition
