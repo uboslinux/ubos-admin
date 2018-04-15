@@ -245,7 +245,7 @@ sub createDiskLayout {
                     };
                 }
 
-                $ret = UBOS::Install::DiskLayouts::GptDiskBlockDevices->new(
+                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                         [   $rootDiskOrImage    ],
                         $deviceTable );
             } elsif( $ret ) {
