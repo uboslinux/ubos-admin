@@ -13,8 +13,6 @@ use base qw( UBOS::Install::AbstractDiskLayout );
 use fields qw( image loopDevice );
 
 use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::MbrDiskImage;
-use UBOS::Install::DiskLayouts::GptDiskImage;
 use UBOS::Logging;
 
 ##
