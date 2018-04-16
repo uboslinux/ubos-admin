@@ -104,7 +104,7 @@ sub run {
         }
     }
 
-    if( !$fromTemplate && !$quiet ) {
+    if( !$jsonTemplate && !$quiet ) {
         print "** First a few questions about the website that you are about to create:\n";
     }
 
@@ -113,8 +113,8 @@ sub run {
     my $hostname = undef;
     unless( $tor ) {
         outer: while( 1 ) {
-            if( $fromTemplate && exists( $fromTemplate->{hostname} )) {
-                $hostname = $fromTemplate->{hostname};
+            if( $jsonTemplate && exists( $jsonTemplate->{hostname} )) {
+                $hostname = $jsonTemplate->{hostname};
                 if( UBOS::Host::findSiteByHostname( $hostname )) {
                     fatal( 'A site with this hostname is deployed already. Cannot create a new site from this template:', $hostname );
                 }
@@ -172,26 +172,26 @@ sub run {
     my $adminCredential = undef;
     my $adminEmail      = undef;
 
-    if( $fromTemplate ) {
-        if( defined( $fromTemplate->{siteid} )) {
-            $siteId = $fromTemplate->{siteid};
+    if( $jsonTemplate ) {
+        if( defined( $jsonTemplate->{siteid} )) {
+            $siteId = $jsonTemplate->{siteid};
 
             if( $oldSites->{$siteId} ) {
                 fatal( 'A site with this siteid is deployed already. Cannot create a new site from this template:', $siteId );
             }
         }
-        if( defined( $fromTemplate->{admin} )) {
-            if( defined( $fromTemplate->{admin}->{userid} )) {
-                $adminUserId = $fromTemplate->{admin}->{userid};
+        if( defined( $jsonTemplate->{admin} )) {
+            if( defined( $jsonTemplate->{admin}->{userid} )) {
+                $adminUserId = $jsonTemplate->{admin}->{userid};
             }
-            if( defined( $fromTemplate->{admin}->{username} )) {
-                $adminUserName = $fromTemplate->{admin}->{username};
+            if( defined( $jsonTemplate->{admin}->{username} )) {
+                $adminUserName = $jsonTemplate->{admin}->{username};
             }
-            if( defined( $fromTemplate->{admin}->{credential} )) {
-                $adminCredential = $fromTemplate->{admin}->{credential};
+            if( defined( $jsonTemplate->{admin}->{credential} )) {
+                $adminCredential = $jsonTemplate->{admin}->{credential};
             }
-            if( defined( $fromTemplate->{admin}->{email} )) {
-                $adminEmail = $fromTemplate->{admin}->{email};
+            if( defined( $jsonTemplate->{admin}->{email} )) {
+                $adminEmail = $jsonTemplate->{admin}->{email};
             }
         }
     }
@@ -207,8 +207,8 @@ sub run {
 
     while( !$adminCredential ) {
         while( 1 ) {
-            if( $fromTemplate && defined( $fromTemplate->{admin} ) && defined( $fromTemplate->{admin}->{credential} )) {
-                $adminCredential = $fromTemplate->{admin}->{credential};
+            if( $jsonTemplate && defined( $jsonTemplate->{admin} ) && defined( $jsonTemplate->{admin}->{credential} )) {
+                $adminCredential = $jsonTemplate->{admin}->{credential};
             } else {
                 $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
             }
@@ -390,18 +390,18 @@ sub run {
         $newSiteJson->{tor} = {};
     }
 
-    if( !$fromTemplate && !$quiet ) {
+    if( !$jsonTemplate && !$quiet ) {
         print "** Now a few questions about the app(s) you are going to deploy to this site:\n";
     }
 
-    if( $fromTemplate && defined( $fromTemplate->{wellknown} )) {
-        $newSiteJson->{wellknown} = $fromTemplate->{wellknown};
+    if( $jsonTemplate && defined( $jsonTemplate->{wellknown} )) {
+        $newSiteJson->{wellknown} = $jsonTemplate->{wellknown};
     }
 
 # AppConfigurations
 
-    if( $fromTemplate ) {
-        foreach my $appConfig ( @{$fromTemplate->{appconfigs}} ) {
+    if( $jsonTemplate ) {
+        foreach my $appConfig ( @{$jsonTemplate->{appconfigs}} ) {
             my $appConfigId = $appConfig->appConfigId();
             if( UBOS::Host::findAppConfigurationById( $appConfigId )) {
                 fatal( 'An AppConfiguration with this appconfigid is deployed already. Cannot create a new site from this template:', $hostname );
@@ -451,8 +451,8 @@ sub run {
             $appConfigJson->{appconfigid} = $appConfigId;
             $appConfigJson->{appid}       = $appId;
 
-            if( defined( $fromTemplate->{context} )) {
-                $appConfigJson->{context} = $fromTemplate->{context};
+            if( defined( $jsonTemplate->{context} )) {
+                $appConfigJson->{context} = $jsonTemplate->{context};
             } elsif( defined( $app->defaultContext() )) {
                 $appConfigJson->{context} = $app->defaultContext();
             } elsif( defined( $app->fixedContex() )) {
