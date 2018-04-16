@@ -68,7 +68,7 @@ sub run {
                     if(( exists( $netconfig->{dhcpserver} ) && $netconfig->{dhcpserver} )) {
                         $s .= ' dhcp-server';
                         if(( exists( $netconfig->{prefixsize} ) && $netconfig->{prefixsize} )) {
-                            $s .= ':' . $netconfig->{prefixsize};
+                            $s .= ':/' . $netconfig->{prefixsize};
                         }
                     }
                     if(( exists( $netconfig->{state} ) && $netconfig->{state} )) {
@@ -87,7 +87,7 @@ sub run {
                         $s .= ' ports';
                     }
                     if(( exists( $netconfig->{appnic} ) && $netconfig->{appnic} )) {
-                        $s .= ' apps';
+                        $s .= ' sites';
                     }
                     if(( exists( $netconfig->{ssh} ) && $netconfig->{ssh} )) {
                         $s .= ' ssh';
@@ -104,12 +104,6 @@ sub run {
                         }
                     }
                     return $s;
-                },
-                sub {
-                    my $a = shift;
-                    my $b = shift;
-
-                    return $a cmp $b;
                 } );
     }
 
@@ -135,7 +129,8 @@ SSS
     forward     : interface forwards traffic for routing purposes
     nat         : interface is subject to Network Address Translation ("masquerade")
     mdns        : device will advertise itself via this network interface using MDNS
-    public      : apps running on this device can be accessed via this network interface
+    ports       : ports requested by apps will be open on this network interface
+    sites       : apps running on this device can be accessed via this network interface
     ssh         : ssh login is permitted via this network interface, optional rate limits
 DDD
         'cmds' => {
