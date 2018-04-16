@@ -5,7 +5,7 @@
         "resourcesdir"              : "/ubos/lib/ubos/resources",
         "pinnedresourcesdir"        : "/ubos/lib/ubos/pinnedresources",
         "sitejsondir"               : "/ubos/lib/ubos/sites",
-        "afterbootfile"             : "/var/lib/ubos/after-boot",
+        "afterbootfile"             : "/ubos/lib/ubos/after-boot",
         "checkmanifest"             : true,
         "readstaffonboot"           : true,
         "deploysitetemplatesonboot" : true,
