@@ -17,9 +17,11 @@ use Cwd;
 use File::Basename;
 use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::UpdateBackup;
+use UBOS::BackupUtils;
+use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::UpdateBackup;
 use UBOS::Utils;
 
 ##

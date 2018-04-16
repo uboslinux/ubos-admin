@@ -13,6 +13,8 @@ package UBOS::Commands::Undeploy;
 use Cwd;
 use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::BackupUtils;
+use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
