@@ -49,7 +49,10 @@ sub createDisks {
             ++$errors;
         } elsif( $out =~ m!Disk.*:\s*(\d+)\s*sectors! )  {
             my $remaining = $1;
-            $remaining -= 5; # first 2048 bytes, plus one sector more
+            $remaining -= 4096 * ( 0 + keys %{$self->{devicetable}} );
+                # first 4096 sectors, for each partition
+                # this is probably too much, but there seem to be alignment calculations with
+                # the recommended start of a new partition
 
             foreach my $data ( values %{$self->{devicetable}} ) {
                 if( exists( $data->{size} )) {
