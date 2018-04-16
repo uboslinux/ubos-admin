@@ -92,7 +92,15 @@ sub run {
                     if(( exists( $netconfig->{ssh} ) && $netconfig->{ssh} )) {
                         $s .= ' ssh';
                         if(( exists( $netconfig->{sshratelimit} ) && $netconfig->{sshratelimit} )) {
-                            $s .= ':' . $netconfig->{sshratelimitcount} . '/' . $netconfig->{sshratelimitseconds} . 'sec';
+                            $s .= ':';
+                            $s .= ( exists( $netconfig->{sshratelimitcount} ) && $netconfig->{sshratelimitcount} )
+                                  ? $netconfig->{sshratelimitcount}
+                                  : $UBOS::Networking::NetConfigUtils::DEFAULT_SSHRATELIMITCOUNT;
+                            $s .= '/';
+                            $s .= ( exists( $netconfig->{sshratelimitseconds} ) && $netconfig->{sshratelimitseconds} )
+                                  ? $netconfig->{sshratelimitseconds}
+                                  : $UBOS::Networking::NetConfigUtils::DEFAULT_SSHRATELIMITSECONDS;
+                            $s .= 'sec';
                         }
                     }
                     return $s;

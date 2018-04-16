@@ -29,6 +29,9 @@ my $_netconfigConfs             = {}; # cached content of $netconfigConfFilePatt
 my $resolvedConfFile            = '/etc/systemd/resolved.conf';
 my $currentNetConfigFile        = '/etc/ubos/active-netconfig';
 
+our $DEFAULT_SSHRATELIMITSECONDS = 120;
+our $DEFAULT_SSHRATELIMITCOUNT   = 7;
+
 # Regardless of Netconfig, always run these
 my %alwaysServices = (
         'systemd-networkd.service' => 1,
@@ -613,8 +616,14 @@ END
                 if( exists( $config->{$nic}->{sshratelimit} ) && $config->{$nic}->{sshratelimit} ) {
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --set\n";
                     $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update"
-                                        . " --seconds "  . ( exists( $config->{$nic}->{sshratelimitseconds} ) ? $config->{$nic}->{sshratelimitseconds} : 120 )
-                                        . " --hitcount " . ( exists( $config->{$nic}->{sshratelimitcount}   ) ? $config->{$nic}->{sshratelimitcount}   :   7 )
+                                        . " --seconds "
+                                            . ( exists( $config->{$nic}->{sshratelimitseconds} )
+                                            ? $config->{$nic}->{sshratelimitseconds}
+                                            : $DEFAULT_SSHRATELIMITSECONDS )
+                                        . " --hitcount "
+                                            . ( exists( $config->{$nic}->{sshratelimitcount}   )
+                                            ? $config->{$nic}->{sshratelimitcount}
+                                            : $DEFAULT_SSHRATELIMITCOUNT )
                                         . " -j DROP\n";
                 }
                 $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT\n";
