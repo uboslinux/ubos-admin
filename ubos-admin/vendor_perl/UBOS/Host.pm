@@ -692,15 +692,16 @@ sub ensurePackages {
         unless( UBOS::Logging::isTraceActive() ) {
             $cmd .= ' > /dev/null';
         }
+        if ( $< != 0 ) {
+            $cmd = 'sudo ' . $cmd;
+        }
 
         debugAndSuspend( 'Execute pacman -S', @filteredPackageList );
         if( myexec( $cmd, undef, \$out, \$out )) {
             $@ = 'Failed to install package(s): ' . join( ' ', @filteredPackageList ) . '. Pacman says: ' . $out;
             if( $out =~ m!conflict.*Remove!i ) {
-                $cmd = 'yes y | pacman -S ' . join( ' ', @filteredPackageList );
-                unless( UBOS::Logging::isTraceActive() ) {
-                    $cmd .= ' > /dev/null';
-                }
+                $cmd = 'yes y | ' $cmd;
+
                 if( myexec( $cmd, undef, \$out, \$out )) {
                     $@ = 'Failed to install package(s) with conflict. Pacman says: ' . $out;
                 }
