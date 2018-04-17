@@ -700,7 +700,7 @@ sub ensurePackages {
         if( myexec( $cmd, undef, \$out, \$out )) {
             $@ = 'Failed to install package(s): ' . join( ' ', @filteredPackageList ) . '. Pacman says: ' . $out;
             if( $out =~ m!conflict.*Remove!i ) {
-                $cmd = 'yes y | ' $cmd;
+                $cmd = 'yes y | ' . $cmd;
 
                 if( myexec( $cmd, undef, \$out, \$out )) {
                     $@ = 'Failed to install package(s) with conflict. Pacman says: ' . $out;
