@@ -14,7 +14,7 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $avahiConfigFile             = '/etc/avahi/ubos-avahi.conf';
+my $avahiConfigFile             = '/etc/avahi/avahi-daemon.conf';
 my $iptablesConfigFile          = '/etc/iptables/iptables.rules';
 my $ip6tablesConfigFile         = '/etc/iptables/ip6tables.rules';
 my $dnsmasqConfigFile           = '/etc/dnsmasq.ubos.d/50-ubos-admin-generated.conf';

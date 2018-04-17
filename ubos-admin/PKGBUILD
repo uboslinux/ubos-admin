@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.284
+pkgver=0.285
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -81,6 +81,11 @@ package() {
 
 # Snapper
     install -D -m644 ${startdir}/etc/snapper/config-templates/ubos-default -t ${pkgdir}/etc/snapper/config-templates/
+
+# Avahi
+# Building Avahi ourselves does not currently work on armv6; no idea why. So we use the prebuilt
+# packages and add what we need from here
+    install -D -m644 ${startdir}/avahi/*.service -t ${pkgdir}/etc/avahi/services/
 
 # Repositories
     mkdir -p ${pkgdir}/etc/pacman.d/repositories.d/

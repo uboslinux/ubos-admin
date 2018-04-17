@@ -788,15 +788,16 @@ sub _askForCustomizationPoints {
 
                 if(    $custPointValuesFromTemplate
                     && defined( $custPointValuesFromTemplate->{$packageName} )
-                    && defined( $custPointValuesFromTemplate->{$packageName}->{$custPointName} ))
+                    && defined( $custPointValuesFromTemplate->{$packageName}->{$custPointName} )
+                    && defined( $custPointValuesFromTemplate->{$packageName}->{$custPointName}->{value} ))
                 {
-                    my $value = $custPointValuesFromTemplate->{$packageName}->{$custPointName};
+                    my $value = $custPointValuesFromTemplate->{$packageName}->{$custPointName}->{value};
                     my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
                     my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
                     unless( $ok ) {
                         fatal( 'Cannot create a site based on this template:', $custPointValidation->{valuecheckerror} );
                     }
-                    $custPointValues->{$packageName}->{$custPointName} = $cleanValue;
+                    $custPointValues->{$packageName}->{$custPointName}->{value} = $cleanValue;
                     next;
                 }
 
