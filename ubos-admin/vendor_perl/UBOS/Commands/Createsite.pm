@@ -402,7 +402,7 @@ sub run {
 
     if( $jsonTemplate ) {
         foreach my $appConfig ( @{$jsonTemplate->{appconfigs}} ) {
-            my $appConfigId = $appConfig->appConfigId();
+            my $appConfigId = $appConfig->{appconfigid};
             if( UBOS::Host::findAppConfigurationById( $appConfigId )) {
                 fatal( 'An AppConfiguration with this appconfigid is deployed already. Cannot create a new site from this template:', $hostname );
             }
@@ -445,7 +445,11 @@ sub run {
                     fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
                 }
             }
-            _askForCustomizationPoints( $custPointValues, undef, [ $app, values %accs ], $askAll );
+            _askForCustomizationPoints(
+                    $custPointValues,
+                    exists( $appConfig->{customizationpoints} ) ? $appConfig->{customizationpoints} : undef,
+                    [ $app, values %accs ],
+                    $askAll );
 
             my $appConfigJson = {};
             $appConfigJson->{appconfigid} = $appConfigId;
@@ -582,7 +586,7 @@ sub run {
                     fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
                 }
             }
-            _askForCustomizationPoints( $custPointValues, undef, [ $app, values %accs ], $askAll );
+            _askForCustomizationPoints( $custPointValues, undef, [ $app, values %accs ] );
 
             my $appConfigJson = {};
             $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
