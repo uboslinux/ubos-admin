@@ -947,7 +947,7 @@ sub randomBytes {
 
     my $ret = '';
     for( my $i=0 ; $i<$length ; ++$i ) {
-        $ret .= rand 256;
+        $ret .= chr( rand 256 );
     }
     return $ret;
 }
