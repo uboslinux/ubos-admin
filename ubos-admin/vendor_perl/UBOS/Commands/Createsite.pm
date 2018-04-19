@@ -459,7 +459,7 @@ sub run {
                 $appConfigJson->{context} = $jsonTemplate->{context};
             } elsif( defined( $app->defaultContext() )) {
                 $appConfigJson->{context} = $app->defaultContext();
-            } elsif( defined( $app->fixedContex() )) {
+            } elsif( defined( $app->fixedContext() )) {
                 $appConfigJson->{context} = $app->fixedContext();
             }
 
