@@ -243,6 +243,7 @@ sub resumeSite {
     my $sitesDocumentRootDir   = UBOS::Host::vars()->getResolve( 'apache2.sitesdir' );
     my $sitesWellknownDir      = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
     my $appConfigFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
+    my $tmpDir                 = UBOS::Host::vars()->getResolve( 'host.tmpdir' );
     my $siteId                 = $site->siteId;
     my $hostname               = $site->hostname;
     my $port                   = $site->port;
@@ -334,7 +335,7 @@ $serverDeclaration
         AllowOverride All
 
         <IfModule php7_module>
-            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/ubos/share/:/srv/http/
+            php_admin_value open_basedir $siteDocumentRoot/:$tmpDir/:/ubos/share/:/srv/http/
         </IfModule>
     </Directory>
 CONTENT
