@@ -931,13 +931,26 @@ sub randomPassword {
 sub randomHex {
     my $length = shift || 8;
 
-    my $ret    = '';
+    my $ret = '';
     for( my $i=0 ; $i<$length ; ++$i ) {
         $ret .= (0..9, "a".."f")[rand 16];
     }
     return $ret;
 }
 
+##
+# Generate a string of random bytes
+# $length: number of bytes
+# return: string of random bytes
+sub randomBytes {
+    my $length = shift || 8;
+
+    my $ret = '';
+    for( my $i=0 ; $i<$length ; ++$i ) {
+        $ret .= rand 256;
+    }
+    return $ret;
+}
 ##
 # Escape a single quote in a string
 # $raw: string to be escaped

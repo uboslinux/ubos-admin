@@ -334,7 +334,7 @@ $serverDeclaration
         AllowOverride All
 
         <IfModule php7_module>
-            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/ubos/share/
+            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/ubos/share/:/srv/http/
         </IfModule>
     </Directory>
 CONTENT
