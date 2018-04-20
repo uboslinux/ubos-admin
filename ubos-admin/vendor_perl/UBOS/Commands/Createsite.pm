@@ -480,10 +480,11 @@ sub run {
         # not from template
         my $counter = 'First';
         my %contextPaths = ();
-        my $appId;
-        my %accs = ();
 
         while( 1 ) {
+            my $appId;
+            my %accs = ();
+
             while( 1 ) {
                 $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
                 if( !$appId || UBOS::Host::ensurePackages( $appId, $quiet ) >= 0 ) {
