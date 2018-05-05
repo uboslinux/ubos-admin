@@ -1044,8 +1044,18 @@ sub runAfterBootCommandsIfNeeded {
 
     trace( 'Host::runAfterBootCommandsIfNeeded' );
 
+    my $afterBootFile;
     if( -e $AFTER_BOOT_FILE ) {
-        my $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
+        $afterBootFile = $AFTER_BOOT_FILE;
+    } elsif( -e '/var/lib/ubos/after-boot' ) {
+        # also support old location
+        $afterBootFile = '/var/lib/ubos/after-boot';
+    } else {
+        $afterBootFile = undef;
+    }
+
+    if( $afterBootFile ) {
+        my $afterBoot = UBOS::Utils::slurpFile( $afterBootFile );
 
         my @lines = split( "\n", $afterBoot );
         foreach my $line ( @lines ) {
@@ -1063,7 +1073,7 @@ sub runAfterBootCommandsIfNeeded {
                 }
             }
         }
-        UBOS::Utils::deleteFile( $AFTER_BOOT_FILE );
+        UBOS::Utils::deleteFile( $afterBootFile );
     }
 }
 

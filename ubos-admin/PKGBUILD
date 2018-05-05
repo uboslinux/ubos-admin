@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.287
+pkgver=0.288
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -95,6 +95,9 @@ package() {
     install -D -m644 ${startdir}/etc/ubos/open-ports.d/* -t ${pkgdir}/etc/ubos/open-ports.d/
     install -D -m644 ${startdir}/etc/diet4j/diet4j.conf  -t ${pkgdir}/etc/diet4j/
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
+
+# Keep old directory, so after-boot file can be written prior to upgrade
+    mkdir -p ${pkgdir}/var/lib/ubos
 
 # A directory to mount a UBOS staff to in a container
     mkdir -p -m755 ${pkgdir}/UBOS-STAFF
