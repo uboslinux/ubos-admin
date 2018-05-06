@@ -587,7 +587,11 @@ sub run {
                     fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
                 }
             }
-            _askForCustomizationPoints( $custPointValues, undef, [ $app, values %accs ] );
+            _askForCustomizationPoints(
+                    $custPointValues,
+                    undef,
+                    [ $app, values %accs ],
+                    $askAll );
 
             my $appConfigJson = {};
             $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
