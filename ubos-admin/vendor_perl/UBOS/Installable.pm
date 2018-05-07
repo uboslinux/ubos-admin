@@ -77,7 +77,7 @@ our $knownCustomizationPointTypes = {
             my $ok = !ref( $v ) && $v =~ /^\S{4,}$/;
             return ( $ok, $v );
         },
-        'valuecheckerror' => 'must be at least four characters long and not contain white space',
+        'valuecheckerror' => 'value must be at least four characters long and not contain white space',
         'isFile' => 0
     },
     'boolean' => {
@@ -101,7 +101,7 @@ our $knownCustomizationPointTypes = {
                 return ( 0, $v );
             }
         },
-        'valuecheckerror' => 'must be true or false',
+        'valuecheckerror' => 'value must be true or false',
         'isFile' => 0
     },
     'integer' => {
@@ -112,7 +112,7 @@ our $knownCustomizationPointTypes = {
             my $ok = !ref( $v ) && $v =~ /^-?[0-9]+$/;
             return ( $ok, $v );
         },
-        'valuecheckerror' => 'must be a whole number',
+        'valuecheckerror' => 'value must be a whole number',
         'isFile' => 0
     },
     'positiveinteger' => {
@@ -123,7 +123,7 @@ our $knownCustomizationPointTypes = {
             my $ok = !ref( $v ) && $v =~ /^[1-9][0-9]*$/;
             return ( $ok, $v );
         },
-        'valuecheckerror' => 'must be a positive, whole number',
+        'valuecheckerror' => 'value must be a positive, whole number',
         'isFile' => 0
     },
     'positiveintegerorzero' => {
@@ -134,7 +134,7 @@ our $knownCustomizationPointTypes = {
             my $ok = !ref( $v ) && $v =~ /^[0-9]+$/;
             return ( $ok, $v );
         },
-        'valuecheckerror' => 'must be a positive, whole number or 0',
+        'valuecheckerror' => 'value must be a positive, whole number or 0',
         'isFile' => 0
     },
     'image' => {
