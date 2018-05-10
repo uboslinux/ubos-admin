@@ -22,7 +22,8 @@ use fields qw( hostname
                additionalkernelparameters
                checksignatures
                partitioningscheme
-               packagedbs disablepackagedbs addpackagedbs removepackagedbs );
+               packagedbs disablepackagedbs addpackagedbs removepackagedbs
+               shepherdKey );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
@@ -252,6 +253,16 @@ sub setCheckSignatures {
 }
 
 ##
+# Set a public SSH key for a to-be-created shepherd account.
+# $shepherdKey: public SSH key
+sub setShepherdKey {
+    my $self        = shift;
+    my $shepherdKey = shift;
+
+    $self->{shepherdKey} = $shepherdKey;
+}
+
+##
 # Install UBOS
 # $diskLayout: the disk layout to use
 sub install {
@@ -336,6 +347,7 @@ SCRIPT
         $errors += $self->addEnableServicesToScript( \$chrootScript );
         $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
         $errors += $self->addConfigureSnapperToScript( \$chrootScript, $diskLayout );
+        $errors += $self->addSetupShepherdAndKeyToScript( \$chrootScript );
 
         trace( "chroot script:\n" . $chrootScript );
         my $out;
@@ -345,6 +357,7 @@ SCRIPT
             ++$errors;
             debugAndSuspend( 'Check what went wrong?' );
         }
+
         $errors += $self->cleanup();
     }
 
@@ -938,7 +951,30 @@ sub addConfigureSnapperToScript {
 }
 
 ##
+# If a key is given, create the shepherd account and add the key
+# Add commands to the provided script, to be run in a chroot, that creates
+# the shepherd account and adds the key (if given)
+# $chrootScriptP: pointer to script
+# return: number of errors
+sub addSetupShepherdAndKeyToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    my $ret = 0;
+    if( $self->{shepherdKey} ) {
+        $$chrootScriptP .= "useradd -e '' -c 'UBOS shepherd user' -m -U shepherd -d /var/shepherd\n";
+        $$chrootScriptP .= "mkdir -m 0700 /var/shepherd/.ssh\n";
+        $$chrootScriptP .= "cat > /var/shepherd/.ssh/authorized_keys <<END\n";
+        $$chrootScriptP .= $self->{shepherdKey} . "\n";
+        $$chrootScriptP .= "END\n";
+        $$chrootScriptP .= "chown -r shepherd:shepherd /var/shepherd\n";
+    }
+    return $ret;
+}
+
+##
 # Clean up after install is done
+# return: number of errors
 sub cleanup {
     my $self = shift;
 

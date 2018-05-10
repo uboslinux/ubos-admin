@@ -43,8 +43,9 @@ my @addKernelParameters = ();
 my %addPackageDbs       = ();
 my %removePackageDbs    = ();
 my %disablePackageDbs   = ();
-my $noswap              = 0;
 my $checkSignatures     = 'required';
+my $noswap              = 0;
+my $shepherdKeyFile     = 0;
 my $help                = 0;
 
 my $parseOk = GetOptions(
@@ -68,6 +69,7 @@ my $parseOk = GetOptions(
         'disablepackagedb=s'   => sub { _addCheck( \@_, \%disablePackageDbs, \%addPackageDbs,    \%removePackageDbs ); },
         'checksignatures=s'    => \$checkSignatures,
         'noswap'               => \$noswap,
+        'shepherdkeyfile'      => \$shepherdKeyFile,
         'h|help'               => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
@@ -162,6 +164,16 @@ if( %removePackageDbs ) {
 }
 if( %disablePackageDbs ) {
     $installer->disablePackageDbs( \%disablePackageDbs );
+}
+if( $shepherdKeyFile ) {
+    my $shepherdKey = UBOS::Utils::slurpFile( $shepherdKeyFile );
+    unless( $shepherdKey ) {
+        fatal( $@ );
+    }
+    unless( $shepherdKey =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+        fatal( 'This does not look like a valid ssh public key:', $shepherdKey );
+    }
+    $installer->setShepherdKey( $shepherdKey );
 }
 $installer->setCheckSignatures( $checkSignatures );
 
@@ -391,6 +403,9 @@ Optional arguments:
           for the default UBOS repository.
     --noswap
           Do not create a swap partition.
+    --shepherdkeyfile <file>
+          Create a shepherd account, and add the SSH public key from the provided file
+          as a user that is allowed to log in via SSH.
 END
     } else {
         print <<END;
@@ -400,7 +415,8 @@ Optional arguments:
     [--arch <arch>][--deviceclass <class>][--checksignatures <never|optional|required>]
     [--bootpartition <part>][--bootloaderdevice <dev>][--varpartition <part>][--swappartition <part>]
     [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
-    [--addpackagedb <name=server>][--removepackagedb <name>][--disablepackagedb <name>]
+    [--addpackagedb <name=server>][--removepackagedb <name>][--disablepackagedb <name>][--noswap]
+    [--shepherdkeyfile <file>]
 END
     }
     exit 1;
