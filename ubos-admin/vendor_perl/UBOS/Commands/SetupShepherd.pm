@@ -33,29 +33,52 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $debug         = undef;
-    my $device        = undef;
-    my $add           = 0; # default is replace
+    my $file          = undef;
+    my $add           = 0;
+    my $force         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'debug'       => \$debug,
-            'add-key'     => \$add );
+            'file=s'      => \$file,
+            'add-key'     => \$add,
+            'force'       => \$force );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $add && @args == 0 ) || ( $verbose && $logConfigFile )) {
+    if(    !$parseOk
+        || @args > 1
+        || ( $file && @args )
+        || ( $add && !$file && @args == 0 )
+        || ( $add && $force )
+        || ( $force && !$file && @args == 0 )
+        || ( $verbose && $logConfigFile ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    foreach my $key ( @args ) {
-        unless( $key =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+    if( $file && ! -r $file ) {
+        fatal( 'File cannot be read or does not exist:', $file );
+    }
+
+    my $key;
+    if( @args ) {
+        $key = $args[0];
+    } else {
+        $key = UBOS::Utils::slurpFile( $file );
+    }
+    unless( $key =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+        if( $file ) {
+            fatal( 'This does not look like a valid ssh public key:', $key );
+        } else {
             fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $key );
         }
     }
-    UBOS::StaffManager::setupUpdateShepherd( $add, @args );
+
+    UBOS::StaffManager::setupUpdateShepherd( $key, $add, $force );
 
     return 1;
 }
@@ -79,19 +102,34 @@ DDD
     If the shepherd account exists already, does nothing.
 HHH
             <<SSS => <<HHH,
-    <public ssh key> ...
+    [--force] <public ssh key>
 SSS
-    Set the given public ssh key on the shepherd account. If a previous
-    ssh key was already set, replace it with this one. If the shepherd
-    account did not exist yet, create it first.
+    Set the given public ssh key on the shepherd account. If the shepherd
+    account does not exist yet, create it first. This will overwrite an
+    existing key, but only if --force is given.
 HHH
-            <<SSS => <<HHH
-    --add-key <public ssh key> ...
+            <<SSS => <<HHH,
+    --add-key <public ssh key>
 SSS
     Add the given public ssh key to the shepherd account. If a previous
     ssh key was already set, add this ssh key and do not replace the
-    previous one. If the shepherd account did not exist yet, create it
+    previous one. If the shepherd account does not exist yet, create it
     first.
+HHH
+            <<SSS => <<HHH,
+    [--force] --file <keyfile>
+SSS
+    Set the public ssh key contained in <keyfile> on the shepherd account.
+    If the shepherd account does not exist yet, create it first. This will
+    overwrite an existing key, but only if --force is given.
+HHH
+            <<SSS => <<HHH
+    --add-key --file <keyfile>
+SSS
+    Add the public ssh key contained in <keyfile> to the shepherd account.
+    If a previous ssh key was already set, add this ssh key and do not
+    replace the previous one. If the shepherd account does not exist yet,
+    create it first.
 HHH
         },
         'args' => {

@@ -777,12 +777,14 @@ sub _deploySiteTemplates {
 
 ##
 # Create or update the shepherd user
+# $key: the public ssh key which is allowed to log in
 # $add: if true, add the keys
-# @keys: the public ssh keys that are allowed to log on, if any
+# $force: if true, replace an existing key
 # return: 1 if ok
 sub setupUpdateShepherd {
-    my $add  = shift;
-    my @keys = @_;
+    my $key   = shift;
+    my $add   = shift;
+    my $force = shift;
 
     my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/ubos/shepherd' );
     if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
@@ -793,15 +795,21 @@ sub setupUpdateShepherd {
         unless( -d "$homeShepherd/.ssh" ) {
             UBOS::Utils::mkdir( "$homeShepherd/.ssh", 0700, 'shepherd', 'shepherd' );
         }
-        my $authorizedKeys;
-        if( $add && -e $authKeyFile ) {
-            $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
-        }
-        if( @keys ) {
-            $authorizedKeys .= join( "\n", @keys ) . "\n";
-        }
-
-        if( defined( $authorizedKeys )) {
+        if( $key ) {
+            my $authorizedKeys;
+            if( -e $authKeyFile ) {
+                $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
+                if( $add ) {
+                    $authorizedKeys .= "\n" . $key;
+                } elsif( $force ) {
+                    $authorizedKeys = $key;
+                } else {
+                    error( 'There is already a key on this account. Use --add or --force to add or overwrite.' );
+                    return 0;
+                }
+            } else {
+                $authorizedKeys = $key;
+            }
             UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
         }
 
@@ -822,8 +830,9 @@ shepherd ALL = NOPASSWD: \
 CONTENT
             return 0;
         }
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 ##
