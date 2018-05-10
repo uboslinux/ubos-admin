@@ -211,6 +211,7 @@ sub saveCurrentConfiguration {
     my $deviceJson  = {
         'arch'        => UBOS::Utils::arch(),
         'hostid'      => $keyFingerprint,
+        'hostname'    => UBOS::Host::hostname()
     };
     if( $deviceClass ) {
         $deviceJson->{deviceclass} = $deviceClass;
