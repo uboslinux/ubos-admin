@@ -49,7 +49,7 @@ sub installBootLoader {
 
     info( 'Installing boot loader' );
 
-    # Copied from the ArmLinuxARM Raspberry Pi image
+    # Copied from the ArchLinuxARM Raspberry Pi image
 
     my $addParString = '';
     if( defined( $self->{additionalkernelparameters} )) {
