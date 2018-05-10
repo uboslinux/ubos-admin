@@ -33,18 +33,25 @@ sub run {
     my $debug         = undef;
     my $directory     = undef;
     my $device        = undef;
+    my $force         = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
             'debug'        => \$debug,
-            'directory=s'  => \$directory );
+            'directory=s'  => \$directory,
+            'force'        => \$force );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $directory && @args ) || @args > 1 || ( $verbose && $logConfigFile )) {
+    if(    !$parseOk
+        || ( $directory && @args )
+        || ( $directory && $force )
+        || @args > 1
+        || ( $verbose && $logConfigFile ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
@@ -55,7 +62,7 @@ sub run {
     } elsif( @args ) {
         $device = shift @args;
         debugAndSuspend( 'Check staff device', $device );
-        $device = UBOS::StaffManager::checkStaffDevice( $device );
+        $device = UBOS::StaffManager::checkStaffDevice( $device, $force );
         unless( $device ) {
             fatal( $@ );
         }
@@ -95,9 +102,11 @@ SSS
     Guess which device is the UBOS staff device.
 HHH
             <<SSS => <<HHH,
-    <ubos-staff-device>
+    <ubos-staff-device> [--force]
 SSS
     Write to the provided UBOS staff device, such as /dev/sdc.
+    If --force is given, write to the device, even if it is not named
+    UBOS-STAFF; rename it if needed.
 HHH
             <<SSS => <<HHH,
     --directory <dir>

@@ -87,13 +87,13 @@ sub performBootActions {
 ##
 # Check that a candidate device is indeed a staff device
 # $device: the candidate device, may be disk or partition
-# $ignoreLabel: if 1, do not check for UBOS-STAFF label
+# $force: if 1, do not require the UBOS-STAFF label but rename if needed
 # return: the $device if partition, or the partition device on $device, or undef
 sub checkStaffDevice {
-    my $device      = shift;
-    my $ignoreLabel = shift;
+    my $device = shift;
+    my $force  = shift;
 
-    trace( 'StaffManager::checkStaffDevice', $device, $ignoreLabel );
+    trace( 'StaffManager::checkStaffDevice', $device, $force );
 
     unless( -b $device ) {
         $@ = 'Not a valid UBOS staff device: ' . $device;
@@ -106,6 +106,7 @@ sub checkStaffDevice {
         fatal( 'lsblk on device failed:', $device, $out, $err );
     }
     my $ret;
+    my $retLabel;
 
     # NAME="sda" TYPE="disk" FSTYPE="" LABEL=""
     # NAME="sda1" TYPE="part" FSTYPE="ext4" LABEL=""
@@ -116,17 +117,25 @@ sub checkStaffDevice {
         unless( $fstype eq 'vfat' ) {
             next;
         }
-        if( !$ignoreLabel && $label ne $LABEL ) {
+        if( !$force && $label ne $LABEL ) {
             next;
         }
         if( $ret ) {
             $@ = 'More than one partition suitable as UBOS staff found: ' . $ret . ' ' . $name;
             return undef;
         }
-        $ret = $name;
+        $ret      = $name;
+        $retLabel = $label;
     }
+
     unless( $ret ) {
         $@ = 'No partition suitable as UBOS staff found on: ' . $device;
+    }
+
+    if( $force && ( $retLabel ne $LABEL )) {
+        if( UBOS::Utils::myexec( "dosfslabel $ret $LABEL", undef, \$out, \$out )) {
+            error( 'Failed to change disk label:', $out );
+        }
     }
 
     return $ret;

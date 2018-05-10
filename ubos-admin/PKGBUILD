@@ -12,6 +12,7 @@ depends=(
     'avahi'
     'btrfs-progs'
     'cronie'
+    'dosfstools'
     'iptables'
     'java-runtime-common'
     'nss-mdns'
