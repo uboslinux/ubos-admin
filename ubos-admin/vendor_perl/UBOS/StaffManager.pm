@@ -214,7 +214,7 @@ sub saveCurrentConfiguration {
         UBOS::Utils::saveFile( "$target/$sshDir/$shortPubKeyFile", $pubKey );
     }
 
-    # Add networking info
+    # device.json
     my $deviceClass = UBOS::Host::deviceClass();
     my $nics        = UBOS::Host::nics();
     my $deviceJson  = {
@@ -234,8 +234,16 @@ sub saveCurrentConfiguration {
             $deviceJson->{nics}->{$nic}->{$entry} = $nics->{$nic}->{$entry};
         }
     }
-
     UBOS::Utils::writeJsonToFile( "$target/$infoDir/device.json", $deviceJson );
+
+    # sites.json
+    my $sites     = UBOS::Host::sites();
+    my $sitesJson = {};
+
+    foreach my $siteId ( keys %$sites ) {
+        $sitesJson->{$siteId} = $sites->{$siteId}->siteJson;
+    }
+    UBOS::Utils::writeJsonToFile( "$target/$infoDir/sites.json", $sitesJson );
 
     return 0;
 }
