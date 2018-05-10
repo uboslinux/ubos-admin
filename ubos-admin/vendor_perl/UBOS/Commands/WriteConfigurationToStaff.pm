@@ -56,8 +56,8 @@ sub run {
         $device = shift @args;
         debugAndSuspend( 'Check staff device', $device );
         $device = UBOS::StaffManager::checkStaffDevice( $device );
-        unless( -b $device ) {
-            fatal( 'Not a valid UBOS staff device:', $device );
+        unless( $device ) {
+            fatal( $@ );
         }
 
     } else {
