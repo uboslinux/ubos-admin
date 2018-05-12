@@ -40,7 +40,7 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $hostid = UBOS::Host::gpgHostKeyFingerprint();
+    my $hostid = UBOS::Host::hostId();
 
     print( "$hostid\n" );
 

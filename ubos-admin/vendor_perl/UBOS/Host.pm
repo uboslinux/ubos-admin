@@ -346,7 +346,7 @@ sub siteDeployed {
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
 
-    UBOS::Utils::invokeCallbacks( "$HOSTNAME_CALLBACKS_DIR", 'deployed', $siteId, $hostname );
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'deployed', $siteId, $hostname );
 
     $_sites = undef;
 }
@@ -365,7 +365,7 @@ sub siteUndeployed {
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-world.json" );
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-full.json" );
 
-    UBOS::Utils::invokeCallbacks( "$HOSTNAME_CALLBACKS_DIR", 'undeployed', $siteId, $hostname );
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'undeployed', $siteId, $hostname );
 
     $_sites = undef;
 }
@@ -523,7 +523,7 @@ sub setState {
 
     $_currentState = $newState;
 
-    UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 'stateChanged', $newState );
+    UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 1, 'stateChanged', $newState );
 }
 
 ##
@@ -986,8 +986,10 @@ sub ensurePacmanInit {
 }
 
 ##
-# Determine the fingerprint of the host key
-sub gpgHostKeyFingerprint {
+# Determine the unique id of this host. It is determined as a
+# fingerprint of the host key.
+# return: the host id
+sub hostId {
 
     unless( $_gpgHostKeyFingerprint ) {
         my $out;

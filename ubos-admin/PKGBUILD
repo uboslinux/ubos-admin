@@ -39,7 +39,8 @@ package() {
 # Code
     install -D -m755 ${startdir}/bin/ubos-admin -t ${pkgdir}/usr/bin/
 
-    for d in AppConfigurationItems Backup Commands Databases HostnameCallbacks Networking Networking/NetConfigs Roles TemplateProcessor; do
+    for d in AppConfigurationItems Backup Commands Databases HostnameCallbacks \
+             Networking Networking/NetConfigs Roles StaffCallbacks TemplateProcessor; do
         for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
             if [ -r "$f" ]; then
                 install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/${d}/
@@ -96,6 +97,7 @@ package() {
     install -D -m644 ${startdir}/etc/ubos/open-ports.d/* -t ${pkgdir}/etc/ubos/open-ports.d/
     install -D -m644 ${startdir}/etc/diet4j/diet4j.conf  -t ${pkgdir}/etc/diet4j/
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
+    install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
 
 # Keep old directory, so after-boot file can be written prior to upgrade
     mkdir -p ${pkgdir}/var/lib/ubos

@@ -24,7 +24,8 @@ use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
 use UBOS::Utils;
 
-my $LABEL = 'UBOS-STAFF';
+my $LABEL                    = 'UBOS-STAFF';
+my $STAFF_BOOT_CALLBACKS_DIR = '/etc/ubos/staff-boot-callbacks';
 
 ##
 # Invoked during boot.
@@ -39,8 +40,8 @@ sub performBootActions {
 
     my $device = guessStaffDevice();
 
-    my $target             = undef;
-    my $genKeyPairIfNeeded = 0;
+    my $target;
+    my $isActualStaffDevice;
     if( $device ) {
         trace( 'Staff device:', $device );
 
@@ -48,12 +49,13 @@ sub performBootActions {
             error( 'Failed to mount:', $device, $target );
             return;
         }
-        $genKeyPairIfNeeded = 1;
+        $isActualStaffDevice = 1;
 
     } else {
         # container/cloud case
         if( -d "/$LABEL" ) {
-            $target = "/$LABEL";
+            $target              = "/$LABEL";
+            $isActualStaffDevice = 0;
             # don't genKeyPairIfNeeded
         } else {
             trace( 'No staff device found' );
@@ -61,17 +63,11 @@ sub performBootActions {
         }
     }
 
-    if( $genKeyPairIfNeeded && UBOS::Host::vars()->getResolve( 'host.initializestaffonboot', 1 )) {
-        if( _generateShepherdKeyPair( $target )) {
-            error( 'Generation of shepherd key pair on staff device failed:', $device, $target );
-        }
-    }
-
-    if( loadCurrentConfiguration( $target )) {
+    if( loadCurrentConfiguration( $target, $isActualStaffDevice )) {
         error( 'Loading current configuration failed from', $device, $target );
     }
 
-    if( saveCurrentConfiguration( $target )) {
+    if( saveCurrentConfiguration( $target, $isActualStaffDevice )) {
         error( 'Saving current configuration failed to', $device, $target );
     }
 
@@ -133,9 +129,7 @@ sub checkStaffDevice {
     }
 
     if( $force && ( $retLabel ne $LABEL )) {
-        if( UBOS::Utils::myexec( "dosfslabel $ret $LABEL", undef, \$out, \$out )) {
-            error( 'Failed to change disk label:', $out );
-        }
+        labelDeviceAsStaff( $ret );
     }
 
     return $ret;
@@ -182,69 +176,90 @@ sub guessStaffDevice {
 }
 
 ##
+# Load configuration from this directory
+# $target: the target directory from which to read (root directory of stick)
+# $isActualStaffDevice: if true, this is a physical staff, not a cloud/virtual directory
+# return: number of errors
+sub loadCurrentConfiguration {
+    my $target              = shift;
+    my $isActualStaffDevice = shift;
+
+    trace( 'StaffManager::loadCurrentConfiguration', $target, $isActualStaffDevice );
+
+    return UBOS::Utils::invokeCallbacks( $STAFF_BOOT_CALLBACKS_DIR, 1, 'performAtLoad', $target, $isActualStaffDevice );
+}
+
+##
 # Save current configuration to this directory
 # $target: the target directory for the save (root directory of stick)
+# $isActualStaffDevice: if true, this is a physical staff, not a cloud/virtual directory
 # return: number of errors
 sub saveCurrentConfiguration {
-    my $target = shift;
+    my $target              = shift;
+    my $isActualStaffDevice = shift;
 
-    trace( 'StaffManager::saveCurrentConfiguration', $target );
+    trace( 'StaffManager::saveCurrentConfiguration', $target, $isActualStaffDevice );
 
-    my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
-    my $sshDir         = "flock/$keyFingerprint/ssh";
-    my $infoDir        = "flock/$keyFingerprint/device-info";
+    return UBOS::Utils::invokeCallbacks( $STAFF_BOOT_CALLBACKS_DIR, 0, 'performAtSave', $target, $isActualStaffDevice );
+}
 
-    unless( -d "$target/$sshDir" ) {
-        UBOS::Utils::mkdirDashP( "$target/$sshDir" );
-    }
-    unless( -d "$target/$infoDir" ) {
-        UBOS::Utils::mkdirDashP( "$target/$infoDir" );
-    }
+##
+# Create or update the shepherd user
+# $key: the public ssh key which is allowed to log in
+# $add: if true, add the keys
+# $force: if true, replace an existing key
+# return: 1 if ok
+sub setupUpdateShepherd {
+    my $key   = shift;
+    my $add   = shift;
+    my $force = shift;
 
-    # Host ssh key info
-    foreach my $pubKeyFile ( glob "/etc/ssh/ssh_host_*.pub" ) {
-#HostKey /etc/ssh/ssh_host_rsa_key
-#HostKey /etc/ssh/ssh_host_dsa_key
-#HostKey /etc/ssh/ssh_host_ecdsa_key
-#HostKey /etc/ssh/ssh_host_ed25519_key
-        my $shortPubKeyFile = $pubKeyFile;
-        $shortPubKeyFile =~ s!^(.*/)!!;
+    my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/ubos/shepherd' );
+    if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
 
-        my $pubKey = UBOS::Utils::slurpFile( $pubKeyFile );
-        UBOS::Utils::saveFile( "$target/$sshDir/$shortPubKeyFile", $pubKey );
-    }
+        trace( 'StaffManager::setupUpdateShepherd', $add, @keys );
 
-    # device.json
-    my $deviceClass = UBOS::Host::deviceClass();
-    my $nics        = UBOS::Host::nics();
-    my $deviceJson  = {
-        'arch'        => UBOS::Utils::arch(),
-        'hostid'      => $keyFingerprint,
-        'hostname'    => UBOS::Host::hostname()
-    };
-    if( $deviceClass ) {
-        $deviceJson->{deviceclass} = $deviceClass;
-    }
-    foreach my $nic ( keys %$nics ) {
-        my @allIp = UBOS::Host::ipAddressesOnNic( $nic );
-        $deviceJson->{nics}->{$nic}->{ipv4address} = [ grep { UBOS::Utils::isIpv4Address( $_ ) } @allIp ];
-        $deviceJson->{nics}->{$nic}->{ipv6address} = [ grep { UBOS::Utils::isIpv6Address( $_ ) } @allIp ];
-        $deviceJson->{nics}->{$nic}->{macaddress}  = UBOS::Host::macAddressOfNic( $nic );
-        foreach my $entry ( qw( type operational )) { # not all entries
-            $deviceJson->{nics}->{$nic}->{$entry} = $nics->{$nic}->{$entry};
+        my $authKeyFile = "$homeShepherd/.ssh/authorized_keys";
+        unless( -d "$homeShepherd/.ssh" ) {
+            UBOS::Utils::mkdir( "$homeShepherd/.ssh", 0700, 'shepherd', 'shepherd' );
         }
+        if( $key ) {
+            my $authorizedKeys;
+            if( -e $authKeyFile ) {
+                $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
+                if( $add ) {
+                    $authorizedKeys .= "\n" . $key;
+                } elsif( $force ) {
+                    $authorizedKeys = $key;
+                } else {
+                    error( 'There is already a key on this account. Use --add or --force to add or overwrite.' );
+                    return 0;
+                }
+            } else {
+                $authorizedKeys = $key;
+            }
+            UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
+        }
+
+        unless( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
+shepherd ALL = NOPASSWD: \
+    /usr/bin/journalctl *, \
+    /usr/bin/mkdir *, \
+    /usr/bin/mount *, \
+    /usr/bin/pacman *, \
+    /usr/bin/smartctl *, \
+    /usr/bin/systemctl *, \
+    /usr/bin/ubos-admin *, \
+    /usr/bin/ubos-install *, \
+    /usr/bin/umount *, \
+    /usr/bin/snapper *, \
+    /usr/bin/su *, \
+    /bin/bash *
+CONTENT
+            return 0;
+        }
+        return 1;
     }
-    UBOS::Utils::writeJsonToFile( "$target/$infoDir/device.json", $deviceJson );
-
-    # sites.json
-    my $sites     = UBOS::Host::sites();
-    my $sitesJson = {};
-
-    foreach my $siteId ( keys %$sites ) {
-        $sitesJson->{$siteId} = $sites->{$siteId}->siteJson;
-    }
-    UBOS::Utils::writeJsonToFile( "$target/$infoDir/sites.json", $sitesJson );
-
     return 0;
 }
 
@@ -352,495 +367,6 @@ sub labelDeviceAsStaff {
     }
 
     return $errors;
-}
-
-##
-# If this is a valid staff device, but it does not have a key for the shepherd,
-# generate a key pair.
-# $target: the target directory from which to read (root directory of stick)
-# return: number of errors
-sub _generateShepherdKeyPair {
-    my $target = shift;
-
-    trace( 'StaffManager::_generateShepherdKeyPair', $target );
-
-    my $errors = 0;
-    unless( -e "$target/shepherd/ssh/id_rsa.pub" ) {
-        unless( -d "$target/shepherd/ssh" ) {
-            UBOS::Utils::mkdirDashP( "$target/shepherd/ssh" );
-        }
-
-        my $out;
-        my $err;
-        if( UBOS::Utils::myexec( "ssh-keygen -C 'UBOS shepherd' -N '' -f '$target/shepherd/ssh/id_rsa'", undef, \$out, \$err )) {
-            error( 'SSH key generation failed:', $out, $err );
-            $errors += 1;
-        }
-    }
-    return $errors;
-}
-
-##
-# Load configuration from this directory
-# $target: the target directory from which to read (root directory of stick)
-# return: number of errors
-sub loadCurrentConfiguration {
-    my $target = shift;
-
-    trace( 'StaffManager::loadCurrentConfiguration', $target );
-
-    my $errors = 0;
-
-    $errors += _loadCurrentSshConfiguration( $target );
-    $errors += _loadCurrentWiFiConfiguration( $target );
-    $errors += _deploySiteTemplates( $target );
-
-    return $errors;
-}
-
-##
-# Load SSH configuration from this directory
-# $target: the target directory from which to read (root directory of stick)
-# return: number of errors
-sub _loadCurrentSshConfiguration {
-    my $target =shift;
-
-    if( -e "$target/shepherd/ssh/id_rsa.pub" ) {
-
-        trace( 'StaffManager::_loadCurrentSshConfiguration', $target );
-
-        my $sshKey = UBOS::Utils::slurpFile( "$target/shepherd/ssh/id_rsa.pub" );
-        $sshKey =~ s!^\s+!!;
-        $sshKey =~ s!\s+$!!;
-
-        unless( setupUpdateShepherd( 0, $sshKey )) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-##
-# Load WiFi configuration from this directory
-# $target: the target directory from which to read (root directory of stick)
-# return: number of errors
-sub _loadCurrentWiFiConfiguration {
-    my $target = shift;
-
-    my $errors = 0;
-    if( -d "$target/wifi" ) {
-
-        trace( 'StaffManager::_loadCurrentWiFiConfiguration', $target );
-
-        my $out;
-        if( UBOS::Utils::myexec( "pacman -Qi wpa_supplicant", undef, \$out, \$out )) {
-            error( 'Cannot provision WiFi from staff device: package wpa_supplicant is not installed' );
-            ++$errors;
-
-        } else {
-            my $confs    = UBOS::Utils::readFilesInDirectory( "$target/wifi", '^[^\.].*\.conf$' );
-            my $wlanNics = UBOS::Host::wlanNics();
-
-            if(( keys %$confs ) && ( keys %$wlanNics )) {
-                unless( -d '/etc/wpa_supplicant' ) {
-                    unless( UBOS::Utils::mkdir( '$target/etc/wpa_supplicant' )) {
-                        ++$errors;
-                    }
-                }
-                my $content = <<CONTENT;
-eapol_version=1
-ap_scan=1
-fast_reauth=1
-
-CONTENT
-                $content .= join( "\n", map { "network={\n" . $_ . "}\n" } values %$confs );
-                foreach my $nic ( keys %$wlanNics ) {
-                    unless( UBOS::Utils::saveFile( "/etc/wpa_supplicant/wpa_supplicant-$nic.conf", $content )) {
-                        ++$errors;
-                    }
-
-                    if( UBOS::Utils::myexec( 'systemctl is-enabled wpa_supplicant@' . $nic . ' > /dev/null || systemctl enable wpa_supplicant@' . $nic, undef, \$out, \$out )) {
-                        ++$errors;
-                    }
-                    if( UBOS::Utils::myexec( 'systemctl is-active  wpa_supplicant@' . $nic . ' > /dev/null || systemctl start  wpa_supplicant@' . $nic, undef, \$out, \$out )) {
-                        ++$errors;
-                    }
-                }
-            }
-
-            # Update regulatory domain
-            if( -e "$target/wifi/wireless-regdom" ) {
-                unless( UBOS::Utils::copyRecursively( "$target/wifi/wireless-regdom", '/etc/conf.d/wireless-regdom' )) {
-                    ++$errors;
-                }
-            }
-        }
-    }
-    return $errors;
-}
-
-##
-# Deploy Site templates found below this directory. If anything goes
-# wrong, we don't do anything at all.
-# $target: the target directory from which to read (root directory of stick)
-# return: number of errors
-sub _deploySiteTemplates {
-    my $target = shift;
-
-    my $errors = 0;
-    my $ret    = 1;
-
-    if( UBOS::Host::vars()->getResolve( 'host.deploysitetemplatesonboot', 1 )) {
-        my $keyFingerprint = UBOS::Host::gpgHostKeyFingerprint();
-
-        trace( 'StaffManager::_deploySiteTemplates', $target );
-
-        my @templateFiles = ();
-        foreach my $templateDir (
-                "$target/site-templates",
-                "$target/flock/$keyFingerprint/site-templates" )
-                        # The host-specific templates overwrite the general ones
-        {
-            if( -d $templateDir ) {
-                if( opendir( DIR, "$templateDir" )) {
-                    while( my $entry = readdir DIR ) {
-                        if( $entry !~ m!^\.! && $entry =~ m!\.json$! ) {
-                            # ignore files that start with . (like ., .., and MacOS resource files)
-                            push @templateFiles, "$templateDir/$entry";
-                        }
-                    }
-                    closedir DIR;
-                } else {
-                    error( 'Cannot read from directory:', $templateDir );
-                }
-            }
-        }
-
-        my @sitesFromTemplates = (); # Some may be already deployed, we skip those. Identify by hostname
-        my $existingSites      = UBOS::Host::sites();
-        my $existingHosts      = {};
-        map { $existingHosts->{$_->hostname()} = 1 } values %$existingSites;
-
-        foreach my $templateFile ( @templateFiles ) {
-
-            trace( 'Reading template file:', $templateFile );
-            my $json = readJsonFromFile( $templateFile );
-            if( $json ) { 
-                my $newSite = UBOS::Site->new( $json, 1 );
-
-                if( !$newSite ) {
-                    error( 'Failed to create site from:', $templateFile );
-                    ++$errors;
-
-                } elsif( !exists( $existingHosts->{$newSite->hostname()} )) {
-                    push @sitesFromTemplates, $newSite;
-
-                } # else skip, we have it already
-            } else {
-                ++$errors;
-            }
-        }
-        if( $errors ) {
-            return $errors;
-        }
-
-        unless( @sitesFromTemplates ) {
-            return 0; # nothing to do
-        }
-
-        my $oldSites = UBOS::Host::sites();
-
-        # make sure AppConfigIds, SiteIds and hostnames are unique, and that all Sites are deployable
-        my $haveIdAlready      = {}; # it's okay that we have an old site by this id
-        my $haveHostAlready    = {}; # it's not okay that we have an old site by this hostname if site id is different
-        my $haveAnyHostAlready = 0; # true if we have the * (any) host
-
-        foreach my $oldSite ( values %$oldSites ) {
-            $haveHostAlready->{$oldSite->hostname} = $oldSite;
-            if( '*' eq $oldSite->hostname ) {
-                $haveAnyHostAlready = 1;
-            }
-        }
-
-        my @newSites = (); # only those that had no error
-        foreach my $newSite ( @sitesFromTemplates ) {
-            my $newSiteId = $newSite->siteId;
-            if( $haveIdAlready->{$newSiteId} ) {
-                # skip
-                next;
-            }
-            $haveIdAlready->{$newSiteId} = $newSite;
-
-            my $newSiteHostName = $newSite->hostname;
-            if( defined( $oldSites->{$newSiteId} )) {
-                # do not redeploy
-                next;
-
-            } elsif( !$newSite->isTor() ) {
-                # site is new and not tor
-                if( $newSiteHostName eq '*' ) {
-                    if( keys %$oldSites > 0 ) {
-                        error( "You can only create a site with hostname * (any) if no other sites exist." );
-                        ++$errors;
-                        return $errors;
-                    }
-
-                } else {
-                    if( $haveAnyHostAlready ) {
-                        error( "There is already a site with hostname * (any), so no other site can be created." );
-                        ++$errors;
-                        return $errors;
-                    }
-                    if( $haveHostAlready->{$newSiteHostName} ) {
-                        error( 'There is already a different site with hostname', $newSiteHostName );
-                        ++$errors;
-                        return $errors;
-                    }
-                }
-            }
-            if( defined( $newSiteHostName )) {
-                # not tor
-                $haveHostAlready->{$newSiteHostName} = $newSite;
-            }
-
-            foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
-                my $newAppConfigId = $newAppConfig->appConfigId;
-                if( $haveIdAlready->{$newAppConfigId} ) {
-                    error( 'More than one site or appconfig with id', $newAppConfigId );
-                    ++$errors;
-                    return $errors;
-                }
-                $haveIdAlready->{$newSiteId} = $newSite;
-
-                foreach my $oldSite ( values %$oldSites ) {
-                    foreach my $oldAppConfig ( @{$oldSite->appConfigs} ) {
-                        if( $newAppConfigId eq $oldAppConfig->appConfigId ) {
-                            if( $newSiteId ne $oldSite->siteId ) {
-                                error(    'Non-unique appconfigid ' . $newAppConfigId
-                                        . ' in sites ' . $newSiteId . ' and ' . $oldSite->siteId );
-                                ++$errors;
-                                return $errors;
-                            }
-                        }
-                    }
-                }
-            }
-            push @newSites, $newSite;
-        }
-
-        # May not be interrupted, bad things may happen if it is
-        UBOS::Host::preventInterruptions();
-
-        # No backup needed, we aren't redeploying
-
-        info( 'Installing prerequisites' );
-
-        # This is a two-step process: first we need to install the applications that haven't been
-        # installed yet, and then we need to install their dependencies
-
-        my $prerequisites = {};
-        foreach my $site ( @newSites ) {
-            $site->addInstallablesToPrerequisites( $prerequisites );
-            if( $site->isTor() ) {
-                $prerequisites->{'tor'} = 'tor';
-            }
-        }
-        if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
-            error( $@ );
-            ++$errors;
-            return $errors;
-        }
-
-        $prerequisites = {};
-        foreach my $site ( @newSites ) {
-            $site->addDependenciesToPrerequisites( $prerequisites );
-        }
-        if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
-            error( $@ );
-            ++$errors;
-            return $errors;
-        }
-
-        trace( 'Checking context paths and customization points', $ret );
-
-        foreach my $newSite ( @newSites ) {
-            my %contexts = ();
-            foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
-                # check contexts
-                my $context = $newAppConfig->context();
-                if( defined( $context )) { # amazonses may not
-                    if( exists( $contexts{$context} )) {
-                        error(   'Site ' . $newSite->siteId . ': more than one appconfig with context ' . $context );
-                        ++$errors;
-                        return $errors;
-                    }
-                }
-                if( keys %contexts ) {
-                    if( $context eq '' || defined( $contexts{''} ) ) {
-                        error(   'Site ' . $newSite->siteId . ': cannot deploy app at root context if other apps are deployed at other contexts' );
-                        ++$errors;
-                        return $errors;
-                    }
-                }
-                unless( $newAppConfig->checkCustomizationPointValues()) {
-                    error( $@ );
-                    ++$errors;
-                    return $errors;
-                }
-
-                my $appPackage = $newAppConfig->app()->packageName();
-                foreach my $acc ( $newAppConfig->accessories() ) {
-                    if( !$acc->canBeUsedWithApp( $appPackage ) ) {
-                        error( 'Accessory', $acc->packageName(), 'cannot be used in appconfig', $newAppConfig->appConfigId(), 'as it does not belong to app', $appPackage );
-                        ++$errors;
-                        return $errors;
-                    }
-                }
-
-                $contexts{$context} = $newAppConfig;
-            }
-        }
-
-        # Now that we have prerequisites, we can check whether the site is deployable
-        foreach my $newSite ( @newSites ) {
-            unless( $newSite->checkDeployable()) {
-                error( 'New site is not deployable:', $newSite );
-                ++$errors;
-                return $errors;
-            }
-        }
-
-        info( 'Setting up placeholder sites or suspending existing sites' );
-
-        my $suspendTriggers = {};
-        foreach my $site ( @newSites ) {
-            my $oldSite = $oldSites->{$site->siteId};
-            if( $oldSite ) {
-                debugAndSuspend( 'Suspend site', $oldSite->siteId() );
-                $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
-            } else {
-                debugAndSuspend( 'Setup placeholder for site', $site->siteId() );
-                $ret &= $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
-            }
-        }
-        debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
-        UBOS::Host::executeTriggers( $suspendTriggers );
-
-        my @letsEncryptCertsNeededSites = grep { $_->hasLetsEncryptTls() && !$_->hasLetsEncryptCerts() } @newSites;
-        if( @letsEncryptCertsNeededSites ) {
-            if( @letsEncryptCertsNeededSites > 1 ) {
-                info( 'Obtaining letsencrypt certificates' );
-            } else {
-                info( 'Obtaining letsencrypt certificate' );
-            }
-            foreach my $site ( @letsEncryptCertsNeededSites ) {
-                debugAndSuspend( 'Obtain letsencrypt certificate for site', $site->siteId() );
-                my $success = $site->obtainLetsEncryptCertificate();
-                unless( $success ) {
-                    warning( 'Failed to obtain letsencrypt certificate for site', $site->hostname, '(', $site->siteId, '). Deploying site without TLS.' );
-                    $site->unsetLetsEncryptTls;
-                }
-                $ret &= $success;
-            }
-        }
-
-        info( 'Backing up, undeploying and redeploying' );
-
-        my $deployUndeployTriggers = {};
-        foreach my $site ( @newSites ) {
-            debugAndSuspend( 'Deploying site', $site->siteId() );
-            $ret &= $site->deploy( $deployUndeployTriggers );
-        }
-        UBOS::Networking::NetConfigUtils::updateOpenPorts();
-
-        debugAndSuspend( 'Execute triggers', keys %$deployUndeployTriggers );
-        UBOS::Host::executeTriggers( $deployUndeployTriggers );
-
-        info( 'Resuming sites' );
-
-        my $resumeTriggers = {};
-        foreach my $site ( @newSites ) {
-            debugAndSuspend( 'Resuming site', $site->siteId() );
-            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-        }
-        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-        UBOS::Host::executeTriggers( $resumeTriggers );
-
-        info( 'Running installers/upgraders' );
-
-        foreach my $site ( @newSites ) {
-            foreach my $appConfig ( @{$site->appConfigs} ) {
-                debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-                $ret &= $appConfig->runInstallers();
-            }
-        }
-    }
-
-    if( $errors ) {
-        return $errors;
-    } else {
-        return $ret ? 0 : 1; # kludge
-    }
-}
-
-##
-# Create or update the shepherd user
-# $key: the public ssh key which is allowed to log in
-# $add: if true, add the keys
-# $force: if true, replace an existing key
-# return: 1 if ok
-sub setupUpdateShepherd {
-    my $key   = shift;
-    my $add   = shift;
-    my $force = shift;
-
-    my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/ubos/shepherd' );
-    if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
-
-        trace( 'StaffManager::setupUpdateShepherd', $add, @keys );
-
-        my $authKeyFile = "$homeShepherd/.ssh/authorized_keys";
-        unless( -d "$homeShepherd/.ssh" ) {
-            UBOS::Utils::mkdir( "$homeShepherd/.ssh", 0700, 'shepherd', 'shepherd' );
-        }
-        if( $key ) {
-            my $authorizedKeys;
-            if( -e $authKeyFile ) {
-                $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
-                if( $add ) {
-                    $authorizedKeys .= "\n" . $key;
-                } elsif( $force ) {
-                    $authorizedKeys = $key;
-                } else {
-                    error( 'There is already a key on this account. Use --add or --force to add or overwrite.' );
-                    return 0;
-                }
-            } else {
-                $authorizedKeys = $key;
-            }
-            UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
-        }
-
-        unless( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
-shepherd ALL = NOPASSWD: \
-    /usr/bin/journalctl *, \
-    /usr/bin/mkdir *, \
-    /usr/bin/mount *, \
-    /usr/bin/pacman *, \
-    /usr/bin/smartctl *, \
-    /usr/bin/systemctl *, \
-    /usr/bin/ubos-admin *, \
-    /usr/bin/ubos-install *, \
-    /usr/bin/umount *, \
-    /usr/bin/snapper *, \
-    /usr/bin/su *, \
-    /bin/bash *
-CONTENT
-            return 0;
-        }
-        return 1;
-    }
-    return 0;
 }
 
 ##
