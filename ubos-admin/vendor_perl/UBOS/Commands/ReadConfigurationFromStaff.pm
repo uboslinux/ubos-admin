@@ -33,12 +33,12 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $debug         = undef;
-    my $target        = undef;
+    my $dir           = undef;
     my $device        = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'target=s'    => \$target,
+            'directory=s' => \$dir,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile,
             'debug'       => \$debug );
@@ -46,16 +46,16 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args > 1 || ( @args && $target ) || ( $verbose && $logConfigFile )) {
+    if( !$parseOk || @args > 1 || ( @args && $dir ) || ( $verbose && $logConfigFile )) {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $errors    = 0;
-    my $targetDir = undef;
+    my $errors       = 0;
+    my $staffRootDir = undef;
 
-    if( $target ) {
-        unless( -d $target ) {
-            fatal( 'Directory does not exist:', $target );
+    if( $dir ) {
+        unless( -d $dir ) {
+            fatal( 'Directory does not exist:', $dir );
         }
 
     } else {
@@ -76,14 +76,14 @@ sub run {
         }
         trace( 'Staff device:', $device );
 
-        $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
-        $target = $targetDir->dirname();
+        $errors += UBOS::StaffManager::mountDevice( $device, \$staffRootDir );
+        $dir     = $staffRootDir->dirname();
     }
 
-    $errors += UBOS::StaffManager::loadCurrentConfiguration( $target );
+    $errors += UBOS::StaffManager::loadCurrentConfiguration( $dir );
 
-    if( $targetDir ) {
-        $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir );
+    if( $staffRootDir ) {
+        $errors += UBOS::StaffManager::unmountDevice( $device, $staffRootDir );
     }
 
     return $errors ? 0 : 1;
@@ -111,9 +111,10 @@ SSS
     Read from the provided UBOS staff device, such as /dev/sdc.
 HHH
             <<SSS => <<HHH
-    --target <directory>
+    --directory <directory>
 SSS
     Read from a directory that contains UBOS staff information instead.
+    Mostly used for testing.
 HHH
         },
         'args' => {

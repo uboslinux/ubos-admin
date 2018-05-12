@@ -12,6 +12,7 @@ use warnings;
 package UBOS::StaffCallbacks::GenerateShepherdKeyPair;
 
 use UBOS::Host;
+use UBOS::Logging;
 use UBOS::StaffManager;
 use UBOS::Utils;
 
@@ -23,6 +24,8 @@ use UBOS::Utils;
 sub performAtLoad {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'GenerateShepherdKeyPair::performAtLoad', $staffRootDir, $isActualStaffDevice );
 
     if( $isActualStaffDevice ) {
         return generateShepherdKeyPair( $staffRootDir );
@@ -41,6 +44,8 @@ sub performAtSave {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
 
+    trace( 'GenerateShepherdKeyPair::performAtSave', $staffRootDir, $isActualStaffDevice );
+
     # no op
     return 0;
 }
@@ -57,7 +62,7 @@ sub generateShepherdKeyPair {
         return 0; # disabled
     }
 
-    trace( 'GenerateShepherdKeyPair::generateShepherdKeyPair', $target );
+    trace( 'GenerateShepherdKeyPair::generateShepherdKeyPair', $staffRootDir );
 
     my $errors = 0;
     unless( -e "$staffRootDir/shepherd/ssh/id_rsa.pub" ) {

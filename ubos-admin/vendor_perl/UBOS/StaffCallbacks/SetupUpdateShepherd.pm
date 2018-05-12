@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::SetupUpdateShepherd;
 
 use UBOS::Host;
+use UBOS::Logging;
 use UBOS::StaffManager;
 use UBOS::Utils;
 
@@ -23,6 +24,8 @@ sub performAtLoad {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
 
+    trace( 'SetupUpdateShepherd::performAtLoad', $staffRootDir, $isActualStaffDevice );
+
     return loadCurrentSshConfiguration( $staffRootDir );
 }
 
@@ -34,6 +37,8 @@ sub performAtLoad {
 sub performAtSave {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'SetupUpdateShepherd::performAtSave', $staffRootDir, $isActualStaffDevice );
 
     # no op
     return 0;

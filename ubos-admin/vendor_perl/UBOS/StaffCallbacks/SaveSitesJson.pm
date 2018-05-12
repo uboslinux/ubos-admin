@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::SaveSitesJson;
 
 use UBOS::Host;
+use UBOS::Logging;
 use UBOS::Utils;
 
 ##
@@ -21,6 +22,8 @@ use UBOS::Utils;
 sub performAtLoad {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'SaveSitesJson::performAtLoad', $staffRootDir, $isActualStaffDevice );
 
     # no op
     return 0;
@@ -34,6 +37,8 @@ sub performAtLoad {
 sub performAtSave {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'SaveSitesJson::performAtSave', $staffRootDir, $isActualStaffDevice );
 
     return saveSitesJson( $staffRootDir );
 }

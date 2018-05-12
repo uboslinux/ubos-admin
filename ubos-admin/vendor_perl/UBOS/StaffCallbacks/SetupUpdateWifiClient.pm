@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::SetupUpdateWifiClient;
 
 use UBOS::Host;
+use UBOS::Logging;
 use UBOS::Utils;
 
 ##
@@ -21,6 +22,8 @@ use UBOS::Utils;
 sub performAtLoad {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'SetupUpdateWifiClient::performAtLoad', $staffRootDir, $isActualStaffDevice );
 
     return loadCurrentWiFiConfiguration( $staffRootDir );
 }
@@ -33,6 +36,8 @@ sub performAtLoad {
 sub performAtSave {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'SetupUpdateWifiClient::performAtSave', $staffRootDir, $isActualStaffDevice );
 
     # no op
     return 0;
@@ -88,7 +93,7 @@ CONTENT
 
             # Update regulatory domain
             if( -e "$staffRootDir/wifi/wireless-regdom" ) {
-                unless( UBOS::Utils::copyRecursively( "$target/wifi/wireless-regdom", '/etc/conf.d/wireless-regdom' )) {
+                unless( UBOS::Utils::copyRecursively( "$staffRootDir/wifi/wireless-regdom", '/etc/conf.d/wireless-regdom' )) {
                     ++$errors;
                 }
             }

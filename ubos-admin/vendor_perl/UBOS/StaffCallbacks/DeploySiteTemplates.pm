@@ -8,9 +8,10 @@
 use strict;
 use warnings;
 
-package UBOS::StaffCallbacks::GenerateShepherdKeyPair;
+package UBOS::StaffCallbacks::DeploySiteTemplates;
 
 use UBOS::Host;
+use UBOS::Logging;
 use UBOS::StaffManager;
 use UBOS::Utils;
 
@@ -23,6 +24,8 @@ sub performAtLoad {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
 
+    trace( 'DeploySiteTemplates::performAtLoad', $staffRootDir, $isActualStaffDevice );
+
     return deploySiteTemplates( $staffRootDir );
 }
 
@@ -34,6 +37,8 @@ sub performAtLoad {
 sub performAtSave {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
+
+    trace( 'DeploySiteTemplates::performAtSave', $staffRootDir, $isActualStaffDevice );
 
     # no op
     return 0;
@@ -59,8 +64,8 @@ sub deploySiteTemplates {
 
     my @templateFiles = ();
     foreach my $templateDir (
-            "$target/site-templates",
-            "$target/flock/$hostId/site-templates" )
+            "$staffRootDir/site-templates",
+            "$staffRootDir/flock/$hostId/site-templates" )
                     # The host-specific templates overwrite the general ones
     {
         if( -d $templateDir ) {
@@ -224,7 +229,7 @@ sub deploySiteTemplates {
         return $errors;
     }
 
-    trace( 'Checking context paths and customization points', $ret );
+    trace( 'Checking context paths and customization points', $errors );
 
     foreach my $newSite ( @newSites ) {
         my %contexts = ();
@@ -280,10 +285,14 @@ sub deploySiteTemplates {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             debugAndSuspend( 'Suspend site', $oldSite->siteId() );
-            $ret &= $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+            unless( $oldSite->suspend( $suspendTriggers )) { # replace with "upgrade in progress page"
+                ++$errors;
+            }
         } else {
             debugAndSuspend( 'Setup placeholder for site', $site->siteId() );
-            $ret &= $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+            unless( $site->setupPlaceholder( $suspendTriggers )) { # show "coming soon"
+                ++$errors;
+            }
         }
     }
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
@@ -302,8 +311,8 @@ sub deploySiteTemplates {
             unless( $success ) {
                 warning( 'Failed to obtain letsencrypt certificate for site', $site->hostname, '(', $site->siteId, '). Deploying site without TLS.' );
                 $site->unsetLetsEncryptTls;
+                ++$errors;
             }
-            $ret &= $success;
         }
     }
 
@@ -312,7 +321,9 @@ sub deploySiteTemplates {
     my $deployUndeployTriggers = {};
     foreach my $site ( @newSites ) {
         debugAndSuspend( 'Deploying site', $site->siteId() );
-        $ret &= $site->deploy( $deployUndeployTriggers );
+        unless( $site->deploy( $deployUndeployTriggers )) {
+            ++$errors;
+        }
     }
     UBOS::Networking::NetConfigUtils::updateOpenPorts();
 
@@ -324,7 +335,9 @@ sub deploySiteTemplates {
     my $resumeTriggers = {};
     foreach my $site ( @newSites ) {
         debugAndSuspend( 'Resuming site', $site->siteId() );
-        $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        unless( $site->resume( $resumeTriggers )) { # remove "upgrade in progress page"
+            ++$errors;
+        }
     }
     debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
@@ -334,7 +347,9 @@ sub deploySiteTemplates {
     foreach my $site ( @newSites ) {
         foreach my $appConfig ( @{$site->appConfigs} ) {
             debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-            $ret &= $appConfig->runInstallers();
+            unless( $appConfig->runInstallers()) {
+                ++$errors;
+            }
         }
     }
 
