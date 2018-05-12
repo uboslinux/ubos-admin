@@ -54,11 +54,13 @@ sub saveDeviceInfo {
     my $infoDir     = "flock/$hostId/device-info";
     my $deviceClass = UBOS::Host::deviceClass();
     my $nics        = UBOS::Host::nics();
+    my $now         = UBOS::Utils::now();
 
     my $deviceJson = {
         'arch'        => UBOS::Utils::arch(),
         'hostid'      => $hostId,
-        'hostname'    => UBOS::Host::hostname()
+        'hostname'    => UBOS::Host::hostname(),
+        'lastupdated' => UBOS::Utils::time2string( $now )
     };
     if( $deviceClass ) {
         $deviceJson->{deviceclass} = $deviceClass;
