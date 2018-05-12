@@ -728,23 +728,34 @@ sub findModulesInDirectory {
 # is a file containing one or more lines, each of which is the name
 # of the class on which the method should be invoked, plus optional arguments.
 # that are passed to the method after the @args provided to this method.
-# $dir: the directory in which the callbacks are to be found.
 # This currently does not know how to handle escapes or spaces in arguments.
+# Does nothing if the directory does not exist.
+# $dir: the directory in which the callbacks are to be found.
+# $forward: if true, iterate over the directory in forward direction; backwards otherwise
 # $method: the method to invoke
 # @args: the arguments to pass, if any
 # return: 1 if ok, 0 if fail
 sub invokeCallbacks {
-    my $dir    = shift;
-    my $method = shift;
-    my @args   = @_;
+    my $dir     = shift;
+    my $forward = shift;
+    my $method  = shift;
+    my @args    = @_;
 
-    trace( 'invokeCallbacks(', $dir, $method, @args, ')' );
+    trace( 'invokeCallbacks(', $dir, $forward, $method, @args, ')' );
+
+    unless( -d $dir ) {
+        return 1;
+    }
 
     my @files            = <$dir/*>;
     my $content          = join( "\n", map { slurpFile( $_ ) } @files );
     my @packagesWithArgs = grep { $_ }
                            map { my $s = $_; $s =~ s!#.*$!! ; $s =~ s!^\s+!! ; $s =~ s!\s+$!! ; $s }
                            split /\n/, $content;
+
+    unless( $forward ) {
+        $packagesWithArgs = reverse @packagesWithArgs;
+    }
 
     my $ret = 1;
     foreach my $packageWithArgs ( @packagesWithArgs ) {
