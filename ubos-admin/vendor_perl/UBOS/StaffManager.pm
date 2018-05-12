@@ -217,7 +217,7 @@ sub setupUpdateShepherd {
     my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/ubos/shepherd' );
     if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
 
-        trace( 'StaffManager::setupUpdateShepherd', $add, @keys );
+        trace( 'StaffManager::setupUpdateShepherd', $add, $force );
 
         my $authKeyFile = "$homeShepherd/.ssh/authorized_keys";
         unless( -d "$homeShepherd/.ssh" ) {

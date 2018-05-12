@@ -754,7 +754,7 @@ sub invokeCallbacks {
                            split /\n/, $content;
 
     unless( $forward ) {
-        $packagesWithArgs = reverse @packagesWithArgs;
+        @packagesWithArgs = reverse @packagesWithArgs;
     }
 
     my $ret = 1;
