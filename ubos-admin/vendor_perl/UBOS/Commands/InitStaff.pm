@@ -31,6 +31,7 @@ sub run {
     my $logConfigFile     = undef;
     my $debug             = undef;
     my $format            = undef;
+    my $label             = undef;
     my $noformat          = undef;
     my $shepherdKey       = undef;
     my @wifiStrings       = ();
@@ -41,6 +42,8 @@ sub run {
             'verbose+'                 => \$verbose,
             'logConfig=s'              => \$logConfigFile,
             'debug'                    => \$debug,
+            'format'                   => \$format,
+            'label'                    => \$label,
             'add-shepherd-key=s'       => \$shepherdKey,
             'add-wifi=s'               => \@wifiStrings,
             'add-site-template-file=s' => \@siteTemplateFiles );
@@ -48,7 +51,13 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args > 1 || ( $verbose && $logConfigFile ) ) {
+    if(    !$parseOk
+        || ( @args > 1 )
+        || ( $format && !@args )
+        || ( $format && $label )
+        || ( $label && !@args )
+        || ( $verbose && $logConfigFile ) )
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
     
@@ -95,7 +104,11 @@ sub run {
     }
 
     if( $device ) {
-        $device = UBOS::StaffManager::checkStaffDevice( $device );
+        if( $format ) {
+            $device = UBOS::StaffManager::formatStaffDevice( $device ):
+        } else {
+            $device = UBOS::StaffManager::checkStaffDevice( $device, $label );
+        }
     } else {
         $device = UBOS::StaffManager::guessStaffDevice();
     }
@@ -103,8 +116,12 @@ sub run {
         fatal( $@ );
     }
 
-    my $targetDir;
+
     $errors += UBOS::StaffManager::labelDeviceAsStaff( $device );
+
+
+
+    my $targetDir;
     $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
     $errors += UBOS::StaffManager::initDirectoryAsStaff( $targetDir->dirname(), $shepherdKey, $wifis, $siteTemplates );
     $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
@@ -186,19 +203,24 @@ sub _parseWifiString {
 sub synopsisHelp {
     return {
         'summary' => <<SSS,
-    Initialize an attached removable device as a UBOS staff.
+    Initialize an attached removable storage device as a UBOS taff.
 SSS
         'detail' => <<DDD,
-    Various options exist to configure the UBOS staff in different ways.
+    Various options exist to configure the UBOS Staff in different ways.
 DDD
         'cmds' => {
             '' => <<HHH,
-    Guess which device to initialize. Will ask for user configuration
+    Guess which removable storage device to initialize. The removable
+    storage device must be labeled UBOS-STAFF.
 HHH
             <<SSS => <<HHH
-    <device>
+    [--format | --label] <device>
 SSS
-    Initialize device <device>, e.g. /dev/sdf
+    Initialize storage device <device>, e.g. /dev/sdf. If --format is
+    given, format the storage device first before initializing (which
+    will destroy all existing data on the storage device ). If --label
+    is given, do not format but label the device 'UBOS-STAFF' if not
+    already labeled.
 HHH
         },
         'args' => {
@@ -208,17 +230,13 @@ HHH
             '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
 HHH
-            '--[no]format' => <<HHH,
-    Format (or do not format) this device. If not given, uses a heuristic.
-HHH
             '--add-shepherd-key <key>' => <<HHH,
     Add a public key to the staff. This public key will be used as the
-    key for shepherd login on devices that read from the created staff.
-    This may be repeated to add multiple keys.
+    key for shepherd login on devices that read from the created Staff.
 HHH
             '--add-wifi <string>' => <<HHH,
     Add WiFi client information so a device that reads from the created
-    staff can automatically setup wifi. This may be repeated to configure
+    Staff can automatically setup wifi. This may be repeated to configure
     multiple wifi networks. <string> is a comma-separated string of
     name=value pairs, each holding an allowed entry with value of the
     "networks" section of a wpa_supplicant.conf file. For example
