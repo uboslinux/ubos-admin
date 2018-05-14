@@ -64,8 +64,8 @@ sub run {
     my $device = @args ? $args[0] : undef;
     my $errors = 0;
 
-    my $wifis         = {}; # SSID     => hash of parameters
-    my $siteTemplates = {}; # filename => Site template JSON
+    my $wifis         = {}; # SSID                       => hash of parameters
+    my $siteTemplates = {}; # filename without extension => Site template JSON
 
     if( $shepherdKey && $shepherdKey !~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
         fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $shepherdKey );
@@ -78,6 +78,7 @@ sub run {
 
         my $shortsiteTemplateName = $siteTemplateFile;
         $shortsiteTemplateName =~ s!^(.*)/!!;
+        $shortsiteTemplateName =~ s!(\..*)/!!;
 
         if( exists( $siteTemplates->{$shortsiteTemplateName} )) {
             fatal( 'Already have a site template with short name:', $shortsiteTemplateName );
@@ -92,7 +93,8 @@ sub run {
         unless( $site ) {
             fatal( $@ );
         }
-        $siteTemplates->{$shortsiteTemplateName} = $json;
+        $siteTemplates->{$shortsiteTemplateName} = UBOS::Utils::readJsonFromFile( $siteTemplateFile );
+            # write the original JSON, not the one modified by UBOS::Site
     }
 
     foreach my $wifiString ( @wifiStrings ) {
@@ -105,7 +107,7 @@ sub run {
 
     if( $device ) {
         if( $format ) {
-            $device = UBOS::StaffManager::formatStaffDevice( $device ):
+            $device = UBOS::StaffManager::formatStaffDevice( $device );
         } else {
             $device = UBOS::StaffManager::checkStaffDevice( $device, $label );
         }
