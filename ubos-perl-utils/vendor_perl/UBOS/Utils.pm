@@ -27,8 +27,8 @@ my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERW
 my $CHANNEL_FILE    = '/etc/ubos/channel';
 my @VALID_CHANNELS  = qw( dev red yellow green );
 
-my $_now         = gmtime( time()); # Time the script(s) started running, use now() to access
-my $_deviceClass = undef;           # Allocated as needed
+my $_now         = time(); # Time the script(s) started running, use now() to access
+my $_deviceClass = undef;  # Allocated as needed
 
 ##
 # Obtain the UNIX system time when the script(s) started running.
