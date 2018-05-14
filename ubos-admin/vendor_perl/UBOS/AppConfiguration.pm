@@ -97,13 +97,7 @@ sub context {
 
     $self->_initialize();
 
-    my $ret = $self->{app}->fixedContext();
-    unless( defined( $ret )) {
-        $ret = $self->{json}->{context};
-    }
-    unless( defined( $ret )) {
-        $ret = $self->{app}->defaultContext();
-    }
+    my $ret = $self->{json}->{context};
     return $ret;
 }
 
@@ -591,6 +585,7 @@ sub _initialize {
     my $self = shift;
 
     if( defined( $self->{app} )) {
+        # initialized already
         return 1;
     }
 
@@ -604,6 +599,14 @@ sub _initialize {
 
     } else {
         $self->{accessories} = [];
+    }
+
+    unless( defined( $self->{json}->{context} )) {
+        my $context = $self->{app}->fixedContext();
+        unless( defined( $context )) {
+            $context = $self->{app}->defaultContext();
+        }
+        $self->{json}->{context} = $context;
     }
 
     return 1;
