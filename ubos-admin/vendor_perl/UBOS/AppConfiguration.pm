@@ -626,9 +626,10 @@ sub isValidContext {
 }
 
 ##
-# Check that all required customization point values have been specified.
+# Check that all required customization point values have been specified
+# and fill in the values from defaults for all others
 # return: 1 if ok
-sub checkCustomizationPointValues {
+sub checkCompleteCustomizationPointValues {
     my $self = shift;
 
     my $appConfigCustPoints = $self->customizationPoints();
@@ -639,54 +640,60 @@ sub checkCustomizationPointValues {
             foreach my $custPointName ( keys %$installableCustPoints ) {
                 my $custPointDef = $installableCustPoints->{$custPointName};
 
-                # check data type
-                my $value = undef;
+                my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
+                my $custPointValidation          = $knownCustomizationPointTypes->{ $custPointDef->{type}};
+
+                my $value;
                 if(    exists( $appConfigCustPoints->{$packageName} )
                     && exists( $appConfigCustPoints->{$packageName}->{$custPointName} )
-                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
+                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} )
+                    && defined( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
                 {
                     $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
-                    if( defined( $value )) {
-                        my $knownCustomizationPointTypes = $UBOS::Installable::knownCustomizationPointTypes;
-                        my $custPointValidation = $knownCustomizationPointTypes->{ $custPointDef->{type}};
-                        # checked earlier that this is non-null
-                        my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
-                        unless( $ok ) {
-                            $@ = 'AppConfiguration ' . $self->appConfigId
-                                   . ', package ' . $packageName
-                                   . ': value for ' . $custPointName
-                                   . ': ' . $custPointValidation->{valuecheckerror}
-                                   . ', is: ' . ( ref( $value ) || $value );
-                            return 0;
-                        }
 
-                        if( exists( $custPointDef->{regex} )) {
-                            unless( $value =~ $custPointDef->{regex} ) {
-                                $@ = 'AppConfiguration ' . $self->appConfigId
-                                       . ', package ' . $packageName
-                                       . ': value for ' . $custPointName
-                                       .  ' must match regex ' . $custPointDef->{regex}
-                                       . ', is: ' . ( ref( $value ) || $value );
-                                return 0;
+                } else {
+                    # take default if it exists
+                    if( defined( $custPointDef->{default} )) {
+                        if( defined( $custPointDef->{default}->{value} )) {
+                            $value = $custPointDef->{default}->{value};
+                            if( defined( $custPointDef->{default}->{encoding} ) && $custPointDef->{default}->{encoding} eq 'base64' ) {
+                                $value = decode_base64( $value );
                             }
+
+                        } elsif( defined( $custPointDef->{default}->{expression} )) {
+                            $value = $custPointDef->{default}->{expression};
+                            $value = $self->vars()->replaceVariables( $value );
                         }
                     }
-                }
-
-                # now check that required values are indeed provided
-                unless( $custPointDef->{required} ) {
-                    next;
-                }
-                if(    !defined( $custPointDef->{default} )
-                    || !( defined( $custPointDef->{default}->{value} ) || defined( $custPointDef->{default}->{expression} ))) {
-                    # make sure the Site JSON file provided one
-                    unless( defined( $value )) {
+                    if( !defined( $value ) && $custPointDef->{required} ) {
                         $@ = 'AppConfiguration ' . $self->appConfigId
                                . ', package ' . $packageName
                                . ': customizationpoint requires a value: ' .  $custPointName;
                         return 0;
                     }
                 }
+
+                my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
+                unless( $ok ) {
+                    $@ = 'AppConfiguration ' . $self->appConfigId
+                           . ', package ' . $packageName
+                           . ': value for ' . $custPointName
+                           . ': ' . $custPointValidation->{valuecheckerror}
+                           . ', is: ' . ( ref( $value ) || $value );
+                    return 0;
+                }
+
+                if( exists( $custPointDef->{regex} )) {
+                    unless( $value =~ $custPointDef->{regex} ) {
+                        $@ = 'AppConfiguration ' . $self->appConfigId
+                               . ', package ' . $packageName
+                               . ': value for ' . $custPointName
+                               .  ' must match regex ' . $custPointDef->{regex}
+                               . ', is: ' . ( ref( $value ) || $value );
+                        return 0;
+                    }
+                }
+                $appConfigCustPoints->{$packageName}->{$custPointName}->{value} = $cleanValue;
             }
         }
     }

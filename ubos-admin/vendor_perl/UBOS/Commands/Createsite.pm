@@ -645,7 +645,7 @@ sub run {
         }
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
-            unless( $newAppConfig->checkCustomizationPointValues()) {
+            unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
                 fatal( $@ );
             }
         }

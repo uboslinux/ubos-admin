@@ -259,7 +259,7 @@ sub run {
                 $contexts{$context} = $newAppConfig;
             }
 
-            unless( $newAppConfig->checkCustomizationPointValues()) {
+            unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
                 fatal( $@ );
             }
 

@@ -213,42 +213,19 @@ sub _createHierarchicalMapAtAppconfigVars {
         }
     };
 
-    my $installableCustPoints = $self->customizationPoints;
-    if( $installableCustPoints ) {
-        my $appConfigCustPoints = $appConfig->customizationPoints();
-        my $appConfigParsDir    = $appConfig->vars()->getResolve( 'host.appconfigparsdir' );
+    my $appConfigCustPoints = $appConfig->customizationPoints();
+    my $appConfigParsDir    = $appConfig->vars()->getResolve( 'host.appconfigparsdir' );
 
-        foreach my $custPointName ( keys %$installableCustPoints ) {
-            my $custPointDef = $installableCustPoints->{$custPointName};
+    foreach my $custPointName ( keys %{$appConfigCustPoints->{$packageName}} ) {
+        my $data = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
 
-            my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
-
-            unless( defined( $value ) && defined( $value->{value} )) {
-                # use default instead
-                $value = $custPointDef->{default};
-            }
-            if( defined( $value )) {
-                my $data = undef;
-                if( exists( $value->{value} )) {
-                    $data = $value->{value};
-                    if( defined( $data )) { # value might be null
-                        if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
-                            $data = decode_base64( $data );
-                        }
-                    }
-
-                } elsif( exists( $value->{expression} )) {
-                    $data = $value->{expression};
-                    $data = $appConfig->vars()->replaceVariables( $data );
-                }
-                if( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} ) {
-                    # do not generate the file if customizationpoint is declared private
-                    my $filename = "$appConfigParsDir/$appConfigId/$packageName/$custPointName";
-                    $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{filename} = $filename;
-                }
-                $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{value} = $data;
-            }
+        my $installableCustPoints = $self->{json}->{customizationpoints}->{$custPointName};
+        if( !exists( $installableCustPoints->{private} ) || !$installableCustPoints->{private} ) {
+            # do not generate the file if customizationpoint is declared private
+            my $filename = "$appConfigParsDir/$appConfigId/$packageName/$custPointName";
+            $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{filename} = $filename;
         }
+        $hierarchicalMap->{installable}->{customizationpoints}->{$custPointName}->{value} = $data;
     }
     return $hierarchicalMap;
 }

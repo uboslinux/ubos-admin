@@ -782,7 +782,7 @@ END
                   sort keys %$config;
 
     if( @appNics ) {
-        my $callbackContent = 'UBOS::HostnameCallbacks::UpdateEtcHosts ' . join( ' ', @appNics ) . "\n";
+        my $callbackContent = 'UBOS::HostnameCallbacks::UpdateEtcHosts 1 ' . join( ' ', @appNics ) . "\n";
         UBOS::Utils::saveFile( '/etc/ubos/hostname-callbacks/etchosts', $callbackContent );
     } else {
         if( -e '/etc/ubos/hostname-callbacks/etchosts' ) {

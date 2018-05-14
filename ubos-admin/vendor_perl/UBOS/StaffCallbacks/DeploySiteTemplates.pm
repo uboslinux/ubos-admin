@@ -250,7 +250,7 @@ sub deploySiteTemplates {
                     return $errors;
                 }
             }
-            unless( $newAppConfig->checkCustomizationPointValues()) {
+            unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
                 error( $@ );
                 ++$errors;
                 return $errors;
