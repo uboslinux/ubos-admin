@@ -59,7 +59,7 @@ sub loadCurrentSshConfiguration {
         $sshKey =~ s!^\s+!!;
         $sshKey =~ s!\s+$!!;
 
-        unless( UBOS::StaffManager::setupUpdateShepherd( 0, $sshKey )) {
+        unless( UBOS::StaffManager::setupUpdateShepherd( $sshKey )) {
             return 1;
         }
     }
