@@ -808,7 +808,9 @@ sub _askForCustomizationPoints {
                 my $isFile = $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile};
                 while( 1 ) {
                     my $blank =    ( 'password' eq $custPointDef->{type} )
-                                || ( exists( $custPointDef->{private} ) && $custPointDef->{private} );
+                                || (    exists( $custPointDef->{private} )
+                                     && $custPointDef->{private}
+                                     && 'text' ne $custPointDef->{type} );
 
                     my $value = ask(
                             (( ref( $installable ) =~ m!App! ) ? 'App ' : 'Accessory ' )
