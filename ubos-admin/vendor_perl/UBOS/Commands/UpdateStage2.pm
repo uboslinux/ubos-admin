@@ -141,13 +141,15 @@ sub finishUpdate {
     my $out;
     UBOS::Utils::myexec( 'pacman -R --noconfirm ubos-networking', undef, \$out, \$out );
 
-    UBOS::Utils::deleteRecursively(
-            grep { -e $_ }
-            qw(
-                /etc/httpd/ubos
-                /var/lib/ubos
-                /srv/http/wellknown )
-            );
+    unless( $ret ) {
+        UBOS::Utils::deleteRecursively(
+                grep { -e $_ }
+                qw(
+                    /etc/httpd/ubos
+                    /var/lib/ubos
+                    /srv/http/wellknown )
+                );
+    }
 
     if( defined( $snapNumber ) && UBOS::Host::vars()->getResolve( 'host.snapshotonupgrade', 0 )) {
         debugAndSuspend( 'Create filesystem snapshot' );
