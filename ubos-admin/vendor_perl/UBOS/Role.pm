@@ -796,9 +796,9 @@ sub checkManifestForRoleGenericAppConfigItems {
                         }
                     }
                     if( defined( $appConfigItem->{permissions} )) {
-                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use fields 'filepermissions' and 'dirpermissions' instead of 'permissions'." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use fields 'filepermissions' and 'dirpermissions' instead of 'permissions' for item of type " . $appConfigItem->{type} . "." );
                     }
-                } else {
+                } elsif( $appConfigItem->{type} eq 'file' ) {
                     if( defined( $appConfigItem->{permissions} )) {
                         if( ref( $appConfigItem->{permissions} )) {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'permissions' must be string (octal)" );
@@ -808,10 +808,10 @@ sub checkManifestForRoleGenericAppConfigItems {
                         }
                     }
                     if( defined( $appConfigItem->{filepermissions} )) {
-                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'filepermissions'." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'filepermissions' for item of type " . $appConfigItem->{type} . "." );
                     }
                     if( defined( $appConfigItem->{dirpermissions} )) {
-                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'dirpermissions'." );
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'dirpermissions' for item of type " . $appConfigItem->{type} . "." );
                     }
                 }
 
