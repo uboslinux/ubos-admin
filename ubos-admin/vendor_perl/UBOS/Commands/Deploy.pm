@@ -50,7 +50,7 @@ sub run {
             'debug'       => \$debug,
             'template'    => \$useAsTemplate,
             'force',      => \$force,
-            'files=s'     => \@files,
+            'file=s'      => \@files,
             'stdin'       => \$stdin,
             'backup=s'    => \$backupFile,
             'notls'       => \$noTls,
