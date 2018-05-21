@@ -130,7 +130,7 @@ sub setupSiteOrCheck {
             UBOS::Utils::mkdirDashP( $siteWellKnownDir );
         }
         unless( -d $appConfigFilesDir ) {
-            UBOS::Utils::mkdir( $appConfigFilesDir );
+            UBOS::Utils::mkdirDashP( $appConfigFilesDir );
         }
 
         if( $site->isTor() ) {
@@ -540,7 +540,7 @@ sub obtainLetsEncryptCertificate {
     my $hostname         = $site->hostname;
 
     unless( -d $siteWellKnownDir ) {
-        UBOS::Utils::mkdir( $siteWellKnownDir );
+        UBOS::Utils::mkdirDashP( $siteWellKnownDir );
     }
 
     my $out;
