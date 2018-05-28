@@ -77,8 +77,8 @@ sub run {
         }
 
         my $shortsiteTemplateName = $siteTemplateFile;
-        $shortsiteTemplateName =~ s!^(.*)/!!;
-        $shortsiteTemplateName =~ s!(\..*)/!!;
+        $shortsiteTemplateName =~ s!^.*/!!;
+        $shortsiteTemplateName =~ s!\..*!!;
 
         if( exists( $siteTemplates->{$shortsiteTemplateName} )) {
             fatal( 'Already have a site template with short name:', $shortsiteTemplateName );
