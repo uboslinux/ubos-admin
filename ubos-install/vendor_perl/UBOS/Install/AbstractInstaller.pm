@@ -214,7 +214,7 @@ sub addPackageDbs {
 
     $self->{addpackagedbs} = {};
     foreach my $packageDb ( @packageDbs ) {
-        if( $packageDb =~ m!^(\w+)=(\w+://\S+$)! ) {
+        if( $packageDb =~ m!^(\S+)=(\w+://\S+$)! ) {
             $self->{addpackagedbs}->{$1} = $2;
         } else {
             fatal( 'Not a valid package db, must be of form name=url :', $packageDb );
