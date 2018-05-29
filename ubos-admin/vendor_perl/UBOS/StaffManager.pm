@@ -31,23 +31,25 @@ my $STAFF_BOOT_CALLBACKS_DIR = '/etc/ubos/staff-boot-callbacks';
 # Invoked during boot.
 # 1. Initialize the configuration if there's a staff device attached
 # 2. Deploy site templates if needed
+# return: number of errors
 sub performBootActions {
     trace( 'StaffManager::initializeIfNeeded' );
 
     unless( UBOS::Host::vars()->getResolve( 'host.readstaffonboot', 1 )) {
-        return;
+        return 0;
     }
 
     my $device = guessStaffDevice();
 
     my $target;
     my $isActualStaffDevice;
+
     if( $device ) {
         trace( 'Staff device:', $device );
 
         if( mountDevice( $device, \$target )) {
             error( 'Failed to mount:', $device, $target );
-            return;
+            return 1;
         }
         $isActualStaffDevice = 1;
 
@@ -59,25 +61,29 @@ sub performBootActions {
             # don't genKeyPairIfNeeded
         } else {
             trace( 'No staff device found' );
-            return;
+            return 0;
         }
     }
 
+    my $errors = 0;
     if( loadCurrentConfiguration( $target, $isActualStaffDevice )) {
         error( 'Loading current configuration failed from', $device, $target );
+        ++$errors;
     }
 
     if( saveCurrentConfiguration( $target, $isActualStaffDevice )) {
         error( 'Saving current configuration failed to', $device, $target );
+        ++$errors;
     }
 
     if( $device ) {
         if( unmountDevice( $device, $target )) {
             error( 'Failed to unmount:', $device, $target );
+        ++$errors;
         }
     }
 
-    return;
+    return $errors;
 }
 
 ##

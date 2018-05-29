@@ -59,7 +59,8 @@ sub loadCurrentSshConfiguration {
         $sshKey =~ s!^\s+!!;
         $sshKey =~ s!\s+$!!;
 
-        unless( UBOS::StaffManager::setupUpdateShepherd( $sshKey )) {
+        unless( UBOS::StaffManager::setupUpdateShepherd( $sshKey, 0, 1 )) {
+            # replace during boot
             return 1;
         }
     }

@@ -519,6 +519,7 @@ sub executeTriggers {
 ##
 # Set the system state
 # $newState: name of the new state
+# return: number of errors
 sub setState {
     my $newState = shift;
 
@@ -526,7 +527,8 @@ sub setState {
 
     $_currentState = $newState;
 
-    UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 1, 'stateChanged', $newState );
+    my $ret = UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 1, 'stateChanged', $newState );
+    return $ret;
 }
 
 ##
@@ -775,17 +777,20 @@ sub packageVersion {
 
 ##
 # Ensure that snapper is configured. Called during package install only.
+#
+# return: number of errors
 sub ensureSnapperConfig {
 
     # Determine the btrfs filesystems
     my $out;
     if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
         error( "findmnt failed:", $out );
-        return undef;
+        return 1;
     }
     $out =~ s!^\s+!!;
     $out =~ s!\s+$!!;
 
+    my $errors = 0;
     if( $out ) {
         my $findmntJson = UBOS::Utils::readJsonFromString( $out );
         my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
@@ -802,6 +807,7 @@ sub ensureSnapperConfig {
                 debugAndSuspend( 'Execute snapper -c', $configName, 'create-config' );
                 if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
                     error( 'snapper (create-config) failed of config', $configName, $target, $err );
+                    ++$errors;
                 }
             }
         }
@@ -814,10 +820,11 @@ sub ensureSnapperConfig {
             debugAndSuspend( 'Execute snapper setup-quota' );
             if( myexec( 'snapper setup-quota', undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
                 error( 'snapper setup-quota failed:', $err );
+                ++$errors;
             }
         }
     }
-    1;
+    return $errors;
 }
 
 ##
@@ -1044,7 +1051,8 @@ sub addAfterBootCommands {
 
 ##
 # If there are commands in the after-boot file, execute them, and then remove
-# the file
+# the file.
+# return: number of errors
 sub runAfterBootCommandsIfNeeded {
 
     trace( 'Host::runAfterBootCommandsIfNeeded' );
@@ -1059,6 +1067,7 @@ sub runAfterBootCommandsIfNeeded {
         $afterBootFile = undef;
     }
 
+    my $errors = 0;
     if( $afterBootFile ) {
         my $afterBoot = UBOS::Utils::slurpFile( $afterBootFile );
 
@@ -1070,16 +1079,19 @@ sub runAfterBootCommandsIfNeeded {
                 my $err;
                 if( myexec( "/bin/bash", $cmd, \$out, \$err )) {
                     error( "Problem when running after-boot commands. Bash command:\n$cmd\nout: $out\nerr: $err\nscript: $afterBoot");
+                    ++$errors;
                 }
             } elsif( $line =~ m!^perleval:(.*)$! ) {
                 my $cmd = $1;
                 unless( eval( $cmd )) {
                     error( "Problem when running after-boot commands. Perl command:\n$cmd\ndollar-bang: $!\ndollar-at: $@\nscript: $afterBoot" );
+                    ++$errors;
                 }
             }
         }
         UBOS::Utils::deleteFile( $afterBootFile );
     }
+    return $errors;
 }
 
 ##
