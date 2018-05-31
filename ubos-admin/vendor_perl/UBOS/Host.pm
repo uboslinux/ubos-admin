@@ -1134,7 +1134,7 @@ sub nics {
     unless( defined( $_physicalNics )) {
         $_physicalNics = {};
         foreach my $nic ( keys %$_allNics ) {
-            if(    $nic !~ m!^(ve-|docker)!
+            if(    $nic !~ m!^(ve-|tun|tap|docker)!
                 && $_allNics->{$nic}->{type} !~ m!^loopback! )
             {
                 $_physicalNics->{$nic} = $_allNics->{$nic};

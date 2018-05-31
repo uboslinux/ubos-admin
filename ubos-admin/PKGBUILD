@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.293
+pkgver=0.294
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -80,6 +80,7 @@ package() {
 # Systemd
     install -D -m644 ${startdir}/systemd/*.{service,timer} -t ${pkgdir}/usr/lib/systemd/system/
     install -D -m644 ${startdir}/systemd/ubos-admin.conf -t ${pkgdir}/usr/lib/sysusers.d/
+    install -D -m644 ${startdir}/systemd/tun9x.network -t ${pkgdir}/usr/lib/systemd/network/
 
 # Snapper
     install -D -m644 ${startdir}/etc/snapper/config-templates/ubos-default -t ${pkgdir}/etc/snapper/config-templates/

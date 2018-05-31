@@ -1,0 +1,9 @@
+#
+# UBOS networking configuration for tun9*, which are devices
+# reserved for UBOS
+#
+[Match]
+Name=tun9*
+
+[Link]
+Unmanaged=true

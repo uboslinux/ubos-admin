@@ -737,14 +737,14 @@ END
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT - [0:0]
-:NIC-tun99-TCP - [0:0]
+:NIC-tun90-TCP - [0:0]
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
--A INPUT -i tun99 -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-tun99-TCP
+-A INPUT -i tun90 -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-tun90-TCP
 -A INPUT -p udp -j REJECT
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT
--A NIC-tun99-TCP -p tcp --dport ssh -j ACCEPT
+-A NIC-tun90-TCP -p tcp --dport ssh -j ACCEPT
 COMMIT
 END
 
