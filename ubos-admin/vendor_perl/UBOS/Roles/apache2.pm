@@ -54,6 +54,7 @@ sub isAlwaysNeeded {
 # it is deployable. Both functions share the same code, so the checks get updated
 # at the same time as the actual deployment.
 # $doIt: if 1, deploy; if 0, only check
+# $phase: the current undeployment phase
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
 # $vars: the Variables object that knows about symbolic names and variables
@@ -61,16 +62,17 @@ sub isAlwaysNeeded {
 sub deployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
+    my $phase       = shift;
     my $appConfig   = shift;
     my $installable = shift;
     my $vars        = shift;
 
     my $roleName = $self->name();
 
-    trace( 'apache2::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+    trace( 'apache2::deployOrCheck', $roleName, $doIt, $phase, $appConfig->appConfigId, $installable->packageName );
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
-    if( $installableRoleJson ) {
+    if( $installableRoleJson && $phase eq $UBOS::AppConfigurationItems::AppConfigurationItem::DEFAULT_PHASE ) {
         my $apache2modules = $installableRoleJson->{apache2modules};
         my $numberActivated = 0;
         if( $appConfig->site && $appConfig->site->hasTls ) {
@@ -87,7 +89,7 @@ sub deployOrCheck {
             UBOS::Apache2::restart(); # reload seems to be insufficient
         }
     }
-    return $self->SUPER::deployOrCheck( $doIt, $appConfig, $installable, $vars );
+    return $self->SUPER::deployOrCheck( $doIt, $phase, $appConfig, $installable, $vars );
 }
 
 ##

@@ -388,11 +388,31 @@ sub deployOrCheck {
                 }
             }
         }
-            
-        # Now for all the roles
+
+        # Now for all the roles -- default phase
         foreach my $role ( @rolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->deployOrCheck( $doIt, $self, $installable, $vars );
+                $ret &= $role->deployOrCheck(
+                        $doIt,
+                        $UBOS::AppConfigurationItems::AppConfigurationItem::DEFAULT_PHASE,
+                        $self,
+                        $installable,
+                        $vars );
+            }
+        }
+    }
+    foreach my $installable ( @installables ) {
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, $doIt );
+
+        # Now for all the roles -- second phase
+        foreach my $role ( @rolesOnHost ) {
+            if( $installable->needsRole( $role )) {
+                $ret &= $role->deployOrCheck(
+                        $doIt,
+                        $UBOS::AppConfigurationItems::AppConfigurationItem::AFTER_ACCESSORIES_PHASE,
+                        $self,
+                        $installable,
+                        $vars );
             }
         }
     }
@@ -429,10 +449,30 @@ sub undeployOrCheck {
     foreach my $installable ( @reverseInstallables ) {
         my $vars = $installable->obtainInstallableAtAppconfigVars( $self, $doIt );
 
-        # Now for all the roles
+        # Now for all the roles -- second phase
         foreach my $role ( @reverseRolesOnHost ) {
             if( $installable->needsRole( $role )) {
-                $ret &= $role->undeployOrCheck( $doIt, $self, $installable, $vars );
+                $ret &= $role->undeployOrCheck(
+                        $doIt,
+                        $UBOS::AppConfigurationItems::AppConfigurationItem::AFTER_ACCESSORIES_PHASE,
+                        $self,
+                        $installable,
+                        $vars );
+            }
+        }
+    }
+    foreach my $installable ( @reverseInstallables ) {
+        my $vars = $installable->obtainInstallableAtAppconfigVars( $self, $doIt );
+
+        # Now for all the roles -- default phase
+        foreach my $role ( @reverseRolesOnHost ) {
+            if( $installable->needsRole( $role )) {
+                $ret &= $role->undeployOrCheck(
+                        $doIt,
+                        $UBOS::AppConfigurationItems::AppConfigurationItem::DEFAULT_PHASE,
+                        $self,
+                        $installable,
+                        $vars );
             }
         }
     }

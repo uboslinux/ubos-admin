@@ -65,6 +65,7 @@ sub isAlwaysNeeded {
 # it is deployable. Both functions share the same code, so the checks get updated
 # at the same time as the actual deployment.
 # $doIt: if 1, deploy; if 0, only check
+# $phase: the current deployment phase
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
 # $vars: the Variables object that knows about symbolic names and variables
@@ -72,6 +73,7 @@ sub isAlwaysNeeded {
 sub deployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
+    my $phase       = shift;
     my $appConfig   = shift;
     my $installable = shift;
     my $vars        = shift;
@@ -80,7 +82,7 @@ sub deployOrCheck {
     my $ret      = 1;
     my $roleName = $self->name();
 
-    trace( 'Role::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
+    trace( 'Role::deployOrCheck', $roleName, $doIt, $phase, $appConfig->appConfigId, $installable->packageName );
 
     if( ref( $installable ) =~ m!App! ) {
         my $siteDocumentDir = $appConfig->vars()->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
@@ -104,7 +106,7 @@ sub deployOrCheck {
                     trace( 'Role::deployOrCheck', $appConfig->appConfigId, $itemIndex );
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
-                if( $item ) {
+                if( $item && $item->appliesInPhase( $phase )) {
                     if( $doIt ) {
                         debugAndSuspend(
                                 'Deploy',         $itemIndex,
@@ -126,6 +128,7 @@ sub deployOrCheck {
 # it is undeployable. Both functions share the same code, so the checks get updated
 # at the same time as the actual deployment.
 # $doIt: if 1, undeploy; if 0, only check
+# $phase: the current undeployment phase
 # $appConfig: the AppConfiguration to deploy
 # $installable: the Installable
 # $vars: the Variables object that knows about symbolic names and variables
@@ -133,6 +136,7 @@ sub deployOrCheck {
 sub undeployOrCheck {
     my $self        = shift;
     my $doIt        = shift;
+    my $phase       = shift;
     my $appConfig   = shift;
     my $installable = shift;
     my $vars        = shift;
@@ -156,7 +160,7 @@ sub undeployOrCheck {
                     trace( 'Role::undeployOrCheck', $appConfig->appConfigId, $itemIndex );
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
-                if( $item ) {
+                if( $item && $item->appliesInPhase( $phase )) {
                     if( $doIt ) {
                         debugAndSuspend(
                                 'Undeploy',       $itemIndex,
@@ -553,6 +557,20 @@ sub checkManifestForRoleGenericAppConfigItems {
 
         my $appConfigIndex = 0;
         foreach my $appConfigItem ( @{$jsonFragment->{appconfigitems}} ) {
+            if( exists( $appConfigItem->{phases} )) {
+                unless( 'ARRAY' eq ref( $appConfigItem->{phases} )) {
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'phases' must be an array" );
+                }
+                foreach my $phase ( @{$appConfigItem->{phases}} ) {
+                    unless( $UBOS::AppConfigurationItems::AppConfigurationItem::VALID_PHASES{$phase} ) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid value in 'phases': $phase" );
+                    }
+                }
+            }
+
+            unless( exists( $appConfigItem->{type} )) {
+                $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must exist" );
+            }
             if( ref( $appConfigItem->{type} )) {
                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
             }
