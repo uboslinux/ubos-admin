@@ -749,9 +749,9 @@ sub configureOs {
 
 +--------------------------------------------------------------------------+
 |                                                                          |
-|                           Welcome to UBOS (tm)                           |
+|                           Welcome to UBOS (R)                            |
 |                                                                          |
-|                                 ubos.net                                 |
+|                                ubos.net                                  |
 |                                                                          |
 ISSUE
     $issue .= sprintf( "|%74s|\n", "device class: $deviceClass, channel: $channel " );
