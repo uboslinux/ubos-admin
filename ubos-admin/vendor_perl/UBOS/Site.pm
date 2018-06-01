@@ -560,7 +560,7 @@ sub print {
                         } else {
                             print "\n";
 
-                            my $custPoints = $appConfig->resolvedCustomizationPoints;
+                            my $custPoints = $appConfig->customizationPoints;
                             foreach my $installable ( $appConfig->installables ) {
                                 print '          ';
                                 if( $installable == $appConfig->app ) {
@@ -569,12 +569,14 @@ sub print {
                                     print 'accessory: ';
                                 }
                                 print $installable->packageName . "\n";
-                                my $installableCustPoints = $custPoints->{$installable->packageName};
-                                if( defined( $installableCustPoints )) {
-                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                                        my $custPointValue = $installableCustPoints->{$custPointName};
+                                if( $custPoints ) {
+                                    my $installableCustPoints = $custPoints->{$installable->packageName};
+                                    if( defined( $installableCustPoints )) {
+                                        foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                                            my $custPointValue = $installableCustPoints->{$custPointName};
 
-                                        print '                     customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                                            print '                     customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                                        }
                                     }
                                 }
                             }

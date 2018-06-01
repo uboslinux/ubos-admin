@@ -212,48 +212,6 @@ sub customizationPoints {
 }
 
 ##
-# Obtain the resolved customization points for this AppConfiguration.
-# These are the provided values in the site JSON, plus, when none are
-# given, the defaults from the Installable's manifest.
-# return: customization points hierarchy as given in the site JSON, but with
-#         default values filled in
-sub resolvedCustomizationPoints {
-    my $self = shift;
-
-    my $ret                 = {};
-    my $appConfigCustPoints = $self->customizationPoints();
-
-    foreach my $installable ( $self->installables ) {
-        my $packageName           = $installable->packageName;
-        my $installableCustPoints = $installable->customizationPoints;
-
-        if( $installableCustPoints ) {
-            foreach my $custPointName ( keys %$installableCustPoints ) {
-                my $custPointDef = $installableCustPoints->{$custPointName};
-
-                # check data type
-                my $value = undef;
-                if(    exists( $appConfigCustPoints->{$packageName} )
-                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName} )
-                    && exists( $appConfigCustPoints->{$packageName}->{$custPointName}->{value} ))
-                {
-                    $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
-                }
-                if( defined( $value )) {
-                    $ret->{$packageName}->{$custPointName}->{value} = $value;
-                } elsif( defined( $custPointDef->{default}->{value} )) {
-                    $ret->{$packageName}->{$custPointName}->{value} = $custPointDef->{default}->{value};
-                } else {
-                    $ret->{$packageName}->{$custPointName}->{value} = $self->vars()->replaceVariables( $custPointDef->{default}->{expression} );
-                }
-            }
-        }
-    }
-
-    return $ret;
-}
-
-##
 # Obtain the definition of the customization point
 # $packageName: name of the package that defines the customization point
 # $customizationPointName: name of the customization point
@@ -672,7 +630,14 @@ sub isValidContext {
 sub checkCompleteCustomizationPointValues {
     my $self = shift;
 
-    my $appConfigCustPoints = $self->customizationPoints();
+    my $appConfigCustPoints;
+    if( exists( $self->{json}->{customizationpoints} )) {
+        $appConfigCustPoints = $self->{json}->{customizationpoints};
+    } else {
+        # avoid polluting
+        $appConfigCustPoints = {};
+    }
+
     foreach my $installable ( $self->installables ) {
         my $packageName           = $installable->packageName;
         my $installableCustPoints = $installable->customizationPoints;
@@ -714,7 +679,11 @@ sub checkCompleteCustomizationPointValues {
                 }
 
                 my ( $ok, $cleanValue ) = $custPointValidation->{valuecheck}->( $value, $custPointDef );
-                unless( $ok ) {
+
+                if( $ok ) {
+                    $appConfigCustPoints->{$packageName}->{$custPointName}->{value} = $cleanValue;
+
+                } else {
                     $@ = 'AppConfiguration ' . $self->appConfigId
                            . ', package ' . $packageName
                            . ': value for ' . $custPointName
@@ -737,6 +706,12 @@ sub checkCompleteCustomizationPointValues {
             }
         }
     }
+
+    # got something where there was nothing?
+    if( keys %$appConfigCustPoints && !exists( $self->{json}->{customizationpoints} )) {
+        $self->{json}->{customizationpoints} = $appConfigCustPoints;
+    }
+
     return 1;
 }
 
@@ -775,7 +750,7 @@ sub print {
         } else {
             print "\n";
 
-            my $custPoints = $self->resolvedCustomizationPoints;
+            my $custPoints = $self->customizationPoints;
             foreach my $installable ( $self->installables ) {
                 print '    ';
                 if( $installable == $self->app ) {
@@ -784,12 +759,14 @@ sub print {
                     print 'accessory: ';
                 }
                 print $installable->packageName . "\n";
-                my $installableCustPoints = $custPoints->{$installable->packageName};
-                if( defined( $installableCustPoints )) {
-                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                        my $custPointValue = $installableCustPoints->{$custPointName};
+                if( $custPoints ) {
+                    my $installableCustPoints = $custPoints->{$installable->packageName};
+                    if( defined( $installableCustPoints )) {
+                        foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                            my $custPointValue = $installableCustPoints->{$custPointName};
 
-                        print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                            print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                        }
                     }
                 }
             }
