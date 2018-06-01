@@ -88,7 +88,10 @@ sub deployOrCheck {
         my $siteDocumentDir = $appConfig->vars()->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
         if( $doIt && $siteDocumentDir ) {
             my $dir      = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-            if( $dir && $dir ne $siteDocumentDir ) {
+            if(    $dir
+                && $dir ne $siteDocumentDir
+                && $phase eq $UBOS::AppConfigurationItems::AppConfigurationItem::DEFAULT_PHASE )
+            {
                 UBOS::Utils::mkdir( $dir, 0755 );
             }
         }
@@ -103,7 +106,7 @@ sub deployOrCheck {
             my $itemIndex = 0;
             foreach my $appConfigItem ( @$appConfigItems ) {
                 if( $doIt ) {
-                    trace( 'Role::deployOrCheck', $appConfig->appConfigId, $itemIndex );
+                    trace( 'Role::deployOrCheck', $phase, $appConfig->appConfigId, $itemIndex );
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item && $item->appliesInPhase( $phase )) {
@@ -157,7 +160,7 @@ sub undeployOrCheck {
             my $itemIndex = @$appConfigItems-1;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
                 if( $doIt ) {
-                    trace( 'Role::undeployOrCheck', $appConfig->appConfigId, $itemIndex );
+                    trace( 'Role::undeployOrCheck', $phase, $appConfig->appConfigId, $itemIndex );
                 }
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                 if( $item && $item->appliesInPhase( $phase )) {
@@ -179,7 +182,10 @@ sub undeployOrCheck {
         my $siteDocumentDir = $appConfig->vars()->getResolve( "site.$roleName.sitedocumentdir", undef, 1 );
         my $dir             = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
-        if( $dir && $dir ne $siteDocumentDir ) {
+        if(    $dir
+            && $dir ne $siteDocumentDir
+            && $phase eq $UBOS::AppConfigurationItems::AppConfigurationItem::DEFAULT_PHASE )
+        {
             UBOS::Utils::rmdir( $dir );
         }
     }
@@ -209,7 +215,7 @@ sub suspend {
         if( $appConfigItems ) {
             my $codeDir   = $vars->getResolve( 'package.codedir' );
             my $dir       = $appConfig->vars()->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-            my $itemIndex = 0;
+            my $itemIndex = @$appConfigItems-1;
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
                 trace( 'Role::suspend', $appConfig->appConfigId, $itemIndex );
 
@@ -223,7 +229,7 @@ sub suspend {
 
                     $ret &= $item->suspend( $codeDir, $dir, $vars );
                 }
-                ++$itemIndex;
+                --$itemIndex;
             }
         }
     }

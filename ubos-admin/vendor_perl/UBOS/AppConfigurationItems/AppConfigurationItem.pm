@@ -57,18 +57,17 @@ sub appliesInPhase {
     my $self  = shift;
     my $phase = shift;
 
+    my $ret = 0;
     if( exists( $self->{json}->{phases} )) {
         if( grep { $_ eq $phase } @{$self->{json}->{phases}} ) {
-            return 1;
-        } else {
-            return 0;
+            $ret = 1;
+        }
+    } else {
+        if( $DEFAULT_PHASE eq $phase ) {
+            $ret = 1;
         }
     }
-    if( $DEFAULT_PHASE eq $phase ) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return $ret;
 }
 
 ##
