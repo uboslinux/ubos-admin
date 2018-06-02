@@ -64,11 +64,13 @@ sub new {
 # Create a DiskLayout object that goes with this Installer.
 # $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# $product: the product JSON if a JSON file was given on the command-line
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self  = shift;
-    my $noswap = shift;
-    my $argvp = shift;
+    my $self    = shift;
+    my $noswap  = shift;
+    my $argvp   = shift;
+    my $product = shift;
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -80,10 +82,10 @@ sub createDiskLayout {
     # ubos-install ... /dev/sda /dev/sdb /dev/sdc
 
     # Option 3: one or more boot partition devices, one more more root partition devices (raid mode),
-    #           zero or more var partition devices, and possibly swap partition devices
+    #           zero or more ubos partition devices, and possibly swap partition devices
     # ubos-install ... --bootloaderdevice /dev/sda --bootpartition /dev/sda1 --bootpartition /dev/sdb1
     #                  --rootpartition /dev/sda2 --rootpartition /dev/sdb2
-    #                  --varpartition /dev/sda3 --varpartition /dev/sdb3
+    #                  --ubospartition /dev/sda3 --ubospartition /dev/sdb3
     #                  --swappartition /dev/sda4 --swappartition /dev/sdb4
 
     # Option 4: a directory (invalid)
@@ -91,7 +93,7 @@ sub createDiskLayout {
     my $bootloaderdevice;
     my $bootpartition;
     my @rootpartitions;
-    my @varpartitions;
+    my @ubospartitions;
     my @swappartitions;
     my $directory;
 
@@ -100,12 +102,39 @@ sub createDiskLayout {
             'bootloaderdevice=s' => \$bootloaderdevice,
             'bootpartition=s'    => \$bootpartition,
             'rootpartition=s'    => \@rootpartitions,
-            'varpartition=s'     => \@varpartitions,
+            'ubospartition=s'    => \@ubospartitions,
             'swappartitions=s'   => \@swappartitions,
             'directory=s'        => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
+    }
+
+    if( !$bootloaderdevice && exists( $product->{bootloaderdevice} )) {
+        $bootloaderdevice = $product->{bootloaderdevice};
+    }
+    if( !$bootpartition && exists( $product->{bootpartition} )) {
+        $bootpartition = $product->{bootpartition};
+    }
+    if( !@rootpartitions ) {
+        if( exists( $product->{rootpartitions} )) {
+            @rootpartitions = @{$product->{rootpartitions}};
+        } elsif( exists( $product->{rootpartition} )) {
+            @rootpartitions = ( $product->{rootpartition} );
+        }
+    }
+    if( !@ubospartitions ) {
+        if( exists( $product->{ubospartitions} )) {
+            @ubospartitions = @{$product->{ubospartitions}};
+        } elsif( exists( $product->{ubospartition} )) {
+            @ubospartitions = ( $product->{ubospartition} );
+        }
+    }
+    if( !$directory && exists( $product->{directory} )) {
+        $directory = $product->{directory};
+    }
+    if( !@$argvp && exists( $product->{devices} )) {
+        @$argvp = $product->{devices};
     }
 
     my $ret = 1; # set to something, so undef can mean error
@@ -114,7 +143,7 @@ sub createDiskLayout {
         error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
         $ret = undef;
 
-    } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @varpartitions || @swappartitions ) {
+    } elsif( $bootloaderdevice || $bootpartition || @rootpartitions || @ubospartitions || @swappartitions ) {
         # Option 3
         $self->{partitioningscheme} = 'mbr';
 
@@ -149,7 +178,7 @@ sub createDiskLayout {
         }
 
         if( $ret ) {
-            foreach my $part ( @rootpartitions, @varpartitions, @swappartitions ) {
+            foreach my $part ( @rootpartitions, @ubospartitions, @swappartitions ) {
                 if( $haveAlready{$part}) {
                     error( 'Specified more than once:', $part );
                     $ret = undef;
@@ -187,11 +216,11 @@ sub createDiskLayout {
                 'devices' => \@rootpartitions
                      # default partition type
             };
-            if( @varpartitions ) {
-                $devicetable->{'/var'} = {
+            if( @ubospartitions ) {
+                $devicetable->{'/ubos'} = {
                     'index'   => $devicetableIndex++,
                     'fs'      => 'btrfs',
-                    'devices' => \@varpartitions
+                    'devices' => \@ubospartitions
                          # default partition type
                 };
             }

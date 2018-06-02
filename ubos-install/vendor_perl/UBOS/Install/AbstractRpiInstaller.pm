@@ -62,11 +62,13 @@ sub new {
 # Create a DiskLayout object that goes with this Installer.
 # $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# $product: the product JSON if a JSON file was given on the command-line
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self  = shift;
-    my $noswap = shift;
-    my $argvp = shift;
+    my $self    = shift;
+    my $noswap  = shift;
+    my $argvp   = shift;
+    my $product = shift;
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -77,25 +79,42 @@ sub createDiskLayout {
     # Option 3: a boot partition device, one or more root partition devices
     # ubos-install ... --bootpartition /dev/sda1 --rootpartition /dev/sda2 --rootpartition /dev/sdb1
 
-    # Option 4: a boot partition device, one or more root partition devices, one or more var partition devices
-    # as #3, plus add --varpartition /dev/sda3 --varpartition /dev/sdd1
+    # Option 4: a boot partition device, one or more root partition devices, one or more ubos partition devices
+    # as #3, plus add --ubospartition /dev/sda3 --ubospartition /dev/sdd1
 
     # Option 5: a directory (invalid)
 
     my $bootpartition;
     my @rootpartitions;
-    my @varpartitions;
+    my @ubospartitions;
     my $directory;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
             'bootpartition=s' => \$bootpartition,
             'rootpartition=s' => \@rootpartitions,
-            'varpartition=s'  => \@varpartitions,
+            'ubospartition=s' => \@ubospartitions,
             'directory=s'     => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
+    }
+
+    if( !$bootpartition && exists( $product->{bootpartition} )) {
+        $bootpartition = $product->{bootpartition};
+    }
+    if( !$rootpartition && exists( $product->{rootpartition} )) {
+        $rootpartition = $product->{rootpartition};
+    }
+    if( !@ubospartitions ) {
+        if( exists( $product->{ubospartitions} )) {
+            @ubospartitions = @{$product->{ubospartitions}};
+        } elsif( exists( $product->{ubospartition} )) {
+            @ubospartitions = ( $product->{ubospartition} );
+        }
+    }
+    if( !$directory && exists( $product->{directory} )) {
+        $directory = $product->{directory};
     }
 
     my $ret = 1; # set to something, so undef can mean error
@@ -104,7 +123,7 @@ sub createDiskLayout {
         error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
         $ret = undef;
 
-    } elsif( $bootpartition || @rootpartitions || @varpartitions ) {
+    } elsif( $bootpartition || @rootpartitions || @ubospartitions ) {
         # Option 3 or 4
         if( $noswap ) {
             error( 'Invalid invocation: --noswap cannot be used if specifying partitions' );
@@ -132,7 +151,7 @@ sub createDiskLayout {
         }
 
         if( $ret ) {
-            foreach my $part ( @rootpartitions, @varpartitions ) {
+            foreach my $part ( @rootpartitions, @ubospartitions ) {
                 if( $haveAlready{$part} ) {
                     error( 'Specified more than once:', $part );
                     $ret = undef;
@@ -146,7 +165,7 @@ sub createDiskLayout {
                 $haveAlready{$part} = 1;
             }
         }
-        if( $ret && @varpartitions == 0 ) {
+        if( $ret && @ubospartitions == 0 ) {
             # Option 3
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
                     {   '/boot' => {
@@ -183,10 +202,10 @@ sub createDiskLayout {
                             'devices' => \@rootpartitions
                              # default partition type
                         },
-                        '/var' => {
+                        '/ubos' => {
                             'index'  => 3,
                             'fs'      => 'btrfs',
-                            'devices' => \@varpartitions
+                            'devices' => \@ubospartitions
                              # default partition type
                         }
                     } );

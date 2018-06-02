@@ -50,11 +50,13 @@ sub new {
 # Create a DiskLayout object that goes with this Installer.
 # $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# $product: the product JSON if a JSON file was given on the command-line
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self  = shift;
-    my $noswap = shift;
-    my $argvp = shift;
+    my $self    = shift;
+    my $noswap  = shift;
+    my $argvp   = shift;
+    my $product = shift;
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -69,10 +71,13 @@ sub createDiskLayout {
     my $parseOk = GetOptionsFromArray(
             $argvp,
             'directory=s' => \$directory );
-
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
+    }
+
+    if( !$directory && exists( $product->{directory} )) {
+        $directory = $product->{directory};
     }
 
     if( $noswap ) {
@@ -102,7 +107,7 @@ sub createDiskLayout {
             error( 'Do not specify more than one image file or device.' );
             $ret = undef;
         } elsif( @$argvp == 0 ) {
-            error( 'Must specify at one image file or device' );
+            error( 'Must specify at least one image file or device' );
             $ret = undef;
         } else {
             my $first = $argvp->[0];

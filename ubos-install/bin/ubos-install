@@ -27,6 +27,7 @@ use UBOS::Utils;
 my $verbose             = 0;
 my $logConfigFile       = undef;
 my $debug               = undef;
+my $productFile         = undef;
 my $list                = 0;
 my $ret                 = 0;
 my $channel             = undef;
@@ -36,9 +37,9 @@ my $deviceclassname     = undef;
 my $target              = undef;
 my $repo                = undef;
 my $depotRoot           = undef;
-my %additionalPackages  = ();
-my %additionalServices  = ();
-my %additionalModules   = ();
+my %addPackages  = ();
+my %addServices  = ();
+my %addModules   = ();
 my @addKernelParameters = ();
 my %addPackageDbs       = ();
 my %removePackageDbs    = ();
@@ -52,6 +53,7 @@ my $parseOk = GetOptions(
         'verbose+'             => \$verbose,
         'logConfig=s'          => \$logConfigFile,
         'debug'                => \$debug,
+        'product=s'            => \$productFile,
         'listdeviceclasses'    => \$list,
         'channel=s'            => \$channel,
         'hostname=s'           => \$hostname,
@@ -60,9 +62,9 @@ my $parseOk = GetOptions(
         'target=s'             => \$target,
         'repository=s'         => \$repo,
         'depotroot=s'          => \$depotRoot,
-        'addpackage=s'         => sub { _addCheck( \@_, \%additionalPackages ); },
-        'addservice=s'         => sub { _addCheck( \@_, \%additionalServices ); },
-        'addmodule=s'          => sub { _addCheck( \@_, \%additionalModules  ); },
+        'addpackage=s'         => sub { _addCheck( \@_, \%addPackages ); },
+        'addservice=s'         => sub { _addCheck( \@_, \%addServices ); },
+        'addmodule=s'          => sub { _addCheck( \@_, \%addModules  ); },
         'addkernelparameter=s' => \@addKernelParameters,
         'addpackagedb=s'       => sub { _addCheck( \@_, \%addPackageDbs,     \%removePackageDbs, \%disablePackageDbs ); },
         'removepackagedb=s'    => sub { _addCheck( \@_, \%removePackageDbs,  \%addPackageDbs,    \%disablePackageDbs ); },
@@ -74,7 +76,7 @@ my $parseOk = GetOptions(
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
 
-if( !$parseOk ) {
+if( !$parseOk || ( $productFile && $list )) {
     synopsisHelpQuit( 0 );
 }
 if( $help ) {
@@ -97,7 +99,21 @@ if ( $< != 0 ) {
 if( $target && ! -d $target ) {
     fatal( 'Target is not a directory:', $target );
 }
+
+my $product;
+if( $productFile ) {
+    $product = UBOS::Utils::readJsonFromFile( $productFile );
+    unless( $product ) {
+        fatal();
+    }
+} else {
+    $product = {};
+}
+
 my $arch = UBOS::Utils::arch();
+if( !$archname && exists( $product->{arch} )) {
+    $archname = $product->{arch};
+}
 if( $archname ) {
     if( $arch ne $archname ) {
         warning( 'Specified arch', $archname, 'is different from the system arch', $arch,
@@ -109,6 +125,9 @@ if( $archname ) {
 }
 
 # Use current device class if not given as parameter
+if( !$deviceclassname && exists( $product->{deviceclass} )) {
+    $deviceclassname = $product->{deviceclass};
+}
 unless( $deviceclassname ) {
     $deviceclassname = UBOS::Utils::deviceClass();
 }
@@ -121,11 +140,22 @@ unless( $installer ) {
     fatal( 'Cannot find installer for arch', $archname, 'deviceclass', $deviceclassname );
 }
 
+if( !$target && exists( $product->{target} )) {
+    $target = $product->{target};
+}
 if( $target ) {
     $installer->setTarget( $target );
 }
+
+if( !$hostname && exists( $product->{hostname} )) {
+    $hostname = $product->{hostname};
+}
 if( $hostname ) {
     $installer->setHostname( $hostname );
+}
+
+if( !$channel && exists( $product->{channel} )) {
+    $channel = $product->{channel};
 }
 if( !$channel && -r '/etc/ubos/channel' ) {
     $channel = UBOS::Utils::slurpFile( '/etc/ubos/channel' );
@@ -135,8 +165,16 @@ if( !$channel && -r '/etc/ubos/channel' ) {
 if( $channel ) {
     $installer->setChannel( $channel );
 }
+
+if( !$repo && exists( $product->{repository} )) {
+    $repo = $product->{repository};
+}
 if( $repo ) {
     $installer->setRepo( $repo );
+}
+
+if( !$depotRoot && exists( $product->{depotroot} )) {
+    $depotRoot = $product->{depotroot};
 }
 if( $depotRoot ) {
     if( $depotRoot =~ m!/$! ) {
@@ -144,26 +182,58 @@ if( $depotRoot ) {
     }
     $installer->setDepotRoot( $depotRoot );
 }
-if( %additionalPackages ) {
-    $installer->addPackages( keys %additionalPackages );
+
+if( exists( $product->{addpackages} )) {
+    map { $addPackages{$_} = 1; } @{$product->{addpackages}};
 }
-if( %additionalServices ) {
-    $installer->addServices( keys %additionalServices );
+if( %addPackages ) {
+    $installer->addPackages( keys %addPackages );
 }
-if( %additionalModules ) {
-    $installer->addPackages( keys %additionalModules );
+
+if( exists( $product->{addservices} )) {
+    map { $addServices{$_} = 1; } @{$product->{addservices}};
+}
+if( %addServices ) {
+    $installer->addServices( keys %addServices );
+}
+
+if( exists( $product->{addmodules} )) {
+    map { $addModules{$_} = 1; } @{$product->{addmodules}};
+}
+if( %addModules ) {
+    $installer->addModules( keys %addModules );
+}
+
+if( exists( $product->{addkernelparameters} )) {
+    @addKernelParameters = ( @{$product->{addkernelparameters}}, @addKernelParameters );
 }
 if( @addKernelParameters ) {
     $installer->addKernelParameters( @addKernelParameters );
 }
+
+if( exists( $product->{addpackagedbs} )) {
+    map { $addPackageDbs{$_} = 1; } @{$product->{addpackagedbs}};
+}
 if( %addPackageDbs ) {
     $installer->addPackageDbs( keys %addPackageDbs );
+}
+
+if( exists( $product->{removepackagedbs} )) {
+    map { $removePackageDbs{$_} = 1; } @{$product->{removepackagedbs}};
 }
 if( %removePackageDbs ) {
     $installer->removePackageDbs( \%removePackageDbs );
 }
+
+if( exists( $product->{disablepackagedbs} )) {
+    map { $disablePackageDbs{$_} = 1; } @{$product->{disablepackagedbs}};
+}
 if( %disablePackageDbs ) {
     $installer->disablePackageDbs( \%disablePackageDbs );
+}
+
+if( !$shepherdKeyFile && exists( $product->{shepherdkeyfile} )) {
+    $shepherdKeyFile = $product->{shepherdkeyfile};
 }
 if( $shepherdKeyFile ) {
     my $shepherdKey = UBOS::Utils::slurpFile( $shepherdKeyFile );
@@ -175,11 +245,18 @@ if( $shepherdKeyFile ) {
     }
     $installer->setShepherdKey( $shepherdKey );
 }
+if( !defined( $checkSignatures ) && exists( $product->{checksignatures} )) {
+    $checkSignatures = $product->{checksignatures};
+}
 $installer->setCheckSignatures( $checkSignatures );
+
+if( !defined( $noswap ) && exists( $product->{noswap} )) {
+    $noswap = $product->{noswap}
+}
 
 trace( 'Using installer', ref( $installer ));
 
-my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV );
+my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV, $product );
 unless( $diskLayout ) {
     synopsisHelpQuit( 0 );
 }
@@ -316,13 +393,22 @@ END
 END
     }
 
-    print "    $0 [ --bootpartition <part> ][ --varpartition <part> ][ --bootloaderdevice <dev>] --rootpartition <part>\n";
+    print "    $0 --rootpartition <part>\n";
     if( $long ) {
         print <<END;
         Install UBOS on root partition <part>. <part> must be a partition such as /dev/sda3.
         If more than one root partition is given, mirror across at least two partitions (RAID1).
         WARNING: THIS WILL OVERWRITE all partitions you specify. ALL YOUR DATA ON THEM WILL BE LOST.
         However, it will not change the partition table, nor will it touch other partitions.
+END
+    }
+    print "    $0 --product <file>\n";
+    if( $long ) {
+        print <<END;
+        Use the information provided in the JSON file <file> to install UBOS.
+        Any optional arguments override the information in the JSON file, except
+        for the --addXXX arguments, which will be added together, and the --removeXXX
+        arguments, which also will be added together.
 END
     }
     print "    $0 --listdeviceclasses\n";
@@ -378,8 +464,8 @@ Optional arguments:
           Install the boot loader on this block device. This is only required for
           some systems (e.g. PC) where boot loaders are written to a special place
           on the hard disk.
-    --varpartition <part>
-          Use a separate /var partition. If more than one var partition is given, mirror
+    --ubospartition <part>
+          Use a separate /ubos partition. If more than one /ubos partition is given, mirror
           across at least two partitions (RAID1).
     --swappartion <part>
           Create a swap partition, or several if more than one is given.
@@ -413,7 +499,7 @@ Optional arguments:
     [--verbose][--logConfFile <log4perlconf>]
     [--channel <channel>][--hostname <hostname>][--repository <path>][--depotroot <url>][--target <path>]
     [--arch <arch>][--deviceclass <class>][--checksignatures <never|optional|required>]
-    [--bootpartition <part>][--bootloaderdevice <dev>][--varpartition <part>][--swappartition <part>]
+    [--bootpartition <part>][--bootloaderdevice <dev>][--ubospartition <part>][--swappartition <part>]
     [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
     [--addpackagedb <name=server>][--removepackagedb <name>][--disablepackagedb <name>][--noswap]
     [--shepherdkeyfile <file>]

@@ -57,11 +57,13 @@ sub new {
 # Create a DiskLayout object that goes with this Installer.
 # $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
+# $product: the product JSON if a JSON file was given on the command-line
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self  = shift;
-    my $noswap = shift;
-    my $argvp = shift;
+    my $self    = shift;
+    my $noswap  = shift;
+    my $argvp   = shift;
+    my $product = shift;
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -73,18 +75,39 @@ sub createDiskLayout {
 
     my $bootloaderdevice;
     my @rootpartitions;
-    my @varpartitions;
+    my @ubospartitions;
     my $directory;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
             'bootloaderdevice=s' => \$bootloaderdevice,
             'rootpartition=s'    => \@rootpartitions,
-            'varpartition=s'     => \@varpartitions,
+            'ubospartition=s'    => \@ubospartitions,
             'directory=s'        => \$directory );
     if( !$parseOk ) {
         error( 'Invalid invocation.' );
         return undef;
+    }
+
+    if( !$bootloaderdevice && exists( $product->{bootloaderdevice} )) {
+        $bootloaderdevice = $product->{bootloaderdevice};
+    }
+    if( !@$rootpartition ) {
+        if( exists( $product->{rootpartitions} )) {
+            @rootpartitions = @{$product->{rootpartitions}};
+        } elsif( exists( $product->{rootpartition} )) {
+            @rootpartitions = ( $product->{rootpartition} );
+        }
+    }
+    if( !@ubospartitions ) {
+        if( exists( $product->{ubospartitions} )) {
+            @ubospartitions = @{$product->{ubospartitions}};
+        } elsif( exists( $product->{ubospartition} )) {
+            @ubospartitions = ( $product->{ubospartition} );
+        }
+    }
+    if( !$directory && exists( $product->{directory} )) {
+        $directory = $product->{directory};
     }
 
     my $ret = 1; # set to something, so undef can mean error
