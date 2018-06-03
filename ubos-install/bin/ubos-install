@@ -27,7 +27,7 @@ use UBOS::Utils;
 my $verbose             = 0;
 my $logConfigFile       = undef;
 my $debug               = undef;
-my $productFile         = undef;
+my $configFile          = undef;
 my $list                = 0;
 my $ret                 = 0;
 my $channel             = undef;
@@ -53,7 +53,7 @@ my $parseOk = GetOptions(
         'verbose+'             => \$verbose,
         'logConfig=s'          => \$logConfigFile,
         'debug'                => \$debug,
-        'product=s'            => \$productFile,
+        'config=s'             => \$configFile,
         'listdeviceclasses'    => \$list,
         'channel=s'            => \$channel,
         'hostname=s'           => \$hostname,
@@ -76,7 +76,7 @@ my $parseOk = GetOptions(
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
 
-if( !$parseOk || ( $productFile && $list )) {
+if( !$parseOk || ( $configFile && $list )) {
     synopsisHelpQuit( 0 );
 }
 if( $help ) {
@@ -100,19 +100,19 @@ if( $target && ! -d $target ) {
     fatal( 'Target is not a directory:', $target );
 }
 
-my $product;
-if( $productFile ) {
-    $product = UBOS::Utils::readJsonFromFile( $productFile );
-    unless( $product ) {
+my $config;
+if( $configFile ) {
+    $config = UBOS::Utils::readJsonFromFile( $configFile );
+    unless( $config ) {
         fatal();
     }
 } else {
-    $product = {};
+    $config = {};
 }
 
 my $arch = UBOS::Utils::arch();
-if( !$archname && exists( $product->{arch} )) {
-    $archname = $product->{arch};
+if( !$archname && exists( $config->{arch} )) {
+    $archname = $config->{arch};
 }
 if( $archname ) {
     if( $arch ne $archname ) {
@@ -125,8 +125,8 @@ if( $archname ) {
 }
 
 # Use current device class if not given as parameter
-if( !$deviceclassname && exists( $product->{deviceclass} )) {
-    $deviceclassname = $product->{deviceclass};
+if( !$deviceclassname && exists( $config->{deviceclass} )) {
+    $deviceclassname = $config->{deviceclass};
 }
 unless( $deviceclassname ) {
     $deviceclassname = UBOS::Utils::deviceClass();
@@ -140,22 +140,22 @@ unless( $installer ) {
     fatal( 'Cannot find installer for arch', $archname, 'deviceclass', $deviceclassname );
 }
 
-if( !$target && exists( $product->{target} )) {
-    $target = $product->{target};
+if( !$target && exists( $config->{target} )) {
+    $target = $config->{target};
 }
 if( $target ) {
     $installer->setTarget( $target );
 }
 
-if( !$hostname && exists( $product->{hostname} )) {
-    $hostname = $product->{hostname};
+if( !$hostname && exists( $config->{hostname} )) {
+    $hostname = $config->{hostname};
 }
 if( $hostname ) {
     $installer->setHostname( $hostname );
 }
 
-if( !$channel && exists( $product->{channel} )) {
-    $channel = $product->{channel};
+if( !$channel && exists( $config->{channel} )) {
+    $channel = $config->{channel};
 }
 if( !$channel && -r '/etc/ubos/channel' ) {
     $channel = UBOS::Utils::slurpFile( '/etc/ubos/channel' );
@@ -166,15 +166,15 @@ if( $channel ) {
     $installer->setChannel( $channel );
 }
 
-if( !$repo && exists( $product->{repository} )) {
-    $repo = $product->{repository};
+if( !$repo && exists( $config->{repository} )) {
+    $repo = $config->{repository};
 }
 if( $repo ) {
     $installer->setRepo( $repo );
 }
 
-if( !$depotRoot && exists( $product->{depotroot} )) {
-    $depotRoot = $product->{depotroot};
+if( !$depotRoot && exists( $config->{depotroot} )) {
+    $depotRoot = $config->{depotroot};
 }
 if( $depotRoot ) {
     if( $depotRoot =~ m!/$! ) {
@@ -183,57 +183,57 @@ if( $depotRoot ) {
     $installer->setDepotRoot( $depotRoot );
 }
 
-if( exists( $product->{addpackages} )) {
-    map { $addPackages{$_} = 1; } @{$product->{addpackages}};
+if( exists( $config->{addpackages} )) {
+    map { $addPackages{$_} = 1; } @{$config->{addpackages}};
 }
 if( %addPackages ) {
     $installer->addPackages( keys %addPackages );
 }
 
-if( exists( $product->{addservices} )) {
-    map { $addServices{$_} = 1; } @{$product->{addservices}};
+if( exists( $config->{addservices} )) {
+    map { $addServices{$_} = 1; } @{$config->{addservices}};
 }
 if( %addServices ) {
     $installer->addServices( keys %addServices );
 }
 
-if( exists( $product->{addmodules} )) {
-    map { $addModules{$_} = 1; } @{$product->{addmodules}};
+if( exists( $config->{addmodules} )) {
+    map { $addModules{$_} = 1; } @{$config->{addmodules}};
 }
 if( %addModules ) {
     $installer->addModules( keys %addModules );
 }
 
-if( exists( $product->{addkernelparameters} )) {
-    @addKernelParameters = ( @{$product->{addkernelparameters}}, @addKernelParameters );
+if( exists( $config->{addkernelparameters} )) {
+    @addKernelParameters = ( @{$config->{addkernelparameters}}, @addKernelParameters );
 }
 if( @addKernelParameters ) {
     $installer->addKernelParameters( @addKernelParameters );
 }
 
-if( exists( $product->{addpackagedbs} )) {
-    map { $addPackageDbs{$_} = 1; } @{$product->{addpackagedbs}};
+if( exists( $config->{addpackagedbs} )) {
+    map { $addPackageDbs{$_} = 1; } @{$config->{addpackagedbs}};
 }
 if( %addPackageDbs ) {
     $installer->addPackageDbs( keys %addPackageDbs );
 }
 
-if( exists( $product->{removepackagedbs} )) {
-    map { $removePackageDbs{$_} = 1; } @{$product->{removepackagedbs}};
+if( exists( $config->{removepackagedbs} )) {
+    map { $removePackageDbs{$_} = 1; } @{$config->{removepackagedbs}};
 }
 if( %removePackageDbs ) {
     $installer->removePackageDbs( \%removePackageDbs );
 }
 
-if( exists( $product->{disablepackagedbs} )) {
-    map { $disablePackageDbs{$_} = 1; } @{$product->{disablepackagedbs}};
+if( exists( $config->{disablepackagedbs} )) {
+    map { $disablePackageDbs{$_} = 1; } @{$config->{disablepackagedbs}};
 }
 if( %disablePackageDbs ) {
     $installer->disablePackageDbs( \%disablePackageDbs );
 }
 
-if( !$shepherdKeyFile && exists( $product->{shepherdkeyfile} )) {
-    $shepherdKeyFile = $product->{shepherdkeyfile};
+if( !$shepherdKeyFile && exists( $config->{shepherdkeyfile} )) {
+    $shepherdKeyFile = $config->{shepherdkeyfile};
 }
 if( $shepherdKeyFile ) {
     my $shepherdKey = UBOS::Utils::slurpFile( $shepherdKeyFile );
@@ -245,18 +245,18 @@ if( $shepherdKeyFile ) {
     }
     $installer->setShepherdKey( $shepherdKey );
 }
-if( !defined( $checkSignatures ) && exists( $product->{checksignatures} )) {
-    $checkSignatures = $product->{checksignatures};
+if( !defined( $checkSignatures ) && exists( $config->{checksignatures} )) {
+    $checkSignatures = $config->{checksignatures};
 }
 $installer->setCheckSignatures( $checkSignatures );
 
-if( !defined( $noswap ) && exists( $product->{noswap} )) {
-    $noswap = $product->{noswap}
+if( !defined( $noswap ) && exists( $config->{noswap} )) {
+    $noswap = $config->{noswap}
 }
 
 trace( 'Using installer', ref( $installer ));
 
-my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV, $product );
+my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV, $config );
 unless( $diskLayout ) {
     synopsisHelpQuit( 0 );
 }
@@ -402,7 +402,7 @@ END
         However, it will not change the partition table, nor will it touch other partitions.
 END
     }
-    print "    $0 --product <file>\n";
+    print "    $0 --config <file>\n";
     if( $long ) {
         print <<END;
         Use the information provided in the JSON file <file> to install UBOS.

@@ -58,13 +58,13 @@ sub new {
 # Create a DiskLayout object that goes with this Installer.
 # $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
-# $product: the product JSON if a JSON file was given on the command-line
+# $config: the config JSON if a JSON file was given on the command-line
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self    = shift;
-    my $noswap  = shift;
-    my $argvp   = shift;
-    my $product = shift;
+    my $self   = shift;
+    my $noswap = shift;
+    my $argvp  = shift;
+    my $config = shift;
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -73,10 +73,10 @@ sub createDiskLayout {
     # ubos-install ... /dev/somedevice
 
     if( !@$argvp ) {
-        if( exists( $product->{devices} )) {
-            @$argvp = $product->{devices};
-        } elsif( exists( $product->{device} )) {
-            @$argvp = ( $product->{device} );
+        if( exists( $config->{devices} )) {
+            @$argvp = $config->{devices};
+        } elsif( exists( $config->{device} )) {
+            @$argvp = ( $config->{device} );
         }
     }
 

@@ -62,13 +62,13 @@ sub new {
 # Create a DiskLayout object that goes with this Installer.
 # $noswap: if true, do not create a swap partition
 # $argvp: remaining command-line arguments
-# $product: the product JSON if a JSON file was given on the command-line
+# $config: the config JSON if a JSON file was given on the command-line
 # return: the DiskLayout object
 sub createDiskLayout {
-    my $self    = shift;
-    my $noswap  = shift;
-    my $argvp   = shift;
-    my $product = shift;
+    my $self   = shift;
+    my $noswap = shift;
+    my $argvp  = shift;
+    my $config = shift;
 
     # Option 1: a single image file
     # ubos-install ... image.img
@@ -100,21 +100,21 @@ sub createDiskLayout {
         return undef;
     }
 
-    if( !$bootpartition && exists( $product->{bootpartition} )) {
-        $bootpartition = $product->{bootpartition};
+    if( !$bootpartition && exists( $config->{bootpartition} )) {
+        $bootpartition = $config->{bootpartition};
     }
-    if( !$rootpartition && exists( $product->{rootpartition} )) {
-        $rootpartition = $product->{rootpartition};
+    if( !$rootpartition && exists( $config->{rootpartition} )) {
+        $rootpartition = $config->{rootpartition};
     }
     if( !@ubospartitions ) {
-        if( exists( $product->{ubospartitions} )) {
-            @ubospartitions = @{$product->{ubospartitions}};
-        } elsif( exists( $product->{ubospartition} )) {
-            @ubospartitions = ( $product->{ubospartition} );
+        if( exists( $config->{ubospartitions} )) {
+            @ubospartitions = @{$config->{ubospartitions}};
+        } elsif( exists( $config->{ubospartition} )) {
+            @ubospartitions = ( $config->{ubospartition} );
         }
     }
-    if( !$directory && exists( $product->{directory} )) {
-        $directory = $product->{directory};
+    if( !$directory && exists( $config->{directory} )) {
+        $directory = $config->{directory};
     }
 
     my $ret = 1; # set to something, so undef can mean error
