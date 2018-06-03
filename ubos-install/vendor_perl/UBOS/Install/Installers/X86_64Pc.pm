@@ -135,7 +135,7 @@ sub createDiskLayout {
     }
     if( !@$argvp ) {
         if( exists( $config->{devices} )) {
-            @$argvp = $config->{devices};
+            @$argvp = @{$config->{devices}};
         } elsif( exists( $config->{device} )) {
             @$argvp = ( $config->{device} );
         }
