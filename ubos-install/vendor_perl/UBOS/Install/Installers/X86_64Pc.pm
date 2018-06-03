@@ -133,8 +133,12 @@ sub createDiskLayout {
     if( !$directory && exists( $product->{directory} )) {
         $directory = $product->{directory};
     }
-    if( !@$argvp && exists( $product->{devices} )) {
-        @$argvp = $product->{devices};
+    if( !@$argvp ) {
+        if( exists( $product->{devices} )) {
+            @$argvp = $product->{devices};
+        } elsif( exists( $product->{device} )) {
+            @$argvp = ( $product->{device} );
+        }
     }
 
     my $ret = 1; # set to something, so undef can mean error

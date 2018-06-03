@@ -72,8 +72,12 @@ sub createDiskLayout {
     # Option 2: a disk device
     # ubos-install ... /dev/somedevice
 
-    if( !@$argvp && exists( $product->{devices} )) {
-        @$argvp = $product->{devices};
+    if( !@$argvp ) {
+        if( exists( $product->{devices} )) {
+            @$argvp = $product->{devices};
+        } elsif( exists( $product->{device} )) {
+            @$argvp = ( $product->{device} );
+        }
     }
 
     my $ret = 1; # set to something, so undef can mean error
