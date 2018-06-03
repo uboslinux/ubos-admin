@@ -103,8 +103,12 @@ sub createDiskLayout {
     if( !$bootpartition && exists( $config->{bootpartition} )) {
         $bootpartition = $config->{bootpartition};
     }
-    if( !$rootpartition && exists( $config->{rootpartition} )) {
-        $rootpartition = $config->{rootpartition};
+    if( !@rootpartition ) {
+        if( exists( $config->{rootpartitions} )) {
+            @rootpartitions = @{$config->{rootpartition}};
+        if( exists( $config->{rootpartition} )) {
+            @rootpartitions = ( $config->{rootpartition} );
+        }
     }
     if( !@ubospartitions ) {
         if( exists( $config->{ubospartitions} )) {
