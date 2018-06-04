@@ -85,8 +85,9 @@
             "dir"         : "${tomcat8.sitesdir}/${site.siteid}/${appconfig.appconfigid}",
             "contextfile" : "${site.tomcat8.contextdir}/${appconfig.contextnoslashorroot}.xml"
         },
-        "datadir"     : "${package.datadir}/${appconfig.appconfigid}",
-        "cachedir"    : "${host.cachedir}/${appconfig.appconfigid}",
-        "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"
+        "datadir"          : "${package.datadir}/${appconfig.appconfigid}",
+        "cachedir"         : "${host.cachedir}/${appconfig.appconfigid}",
+        "cronjobfile"      : "/etc/cron.d/50-${appconfig.appconfigid}",
+        "appconfigparsdir" : "${host.appconfigparsdir}/${appconfig.appconfigid}"
     }
 }
