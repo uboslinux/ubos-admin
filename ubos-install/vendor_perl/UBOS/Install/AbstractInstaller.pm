@@ -560,7 +560,7 @@ sub installPackages {
     }
 
     my $cmd = "pacman"
-            . " -r '$target'"
+            . " --sysroot '$target'"
             . " -Sy"
             . " '--config=$pacmanConfigFile'"
             . " --cachedir '$target/var/cache/pacman/pkg'"

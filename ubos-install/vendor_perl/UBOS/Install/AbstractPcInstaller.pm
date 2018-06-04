@@ -90,7 +90,7 @@ sub installGrub {
     if( $bootLoaderDevice ) {
         # install grub package
         my $cmd = "pacman"
-                . " -r '$target'"
+                . " --sysroot '$target'"
                 . " -Sy"
                 . " '--config=$pacmanConfigFile'"
                 . " --cachedir '$target/var/cache/pacman/pkg'"
