@@ -24,6 +24,9 @@ MSG
 ##
 pre_install() {
     ensureChattr
+
+    # Fix file leftover from package js52
+    [[ -e /usr/lib/libmozjs-52.so.0 ]] && ! pacman -Qo /usr/lib/libmozjs-52.so.0 > /dev/null 2>&1 && rm -f /usr/lib/libmozjs-52.so.0
 }
 
 post_install() {
