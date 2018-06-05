@@ -10,6 +10,7 @@
         "readstaffonboot"           : true,
         "deploysitetemplatesonboot" : true,
         "snapshotonupgrade"         : true,
+        "snappercleanupalgorithm"   : "timeline",
         "tmpdir"                    : "/tmp",
         "homeshepherd"              : "/var/shepherd"
     },

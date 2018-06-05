@@ -804,9 +804,9 @@ sub ensureSnapperConfig {
 
             unless( -e "/etc/snapper/configs/$configName" ) {
                 my $err;
-                debugAndSuspend( 'Execute snapper -c', $configName, 'create-config' );
-                if( myexec( "snapper -c '$configName' create-config -t ubos-default '$target'", undef, \$err, \$err )) {
-                    error( 'snapper (create-config) failed of config', $configName, $target, $err );
+                debugAndSuspend( 'Execute snapper --config', $configName, 'create-config' );
+                if( myexec( "snapper --config '$configName' create-config --template ubos-default '$target'", undef, \$err, \$err )) {
+                    error( 'snapper (create-config) failed for config', $configName, $target, $err );
                     ++$errors;
                 }
             }
@@ -842,6 +842,8 @@ sub preSnapshot {
     $out =~ s!\s+$!!;
 
     if( $out ) {
+        my $cleanupAlgorithm = vars()->getResolve( 'host.snappercleanupalgorithm', 'timeline' );
+
         my $findmntJson = UBOS::Utils::readJsonFromString( $out );
         my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
         my $ret;
@@ -854,9 +856,13 @@ sub preSnapshot {
             }
 
             if( -e "$target/etc/snapper/configs/$configName" ) {
+                my $cmd  = "snapper --config '$configName'"
+                $cmd    .= " create --type pre --print-number";
+                $cmd    .= " --cleanup-algorithm '$cleanupAlgorithm'";
+
                 my $snapNumber;
                 my $err;
-                if( myexec( "snapper -c '$configName' create --type pre --print-number", undef, \$snapNumber, \$err )) {
+                if( myexec( $cmd, undef, \$snapNumber, \$err )) {
                     error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
                 } else {
                     $snapNumber =~ s!^\s+!!;
@@ -879,6 +885,8 @@ sub preSnapshot {
 sub postSnapshot {
     my $preInfo = shift;
 
+    my $cleanupAlgorithm = vars()->getResolve( 'host.snappercleanupalgorithm', 'timeline' );
+
     foreach my $item ( split ",", $preInfo ) {
         if( $item =~ m!^(.+)=(\d+)$! ) {
             my $target     = $1;
@@ -891,8 +899,12 @@ sub postSnapshot {
             }
 
             if( -e "$target/etc/snapper/configs/$configName" ) {
+                my $cmd  = "snapper --config '$configName'"
+                $cmd    .= " create --type post --pre-number '$snapNumber'"
+                $cmd    .= " --cleanup-algorithm '$cleanupAlgorithm'";
+
                 my $out;
-                if( myexec( "snapper -c '$configName' create --type post --pre-number '$snapNumber'", undef, \$out, \$out )) {
+                if( myexec( $cmd, undef, \$out, \$out )) {
                     error( 'snapper (post) failed of config', $configName, ', number', $snapNumber, $out );
                 }
             }
