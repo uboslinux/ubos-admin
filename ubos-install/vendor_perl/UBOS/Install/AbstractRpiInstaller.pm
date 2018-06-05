@@ -106,7 +106,7 @@ sub createDiskLayout {
     if( !@rootpartitions ) {
         if( exists( $config->{rootpartitions} )) {
             @rootpartitions = @{$config->{rootpartitions}};
-        if( exists( $config->{rootpartition} )) {
+        } elsif( exists( $config->{rootpartition} )) {
             @rootpartitions = ( $config->{rootpartition} );
         }
     }
