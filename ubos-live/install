@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+#
+# Run during package install etc.
+#
+# Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
+#
+
+post_upgrade() {
+    perl -MUBOS::Live::UbosLive -e 'UBOS::Live::UbosLive::postUpgrade();'
+}
+

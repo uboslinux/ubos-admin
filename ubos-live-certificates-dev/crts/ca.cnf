@@ -1,0 +1,34 @@
+#
+# OpenSSL configuration file
+#
+
+[ ca ]
+
+certificate   = ca/ca.crt
+crl           = ca/ca.crl
+private_key   = ca/ca.key
+
+default_days     = 3650
+default_crl_days = 30
+default_md       = sha256
+preserve         = no
+
+policy = policy_commonNameOnly
+
+[ policy_commonNameOnly ]
+
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+distinguished_name = req_distinguished_name
+
+[ req_distinguished_name ]
+
+commonName     = Common Name (CN: must be domain name)
+commonName_max = 64

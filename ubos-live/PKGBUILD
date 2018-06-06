@@ -1,0 +1,47 @@
+developer=http://indiecomputing.com/
+url=${developer}
+maintainer=http://indiecomputing.com/
+pkgname=$(basename $(pwd))
+pkgver=0.10
+pkgrel=1
+pkgdesc="Functionality that allows UBOS to interact with UBOS Live"
+arch=('any')
+license=("proprietary")
+options=('!strip')
+depends=(
+    'coreutils'
+    'openvpn'
+    'ubos-admin'
+    'ubos-live-certificates'
+)
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
+install=install
+
+package() {
+# Config
+    mkdir -p -m755 ${pkgdir}/etc/openvpn
+
+# ubos-live user
+    install -D -m644 ${startdir}/sysusers.d/ubos-live.conf -t ${pkgdir}/usr/lib/sysusers.d/
+    install -D -m644 ${startdir}/tmpfiles.d/ubos-live.conf -t ${pkgdir}/usr/lib/tmpfiles.d/
+    install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
+
+# Put obtained certificate(s) here
+    mkdir -p -m755 ${pkgdir}/etc/ubos-live
+
+# Initialize on boot with staff
+    install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
+
+# Code
+    install -D -m755 ${startdir}/vendor_perl/UBOS/Commands/*.pm            -t ${pkgdir}${_vendor_perl}/UBOS/Commands/
+    install -D -m755 ${startdir}/vendor_perl/UBOS/Live/*.pm                -t ${pkgdir}${_vendor_perl}/UBOS/Live/
+    install -D -m755 ${startdir}/vendor_perl/UBOS/Live/StaffCallbacks/*.pm -t ${pkgdir}${_vendor_perl}/UBOS/Live/StaffCallbacks/
+
+# Insert inlined images
+    perl -p -i \
+        -e "s!UBOS_STAFF_IMAGE_BASE64!$(base64 ${startdir}/images/ubos-staff.png | tr -d '\n')!" \
+        ${pkgdir}${_vendor_perl}/UBOS/Live/UbosLiveHtmlConstants.pm
+    perl -p -i \
+        -e "s!HELP_IMAGE_BASE64!$(base64 ${startdir}/images/help.png | tr -d '\n')!" \
+        ${pkgdir}${_vendor_perl}/UBOS/Live/UbosLiveHtmlConstants.pm
+}

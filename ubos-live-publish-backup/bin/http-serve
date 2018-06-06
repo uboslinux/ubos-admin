@@ -1,0 +1,101 @@
+#!/usr/bin/perl
+#
+# Publishes a backup file for HTTP access
+#
+# This file is part of ubos-live-publish-backup.
+# (C) 2012 and later Indie Computing Corp.
+#
+# Confidential and proprietary.
+#
+
+use strict;
+use warnings;
+
+use CGI;
+use UBOS::Logging;
+use UBOS::Utils;
+
+my $q             = CGI->new();
+my $backupDir     = '/ubos/backups/publish';
+my $requestMethod = $ENV{'REQUEST_METHOD'};
+my $requestUri    = $ENV{'REQUEST_URI'};
+my $context       = $ENV{'CONTEXT'};
+
+unless( -d $backupDir ) {
+    invalidInvocation();
+}
+
+if( !$requestMethod || !$requestUri ) {
+    invalidInvocation();
+}
+
+unless( 'GET' eq $requestMethod ) {
+    invalidInvocation();
+}
+
+unless( $requestUri =~ m!/^$context/([^\?/]+)\.ubos-backup\?t=(.*)$! ) {
+    invalidInvocation();
+}
+my $fileName = $1;
+my $token    = $2;
+
+my $backupFileName  = "$backupDir/$fileName.ubos-backup";
+my $tokenFileName   = "$backupDir/$fileName.token";
+my $expiresFileName = "$backupDir/$fileName.expires";
+
+unless( -r $backupFileName ) {
+    invalidInvocation();
+}
+unless( -r $tokenFileName ) {
+    invalidInvocation();
+}
+
+if( -r $expiresFileName ) {
+    my $foundExpires = slurp( $expiresFileName );
+    $foundExpires =~ s/^\s+//;
+    $foundExpires =~ s/\s+$//;
+
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime( time() );
+    my $now = sprintf( "%04d%02d%02d-%02d%02d%02d",  $year+1900, $mon+1, $mday, $hour, $min, $sec );
+
+    if( ( $foundExpires cmp $now ) < 0 ) { # parentheses!
+        deleteBackup();
+        invalidInvocation();
+    }
+}
+
+my $foundToken = slurp( $tokenFileName );
+$foundToken =~ s/^\s+//;
+$foundToken =~ s/\s+$//;
+
+unless( $foundToken eq $token ) {
+    invalidInvocation();
+}
+
+print $q->header( 'application/octet-stream' );
+my $F;
+open $F, "<$backupFileName";
+binmode $F;
+
+my $count;
+my $buf;
+while(( $count = sysread( $F, $buf, 4096 ) > 0 ) {
+    print $buf;
+}
+close $F;
+
+deleteBackup();
+
+exit 0;
+
+sub invalidInvocation {
+    print $q->redirect( "$context/404" );
+    exit 0;
+}
+
+##
+sub deleteBackup {
+    UBOS::Utils::deleteFile( $backupFileName, $tokenFileName, $expiresFileName );
+}
+
+1;

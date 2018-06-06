@@ -1,0 +1,29 @@
+developer=http://indiecomputing.com/
+url=${developer}
+maintainer=${developer}
+pkgname=$(basename $(pwd))
+pkgver=0.2
+pkgrel=1
+pkgdesc="Development certificates for UBOS Live"
+arch=('any')
+license=("proprietary")
+options=('!strip')
+_realpackage=ubos-live-certificates
+conflicts=(${_realpackage})
+provides=(${_realpackage})
+
+# Be explicit so we don't miss one
+_crts=(
+    's1-ca-dev.live.ubos.net.crt'
+)
+
+package() {
+    mkdir -p -m755 ${pkgdir}/etc/${_realpackage}
+
+    touch ${pkgdir}/etc/${_realpackage}/s-cas.live.ubos.net.crt
+    for c in ${_crts[*]}; do
+        install -m0644 ${startdir}/crts/$c -t ${pkgdir}/etc/${_realpackage}/
+        cat ${startdir}/crts/$c >> ${pkgdir}/etc/${_realpackage}/s-cas.live.ubos.net.crt
+    done
+    chmod 0644 ${pkgdir}/etc/${_realpackage}/s-cas.live.ubos.net.crt
+}

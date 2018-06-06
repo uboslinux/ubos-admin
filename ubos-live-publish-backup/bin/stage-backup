@@ -1,0 +1,114 @@
+#!/usr/bin/perl
+#
+# Takes a backup file, and stages it in the right place to be served with
+# http-serve in this package.
+#
+# This file is part of ubos-live-publish-backup.
+# (C) 2012 and later Indie Computing Corp.
+#
+# Confidential and proprietary.
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Time::Piece;
+use UBOS::Logging;
+use UBOS::Utils;
+
+my $backupDir = '/ubos/backups/publish';
+my $verbose       = 0;
+my $logConfigFile = undef;
+my $debug         = undef;
+my $expires       = undef;
+my $move          = 0;
+my $print         = 0;
+my $help          = 0;
+
+my $parseOk = GetOptions(
+    'verbose+'        => \$verbose,
+    'logConfig=s'     => \$logConfigFile,
+    'debug'           => \$debug,
+    'expires=s'       => \$expires,
+    'move'            => \$move,
+    'print'           => \$print,
+    'help'            => \$help );
+
+if( $help || !@ARGV ) {
+    synopsisHelpQuit();
+}
+
+unless( -d $backupDir ) {
+    UBOS::Utils::mkdirDashP( $backupDir, 0700, 'httpd', 'httpd' );
+}
+
+if( $expires ) {
+    if( $expires =~ m!^\+(\d+)$! ) {
+        # relative time
+        $expires = time() + $1;
+
+        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime( $expires );
+        $expires = sprintf( "%04d%02d%02d-%02d%02d%02d",  $year+1900, $mon+1, $mday, $hour, $min, $sec );
+
+    } else {
+        my $parsedExpires = Time::Piece->strptime( $expires, "%Y%m%d-%H%M%S" );
+        unless( $parsedExpires ) {
+            fatal( 'Cannot parse expires date:', $expires );
+        }
+        $expires = $parsedExpires->strftime( "%Y%m%d-%H%M%S" );
+    }
+}
+
+foreach my $backupFile ( @ARGV ) {
+    if( -r $backupFile ) {
+        my $localBaseFile = $backupFile;
+        $localBaseFile =~ s!.*/!!; # greedy
+        if( $localBaseFile =~ m!(.*)\.ubos-backup$! ) {
+            $localBaseFile = $1;
+
+            my $destinationFile = "$backupDir/$localBaseFile.ubos-backup";
+
+            if( -e $destinationFile ) {
+                error( 'Staged file exists already, skipping:', $destinationFile );
+            } else {
+                if( $move ) {
+                    UBOS::Utils::myexec( "mv '$backupFile' '$destinationFile" );
+                } else {
+                    UBOS::Utils::myexec( "cp '$backupFile' '$destinationFile" );
+                }
+                my $tokenFile   = "$backupDir/$localBaseFile.token";
+                my $expiresFile = "$backupDir/$localBaseFile.expires";
+
+                my $token = UBOS::Utils::randomHex(64);
+
+                UBOS::Utils::saveFile( $tokenFile, $token );
+                if( $expires ) {
+                    UBOS::Utils::saveFile( $expiresFile, $expires );
+                    if( $print ) {
+                        print "$localBaseFile.ubos-backup $token $expires\n";
+                    }
+                } else {
+                    if( $print ) {
+                        print "$localBaseFile.ubos-backup $token\n";
+                    }
+                }
+            }
+        } else {
+            error( 'Backup files must end with extension .ubos-backup, skipping:', $backupFile );
+        }
+    } else {
+        error( 'Cannot read, skipping:', $backupFile );
+    }
+}
+
+#####
+sub synopsisHelpQuit {
+        print <<END;
+Synopsis:
+    stage-backup [--verbose | --logConfig <file>] [--debug] [--expires <timestamp>] [--move] [--print]  <backupfile> ...
+    stage-backup --help
+END
+}
+
+1;

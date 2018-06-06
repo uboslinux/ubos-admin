@@ -1,0 +1,23 @@
+developer="http://indiecomputing.com/"
+url="http://ubos.net/"
+maintainer=${developer}
+pkgname=$(basename $(pwd))
+pkgver=0.11
+pkgrel=1
+pkgdesc="Publishes backup files"
+arch=('any')
+license=("proprietary")
+options=('!strip')
+
+package() {
+# Manifest
+    install -D -m0644 ${startdir}/ubos-manifest.json ${pkgdir}/ubos/lib/ubos/manifests/${pkgname}.json
+
+# Icons
+#    install -D -m0644 ${startdir}/appicons/{72x72,144x144}.png -t ${pkgdir}/ubos/http/_appicons/${pkgname}/
+#    install -D -m0644 ${startdir}/appicons/license.txt         -t ${pkgdir}/ubos/http/_appicons/${pkgname}/
+
+# Code
+    install -D -m0755 ${startdir}/bin/*              -t ${pkgdir}/ubos/share/${pkgname}/bin/
+    install -D -m0644 ${startdir}/tmpl/htaccess.tmpl -t ${pkgdir}/ubos/share/${pkgname}/tmpl/
+}
