@@ -92,7 +92,7 @@ sub createDiskLayout {
     if( !$bootloaderdevice && exists( $config->{bootloaderdevice} )) {
         $bootloaderdevice = $config->{bootloaderdevice};
     }
-    if( !@$rootpartition ) {
+    if( !@rootpartitions ) {
         if( exists( $config->{rootpartitions} )) {
             @rootpartitions = @{$config->{rootpartitions}};
         } elsif( exists( $config->{rootpartition} )) {
