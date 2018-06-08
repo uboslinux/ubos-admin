@@ -781,19 +781,40 @@ sub packageVersion {
 # return: number of errors
 sub ensureSnapperConfig {
 
-    # Determine the btrfs filesystems
-    my $out;
-    if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
-        error( "findmnt failed:", $out );
-        return 1;
+    my @targets = _findBtrfsFilesystems();
+
+    my $errors = 0;
+    foreach my $target ( @targets ) {
+        my $configName = $target;
+        $configName =~ s!/!!g;
+        unless( $configName ) {
+            $configName = 'root';
+        }
+
+        unless( -e "/etc/snapper/configs/$configName" ) {
+            my $err;
+            debugAndSuspend( 'Execute snapper --config', $configName, 'create-config' );
+            if( myexec( "snapper --config '$configName' create-config --template ubos-default '$target'", undef, \$err, \$err )) {
+                error( 'snapper (create-config) failed for config', $configName, $target, $err );
+                ++$errors;
+            }
+        }
     }
+
+    my %snapperquotaon = ();
+    map { $snapperquotaon{$_} = $_; } split( /[,\s]+/, vars()->getResolve( 'host.snapperquotaon', 'none,xen' ));
+    # By default, we create snapshots on real hardware and on Xen (Amazon)
+
+    my $out;
+    my $err;
+    debugAndSuspend( 'Detect virtualization' );
+    myexec( 'systemd-detect-virt', undef, \$out, \$err ); # ignore status code
+
     $out =~ s!^\s+!!;
     $out =~ s!\s+$!!;
 
-    my $errors = 0;
-    if( $out ) {
-        my $findmntJson = UBOS::Utils::readJsonFromString( $out );
-        my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
+    if( $snapperquotaon{$out} ) {
+        debugAndSuspend( 'Execute snapper setup-quota' );
 
         foreach my $target ( @targets ) {
             my $configName = $target;
@@ -803,27 +824,16 @@ sub ensureSnapperConfig {
             }
 
             unless( -e "/etc/snapper/configs/$configName" ) {
-                my $err;
-                debugAndSuspend( 'Execute snapper --config', $configName, 'create-config' );
-                if( myexec( "snapper --config '$configName' create-config --template ubos-default '$target'", undef, \$err, \$err )) {
-                    error( 'snapper (create-config) failed for config', $configName, $target, $err );
+                if( myexec( "snapper --config '$configName' setup-quota", undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
+                    error( "snapper --config '$configName' setup-quota failed:", $err );
                     ++$errors;
                 }
             }
         }
-
-        my $err;
-        debugAndSuspend( 'Detect virtualization' );
-        if( myexec( 'systemd-detect-virt', undef, \$err, \$err ) != 0 ) {
-            # Don't do this in a container
-
-            debugAndSuspend( 'Execute snapper setup-quota' );
-            if( myexec( 'snapper setup-quota', undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
-                error( 'snapper setup-quota failed:', $err );
-                ++$errors;
-            }
-        }
+    } else {
+        trace( 'Skipping snapper setup-quota:', $out );
     }
+
     return $errors;
 }
 
@@ -832,51 +842,40 @@ sub ensureSnapperConfig {
 # return: string to be passed into postSnapshot to perform the corresponding "post" snapshot
 sub preSnapshot {
 
-    # Determine the btrfs filesystems
-    my $out;
-    if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
-        error( "findmnt failed:", $out );
+    my @targets = _findBtrfsFilesystems();
+    my $ret     = '';
+    my $cleanupAlgorithm = vars()->getResolve( 'host.snappercleanupalgorithm', 'timeline' );
+
+    my $sep = '';
+    foreach my $target ( @targets ) {
+        my $configName = $target;
+        $configName =~ s!/!!g;
+        unless( $configName ) {
+            $configName = 'root';
+        }
+
+        if( -e "$target/etc/snapper/configs/$configName" ) {
+            my $cmd  = "snapper --config '$configName'";
+            $cmd    .= " create --type pre --print-number";
+            $cmd    .= " --cleanup-algorithm '$cleanupAlgorithm'";
+
+            my $snapNumber;
+            my $err;
+            if( myexec( $cmd, undef, \$snapNumber, \$err )) {
+                error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
+            } else {
+                $snapNumber =~ s!^\s+!!;
+                $snapNumber =~ s!\s+$!!;
+                $ret .= "$sep$target=$snapNumber";
+                $sep = ',';
+            }
+        }
+    }
+    if( $ret ) {
+        return $ret;
+    } else {
         return undef;
     }
-    $out =~ s!^\s+!!;
-    $out =~ s!\s+$!!;
-
-    if( $out ) {
-        my $cleanupAlgorithm = vars()->getResolve( 'host.snappercleanupalgorithm', 'timeline' );
-
-        my $findmntJson = UBOS::Utils::readJsonFromString( $out );
-        my @targets     = map { $_->{target} } @{$findmntJson->{filesystems}};
-        my $ret;
-        my $sep = '';
-        foreach my $target ( @targets ) {
-            my $configName = $target;
-            $configName =~ s!/!!g;
-            unless( $configName ) {
-                $configName = 'root';
-            }
-
-            if( -e "$target/etc/snapper/configs/$configName" ) {
-                my $cmd  = "snapper --config '$configName'";
-                $cmd    .= " create --type pre --print-number";
-                $cmd    .= " --cleanup-algorithm '$cleanupAlgorithm'";
-
-                my $snapNumber;
-                my $err;
-                if( myexec( $cmd, undef, \$snapNumber, \$err )) {
-                    error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
-                } else {
-                    $snapNumber =~ s!^\s+!!;
-                    $snapNumber =~ s!\s+$!!;
-                    $ret .= "$sep$target=$snapNumber";
-                    $sep = ',';
-                }
-            }
-        }
-        if( $ret ) {
-            return $ret;
-        }
-    }
-    return undef;
 }
 
 ##
@@ -913,6 +912,60 @@ sub postSnapshot {
 }
 
 ##
+# Determine the btrfs filesystems
+# return: array of mount points
+sub _findBtrfsFilesystems() {
+
+    my $out;
+    if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
+        error( "findmnt failed:", $out );
+        return undef;
+    }
+    my $json = UBOS::Utils::readJsonFromString( $out );
+
+    # {
+    #    "filesystems": [
+    #       {"target": "/", "source": "/dev/sda2", "fstype": "btrfs", "options": "rw,relatime,space_cache,subvolid=5,subvol=/",
+    #          "children": [
+    #             {"target": "/home", "source": "/dev/sdb", "fstype": "btrfs", "options": "rw,relatime,space_cache,subvolid=5,subvol=/",
+    #                "children": [
+    #                   {"target": "/tmp/foo", "source": "/dev/loop0", "fstype": "btrfs", "options": "rw,relatime,space_cache,subvolid=5,subvol=/"}
+    #                ]
+    #             }
+    #          ]
+    #       }
+    #    ]
+    # }
+
+    my @ret = ();
+    if( exists( $json->{filesystems} )) {
+        foreach my $fs ( @{$json->{filesystems}} ) {
+            push @ret, _parseFindMntJson( $fs );
+        }
+    }
+    return @ret;
+}
+
+##
+# Recursive parsing of findmnt JSON
+# $json the JSON fragment
+# return: the found mount points
+##
+sub _parseFindMntJson {
+    my $json = shift;
+
+    my @ret = ();
+    if( exists( $json->{target} )) {
+        push @ret, $json->{target};
+    }
+    if( exists( $json->{children} )) {
+        foreach my $child ( @{$json->{children}} ) {
+            push @ret, _parseFindMntJson( $child );
+        }
+    }
+    return @ret;
+}
+
 # Prevent interruptions of this script
 sub preventInterruptions {
     setState( 'InMaintenance' );

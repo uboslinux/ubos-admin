@@ -11,6 +11,7 @@
         "deploysitetemplatesonboot" : true,
         "snapshotonupgrade"         : true,
         "snappercleanupalgorithm"   : "timeline",
+        "snapperquotaon"            : "none,xen",
         "tmpdir"                    : "/tmp",
         "homeshepherd"              : "/var/shepherd"
     },
