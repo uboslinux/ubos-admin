@@ -153,7 +153,7 @@ sub finishUpdate {
 
     if( defined( $snapNumber ) && UBOS::Host::vars()->getResolve( 'host.snapshotonupgrade', 0 )) {
         debugAndSuspend( 'Create filesystem snapshot' );
-         UBOS::Host::postSnapshot( $snapNumber );
+        UBOS::Host::postSnapshot( $snapNumber );
     }
 
     return $ret;
