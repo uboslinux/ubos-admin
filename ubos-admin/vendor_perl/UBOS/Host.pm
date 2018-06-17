@@ -783,39 +783,22 @@ sub ensureSnapperConfig {
 
     my @targets = _findBtrfsFilesystems();
 
-    my $errors = 0;
-    foreach my $target ( @targets ) {
-        my $configName = $target;
-        $configName =~ s!/!!g;
-        unless( $configName ) {
-            $configName = 'root';
-        }
-
-        unless( -e "/etc/snapper/configs/$configName" ) {
-            my $err;
-            debugAndSuspend( 'Execute snapper --config', $configName, 'create-config' );
-            if( myexec( "snapper --config '$configName' create-config --template ubos-default '$target'", undef, \$err, \$err )) {
-                error( 'snapper (create-config) failed for config', $configName, $target, $err );
-                ++$errors;
-            }
-        }
-    }
-
-    my %snapperquotaon = ();
-    map { $snapperquotaon{$_} = $_; } split( /[,\s]+/, vars()->getResolve( 'host.snapperquotaon', 'none,xen' ));
-    # By default, we create snapshots on real hardware and on Xen (Amazon)
-
-    my $out;
+    my $virt;
     my $err;
     debugAndSuspend( 'Detect virtualization' );
-    myexec( 'systemd-detect-virt', undef, \$out, \$err ); # ignore status code
+    myexec( 'systemd-detect-virt', undef, \$virt, \$err ); # ignore status code
 
-    $out =~ s!^\s+!!;
-    $out =~ s!\s+$!!;
+    $virt =~ s!^\s+!!;
+    $virt =~ s!\s+$!!;
 
-    if( $snapperquotaon{$out} ) {
-        debugAndSuspend( 'Execute snapper setup-quota' );
+    my %snapperSnapshotsOn = ();
+    my %snapperQuotaOn      = ();
+    map { $snapperSnapshotsOn{$_} = $_; } split( /[,\s]+/, vars()->getResolve( 'host.snappersnapshotson', 'none,xen' ));
+    map { $snapperQuotaOn{$_}     = $_; } split( /[,\s]+/, vars()->getResolve( 'host.snapperquotaon',     'none,xen' ));
+    # By default, we create snapshots on real hardware and on Xen (Amazon)
 
+    my $errors = 0;
+    if( $snapperSnapshotsOn{$virt} ) {
         foreach my $target ( @targets ) {
             my $configName = $target;
             $configName =~ s!/!!g;
@@ -824,14 +807,34 @@ sub ensureSnapperConfig {
             }
 
             unless( -e "/etc/snapper/configs/$configName" ) {
-                if( myexec( "snapper --config '$configName' setup-quota", undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
-                    error( "snapper --config '$configName' setup-quota failed:", $err );
+                debugAndSuspend( 'Execute snapper --config', $configName, 'create-config' );
+                if( myexec( "snapper --config '$configName' create-config --template ubos-default '$target'", undef, \$err, \$err )) {
+                    error( 'snapper (create-config) failed for config', $configName, $target, $err );
                     ++$errors;
                 }
             }
         }
+
+        if( $snapperQuotaOn{$virt} ) {
+            debugAndSuspend( 'Execute snapper setup-quota' );
+
+            foreach my $target ( @targets ) {
+                my $configName = $target;
+                $configName =~ s!/!!g;
+                unless( $configName ) {
+                    $configName = 'root';
+                }
+
+                unless( -e "/etc/snapper/configs/$configName" ) {
+                    if( myexec( "snapper --config '$configName' setup-quota", undef, \$err, \$err ) && $err !~ /qgroup already set/ ) {
+                        error( "snapper --config '$configName' setup-quota failed:", $err );
+                        ++$errors;
+                    }
+                }
+            }
+        }
     } else {
-        trace( 'Skipping snapper setup-quota:', $out );
+        trace( 'Skipping snapper setup:', $virt );
     }
 
     return $errors;
