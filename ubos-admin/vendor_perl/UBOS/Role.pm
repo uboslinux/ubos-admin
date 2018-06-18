@@ -568,8 +568,8 @@ sub checkManifestForRoleGenericAppConfigItems {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'phases' must be an array" );
                 }
                 foreach my $phase ( @{$appConfigItem->{phases}} ) {
-                    unless( $UBOS::AppConfigurationItems::AppConfigurationItem::VALID_PHASES{$phase} ) {
-                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid value in 'phases': $phase" );
+                    unless( $UBOS::AppConfigurationItems::AppConfigurationItem::VALID_PHASES->{$phase} ) {
+                        $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid value in 'phases': $phase; valid values are " . join( ' ', sort keys %{$UBOS::AppConfigurationItems::AppConfigurationItem::VALID_PHASES} ));
                     }
                 }
             }
