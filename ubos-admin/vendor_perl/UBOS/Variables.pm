@@ -20,14 +20,21 @@ use fields qw( name hierarchicalMap flatMap delegates );
 my $knownFunctions = {
     'base64encode'     => \&encode_base64,
     'base64decode'     => \&decode_base64,
+
     'escapeSquote'     => \&UBOS::Utils::escapeSquote,
     'escapeDquote'     => \&UBOS::Utils::escapeDquote,
+
     'trim'             => \&UBOS::Utils::trim,
+
     'cr2space'         => \&UBOS::Utils::cr2space,
+
     'randomHex'        => \&UBOS::Utils::randomHex,
     'randomIdentifier' => \&UBOS::Utils::randomIdentifier,
     'randomPassword'   => \&UBOS::Utils::randomPassword,
-    'randomBytes'      => \&UBOS::Utils::randomBytes
+    'randomBytes'      => \&UBOS::Utils::randomBytes,
+
+    'uid'              => \&UBOS::Utils::getUid,
+    'gid'              => \&UBOS::Utils::getGid
 };
 
 ##
