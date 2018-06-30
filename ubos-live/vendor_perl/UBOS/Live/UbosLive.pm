@@ -11,6 +11,7 @@ use warnings;
 package UBOS::Live::UbosLive;
 
 use UBOS::Logging;
+use UBOS::Host;
 use UBOS::Utils;
 
 my $OPENVPN_CLIENT_CONFIG  = '/etc/openvpn/client/ubos-live.conf';
@@ -162,6 +163,12 @@ sub _ensureRegistered {
 
     trace( 'UbosLive::_ensureRegistered' );
 
+    my $hostid      = UBOS::Host::hostId();
+    my $arch        = UBOS::Utils::arch();
+    my $deviceClass = UBOS::Utils::deviceClass();
+    my $channel     = UBOS::Utils::channel();
+    my $sku         = UBOS::Utils::sku();
+
     my $errors = 0;
 
     unless( -e $OPENVPN_CLIENT_CRT ) {
@@ -171,9 +178,19 @@ sub _ensureRegistered {
         $cmd   .= " --silent";
         $cmd   .= " -XPOST";
         $cmd   .= " -w '%{http_code}'";
-        $cmd   .= " --data-binary '@" . $OPENVPN_CLIENT_CSR . "'";
-        $cmd   .= " -H 'Content-Type: text/plain'";
-        $cmd   .= " '$registrationurl?token=$token'";
+        $cmd   .= " --data-urlencode 'token="       . $token              . "'";
+        $cmd   .= " --data-urlencode 'csr@"         . $OPENVPN_CLIENT_CSR . "'";
+        $cmd   .= " --data-urlencode 'hostid="      . $hostid             . "'";
+        $cmd   .= " --data-urlencode 'arch="        . $arch               . "'";
+        $cmd   .= " --data-urlencode 'deviceclass=" . $deviceClass        . "'";
+        $cmd   .= " --data-urlencode 'channel="     . $channel            . "'";
+
+        if( $sku ) {
+            # might be a download, self-assembled
+            $cmd   .= " --data-urlencode 'sku="     . $sku                . "'";
+        }
+
+        $cmd   .= " '$registrationurl'";
         $cmd   .= " -o " . $OPENVPN_CLIENT_CRT;
 
         my $out;
