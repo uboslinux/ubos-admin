@@ -1102,6 +1102,33 @@ sub regeneratePacmanConf {
 }
 
 ##
+# Generate/update /etc/issue
+# $deviceClass: the device class
+# $channel: the channel
+# $target: root directory of the file system
+sub regenerateEtcIssue {
+    my $deviceClass = shift || deviceClass();
+    my $channel     = shift || channel();
+    my $target      = shift || '';
+
+    my $issue = <<ISSUE;
+
++--------------------------------------------------------------------------+
+|                                                                          |
+|                           Welcome to UBOS (R)                            |
+|                                                                          |
+|                                ubos.net                                  |
+|                                                                          |
+ISSUE
+    $issue .= sprintf( "|%74s|\n", "device class: $deviceClass, channel: $channel " );
+    $issue .= <<ISSUE;
++--------------------------------------------------------------------------+
+
+ISSUE
+    UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
+}
+
+##
 # Determine whether a candidate channel name is indeed a valid channel.
 # If so, return the canonical name of the valid channel.
 # $channelCandidate: the candidate name for the channel
