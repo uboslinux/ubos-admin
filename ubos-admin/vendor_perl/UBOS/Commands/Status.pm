@@ -204,7 +204,7 @@ MSG
             my @lines = split /\n/, $out;
             my $first = shift @lines;
 
-            if( $first =~ m!^\s*(\d+:\d+:\d+)\s*up\s*([^,]+),\s*(\d+)\s*users,\s*load\s*average:\s*([^,]+),\s*([^,]+),\s*([^,]+)\s*$! ) {
+            if( $first =~ m!^\s*(\d+:\d+:\d+)\s*up\s*([^,]+),\s*(\d+)\s*users?,\s*load\s*average:\s*([^,]+),\s*([^,]+),\s*([^,]+)\s*$! ) {
                 $json->{uptime}->{time}      = $1;
                 $json->{uptime}->{uptime}    = $2;
                 $json->{uptime}->{nusers}    = $3;
