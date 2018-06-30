@@ -25,10 +25,12 @@ my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
 my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
 my $CHANNEL_FILE    = '/etc/ubos/channel';
+my $SKU_FILE        = '/etc/ubos/product';
 my @VALID_CHANNELS  = qw( dev red yellow green );
 
-my $_now         = time(); # Time the script(s) started running, use now() to access
-my $_deviceClass = undef;  # Allocated as needed
+my $_now           = time(); # Time the script(s) started running, use now() to access
+my $_deviceClass   = undef;  # Allocated as needed
+my $_osReleaseInfo = undef;  # Allocated as needed
 
 ##
 # Obtain the UNIX system time when the script(s) started running.
@@ -1065,16 +1067,7 @@ sub regeneratePacmanConf {
     my $channel        = shift;
 
     unless( $channel ) {
-        if( -e $CHANNEL_FILE ) {
-            $channel = slurpFile( $CHANNEL_FILE );
-            $channel =~ s!^\s+!!;
-            $channel =~ s!\s+$!!;
-        }
-        $channel = isValidChannel( $channel );
-        unless( $channel ) {
-             warning( 'Cannot read channel file, defaulting to yellow:', $CHANNEL_FILE );
-             $channel = 'yellow';
-        }
+        $channel = channel();
     }
 
     my $pacmanConf    = slurpFile( $pacmanConfFile );
@@ -1143,22 +1136,35 @@ sub arch {
 }
 
 ##
+# Helper method to read /etc/os-release
+# Return: hash with found values (may be empty)
+sub _getOsReleaseInfo {
+    unless( defined( $_osReleaseInfo )) {
+        $_osReleaseInfo = {};
+
+        if( -e '/etc/os-release' ) {
+            my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
+            while( $osRelease =~ m!^\s*([-_a-zA-Z0-9]+)\s*=\s*\"?([-_ ;:/\.a-zA-Z0-9]*)\"?\s*$!mg ) {
+                $_osReleaseInfo->{$1} = $2;
+            }
+        }
+    }
+    return $_osReleaseInfo;
+}
+
+##
 # Determine the device class of this system. Works on UBOS and non-UBOS
-# systems. See also UBOS::Host::deviceClass()
+# systems.
 sub deviceClass {
     if( $_deviceClass ) {
         return $_deviceClass;
     }
 
-    if( -e '/etc/os-release' ) {
-        my $osRelease = slurpFile( '/etc/os-release' );
-        while( $osRelease =~ m!([-_a-zA-Z0-9]+)=\"([-_a-zA-Z0-9]+)\"!mg ) {
-            if( $1 eq 'UBOS_DEVICECLASS' ) {
-                $_deviceClass = $2;
-                last;
-            }
-        }
+    my $osReleaseInfo = _getOsReleaseInfo();
+    if( exists( $osReleaseInfo->{'UBOS_KERNELPACKAGE'} )) {
+        $_deviceClass = $osReleaseInfo->{'UBOS_KERNELPACKAGE'};
     }
+
     unless( $_deviceClass ) {
         # now we guess
         my $out;
@@ -1167,10 +1173,6 @@ sub deviceClass {
             $_deviceClass = 'rpi';
         } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
             $_deviceClass = 'rpi2';
-        } elsif( $out =~ m!bone.*armv7l! ) {
-            $_deviceClass = 'bbb';
-        } elsif( $out =~ m!pcduino3.*armv7l! ) {
-            $_deviceClass = 'pcduino3';
         } elsif( $out =~ m!espressobin.*aarch64! ) {
             $_deviceClass = 'espressobin';
         } elsif( $out =~ m!x86_64! ) {
@@ -1185,6 +1187,57 @@ sub deviceClass {
         }
     }
     return $_deviceClass;
+}
+
+##
+# Determine the current device's kernel package name.
+# return: kernel package name, or undef
+sub kernelPackageName {
+    my $ret;
+
+    my $osReleaseInfo = _getOsReleaseInfo();
+    if( exists( $osReleaseInfo->{'UBOS_KERNELPACKAGE'} )) {
+        return $osReleaseInfo->{'UBOS_KERNELPACKAGE'};
+    }
+    return undef;
+}
+
+##
+# Determine the release channel this device is on.
+#
+# return: release channel
+sub channel {
+    my $channel;
+
+    if( -e $CHANNEL_FILE ) {
+        $channel = slurpFile( $CHANNEL_FILE );
+        $channel =~ s!^\s+!!;
+        $channel =~ s!\s+$!!;
+        $channel = isValidChannel( $channel );
+        unless( $channel ) {
+            warning( 'Invalid channel specified, defaulting to yellow:', $CHANNEL_FILE );
+            $channel = 'yellow';
+        }
+    } else {
+        warning( 'Cannot read channel file, defaulting to yellow:', $CHANNEL_FILE );
+        $channel = 'yellow';
+    }
+    return $channel;
+}
+
+##
+# Determine the product SKU of this device.
+#
+# return: the SKU, or undef if not a product
+sub sku {
+    my $sku = undef;
+
+    if( -e $SKU_FILE ) {
+        $sku = slurpFile( $SKU_FILE );
+        $sku =~ s!^\s+!!;
+        $sku =~ s!\s+$!!;
+    }
+    return $sku;
 }
 
 ##
