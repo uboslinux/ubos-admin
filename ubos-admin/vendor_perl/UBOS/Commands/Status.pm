@@ -174,6 +174,8 @@ MSG
                 if( $max > @fields ) {
                     $max = @fields;
                 }
+                $key =~ s!:!!;
+                $key = lc( $key );
                 for( my $i=0 ; $i<$max ; ++$i ) {
                     $json->{memory}->{$key}->{$headerFields[$i]} = $fields[$i];
                 }
