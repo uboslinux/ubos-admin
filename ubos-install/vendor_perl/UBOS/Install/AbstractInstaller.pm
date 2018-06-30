@@ -560,7 +560,7 @@ sub installPackages {
     }
 
     my $cmd = "pacman"
-            . " --root '$target'" # Wait for ARM to catch up " --sysroot '$target'"
+            . " --sysroot '$target'"
             . " -Sy"
             . " '--config=$pacmanConfigFile'"
             . " --cachedir '$target/var/cache/pacman/pkg'"
