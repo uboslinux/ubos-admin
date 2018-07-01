@@ -52,7 +52,7 @@ sub saveDeviceInfo {
 
     my $hostId      = UBOS::Host::hostId();
     my $infoDir     = "flock/$hostId/device-info";
-    my $deviceClass = UBOS::Host::deviceClass();
+    my $deviceClass = UBOS::Utils::deviceClass();
     my $nics        = UBOS::Host::nics();
     my $now         = UBOS::Utils::now();
 

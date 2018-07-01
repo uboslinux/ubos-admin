@@ -560,7 +560,7 @@ sub installPackages {
     }
 
     my $cmd = "pacman"
-            . " --root '$target'" # Wait for ARM to catch up " --sysroot '$target'"
+            . " --sysroot '$target'"
             . " -Sy"
             . " '--config=$pacmanConfigFile'"
             . " --cachedir '$target/var/cache/pacman/pkg'"
@@ -747,21 +747,8 @@ sub configureOs {
 
     # version
     trace( "OS version info" );
-    my $issue = <<ISSUE;
 
-+--------------------------------------------------------------------------+
-|                                                                          |
-|                           Welcome to UBOS (R)                            |
-|                                                                          |
-|                                ubos.net                                  |
-|                                                                          |
-ISSUE
-    $issue .= sprintf( "|%74s|\n", "device class: $deviceClass, channel: $channel " );
-    $issue .= <<ISSUE;
-+--------------------------------------------------------------------------+
-
-ISSUE
-    UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
+    UBOS::Utils::regenerateEtcIssue( $deviceClass, $channel, $target );
 
     my $osRelease = <<OSRELEASE;
 NAME="UBOS"

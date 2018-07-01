@@ -37,7 +37,6 @@ my $_hostVars              = undef; # allocated as needed
 my $_rolesOnHostInSequence = undef; # allocated as needed
 my $_rolesOnHost           = undef; # allocated as needed
 my $_sites                 = undef; # allocated as needed
-my $_osReleaseInfo         = undef; # allocated as needed
 my $_allNics               = undef; # allocated as needed
 my $_physicalNics          = undef; # allocated as needed
 my $_gpgHostKeyFingerprint = undef; # allocated as needed
@@ -61,49 +60,6 @@ sub vars {
         $_hostVars = UBOS::Variables->new( 'Host', $raw );
     }
     return $_hostVars;
-}
-
-##
-# Helper method to read /etc/os-release
-# Return: hash with found values (may be empty)
-sub _getOsReleaseInfo {
-    unless( defined( $_osReleaseInfo )) {
-        $_osReleaseInfo = {};
-
-        if( -e '/etc/os-release' ) {
-            my $osRelease = UBOS::Utils::slurpFile( '/etc/os-release' );
-            while( $osRelease =~ m!^\s*([-_a-zA-Z0-9]+)\s*=\s*\"?([-_ ;:/\.a-zA-Z0-9]*)\"?\s*$!mg ) {
-                $_osReleaseInfo->{$1} = $2;
-            }
-        }
-    }
-    return $_osReleaseInfo;
-}
-
-##
-# Determine the current device's class.
-# return: deviceClass, or undef
-sub deviceClass {
-    my $ret;
-
-    my $osReleaseInfo = _getOsReleaseInfo();
-    if( exists( $osReleaseInfo->{'UBOS_DEVICECLASS'} )) {
-        return $osReleaseInfo->{'UBOS_DEVICECLASS'};
-    }
-    return undef;
-}
-
-##
-# Determine the current device's kernel package name.
-# return: kernel package name, or undef
-sub kernelPackageName {
-    my $ret;
-
-    my $osReleaseInfo = _getOsReleaseInfo();
-    if( exists( $osReleaseInfo->{'UBOS_KERNELPACKAGE'} )) {
-        return $osReleaseInfo->{'UBOS_KERNELPACKAGE'};
-    }
-    return undef;
 }
 
 ##
@@ -622,7 +578,7 @@ sub updateCode {
     UBOS::Utils::saveFile( $LAST_UPDATE_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
 
     # if installed kernel package is now different from running kernel: signal to reboot
-    my $kernelPackageName = kernelPackageName();
+    my $kernelPackageName = UBOS::Utils::kernelPackageName();
     if( $kernelPackageName ) { # This will be undef in a container, so a container will never reboot automatically
         my $kernelPackageVersion = packageVersion( $kernelPackageName );
         if( $kernelPackageVersion ) {

@@ -191,6 +191,7 @@ sub run {
     } else {
         debugAndSuspend( 'Regenerate pacman.conf' );
         UBOS::Utils::regeneratePacmanConf();
+        UBOS::Utils::regenerateEtcIssue();
         debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/mods-enabled' );
         UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/mods-enabled' );
 
