@@ -510,7 +510,6 @@ LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
 END
 
-
     my %bothDbs = ( %$dbs, %$addDbs );
     foreach my $dbKey ( sort keys %bothDbs ) {
         if( exists( $removeDbs->{$dbKey} )) {
@@ -559,11 +558,20 @@ sub installPackages {
         push @allPackages, @{$self->{additionalpackages}};
     }
 
+    # pacman now chroot's into $target, so we need to temporarily
+    # copy the config file into $target/tmp
+
+    my $tmpConfigFile = File::Temp->new( DIR => "$target/tmp", UNLINK => 1 );
+    print $tmpConfigFile UBOS::Utils::slurpFile( $pacmanConfigFile );
+    close $tmpConfigFile;
+
+    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target )); 
+
     my $cmd = "pacman"
             . " --sysroot '$target'"
             . " -Sy"
-            . " '--config=$pacmanConfigFile'"
-            . " --cachedir '$target/var/cache/pacman/pkg'"
+            . " '--config=$tmpConfigFileInside'"
+            . " --cachedir '/var/cache/pacman/pkg'"
             . " --noconfirm"
             . ' ' . join( ' ', @allPackages );
 
