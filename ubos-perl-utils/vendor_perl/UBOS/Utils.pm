@@ -1188,8 +1188,8 @@ sub deviceClass {
     }
 
     my $osReleaseInfo = _getOsReleaseInfo();
-    if( exists( $osReleaseInfo->{'UBOS_KERNELPACKAGE'} )) {
-        $_deviceClass = $osReleaseInfo->{'UBOS_KERNELPACKAGE'};
+    if( exists( $osReleaseInfo->{'UBOS_DEVICECLASS'} )) {
+        $_deviceClass = $osReleaseInfo->{'UBOS_DEVICECLASS'};
     }
 
     unless( $_deviceClass ) {
