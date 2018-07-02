@@ -481,6 +481,16 @@ sub setState {
 
     trace( 'Host::setState', $newState );
 
+    my %permittedStates = (
+        'BootingOrShuttingDown' => 1,
+        'Operational'           => 1,
+        'InMaintenance'         => 1,
+        'Error'                 => 1
+    );
+    unless( $permittedStates{$newState} ) {
+        error( 'Unknown UBOS state:', $newState );
+        return 1;
+    }
     $_currentState = $newState;
 
     my $ret = UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 1, 'stateChanged', $newState );
