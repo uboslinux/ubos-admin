@@ -558,20 +558,25 @@ sub installPackages {
         push @allPackages, @{$self->{additionalpackages}};
     }
 
+# This isn't working yet (upstream), so we need to deal with the
+# deprecation warning
     # pacman now chroot's into $target, so we need to temporarily
     # copy the config file into $target/tmp
 
-    my $tmpConfigFile = File::Temp->new( DIR => "$target/tmp", UNLINK => 1 );
-    print $tmpConfigFile UBOS::Utils::slurpFile( $pacmanConfigFile );
-    close $tmpConfigFile;
+#    my $tmpConfigFile = File::Temp->new( DIR => "$target/tmp", UNLINK => 1 );
+#    print $tmpConfigFile UBOS::Utils::slurpFile( $pacmanConfigFile );
+#    close $tmpConfigFile;
 
-    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target )); 
+#    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target )); 
 
     my $cmd = "pacman"
-            . " --sysroot '$target'"
+#            . " --sysroot '$target'"
+            . " --root '$target'"
             . " -Sy"
-            . " '--config=$tmpConfigFileInside'"
-            . " --cachedir '/var/cache/pacman/pkg'"
+#            . " '--config=$tmpConfigFileInside'"
+            . " '--config=$pacmanConfigFile'"
+#            . " --cachedir '/var/cache/pacman/pkg'"
+            . " --cachedir '$target/var/cache/pacman/pkg'"
             . " --noconfirm"
             . ' ' . join( ' ', @allPackages );
 
