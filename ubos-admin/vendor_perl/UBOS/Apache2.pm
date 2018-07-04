@@ -141,6 +141,8 @@ sub ensureConfigFiles {
 sub activateApacheModules {
     my @modules = @_;
 
+    trace( 'Activating Apache modules:', @modules );
+
     my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$modsEnabledDir/$module.load" ) {
@@ -150,9 +152,7 @@ sub activateApacheModules {
             warning( 'Cannot find Apache2 module, not activating:', $module );
             next;
         }
-        trace( 'Activating Apache2 module:', $module );
 
-        debugAndSuspend( 'Activate Apache2 module', $module );
         UBOS::Utils::symlink( "$modsAvailableDir/$module.load", "$modsEnabledDir/$module.load" );
         ++$ret;
     }
@@ -166,6 +166,8 @@ sub activateApacheModules {
 sub activatePhpModules {
     my @modules = @_;
 
+    trace( 'Activating PHP modules:', @modules );
+
     my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$phpModulesConfDir/$module.ini" ) {
@@ -175,9 +177,7 @@ sub activatePhpModules {
             warning( 'Cannot find PHP module, not activating:', $module );
             next;
         }
-        trace( 'Activating PHP module:', $module );
 
-        debugAndSuspend( 'Activate Apache2/PHP module', $module );
         UBOS::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
 extension=$module.so
 END
