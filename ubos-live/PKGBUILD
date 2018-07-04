@@ -24,6 +24,7 @@ package() {
 # ubos-live user
     install -D -m644 ${startdir}/sysusers.d/ubos-live.conf -t ${pkgdir}/usr/lib/sysusers.d/
     install -D -m644 ${startdir}/tmpfiles.d/ubos-live.conf -t ${pkgdir}/usr/lib/tmpfiles.d/
+    mkdir -m750 ${pkgdir}/etc/sudoers.d
     install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
 
 # Put obtained certificate(s) here
