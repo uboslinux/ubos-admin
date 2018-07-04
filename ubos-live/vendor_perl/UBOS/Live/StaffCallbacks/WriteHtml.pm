@@ -352,13 +352,13 @@ HTML
            <div id="site-$siteId-passwd" class="hide"></div>
             <span class="site-$siteId-passwd-reveal reveal">
              &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
-             (<a href="javascript:toggle('site-$siteId-passwd');">reveal</a>)
+             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Reveal</a>
             </span>
             <span class="site-$siteId-passwd-hide hide">
-             <tt id="site-$siteId-passwd-value">$siteAdminCred</tt>
-             (<a href="javascript:toggle('site-$siteId-passwd');">hide</a>)
+             <tt id="site-$siteId-passwd-copy-fromhere">$siteAdminCred</tt>
+             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Hide</a>
+             <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">Copy</a>
             </span>
-            (<a href="#" id="site-$siteId-passwd-copy" class="passwd-copy">Copy to clipboard</a>)
            </td>
          </tr>
          <tr>
@@ -494,10 +494,10 @@ HTML
      <h2>
       WiFi Credentials
       <span class="wifi-reveal sidenote">
-       <a href="javascript:toggle('wifi');">Show WiFi Credentials</a>
+       <a href="javascript:toggle('wifi');">Show WiFi credentials</a>
       </span>
       <span class="wifi-hide hide sidenote">
-       <a href="javascript:toggle('wifi');">Hide WiFI Credentials</a>
+       <a href="javascript:toggle('wifi');">Hide WiFI credentials</a>
       </span>
      </h2>
      <div id="wifi" class="hide">
@@ -516,10 +516,10 @@ HTML
      <h2>
       Site Templates
       <span class="site-templates-reveal sidenote">
-       <a href="javascript:toggle('site-templates');">Show Site Templates</a>
+       <a href="javascript:toggle('site-templates');">Show site templates</a>
       </span>
       <span class="site-templates-hide hide sidenote">
-       <a href="javascript:toggle('site-templates');">Hide Site Templates</a>
+       <a href="javascript:toggle('site-templates');">Hide site templates</a>
       </span>
      </h2>
      <div id="site-templates" class="hide">
@@ -538,14 +538,14 @@ HTML
 
    <footer>
     <p>&copy; <a href="http://indiecomputing.com/">Indie Computing Corp.</a>
-       <a href="https://ubos.net/legal/">Legal</a>. Need help? Go do the
+       <a href="https://ubos.net/legal/">Legal</a>. Need help? Go to the
        <a href="https://forum.ubos.net/">forum.</a>
     </p>
    </footer>
   </div>
   <script>
 function handlePasswdCopy( ev ) {
-    var elId = ev.target.id.substring( 0, ev.target.id.length()-4 ) + "value";
+    var elId = ev.target.id + "-fromhere";
     var el   = document.getElementById( elId );
 
     var range = document.createRange();
@@ -556,7 +556,7 @@ function handlePasswdCopy( ev ) {
 
     var success = false;
     try{
-        success = document.execCommand("copy")) {
+        success = document.execCommand("copy");
     } catch(e){
         success = false;
     }

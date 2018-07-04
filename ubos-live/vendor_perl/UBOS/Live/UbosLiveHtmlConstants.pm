@@ -144,7 +144,7 @@ span.warn {
     float: left;
     margin: 0 10px 10px 0;
 }
-span.sidenote {
+.sidenote {
     margin-left: 30px;
     font-size: 10px;
     vertical-align: middle;
