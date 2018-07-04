@@ -355,9 +355,10 @@ HTML
              (<a href="javascript:toggle('site-$siteId-passwd');">reveal</a>)
             </span>
             <span class="site-$siteId-passwd-hide hide">
-             <tt>$siteAdminCred</tt>
+             <tt id="site-$siteId-passwd-value">$siteAdminCred</tt>
              (<a href="javascript:toggle('site-$siteId-passwd');">hide</a>)
             </span>
+            (<a href="#" id="site-$siteId-passwd-copy" class="passwd-copy">Copy to clipboard</a>)
            </td>
          </tr>
          <tr>
@@ -409,7 +410,7 @@ HTML
            </thead>
 HTML
                     my @installableIds = ( $appId );
-                    if( exists( $appConfig->{accessryids} )) {
+                    if( exists( $appConfig->{accessoryids} )) {
                         push @installableIds, sort @{$appConfig->{accessoryids}};
                     }
                     foreach my $installableId ( @installableIds ) {
@@ -542,6 +543,33 @@ HTML
     </p>
    </footer>
   </div>
+  <script>
+function handlePasswdCopy( ev ) {
+    var elId = ev.target.id.substring( 0, ev.target.id.length()-4 ) + "value";
+    var el   = document.getElementById( elId );
+
+    var range = document.createRange();
+    range.selectNodeContents( el );
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange( range );
+
+    var success = false;
+    try{
+        success = document.execCommand("copy")) {
+    } catch(e){
+        success = false;
+    }
+    if( !success ) {
+        alert( "Your browser isn't letting me copy to the clipboard. Please type the password in manually." )
+    }
+}
+
+var pwCopy = document.body.getElementsByClassName( 'passwd-copy' );
+for( i=0; i<pwCopy.length; ++i ) {
+    pwCopy[i].addEventListener("click", handlePasswdCopy, false );
+}
+  </script>
  </body>
 </html>
 HTML
