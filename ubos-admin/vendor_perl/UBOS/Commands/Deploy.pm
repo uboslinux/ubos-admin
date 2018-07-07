@@ -373,13 +373,23 @@ sub run {
     info( 'Resuming sites' );
 
     my $resumeTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        debugAndSuspend( 'Resuming site', $site->siteId() );
-        $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+
+
+    if( $backupFailed ) {
+        foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        $ret = 0;
+
+    } else {
+        foreach my $site ( @newSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
     }
     debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
-    $ret = 0;
 
     unless( $ret ) {
         error( "Deploy failed." );
