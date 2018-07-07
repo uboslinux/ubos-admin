@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::AppConfigurationItems::SystemdTimer;
 
-use base qw( UBOS::AbstractSystemdItem );
+use base qw( UBOS::AppConfigurationItems::AbstractSystemdItem );
 use fields;
 
 ##
