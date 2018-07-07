@@ -393,6 +393,9 @@ sub restoreAppConfigs {
                 $backup->findAppConfigurationById( $oldAppConfigId ),
                 $newAppConfigs{$newAppConfigId},
                 $migratePackages );
+
+        debugAndSuspend( 'Running upgraders at appconfig', $newAppConfigId );
+        $ret &= $newAppConfigs{$newAppConfigId}->runUpgraders();
     }
 
     info( 'Resuming site(s)' );
@@ -407,15 +410,6 @@ sub restoreAppConfigs {
 
     debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
-
-    info( 'Running upgraders' );
-
-    foreach my $newAppConfigId ( @appConfigIdsToRestore ) {
-        my $appConfig = $newAppConfigs{$newAppConfigId};
-
-        debugAndSuspend( 'Running upgraders at appconfig', $appConfig->appConfigId );
-        $ret &= $appConfig->runUpgraders();
-    }
 
     if( $showIds ) {
         foreach my $newAppConfigId ( @appConfigIdsToRestore ) {

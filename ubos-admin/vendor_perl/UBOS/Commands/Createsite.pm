@@ -683,6 +683,7 @@ sub run {
         my $deployUndeployTriggers = {};
         debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
+        $ret &= $newSite->runInstallers();
 
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
 
@@ -696,13 +697,6 @@ sub run {
         $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
         debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
         UBOS::Host::executeTriggers( $resumeTriggers );
-
-        info( 'Running installers' );
-        # no need to run any upgraders
-
-        foreach my $appConfig ( @{$newSite->appConfigs} ) {
-            $ret &= $appConfig->runInstallers();
-        }
 
         if( $out ) {
             # Need to be at the end, so tor info has been inserted

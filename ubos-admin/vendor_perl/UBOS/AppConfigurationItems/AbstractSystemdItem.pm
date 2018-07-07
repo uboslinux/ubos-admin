@@ -9,7 +9,7 @@
 use strict;
 use warnings;
 
-package UBOS::AbstractSystemdItem;
+package UBOS::AppConfigurationItems::AbstractSystemdItem;
 
 use base qw( UBOS::AppConfigurationItems::AppConfigurationItem );
 use fields qw( suffix );

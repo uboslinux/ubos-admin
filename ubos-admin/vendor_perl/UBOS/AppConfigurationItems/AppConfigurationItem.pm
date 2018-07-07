@@ -17,14 +17,6 @@ use UBOS::TemplateProcessor::Passthrough;
 use UBOS::TemplateProcessor::Perlscript;
 use UBOS::TemplateProcessor::Varsubst;
 
-our $DEFAULT_PHASE = 'default';
-our $AFTER_ACCESSORIES_PHASE = 'after-accessories';
-
-our $VALID_PHASES = {
-    $DEFAULT_PHASE           => 1,
-    $AFTER_ACCESSORIES_PHASE => 1
-};
-
 ##
 # Constructor
 # $json: the JSON fragment from the manifest JSON
@@ -47,27 +39,6 @@ sub new {
     $self->{installable} = $installable;
 
     return $self;
-}
-
-##
-# Does this AppConfigurationItem apply in the provided phase?
-# $phase: the current phase
-# return: yes or no
-sub appliesInPhase {
-    my $self  = shift;
-    my $phase = shift;
-
-    my $ret = 0;
-    if( exists( $self->{json}->{phases} )) {
-        if( grep { $_ eq $phase } @{$self->{json}->{phases}} ) {
-            $ret = 1;
-        }
-    } else {
-        if( $DEFAULT_PHASE eq $phase ) {
-            $ret = 1;
-        }
-    }
-    return $ret;
 }
 
 ##

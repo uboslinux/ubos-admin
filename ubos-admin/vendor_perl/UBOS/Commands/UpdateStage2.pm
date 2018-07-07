@@ -91,6 +91,9 @@ sub finishUpdate {
             debugAndSuspend( 'Restore site', $site->siteId );
             $ret &= $backup->restoreSite( $site );
 
+            debugAndSuspend( 'Run upgraders at site', $site->siteId );
+            $ret &= $site->runUpgraders();
+
             UBOS::Host::siteDeployed( $site );
         }
         if( $restartServices ) {
@@ -112,15 +115,6 @@ sub finishUpdate {
         if( $restartServices ) {
             debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
             UBOS::Host::executeTriggers( $resumeTriggers );
-        }
-
-        info( 'Running upgraders' );
-
-        foreach my $site ( values %$oldSites ) {
-            foreach my $appConfig ( @{$site->appConfigs} ) {
-                debugAndSuspend( 'Run upgraders for appconfig', $appConfig->appConfigId );
-                $ret &= $appConfig->runUpgraders();
-            }
         }
     }
 

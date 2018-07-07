@@ -348,6 +348,7 @@ sub run {
 
                 debugAndSuspend( 'Restoring from UpdateBackup for site', $site->siteId() );
                 $ret &= $updateBackup->restoreSite( $site );
+                $ret &= $site->runUpgraders();
 
                 if( $ret ) {
                     trace( 'Deleting update backup for site', $site->siteId );
@@ -360,6 +361,7 @@ sub run {
             } else {
                 debugAndSuspend( 'Deploying site', $site->siteId() );
                 $ret &= $site->deploy( $deployUndeployTriggers );
+                $ret &= $site->runInstallers();
             }
         }
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
@@ -370,50 +372,17 @@ sub run {
 
     info( 'Resuming sites' );
 
-    if( $backupFailed ) {
-        my $resumeTriggers = {};
-        foreach my $site ( values %$oldSites ) {
-            debugAndSuspend( 'Resuming site', $site->siteId() );
-            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-        }
-        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-        UBOS::Host::executeTriggers( $resumeTriggers );
-        $ret = 0;
+    my $resumeTriggers = {};
+    foreach my $site ( values %$oldSites ) {
+        debugAndSuspend( 'Resuming site', $site->siteId() );
+        $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+    }
+    debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+    UBOS::Host::executeTriggers( $resumeTriggers );
+    $ret = 0;
 
-    } else {
-        my $resumeTriggers = {};
-        foreach my $site ( @newSites ) {
-            debugAndSuspend( 'Resuming site', $site->siteId() );
-            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-        }
-        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-        UBOS::Host::executeTriggers( $resumeTriggers );
-
-        info( 'Running installers/upgraders' );
-
-        foreach my $site ( @newSites ) {
-            my $oldSite = $oldSites->{$site->siteId};
-            if( $oldSite ) {
-                foreach my $appConfig ( @{$site->appConfigs} ) {
-                    if( $oldSite->appConfig( $appConfig->appConfigId() )) {
-                        debugAndSuspend( 'Running upgrader for appconfig', $appConfig->appConfigId );
-                        $ret &= $appConfig->runUpgraders();
-                    } else {
-                        debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-                        $ret &= $appConfig->runInstallers();
-                    }
-                }
-            } else {
-                foreach my $appConfig ( @{$site->appConfigs} ) {
-                    debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-                    $ret &= $appConfig->runInstallers();
-                }
-            }
-        }
-
-        unless( $ret ) {
-            error( "Deploy failed." );
-        }
+    unless( $ret ) {
+        error( "Deploy failed." );
     }
         
     return $ret;

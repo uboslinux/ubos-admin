@@ -910,6 +910,32 @@ sub addDeployAppConfiguration {
 }
 
 ##
+# Run the installer(s) for everything installed at this Site
+# return: success or fail
+sub runInstallers {
+    my $self = shift;
+
+    my $ret = 1;
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $ret &= $appConfig->runInstallers();
+    }
+    return $ret;
+}
+
+##
+# Run the upgrader(s) for everything installed at this Site
+# return: success or fail
+sub runUpgraders {
+    my $self = shift;
+
+    my $ret = 1;
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $ret &= $appConfig->runUpgraders();
+    }
+    return $ret;
+}
+
+##
 # Clear cached information.
 sub clearCaches {
     my $self = shift;
