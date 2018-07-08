@@ -27,8 +27,8 @@ package() {
     mkdir -m750 ${pkgdir}/etc/sudoers.d
     install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
 
-# Put obtained certificate(s) here
-    mkdir -p -m755 ${pkgdir}/etc/ubos-live
+# Put obtained certificate(s) here; also, ssh keys
+    install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/etc/ubos-live
 
 # Initialize on boot with staff
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/

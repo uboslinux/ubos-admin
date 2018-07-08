@@ -63,8 +63,9 @@ sub startUbosLive {
 
     trace( 'UbosLive::startUbosLive' );
 
-    my $status  = UBOS::Utils::myexec( 'systemctl start ' . $SERVICE );
-    $status    |= UBOS::Utils::myexec( 'systemctl enable ' . $SERVICE );
+    my $out;
+    my $status  = UBOS::Utils::myexec( 'systemctl start '  . $SERVICE, undef, \$out, \$out );
+    $status    |= UBOS::Utils::myexec( 'systemctl enable ' . $SERVICE, undef, \$out, \$out );
 
     return $status == 0;
 }
@@ -75,8 +76,9 @@ sub stopUbosLive {
 
     trace( 'UbosLive::stopUbosLive' );
 
-    my $status  = UBOS::Utils::myexec( 'systemctl disable ' . $SERVICE );
-    $status    |= UBOS::Utils::myexec( 'systemctl stop ' . $SERVICE );
+    my $out;
+    my $status  = UBOS::Utils::myexec( 'systemctl disable ' . $SERVICE, undef, \$out, \$out );
+    $status    |= UBOS::Utils::myexec( 'systemctl stop '    . $SERVICE, undef, \$out, \$out );
 
     return $status == 0;
 }
@@ -109,6 +111,7 @@ sub postUpgrade {
     if( -e $OPENVPN_CLIENT_CONFIG ) {
         _ensureOpenvpnClientConfig();
     }
+    _copyAuthorizedKeys();
     _restartUbosLiveIfNeeded();
 
     return 0;
@@ -257,6 +260,19 @@ CONTENT
         ++$errors;
     }
     return $errors;
+}
+
+##
+# Copy the authorized SSH keys into ~ubos-live/.ssh/authorized_keys
+sub _copyAuthorizedKeys {
+    my $keys = UBOS::Utils::slurpFile( '/etc/ubos-live/authorized_keys' );
+    if( $keys ) {
+        my $dir = '/var/ubos-live/.ssh';
+        unless( -d $dir ) {
+            UBOS::Utils::mkdir( $dir, 0700, 'ubos-live', 'ubos-live' );
+        }
+        UBOS::Utils::saveFile( "$dir/.authorized_keys", $keys, 0600, 'ubos-live', 'ubos-live' );
+    }
 }
 
 ##
