@@ -750,7 +750,7 @@ sub invokeCallbacks {
     }
 
     my @files            = <$dir/*>;
-    my $content          = join( "\n", map { slurpFile( $_ ) } @files );
+    my $content          = join( "\n", map { slurpFile( $_ ) } grep { -f $_ } @files );
     my @packagesWithArgs = grep { $_ }
                            map { my $s = $_; $s =~ s!#.*$!! ; $s =~ s!^\s+!! ; $s =~ s!\s+$!! ; $s }
                            split /\n/, $content;
