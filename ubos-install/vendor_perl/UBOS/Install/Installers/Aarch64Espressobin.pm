@@ -155,12 +155,14 @@ sub createDiskLayout {
                             'fs'        => 'ext4',
                             'size'      => 200 * 1024, # 100M at 512/sector
                             'mkfsflags' => '-O ^metadata_csum,^64bit',
-                            'mbrboot'   => 1
+                            'mbrboot'   => 1,
+                            'label'       => 'UBOS_boot'
                             # default partition type
                         },
                         '/' => {
                             'index' => 2,
-                            'fs'    => 'btrfs'
+                            'fs'    => 'btrfs',
+                            'label' => 'UBOS_root'
                             # default partition type
                         }
                     };

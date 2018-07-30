@@ -263,7 +263,7 @@ sub createDiskLayout {
                                         'index'       => 1,
                                         'size'        => 2048, # 1M at 512/sector
                                         'gptparttype' => 'EF02',
-                                        'label'       => 'BIOS boot'
+                                        'label'       => 'BIOS_boot'
                                         # no filesystem, do not mount
                                     },
                                     '/boot' => {
@@ -272,12 +272,12 @@ sub createDiskLayout {
                                         'size'        => 1024*1024, # 512M at 512/sector
                                         'mkfsflags'   => '-F32',
                                         'gptparttype' => 'EF00',
-                                        'label'       => 'UBOS boot'
+                                        'label'       => 'UBOS_boot'
                                     },
                                     '/' => {
                                         'index' => 3,
                                         'fs'    => 'btrfs',
-                                        'label' => 'UBOS root'
+                                        'label' => 'UBOS_root'
                                         # default partition type
                                     }
                                 } );
@@ -329,7 +329,7 @@ sub createDiskLayout {
                                      'index'       => 1,
                                      'size'        => 2048, # 1M at 512/sector
                                      'gptparttype' => 'EF02',
-                                     'label'       => 'BIOS boot'
+                                     'label'       => 'BIOS_boot'
                                      # no filesystem, do not mount
                                 },
                                 '/boot' => {
@@ -338,12 +338,12 @@ sub createDiskLayout {
                                     'size'        => 1024 * 1024, # 512M at 512/sector
                                     'mkfsflags'   => '-F32',
                                     'gptparttype' => 'EF00',
-                                    'label'       => 'UBOS boot'
+                                    'label'       => 'UBOS_boot'
                                 },
                                 '/' => {
                                     'index' => 3,
                                     'fs'    => 'btrfs',
-                                    'label' => 'UBOS root'
+                                    'label' => 'UBOS_root'
                                     # default partition type
                                 }
                             };

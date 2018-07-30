@@ -251,13 +251,13 @@ sub createDiskLayout {
                         'size'        => 200 * 1024, # 100M at 512/sector
                         'mkfsflags'   => '-F32',
                         'mbrparttype' => 'c',
-                        'label'       => 'UBOS boot'
+                        'label'       => 'UBOS_boot'
                         # default partition type for gpt
                     },
                     '/' => {
                         'index' => 2,
                         'fs'    => 'btrfs',
-                        'label' => 'UBOS root'
+                        'label' => 'UBOS_root'
                         # default partition type
                     },
                 };
