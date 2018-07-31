@@ -137,7 +137,7 @@ sub createDiskLayout {
         }
     } else {
         # Need at least one disk
-        error( 'Must specify at least than one file or image for deviceclass=vbox' );
+        error( 'Must specify at least one file or image for deviceclass=' . $self->deviceClass() );
         $ret = undef;
     }
 

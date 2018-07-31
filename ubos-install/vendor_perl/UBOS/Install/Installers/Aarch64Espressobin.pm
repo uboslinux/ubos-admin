@@ -109,6 +109,13 @@ sub createDiskLayout {
     if( !$directory && exists( $config->{directory} )) {
         $directory = $config->{directory};
     }
+    if( !@$argvp ) {
+        if( exists( $config->{devices} )) {
+            @$argvp = @{$config->{devices}};
+        } elsif( exists( $config->{device} )) {
+            @$argvp = ( $config->{device} );
+        }
+    }
 
     my $ret = 1; # set to something, so undef can mean error
     if( $directory ) {
@@ -190,7 +197,7 @@ sub createDiskLayout {
             $ret = undef;
         } else {
             # Need at least one disk
-            error( 'Must specify at least than one file or image for deviceclass=' . $self->deviceClass() );
+            error( 'Must specify at least one file or image for deviceclass=' . $self->deviceClass() );
             $ret = undef;
         }
     }

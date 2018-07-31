@@ -79,6 +79,13 @@ sub createDiskLayout {
     if( !$directory && exists( $config->{directory} )) {
         $directory = $config->{directory};
     }
+    if( !@$argvp ) {
+        if( exists( $config->{devices} )) {
+            @$argvp = @{$config->{devices}};
+        } elsif( exists( $config->{device} )) {
+            @$argvp = ( $config->{device} );
+        }
+    }
 
     if( $noswap ) {
         error( 'Invalid invocation: --noswap cannot be used when installing for a container' );
@@ -136,7 +143,7 @@ sub createDiskLayout {
 
             } else {
                 # Need at least one disk
-                error( 'Must specify at least than one file or image for deviceclass=container' );
+                error( 'Must specify at least one file or image for deviceclass=' . $self->deviceClass() );
                 $ret = undef;
             }
         }
