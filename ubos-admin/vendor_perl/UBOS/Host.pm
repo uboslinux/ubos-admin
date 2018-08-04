@@ -1073,6 +1073,10 @@ sub addAfterBootCommands {
     if( -e $AFTER_BOOT_FILE ) {
         $afterBoot = UBOS::Utils::slurpFile( $AFTER_BOOT_FILE );
     }
+    my $afterBootDir = dirname( $AFTER_BOOT_FILE );
+    unless( -d $afterBootDir ) {
+        UBOS::Utils::mkdirDashP( $afterBootDir );
+    }
     foreach my $cmd ( @cmds ) {
         if( $cmd =~ m!^(bash|perleval):! ) {
             $afterBoot .= "$cmd\n";
