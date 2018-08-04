@@ -182,6 +182,27 @@ sub guessStaffDevice {
 }
 
 ##
+# Format a device as a suitable UBOS Staff device
+# $device: the device to be formatted
+# return: number of errors
+sub formatStaffDevice {
+    my $device = shift;
+
+    unless( -b $device ) {
+        fatal( 'Not a block device:', $device );
+    }
+
+    my $errors = 0;
+    my $out;
+    if( UBOS::Utils::myexec( "mkfs.vfat '$device' -n UBOS-STAFF", undef, \$out, \$out )) {
+        error( 'mkfs.vfat failed:', $out );
+        ++$errors;
+    }
+
+    return $errors;
+}
+
+##
 # Load configuration from this directory
 # $target: the target directory from which to read (root directory of stick)
 # $isActualStaffDevice: if true, this is a physical staff, not a cloud/virtual directory
