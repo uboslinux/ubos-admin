@@ -71,7 +71,7 @@ my $parseOk = GetOptions(
         'disablepackagedb=s'   => sub { _addCheck( \@_, \%disablePackageDbs, \%addPackageDbs,    \%removePackageDbs ); },
         'checksignatures=s'    => \$checkSignatures,
         'noswap'               => \$noswap,
-        'shepherdkeyfile'      => \$shepherdKeyFile,
+        'shepherdkeyfile=s'    => \$shepherdKeyFile,
         'h|help'               => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
