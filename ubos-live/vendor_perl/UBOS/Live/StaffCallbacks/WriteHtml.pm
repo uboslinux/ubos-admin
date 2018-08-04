@@ -385,12 +385,25 @@ HTML
                     my $appConfigId = $appConfig->{appconfigid};
                     my $appId       = $appConfig->{appid};
                     my $context     = $appConfig->{context};
-                    my $contextName = $context ? $context : 'root of site';
 
                     $html .= <<HTML;
         <dl class="appconfig">
          <dt>
+HTML
+
+                    if( defined( $context )) {
+                        my $contextName = $context ? $context : 'root of site';
+
+                        $html .= <<HTML;
           App $appId at <a href="$protocol://$accessAtHost$context/">$contextName</a>
+HTML
+                    } else {
+                        $html .= <<HTML;
+          App $appId (not a web app)
+HTML
+                    }
+
+                    $html .= <<HTML;
           <span class="appconfig-$appConfigId-reveal reveal sidenote">
            <a href="javascript:toggle('appconfig-$appConfigId');">Show details</a>
           </span>
