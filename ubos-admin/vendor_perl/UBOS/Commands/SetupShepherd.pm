@@ -51,25 +51,23 @@ sub run {
 
     if(    !$parseOk
         || @args > 1
-        || ( $file && @args )
-        || ( $add && !$file && @args == 0 )
+        || ( $file  && @args )
+        || ( !$file && @args == 0 )
         || ( $add && $force )
-        || ( $force && !$file && @args == 0 )
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( $file && ! -r $file ) {
-        fatal( 'File cannot be read or does not exist:', $file );
-    }
-
     my $key;
     if( @args ) {
         $key = $args[0];
-    } else {
+    } elsif( -r $file ) {
         $key = UBOS::Utils::slurpFile( $file );
+    } else {
+        fatal( 'File cannot be read or does not exist:', $file );
     }
+
     unless( $key =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
         if( $file ) {
             fatal( 'This does not look like a valid ssh public key:', $key );
