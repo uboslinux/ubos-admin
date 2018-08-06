@@ -2,9 +2,9 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.13
+pkgver=0.14
 pkgrel=1
-pkgdesc="Functionality that allows UBOS to interact with UBOS Live"
+pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
 license=("proprietary")
 options=('!strip')
@@ -28,7 +28,7 @@ package() {
     install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
 
 # Put obtained certificate(s) here; also, ssh keys
-    install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/etc/ubos-live
+    install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/usr/share/ubos-live
 
 # Initialize on boot with staff
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/

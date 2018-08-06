@@ -104,6 +104,12 @@ sub _restartUbosLiveIfNeeded() {
 }
 
 ##
+# Invoked when the package installs
+sub postInstall {
+    postUpgrade();
+}
+
+##
 # Invoked when the package upgrades
 sub postUpgrade {
     # UBOS Live may or may not be active
@@ -265,13 +271,13 @@ CONTENT
 ##
 # Copy the authorized SSH keys into ~ubos-live/.ssh/authorized_keys
 sub _copyAuthorizedKeys {
-    my $keys = UBOS::Utils::slurpFile( '/etc/ubos-live/authorized_keys' );
+    my $keys = UBOS::Utils::slurpFile( '/usr/share/ubos-live/authorized_keys' );
     if( $keys ) {
         my $dir = '/var/ubos-live/.ssh';
         unless( -d $dir ) {
             UBOS::Utils::mkdir( $dir, 0700, 'ubos-live', 'ubos-live' );
         }
-        UBOS::Utils::saveFile( "$dir/.authorized_keys", $keys, 0600, 'ubos-live', 'ubos-live' );
+        UBOS::Utils::saveFile( "$dir/authorized_keys", $keys, 0600, 'ubos-live', 'ubos-live' );
     }
 }
 
