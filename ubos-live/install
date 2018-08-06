@@ -5,6 +5,10 @@
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
+post_install() {
+    perl -MUBOS::Live::UbosLive -e 'UBOS::Live::UbosLive::postInstall();'
+}
+
 post_upgrade() {
     perl -MUBOS::Live::UbosLive -e 'UBOS::Live::UbosLive::postUpgrade();'
 }
