@@ -189,6 +189,10 @@ a.hide {
 .hide {
     display: none;
 }
+span.tt {
+    font-family: monospace;
+}
+
 CSS
 
 ## The Javascript

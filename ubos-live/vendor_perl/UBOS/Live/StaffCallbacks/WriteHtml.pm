@@ -350,16 +350,16 @@ HTML
           <th>Site admin user password:</th>
           <td>
            <div id="site-$siteId-passwd" class="hide"></div>
-            <span class="site-$siteId-passwd-reveal reveal">
-             &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
-             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Reveal</a>
-            </span>
-            <span class="site-$siteId-passwd-hide hide">
-             <tt id="site-$siteId-passwd-copy-fromhere">$siteAdminCred</tt>
-             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Hide</a>
-             <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">Copy</a>
-            </span>
-           </td>
+           <span class="site-$siteId-passwd-reveal reveal">
+            &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
+            <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Reveal</a>
+           </span>
+           <span class="site-$siteId-passwd-hide hide">
+            <span class="tt" id="site-$siteId-passwd-copy-fromhere">$siteAdminCred</span>
+            <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Hide</a>
+            <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">Copy</a>
+           </span>
+          </td>
          </tr>
          <tr>
           <th>Site admin user e-mail:</th>
@@ -422,11 +422,12 @@ HTML
             </tr>
            </thead>
 HTML
-                    my @installableIds = ( $appId );
-                    if( exists( $appConfig->{accessoryids} )) {
-                        push @installableIds, sort @{$appConfig->{accessoryids}};
-                    }
-                    foreach my $installableId ( @installableIds ) {
+                    my @installables = ( $appConfig->app() );
+                    push @installables, sort { $a->packageName() <=> $b->packageName() } $appConfig->accessories();
+                    foreach my $installable ( @installables ) {
+                        my $installableId = $installable->packageName();
+                        my $custPointDefs = $installable->customizationPoints();
+
                         if(    exists( $appConfig->{customizationpoints} )
                             && exists( $appConfig->{customizationpoints}->{$installableId} ))
                         {
@@ -435,22 +436,40 @@ HTML
                             my $isFirst = 1;
                             foreach my $pointName ( sort keys %{$appConfig->{customizationpoints}->{$installableId}} ) {
                                 my $pointValue = _formatValue( $appConfig->{customizationpoints}->{$installableId}->{$pointName} );
+                                $html .= <<HTML;
+           <tr>
+HTML
                                 if( $isFirst ) {
                                     $html .= <<HTML;
-           <tr>
             <th$rowSpan>$installableId</th>
-            <td>$pointName</td>
-            <td>$pointValue</td>
-           </tr>
-HTML
-                                } else {
-                                    $html .= <<HTML;
-           <tr>
-            <td>$pointName</td>
-            <td>$pointValue</td>
            </tr>
 HTML
                                 }
+                                $html .= <<HTML;
+            <td>$pointName</td>
+            <td>
+HTML
+                                if( exists( $custPointDefs->{$pointName} ) && $custPointDefs->{$pointName}->{private} ) {
+                                    $html .= <<HTML;
+           <div id="appconfig-$appConfigId-$installableId-$pointName" class="hide"></div>
+           <span class="appconfig-$appConfigId-$installableId-$pointName-reveal reveal">
+            &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
+            <a class="sidenote" href="javascript:toggle('appconfig-$appConfigId-$installableId-$pointName');">Reveal</a>
+           </span>
+           <span class="appconfig-$appConfigId-$installableId-$pointName-hide hide">
+            $pointValue
+            <a class="sidenote" href="javascript:toggle('appconfig-$appConfigId-$installableId-$pointName');">Hide</a>
+           </span>
+HTML
+                                } else {
+                                    $html .= <<HTML;
+             $pointValue
+HTML
+                                }
+                                $html .= <<HTML;
+            </td>
+           </tr>
+HTML
                                 $isFirst = 0;
                             }
                         } else { # no customization points
@@ -494,8 +513,8 @@ HTML
      </h2>
      <div id="keys" class="hide">
       <p class="note">If there is an SSH public key on this Staff,
-      a file named <tt>id_rsa.pub</tt> will be shown below. If there is also an SSH private
-      key, it will be in file <tt>id_rsa</tt>. Due to browser limitations, displaying
+      a file named <span class="tt">id_rsa.pub</span> will be shown below. If there is also an SSH private
+      key, it will be in file <span class="tt">id_rsa</span>. Due to browser limitations, displaying
       it this way is the best we can do.</p>
       <iframe src="shepherd/ssh/"></iframe>
      </div>
@@ -517,7 +536,7 @@ HTML
       <p class="note">If there are WiFi credentials on this Staff,
       so your UBOS device automatically connects to a WiFi network when you boot
       it with this Staff inserted, they will be shown below. Each WiFi network must be
-      in a separate file with the extention <tt>.conf</tt>. Due to browser
+      in a separate file with the extention <span class="tt">.conf</span>. Due to browser
       limitations, displaying them this way is the best we can do.</p>
       <iframe src="wifi/"></iframe>
      </div>
@@ -539,7 +558,7 @@ HTML
       <p class="note">If there are Site templates on this Staff,
       which will be automatically deployed when you boot your UBOS device with
       this Staff inserted, they will be shown below. Files must end with
-      extension <tt>.json</tt>. Due to browser limitations,
+      extension <span class="tt">.json</span>. Due to browser limitations,
       displaying them this way is the best we can do.</p>
       <iframe src="site-templates/"></iframe>
      </div>
