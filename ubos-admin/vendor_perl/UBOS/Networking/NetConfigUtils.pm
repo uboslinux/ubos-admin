@@ -353,7 +353,7 @@ END
             $servicesNeeded{'avahi-daemon.service'} = 1;
             $servicesNeeded{'avahi-daemon.socket'}  = 1;
             if( $avahiAllowInterfacesString ) {
-                $avahiAllowInterfacesString .= ' ';
+                $avahiAllowInterfacesString .= ','; # comma-separated
             }
             $avahiAllowInterfacesString .= $nic;
 
