@@ -246,6 +246,10 @@ CONTENT
 #over_voltage=6
 
 gpu_mem=64
+
+# hardware clock of the Desktop Pi
+device_tree_overlay=i2c-rtc,pcf8563
+
 CONTENT
 
     return 0;
@@ -271,7 +275,7 @@ sub deviceClass {
 ##
 # Help text
 sub help {
-    return 'SD card for Raspberry Pi 2 or 3';
+    return 'SD card or USB disk for Raspberry Pi 2 or 3';
 }
 
 1;
