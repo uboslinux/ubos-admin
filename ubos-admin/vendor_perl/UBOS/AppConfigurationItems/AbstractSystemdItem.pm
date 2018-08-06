@@ -43,6 +43,52 @@ sub new {
 }
 
 ##
+# Install this item, or check that it is installable.
+# $doIt: if 1, install; if 0, only check
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $vars: the Variables object that knows about symbolic names and variables
+# return: success or fail
+sub deployOrCheck {
+    my $self           = shift;
+    my $doIt           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $vars           = shift;
+
+    trace( 'AbstractSystemdItem::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
+
+    my $ret = 1;
+    if( $self->_runAtDeployUndeploy()) {
+        $ret = $self->_switchOn( $vars );
+    }
+    return $ret;
+}
+
+##
+# Uninstall this item, or check that it is uninstallable.
+# $doIt: if 1, uninstall; if 0, only check
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $vars: the Variables object that knows about symbolic names and variables
+# return: success or fail
+sub undeployOrCheck {
+    my $self           = shift;
+    my $doIt           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $vars           = shift;
+
+    trace( 'AbstractSystemdItem::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
+
+    my $ret = 1;
+    if( $self->_runAtDeployUndeploy()) {
+        $ret = $self->_switchOff( $vars );
+    }
+    return $ret;
+}
+
+##
 # Suspend this item.
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
@@ -54,24 +100,11 @@ sub suspend {
     my $defaultToDir   = shift;
     my $vars           = shift;
 
-    my $ret    = 1;
-    my $name   = $self->{json}->{name};
-    my $suffix = $self->{suffix};
+    trace( 'AbstractSystemdItem::suspend', $defaultFromDir, $defaultToDir );
 
-    trace( 'AbstractSystemdItem::suspend', $defaultFromDir, $defaultToDir, $name, $suffix );
-
-    $name = $vars->replaceVariables( $name );
-
-    my $out;
-    my $err;
-    if( UBOS::Utils::myexec( "systemctl disable '$name.$suffix'", undef, \$out, \$err )) {
-        error( 'AbstractSystemdItem::suspend: failed to disable', "$name.$suffix:", $out, $err );
-        $ret = 0;
-    }
-    # stop even if disable failed
-    if( UBOS::Utils::myexec( "systemctl stop '$name.$suffix'", undef, \$out, \$err )) {
-        error( 'AbstractSystemdItem::suspend: failed to stop', "$name.$suffix:", $out, $err );
-        $ret = 0;
+    my $ret = 1;
+    unless( $self->_runAtDeployUndeploy()) {
+        $ret = $self->_switchOff( $vars );
     }
 
     return $ret;
@@ -89,23 +122,72 @@ sub resume {
     my $defaultToDir   = shift;
     my $vars           = shift;
 
+    trace( 'AbstractSystemdItem::resume', $defaultFromDir, $defaultToDir );
+
+    my $ret    = 1;
+    unless( $self->_runAtDeployUndeploy()) {
+        $ret = $self->_switchOn( $vars );
+    }
+
+    return $ret;
+}
+
+##
+# Evaluate whether to switch this item during the deploy/undeploy phase or
+# during the suspend/resume phase.
+sub _runAtDeployUndeploy {
+    my $self = shift;
+
+    if( exists( $self->{json}->{phase} ) &&  'suspendresume' eq $self->{json}->{phase} ) {
+        return 0;
+
+    } else {
+        return 1;
+    }
+}
+
+##
+# Turn the item off
+# $vars: the Variables object that knows about symbolic names and variables
+# return: success or fail
+sub _switchOff {
+    my $self = shift;
+    my $vars = shift;
+
     my $ret    = 1;
     my $name   = $self->{json}->{name};
     my $suffix = $self->{suffix};
-
-    trace( 'AbstractSystemdItem::resume', $defaultFromDir, $defaultToDir, $name, $suffix );
 
     $name = $vars->replaceVariables( $name );
 
     my $out;
     my $err;
-    if( UBOS::Utils::myexec( "systemctl start '$name.$suffix'", undef, \$out, \$err )) {
-        error( 'AbstractSystemdItem::resume: failed to start', "$name.$suffix:", $out, $err );
+    if( UBOS::Utils::myexec( "systemctl disable --now '$name.$suffix'", undef, \$out, \$err )) {
+        error( 'AbstractSystemdItem::_switchOff: failed to disable', "$name.$suffix:", $out, $err );
         $ret = 0;
+    }
 
-    # only enable if start succeeded
-    } elsif( UBOS::Utils::myexec( "systemctl enable '$name.$suffix'", undef, \$out, \$err )) {
-        error( 'AbstractSystemdItem::resume: failed to enable', "$name.$suffix:", $out, $err );
+    return $ret;
+}
+
+##
+# Turn the item on
+# $vars: the Variables object that knows about symbolic names and variables
+# return: success or fail
+sub _switchOn {
+    my $self = shift;
+    my $vars = shift;
+
+    my $ret    = 1;
+    my $name   = $self->{json}->{name};
+    my $suffix = $self->{suffix};
+
+    $name = $vars->replaceVariables( $name );
+
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "systemctl enable --now '$name.$suffix'", undef, \$out, \$err )) {
+        error( 'AbstractSystemdItem::_switchOn: failed to enable', "$name.$suffix:", $out, $err );
         $ret = 0;
     }
 
