@@ -296,7 +296,10 @@ sub siteDeployed {
     trace( 'Host::siteDeployed', $siteId );
 
     my $now = UBOS::Utils::now();
-    $siteJson->{lastupdated} = UBOS::Utils::time2string( $now );
+    my $lastUpdated = UBOS::Utils::time2string( $now );
+
+    $siteJson->{lastupdated}       = $lastUpdated;
+    $publicSiteJson->{lastupdated} = $lastUpdated;
 
     unless( -d $SITE_JSON_DIR ) {
         UBOS::Utils::mkdirDashP( $SITE_JSON_DIR );
