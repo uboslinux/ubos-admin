@@ -10,6 +10,7 @@ use warnings;
 
 package UBOS::Host;
 
+use File::Basename;
 use UBOS::Apache2;
 use UBOS::Logging;
 use UBOS::Roles::apache2;
@@ -308,9 +309,9 @@ sub siteDeployed {
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
 
-    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'deployed', $siteId, $hostname );
-
     $_sites = undef;
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'deployed', $siteId, $hostname );
 }
 
 ##
@@ -327,9 +328,9 @@ sub siteUndeployed {
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-world.json" );
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-full.json" );
 
-    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'undeployed', $siteId, $hostname );
-
     $_sites = undef;
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'undeployed', $siteId, $hostname );
 }
 
 ##
@@ -485,10 +486,11 @@ sub setState {
     trace( 'Host::setState', $newState );
 
     my %permittedStates = (
-        'BootingOrShuttingDown' => 1,
-        'Operational'           => 1,
-        'InMaintenance'         => 1,
-        'Error'                 => 1
+        'Operational'   => 1,
+        'InMaintenance' => 1,
+        'ShuttingDown'  => 1,
+        'Rebooting'     => 1,
+        'Error'         => 1
     );
     unless( $permittedStates{$newState} ) {
         error( 'Unknown UBOS state:', $newState );
@@ -940,11 +942,11 @@ sub _parseFindMntJson {
 
 # Prevent interruptions of this script
 sub preventInterruptions {
-    setState( 'InMaintenance' );
-
     $SIG{'HUP'}  = 'IGNORE';
     $SIG{'INT'}  = 'IGNORE';
     $SIG{'QUIT'} = 'IGNORE';
+
+    setState( 'InMaintenance' );
 }
 
 my $dbTypes           = {}; # cache

@@ -12,7 +12,7 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::StaffManager;
 
-UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-start', 0, '/etc/ubos/log-system.conf' );
+UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready', 0, '/etc/ubos/log-system.conf' );
 
 my $errors = UBOS::Host::ensureSnapperConfig();
 $errors += UBOS::Host::runAfterBootCommandsIfNeeded();

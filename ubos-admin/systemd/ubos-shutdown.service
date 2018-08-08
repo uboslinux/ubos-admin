@@ -1,0 +1,15 @@
+[Unit]
+Description=UBOS shutdown actions
+DefaultDependencies=no
+Before=shutdown.target halt.target
+
+[Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-shutdown
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-shutdown
+
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/share/ubos-admin/bin/ubos-shutdown
+
+[Install]
+WantedBy=shutdown.target halt.target

@@ -49,10 +49,9 @@ sub deployed {
 }
 
 ##
-# A site with this hostname has been undeployed from this host
+# A site has been undeployed from this host
 # $siteId: the id of the site
 # $hostname: the hostname of the site
-# @nics: the network interfaces on which the site can be reached
 # @nics: the network interfaces on which the site can be reached
 sub undeployed {
     my $siteId   = shift;

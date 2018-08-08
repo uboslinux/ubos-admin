@@ -1,5 +1,5 @@
 [Unit]
-Description=ubos-ready configuration
+Description=UBOS ready actions
 Wants=network.target cronie.service httpd.service certbot.timer
 After=ubos-admin.service httpd.service mysqld.service
 
@@ -9,8 +9,7 @@ ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-ready
 
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/share/ubos-admin/bin/ubos-ready-start
-ExecStop=/usr/share/ubos-admin/bin/ubos-ready-stop
+ExecStart=/usr/share/ubos-admin/bin/ubos-ready
 
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=UBOS reboot actions
+DefaultDependencies=no
+Before=reboot.target
+
+[Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-reboot
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop ubos-reboot
+
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/share/ubos-admin/bin/ubos-reboot
+
+[Install]
+WantedBy=reboot.target

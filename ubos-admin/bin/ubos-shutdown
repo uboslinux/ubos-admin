@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+#
+# Invoked when ubos-shutdown.service activates during a shutdown or halt
+#
+# Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
+#
+
+use strict;
+use warnings;
+
+use UBOS::Host;
+use UBOS::Logging;
+
+UBOS::Logging::initialize( 'ubos-admin', 'ubos-shutdown', 0, '/etc/ubos/log-system.conf' );
+
+my $errors = UBOS::Host::setState( 'ShuttingDown' );
+
+if( $errors ) {
+    exit( 1 );
+} else {
+    exit( 0 );
+}
+
+1;

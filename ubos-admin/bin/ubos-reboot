@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Invoked when ubos-ready.service is stopped
+# Invoked when ubos-reboot.service activates during a reboot
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -11,9 +11,9 @@ use warnings;
 use UBOS::Host;
 use UBOS::Logging;
 
-UBOS::Logging::initialize( 'ubos-admin', 'ubos-ready-stop', 0, '/etc/ubos/log-system.conf' );
+UBOS::Logging::initialize( 'ubos-admin', 'ubos-reboot', 0, '/etc/ubos/log-system.conf' );
 
-my $errors = UBOS::Host::setState( 'BootingOrShuttingDown' );
+my $errors = UBOS::Host::setState( 'Rebooting' );
 
 if( $errors ) {
     exit( 1 );
