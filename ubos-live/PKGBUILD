@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.16
+pkgver=0.17
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -20,6 +20,7 @@ install=install
 package() {
 # Config
     mkdir -p -m755 ${pkgdir}/etc/openvpn
+    mkdir -p -m755 ${pkgdir}/etc/ubos-live
 
 # ubos-live user
     install -D -m644 ${startdir}/sysusers.d/ubos-live.conf -t ${pkgdir}/usr/lib/sysusers.d/
