@@ -40,7 +40,11 @@ sub performAtSave {
 
     trace( 'SaveDeviceInfo::performAtSave', $staffRootDir, $isActualStaffDevice );
 
-    return saveDeviceInfo( $staffRootDir );
+    if( $isActualStaffDevice ) {
+        return saveDeviceInfo( $staffRootDir );
+    } else {
+        return 0;
+    }
 }
 
 ##

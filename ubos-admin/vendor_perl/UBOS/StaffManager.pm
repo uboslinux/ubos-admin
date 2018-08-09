@@ -53,14 +53,20 @@ sub performBootActions {
         }
         $isActualStaffDevice = 1;
 
-    } else {
-        # container/cloud case
-        if( -d "/$LABEL" ) {
-            $target              = "/$LABEL";
-            $isActualStaffDevice = 0;
-            # don't genKeyPairIfNeeded
+    } else  {
+        my $out;
+        if( UBOS::Utils::myexec( 'systemd-detect-virt', undef, \$out, \$out ) == 0 ) {
+            # container/cloud case
+            if( -d "/$LABEL" ) {
+                $target              = "/$LABEL";
+                $isActualStaffDevice = 0;
+
+            } else {
+                trace( 'No staff device found' );
+                return 0;
+            }
         } else {
-            trace( 'No staff device found' );
+            # regular computer, but no staff device
             return 0;
         }
     }
@@ -79,7 +85,7 @@ sub performBootActions {
     if( $device ) {
         if( unmountDevice( $device, $target )) {
             error( 'Failed to unmount:', $device, $target );
-        ++$errors;
+            ++$errors;
         }
     }
 

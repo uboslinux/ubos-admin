@@ -40,7 +40,11 @@ sub performAtSave {
 
     trace( 'SaveSitesJson::performAtSave', $staffRootDir, $isActualStaffDevice );
 
-    return saveSitesJson( $staffRootDir );
+    if( $isActualStaffDevice ) {
+        return saveSitesJson( $staffRootDir );
+    } else {
+        return 0;
+    }
 }
 
 ##

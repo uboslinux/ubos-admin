@@ -44,6 +44,10 @@ sub performAtSave {
 
     trace( 'WriteHtml::performAtSave', $staffRootDir, $isActualStaffDevice );
 
+    unless( $isActualStaffDevice ) {
+        return 0;
+    }
+
     my $devicesDir  = "$staffRootDir/flock";
     my $devicesDirs = {};
 
