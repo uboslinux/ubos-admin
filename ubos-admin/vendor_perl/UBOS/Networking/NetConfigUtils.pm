@@ -1077,7 +1077,7 @@ sub compareNics($$) {
 
 ##
 # Determine the list of open ports
-# return: list of ports
+# return: list of ports, as port/protoc
 sub _determineOpenPorts {
 
     my $all = '';
