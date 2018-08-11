@@ -59,7 +59,7 @@ sub deployOrCheck {
     trace( 'AbstractSystemdItem::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
 
     my $ret = 1;
-    if( $self->_runAtDeployUndeploy()) {
+    if( $doIt && $self->_runAtDeployUndeploy()) {
         $ret = $self->_switchOn( $vars );
     }
     return $ret;
@@ -82,7 +82,7 @@ sub undeployOrCheck {
     trace( 'AbstractSystemdItem::undeployOrCheck', $doIt, $defaultFromDir, $defaultToDir );
 
     my $ret = 1;
-    if( $self->_runAtDeployUndeploy()) {
+    if( $doIt && $self->_runAtDeployUndeploy()) {
         $ret = $self->_switchOff( $vars );
     }
     return $ret;
