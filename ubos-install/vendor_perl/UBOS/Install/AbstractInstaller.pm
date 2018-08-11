@@ -964,7 +964,7 @@ sub addSetupShepherdAndKeyToScript {
 
     my $ret = 0;
     if( $self->{shepherdKey} ) {
-        $$chrootScriptP .= "useradd -e '' -c 'UBOS shepherd user' -m -U shepherd -d /var/shepherd\n";
+        # user was created by sysusers
         $$chrootScriptP .= "mkdir -m 0700 /var/shepherd/.ssh\n";
         $$chrootScriptP .= "cat > /var/shepherd/.ssh/authorized_keys <<END\n";
         $$chrootScriptP .= $self->{shepherdKey} . "\n";
