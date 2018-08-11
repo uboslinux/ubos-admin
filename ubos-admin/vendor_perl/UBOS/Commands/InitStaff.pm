@@ -67,7 +67,7 @@ sub run {
     my $wifis         = {}; # SSID                       => hash of parameters
     my $siteTemplates = {}; # filename without extension => Site template JSON
 
-    if( $shepherdKey && $shepherdKey !~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+    if( $shepherdKey && $shepherdKey !~ m!^ssh-\S+ ! ) {
         fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $shepherdKey );
     }
     foreach my $siteTemplateFile ( @siteTemplateFiles ) {

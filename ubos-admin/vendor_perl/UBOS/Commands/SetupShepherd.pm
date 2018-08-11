@@ -68,7 +68,7 @@ sub run {
         fatal( 'File cannot be read or does not exist:', $file );
     }
 
-    unless( $key =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+    unless( $key =~ m!^ssh-\S+ ! ) {
         if( $file ) {
             fatal( 'This does not look like a valid ssh public key:', $key );
         } else {

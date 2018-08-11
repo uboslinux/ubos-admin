@@ -254,7 +254,7 @@ if( $shepherdKeyFile ) {
     unless( $shepherdKey ) {
         fatal( $@ );
     }
-    unless( $shepherdKey =~ m!^ssh-\S+ \S+ \S+\@\S+$! ) {
+    unless( $shepherdKey =~ m!^ssh-\S+ ! ) {
         fatal( 'This does not look like a valid ssh public key:', $shepherdKey );
     }
     $installer->setShepherdKey( $shepherdKey );
