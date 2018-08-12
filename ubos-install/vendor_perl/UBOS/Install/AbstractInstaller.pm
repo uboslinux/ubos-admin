@@ -339,7 +339,8 @@ set -e
 
 # In a container, there may be no /lib/modules
 if [ -d /lib/modules ]; then
-    for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+    # old version: for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+    depmod -a
 fi
 
 systemctl set-default multi-user.target
