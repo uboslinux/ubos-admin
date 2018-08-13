@@ -970,7 +970,7 @@ sub addSetupShepherdAndKeyToScript {
         $$chrootScriptP .= "cat > /var/shepherd/.ssh/authorized_keys <<END\n";
         $$chrootScriptP .= $self->{shepherdKey} . "\n";
         $$chrootScriptP .= "END\n";
-        $$chrootScriptP .= "chown -r shepherd:shepherd /var/shepherd\n";
+        $$chrootScriptP .= "chown -R shepherd:shepherd /var/shepherd\n";
     }
     return $ret;
 }
