@@ -54,7 +54,7 @@ sub run {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
-    my $ret = finishUpdate( 1, $snapNumber );
+    my $ret = finishUpdate( $snapNumber );
 
     unless( $ret && !$stage1exit ) {
         error( "Update failed." );
@@ -65,13 +65,11 @@ sub run {
 
 ##
 # Factored-out method that is invoked from UpdateStage2::run and from
-# ubos-admin-init after Update has invoked a reboot, and the system
+# ubos-ready after Update has invoked a reboot, and the system
 # has rebooted.
-# $restartServices: if true, restart Apache et all. If false, don't because that might deadlock systemd
 # $snapNumber: if defined, create a "post" snapshot that corresponds to the "pre" snapshot with this number
 sub finishUpdate {
-    my $restartServices = shift;
-    my $snapNumber      = shift;
+    my $snapNumber = shift;
 
     my $ret = 1;
 
@@ -96,12 +94,10 @@ sub finishUpdate {
 
             UBOS::Host::siteDeployed( $site );
         }
-        if( $restartServices ) {
-            $deployTriggers->{'httpd-restart'} = 1;
+        $deployTriggers->{'httpd-restart'} = 1;
 
-            debugAndSuspend( 'Execute triggers', keys %$deployTriggers );
-            UBOS::Host::executeTriggers( $deployTriggers );
-        }
+        debugAndSuspend( 'Execute triggers', keys %$deployTriggers );
+        UBOS::Host::executeTriggers( $deployTriggers );
 
         info( 'Resuming sites' );
 
@@ -112,10 +108,8 @@ sub finishUpdate {
         }
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
 
-        if( $restartServices ) {
-            debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-            UBOS::Host::executeTriggers( $resumeTriggers );
-        }
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
     }
 
     if( $ret ) {

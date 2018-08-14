@@ -138,7 +138,7 @@ sub run {
         UBOS::Host::executeTriggers( $suspendTriggers );
 
         info( 'Backing up' );
-        
+
         if( $backupFile ) {
             my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
             trace( 'ZipFileBackup of sites:', @siteIdsToBackup );
@@ -259,7 +259,7 @@ sub run {
         }
 
         if( $doReboot ) {
-            my $afterBoot = 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( 0, ';
+            my $afterBoot = 'perleval:use UBOS::Commands::UpdateStage2; UBOS::Commands::UpdateStage2::finishUpdate( ';
             if( defined( $snapNumber )) {
                 $afterBoot .= '"' . $snapNumber . '"';
             } else {
