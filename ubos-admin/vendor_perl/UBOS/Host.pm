@@ -601,7 +601,8 @@ sub updateCode {
             myexec( 'uname -r', undef, \$kernelVersion );
             $kernelVersion =~ s!^\s+!!;
             $kernelVersion =~ s!\s+$!!;
-            $kernelVersion =~ s!-ARCH$!!; # somehow there's a -ARCH at the end
+            $kernelVersion =~ s!-arch!.arch!; # they don't agree on . vs -
+            $kernelVersion =~ s!-ARCH$!!;     # somehow there's a -ARCH at the end
 
             if( $kernelPackageVersion ne $kernelVersion && "$kernelPackageVersion-ec2" ne $kernelVersion ) {
                 # apparently the EC2 kernel version has a trailing -ec2
