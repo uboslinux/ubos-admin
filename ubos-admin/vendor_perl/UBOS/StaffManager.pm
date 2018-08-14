@@ -222,15 +222,14 @@ END
 
             trace( 'fdisk script for', $device, ':', $fdiskScript );
 
-            if( UBOS::Utils::myexec( "fdisk '" . $device . "'", $fdiskScript, \$out, \$err )) {
-                error( 'fdisk failed', $out, $err );
+            if( UBOS::Utils::myexec( "fdisk '" . $device . "'", $fdiskScript, \$out, \$out )) {
+                error( 'fdisk failed', $out );
                 return undef;
             }
             $device = $device . '1';
         }
     }
 
-    my $out;
     if( UBOS::Utils::myexec( "mkfs.vfat '$device' -n UBOS-STAFF", undef, \$out, \$out )) {
         error( 'mkfs.vfat failed:', $out );
         return undef;
