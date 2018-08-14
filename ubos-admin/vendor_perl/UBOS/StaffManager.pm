@@ -209,7 +209,7 @@ sub formatStaffDevice {
 
         unless( $type eq 'part' ) {
             my $fdiskScript = '';
-            $fdiskScript .= <<END; # first clear out everything
+            $fdiskScript .= <<END; # clear out everything, create single partition of type b=FAT32
 o
 n
 p
@@ -217,6 +217,8 @@ p
 
 
 
+t
+b
 w
 END
 
