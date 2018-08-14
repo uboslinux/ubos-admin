@@ -190,7 +190,7 @@ sub guessStaffDevice {
 ##
 # Format a device as a suitable UBOS Staff device
 # $device: the device to be formatted
-# return: number of errors
+# return: the $device if partition, or the partition device on $device, or undef
 sub formatStaffDevice {
     my $device = shift;
 
@@ -198,14 +198,45 @@ sub formatStaffDevice {
         fatal( 'Not a block device:', $device );
     }
 
-    my $errors = 0;
+    # If this is a device without a partition table, create one
+    my $out;
+    UBOS::Utils::myexec( "lsblk -o NAME,TYPE --json -n '$device'", undef, \$out );
+
+    my $json = UBOS::Utils::readJsonFromString( $out );
+
+    if( $json && exists( $json->{blockdevices} ) && @{$json->{blockdevices}} ) {
+        my $type = $json->{blockdevices}->[0]->{type};
+
+        unless( $type eq 'part' ) {
+            my $fdiskScript = '';
+            $fdiskScript .= <<END; # first clear out everything
+o
+n
+p
+
+
+
+
+w
+END
+
+            trace( 'fdisk script for', $device, ':', $fdiskScript );
+
+            if( UBOS::Utils::myexec( "fdisk '" . $device . "'", $fdiskScript, \$out, \$err )) {
+                error( 'fdisk failed', $out, $err );
+                return undef;
+            }
+            $device = $device . '1';
+        }
+    }
+
     my $out;
     if( UBOS::Utils::myexec( "mkfs.vfat '$device' -n UBOS-STAFF", undef, \$out, \$out )) {
         error( 'mkfs.vfat failed:', $out );
-        ++$errors;
+        return undef;
     }
 
-    return $errors;
+    return $device;
 }
 
 ##
