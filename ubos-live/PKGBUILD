@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.19
+pkgver=0.20
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -24,7 +24,6 @@ package() {
 
 # ubos-live user
     install -D -m644 ${startdir}/sysusers.d/ubos-live.conf -t ${pkgdir}/usr/lib/sysusers.d/
-    install -D -m644 ${startdir}/tmpfiles.d/ubos-live.conf -t ${pkgdir}/usr/lib/tmpfiles.d/
     mkdir -m750 ${pkgdir}/etc/sudoers.d
     install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
 

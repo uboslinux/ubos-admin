@@ -117,6 +117,7 @@ sub postUpgrade {
     if( -e $OPENVPN_CLIENT_CONFIG ) {
         _ensureOpenvpnClientConfig();
     }
+    _createUser();
     _copyAuthorizedKeys();
     _restartUbosLiveIfNeeded();
 
@@ -269,13 +270,20 @@ CONTENT
 }
 
 ##
+# Because the systemd-sysusers hook only runs after the package install
+# script is completed, we run it ourselves from the package install script.
+sub _createUser {
+    UBOS::Utils::myexec( "systemd-sysusers /usr/lib/sysusers.d/ubos-live.conf" );
+}
+
+##
 # Copy the authorized SSH keys into ~ubos-live/.ssh/authorized_keys
 sub _copyAuthorizedKeys {
     my $keys = UBOS::Utils::slurpFile( '/usr/share/ubos-live/authorized_keys' );
     if( $keys ) {
         my $dir = '/var/ubos-live/.ssh';
         unless( -d $dir ) {
-            UBOS::Utils::mkdir( $dir, 0700, 'ubos-live', 'ubos-live' );
+            UBOS::Utils::mkdirDashP( $dir, 0700, 'ubos-live', 'ubos-live' );
         }
         UBOS::Utils::saveFile( "$dir/authorized_keys", $keys, 0600, 'ubos-live', 'ubos-live' );
     }
@@ -291,7 +299,7 @@ sub generateRegistrationToken {
     for( my $i=0 ; $i<8 ; ++$i ) {
         $ret .= $sep . UBOS::Utils::randomHex( 4 );
         $sep = '-';
-    }        
+    }
     return $ret;
 }
 
