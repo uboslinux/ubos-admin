@@ -77,13 +77,13 @@ sub run {
 
     my $errors = 0;
     if( $directory ) {
-        $errors += UBOS::StaffManager::saveCurrentConfiguration( $directory );
+        $errors += UBOS::StaffManager::saveCurrentConfiguration( $directory, 0 );
 
     } else {
         my $targetDir;
         $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
-        $errors += UBOS::StaffManager::saveCurrentConfiguration( $targetDir->dirname() );
-        $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
+        $errors += UBOS::StaffManager::saveCurrentConfiguration( $targetDir->dirname(), 1 );
+        $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir );
     }
 
     return $errors ? 0 : 1;
