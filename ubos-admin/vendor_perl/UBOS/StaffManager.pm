@@ -27,6 +27,10 @@ use UBOS::Utils;
 my $LABEL                    = 'UBOS-STAFF';
 my $STAFF_BOOT_CALLBACKS_DIR = '/etc/ubos/staff-boot-callbacks';
 
+# Name of the file that needs to be on the root of the UBOS Staff to
+# skip registering for UBOS Live.
+our $SKIP_UBOS_LIVE_FILE = 'I-ADMINISTER-MY-UBOSBOX-MYSELF';
+
 ##
 # Invoked during boot.
 # 1. Initialize the configuration if there's a staff device attached
@@ -334,12 +338,14 @@ CONTENT
 # $shepherdKey: public ssh key for the shepherd, if any
 # $wifis: hash of WiFi network client information
 # $siteTemplates: hash of template name to site template JSON
+# $noUbosLive: if true, put the skip file at the root of the device
 # return: number of errors
 sub initDirectoryAsStaff {
     my $dir           = shift;
     my $shepherdKey   = shift;
     my $wifis         = shift;
     my $siteTemplates = shift;
+    my $noUbosLive    = shift;
 
     my $errors = 0;
 
@@ -404,6 +410,21 @@ For details, go to https://ubos.net/staff
 
 CONTENT
 
+    if( $noUbosLive ) {
+         UBOS::Utils::saveFile( "$dir/$SKIP_UBOS_LIVE_FILE", <<CONTENT );
+You have chosen to administer your UBOSbox yourself and not use UBOS Live.
+
+That's perfectly fine, but you are on your own performing upgrades etc :-)
+
+If you change your mind:
+* delete this file from your UBOS Staff,
+* make sure package ubos-live is installed on your UBOSbox,
+* reboot your UBOSbox with the UBOS Staff present,
+* then put your UBOS Staff into a computer with a web browser, click
+  on the UBOS-STAFF.html file and follow the registration flow from there.
+
+CONTENT
+    }
     return $errors;
 }
 
@@ -442,7 +463,7 @@ sub labelDeviceAsStaff {
 sub mountDevice {
     my $device  = shift;
     my $targetP = shift;
-    
+
     my $tmpDir    = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
     $$targetP     = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
     my $targetDir = $$targetP->dirname;

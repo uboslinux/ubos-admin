@@ -14,10 +14,7 @@ use UBOS::Host;
 use UBOS::Live::UbosLive;
 use UBOS::Logging;
 use UBOS::Utils;
-
-# Name of the file that needs to be on the root of the UBOS Staff to
-# skip registering for UBOS Live.
-my $SKIP_FILE = 'I-ADMINISTER-MY-DEVICE-MYSELF';
+use UBOS::StaffManager;
 
 ##
 # Reading-from-Staff callback.
@@ -55,7 +52,9 @@ sub performAtSave {
 sub registerWithUbosLive {
     my $staffRootDir = shift;
 
-    if( -e "$staffRootDir/$SKIP_FILE" ) {
+    my $skipFile = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
+
+    if( -e "$staffRootDir/$skipFile" ) {
         return 0;
     }
     if( UBOS::Live::UbosLive::isRegisteredWithUbosLive()) {

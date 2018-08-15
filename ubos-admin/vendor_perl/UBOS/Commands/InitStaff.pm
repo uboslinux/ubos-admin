@@ -32,7 +32,7 @@ sub run {
     my $debug             = undef;
     my $format            = undef;
     my $label             = undef;
-    my $noformat          = undef;
+    my $noUbosLive        = undef;
     my $shepherdKey       = undef;
     my @wifiStrings       = ();
     my @siteTemplateFiles = ();
@@ -43,6 +43,7 @@ sub run {
             'logConfig=s'              => \$logConfigFile,
             'debug'                    => \$debug,
             'format'                   => \$format,
+            'no-ubos-live'             => \$noUbosLive,
             'label'                    => \$label,
             'add-shepherd-key=s'       => \$shepherdKey,
             'add-wifi=s'               => \@wifiStrings,
@@ -60,7 +61,7 @@ sub run {
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
-    
+
     my $device = @args ? $args[0] : undef;
     my $errors = 0;
 
@@ -118,15 +119,12 @@ sub run {
         fatal( $@ );
     }
 
-
     $errors += UBOS::StaffManager::labelDeviceAsStaff( $device );
-
-
 
     my $targetDir;
     $errors += UBOS::StaffManager::mountDevice( $device, \$targetDir );
-    $errors += UBOS::StaffManager::initDirectoryAsStaff( $targetDir->dirname(), $shepherdKey, $wifis, $siteTemplates );
-    $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir ); 
+    $errors += UBOS::StaffManager::initDirectoryAsStaff( $targetDir->dirname(), $shepherdKey, $wifis, $siteTemplates, $noUbosLive );
+    $errors += UBOS::StaffManager::unmountDevice( $device, $targetDir );
 
     return $errors ? 0 : 1;
 }
@@ -137,7 +135,7 @@ sub run {
 # return: hash of the content of the strin
 sub _parseWifiString {
     my $wifiString = shift;
-    
+
     my $currentWifi        = {};
     my $currentKey         = '';
     my $currentValue       = undef;
@@ -166,7 +164,7 @@ sub _parseWifiString {
             } else {
                 $currentValue .= $c;
             }
-            
+
         } else {
             if( $c eq '=' ) {
                 # state transition, now looking for value
@@ -181,7 +179,7 @@ sub _parseWifiString {
                 $currentWifi->{$currentKey} = '';
                 $currentKey   = '';
                 $currentValue = undef;
-                
+
             } else {
                 $currentKey .= $c;
             }
