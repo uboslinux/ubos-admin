@@ -272,7 +272,7 @@ sub createDiskLayout {
                     $deviceTable->{swap} = {
                         'index'       => 3,
                         'fs'          => 'swap',
-                        'size'        => 8192 * 1024, # 4G at 512/sector
+                        'size'        => 2048 * 1024, # 1G at 512/sector
                         'mbrparttype' => '82',
                         'gptparttype' => '8200',
                         'label'       => 'swap'
