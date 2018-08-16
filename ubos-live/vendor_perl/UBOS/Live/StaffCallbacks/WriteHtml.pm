@@ -120,7 +120,7 @@ sub writeHtml {
     my $errors = 0;
 
     my @deviceJsonList = sort { $a->{hostname} cmp $b->{hostname} }
-                         grep { exists( $a->{hostname} ) } # Skip incomplete info on old Staffs
+                         grep { exists( $_->{hostname} ) } # Skip incomplete info on old Staffs
                          map { $_->{device} } values %$devicesInfo;
 
     my $html   = <<'HTML';
