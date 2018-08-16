@@ -428,8 +428,9 @@ HTML
             </tr>
            </thead>
 HTML
-                    my @installables = ( $appConfig->app() );
-                    push @installables, sort { $a->packageName() <=> $b->packageName() } $appConfig->accessories();
+                    my $appConfigObj = UBOS::Host::findAppConfigurationById( $appConfigId );
+                    my @installables = ( $appConfigObj->app() );
+                    push @installables, sort { $a->packageName() cmp $b->packageName() } $appConfigObj->accessories();
                     foreach my $installable ( @installables ) {
                         my $installableId = $installable->packageName();
                         my $custPointDefs = $installable->customizationPoints();
