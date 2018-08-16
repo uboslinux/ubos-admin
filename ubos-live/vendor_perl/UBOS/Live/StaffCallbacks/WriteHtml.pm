@@ -449,7 +449,6 @@ HTML
                                 if( $isFirst ) {
                                     $html .= <<HTML;
             <th$rowSpan>$installableId</th>
-           </tr>
 HTML
                                 }
                                 $html .= <<HTML;
