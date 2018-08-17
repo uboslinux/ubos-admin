@@ -65,11 +65,11 @@ sub saveSitesJson {
         my $siteJson = $site->siteJson;
 
         # Mark private customizationpoints so the Staff HTML can render them differently
-        foreach my $appConfig ( @{site->appConfigs} ) {
+        foreach my $appConfig ( @{$site->appConfigs} ) {
             my $custPoints = $appConfig->customizationPoints();
 
             my $appConfigJson = undef;
-            foreach my $appConfigJsonI ( @{siteJson->{appconfigs}} ) {
+            foreach my $appConfigJsonI ( @{$siteJson->{appconfigs}} ) {
                 if( $appConfigJsonI->{appconfigid} eq $appConfig->appConfigId ) {
                     $appConfigJson = $appConfigJsonI;
                     last;
