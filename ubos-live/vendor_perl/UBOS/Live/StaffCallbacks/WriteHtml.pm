@@ -10,7 +10,6 @@ use warnings;
 
 package UBOS::Live::StaffCallbacks::WriteHtml;
 
-use UBOS::Host;
 use UBOS::Live::UbosLiveHtmlConstants;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -388,9 +387,10 @@ HTML
             if( exists( $site->{appconfigs} ) && @{$site->{appconfigs}} ) {
                 # foreach my $appConfig ( sort { $a->{context} cmp $b->{context} } @{$site->{appconfigs}} ) {
                 foreach my $appConfig ( @{$site->{appconfigs}} ) {
-                    my $appConfigId = $appConfig->{appconfigid};
-                    my $appId       = $appConfig->{appid};
-                    my $context     = $appConfig->{context};
+                    my $appConfigId  = $appConfig->{appconfigid};
+                    my $appId        = $appConfig->{appid};
+                    my @accessoryIds = exists( $appConfig->{accessoryids} ) ? @{$appConfig->{accessoryids}} : ();
+                    my $context      = $appConfig->{context};
 
                     $html .= <<HTML;
         <dl class="appconfig">
@@ -428,12 +428,9 @@ HTML
             </tr>
            </thead>
 HTML
-                    my $appConfigObj = UBOS::Host::findAppConfigurationById( $appConfigId );
-                    my @installables = ( $appConfigObj->app() );
-                    push @installables, sort { $a->packageName() cmp $b->packageName() } $appConfigObj->accessories();
+                    my @installables = ( $appId );
+                    push @installables, sort @accessoryIds;
                     foreach my $installable ( @installables ) {
-                        my $installableId = $installable->packageName();
-                        my $custPointDefs = $installable->customizationPoints();
 
                         if(    exists( $appConfig->{customizationpoints} )
                             && exists( $appConfig->{customizationpoints}->{$installableId} ))
@@ -455,7 +452,9 @@ HTML
             <td>$pointName</td>
             <td>
 HTML
-                                if( exists( $custPointDefs->{$pointName} ) && $custPointDefs->{$pointName}->{private} ) {
+                                if(    exists( $appConfig->{customizationpoints}->{$installableId}->{$pointName}->{private} )
+                                    && $appConfig->{customizationpoints}->{$installableId}->{$pointName}->{private} )
+                                {
                                     $html .= <<HTML;
            <div id="appconfig-$appConfigId-$installableId-$pointName" class="hide"></div>
            <span class="appconfig-$appConfigId-$installableId-$pointName-reveal reveal">

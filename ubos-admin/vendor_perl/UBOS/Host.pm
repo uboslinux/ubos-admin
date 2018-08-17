@@ -483,7 +483,7 @@ sub executeTriggers {
 sub setState {
     my $newState = shift;
 
-    trace( 'Host::setState', $newState );
+    info( 'Host::setState', $newState );
 
     my %permittedStates = (
         'Operational'   => 1,

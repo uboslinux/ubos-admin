@@ -10,6 +10,7 @@ use warnings;
 
 package UBOS::StaffCallbacks::SaveSitesJson;
 
+use JSON;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -60,7 +61,38 @@ sub saveSitesJson {
 
     my $sitesJson = {};
     foreach my $siteId ( keys %$sites ) {
-        $sitesJson->{$siteId} = $sites->{$siteId}->siteJson;
+        my $site     = $sites->{$siteId};
+        my $siteJson = $site->siteJson;
+
+        # Mark private customizationpoints so the Staff HTML can render them differently
+        foreach my $appConfig ( @{site->appConfigs} ) {
+            my $custPoints = $appConfig->customizationPoints();
+
+            my $appConfigJson = undef;
+            foreach my $appConfigJsonI ( @{siteJson->{appconfigs}} ) {
+                if( $appConfigJsonI->{appconfigid} eq $appConfig->appConfigId ) {
+                    $appConfigJson = $appConfigJsonI;
+                    last;
+                }
+            }
+            unless( $appConfigJson ) {
+                warning( 'Failed to find AppConfiguration JSON', $appConfig, $siteJson );
+                next;
+            }
+
+            if( $custPoints ) {
+                foreach my $installableName ( keys %$custPoints ) {
+                    foreach my $custPointName ( keys %{$custPoints->{$installableName}} ) {
+                        my $custPointDef = $appConfig->customizationPointDefinition( $installableName, $custPointName );
+                        if( exists( $custPointDef->{private} ) && $custPointDef->{private} ) {
+                            $appConfigJson->{customizationpoints}->{$installableName}->{$custPointName}->{private} = JSON::true;
+                        }
+                    }
+                }
+            }
+        }
+
+        $sitesJson->{$siteId} = $siteJson;
     }
 
     unless( -d "$staffRootDir/$infoDir" ) {
