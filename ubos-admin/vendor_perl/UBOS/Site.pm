@@ -1245,7 +1245,9 @@ sub _checkJson {
                     $@ = 'Site JSON: customizationpoints section: not a JSON HASH';
                     return 0;
                 }
-                foreach my $packageName ( keys %{$appConfigJson->{customizationpoints}} ) {
+
+                my @packageNames = keys %{$appConfigJson->{customizationpoints}};
+                foreach my $packageName ( @packageNames ) {
                     unless( $installables{$packageName} ) {
                         $@ = 'Site JSON: customizationpoint specified for non-installed installable ' . $packageName . ', installed: ' . join( ' ', keys %installables );
                         return 0;
@@ -1255,21 +1257,25 @@ sub _checkJson {
                         $@ = 'Site JSON: customizationpoints for package ' . $packageName . ' must be a JSON hash';
                         return 0;
                     }
-                    foreach my $pointName ( keys %$custPointsForPackage ) {
-                        unless( $pointName =~ m!^[a-z][a-z0-9_]*$! ) {
-                            $@ = 'Site JSON: invalid name for customizationpoint, is: ' . $pointName;
-                            return 0;
+                    if( keys %$custPointsForPackage ) {
+                        foreach my $pointName ( keys %$custPointsForPackage ) {
+                            unless( $pointName =~ m!^[a-z][a-z0-9_]*$! ) {
+                                $@ = 'Site JSON: invalid name for customizationpoint, is: ' . $pointName;
+                                return 0;
+                            }
+                            my $pointValue = $custPointsForPackage->{$pointName};
+                            if( !$pointValue || ref( $pointValue ) ne 'HASH' ) {
+                                $@ = 'Site JSON: customizationpoint values for package ' . $packageName . ', point ' . $pointName . ' must be a JSON hash';
+                                return 0;
+                            }
+                            my $valueEncoding = $pointValue->{encoding};
+                            if( $valueEncoding && $valueEncoding ne 'base64' ) {
+                               $@ = 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' invalid encoding';
+                               return 0;
+                            }
                         }
-                        my $pointValue = $custPointsForPackage->{$pointName};
-                        if( !$pointValue || ref( $pointValue ) ne 'HASH' ) {
-                            $@ = 'Site JSON: customizationpoint values for package ' . $packageName . ', point ' . $pointName . ' must be a JSON hash';
-                            return 0;
-                        }
-                        my $valueEncoding = $pointValue->{encoding};
-                        if( $valueEncoding && $valueEncoding ne 'base64' ) {
-                            $@ = 'Site JSON: customizationpoint value for package ' . $packageName . ', point ' . $pointName . ' invalid encoding';
-                            return 0;
-                        }
+                    } else {
+                        delete $appConfigJson->{customizationpoints}->{$packageName}; # clean up empty sections
                     }
                 }
             }
