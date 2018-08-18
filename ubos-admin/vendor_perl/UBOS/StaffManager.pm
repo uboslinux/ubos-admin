@@ -29,7 +29,7 @@ my $STAFF_BOOT_CALLBACKS_DIR = '/etc/ubos/staff-boot-callbacks';
 
 # Name of the file that needs to be on the root of the UBOS Staff to
 # skip registering for UBOS Live.
-our $SKIP_UBOS_LIVE_FILE = 'I-ADMINISTER-MY-UBOSBOX-MYSELF';
+our $SKIP_UBOS_LIVE_FILE = 'I-ADMINISTER-MY-UBOSBOX-MYSELF.txt';
 
 ##
 # Invoked during boot.
