@@ -5,4 +5,4 @@ ubos-live ALL = NOPASSWD: \
     /usr/bin/pacman *, \
     /usr/bin/smartctl *, \
     /usr/bin/systemctl *, \
-    /usr/bin/su sudo *
+    /bin/bash *
