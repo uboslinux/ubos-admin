@@ -55,6 +55,7 @@ sub registerWithUbosLive {
     my $skipFile = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
 
     if( -e "$staffRootDir/$skipFile" ) {
+        info( 'Skipping UBOS Live: user has chosen to self-administer' );
         return 0;
     }
     if( UBOS::Live::UbosLive::isRegisteredWithUbosLive()) {
