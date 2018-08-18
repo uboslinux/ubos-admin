@@ -428,12 +428,13 @@ HTML
             </tr>
            </thead>
 HTML
-                    my @installables = ( $appId );
-                    push @installables, sort @accessoryIds;
-                    foreach my $installable ( @installables ) {
+                    my @installableIds = ( $appId );
+                    push @installableIds, sort @accessoryIds;
+                    foreach my $installableId ( @installableIds ) {
 
                         if(    exists( $appConfig->{customizationpoints} )
-                            && exists( $appConfig->{customizationpoints}->{$installableId} ))
+                            && exists( $appConfig->{customizationpoints}->{$installableId} )
+                            && keys %{ $appConfig->{customizationpoints}->{$installableId}} )
                         {
                             my $nPoints = keys %{$appConfig->{customizationpoints}->{$installableId}};
                             my $rowSpan = $nPoints == 1 ? '' : " rowspan=$nPoints";
