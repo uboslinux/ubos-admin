@@ -973,7 +973,9 @@ sub mayContextBeAdded {
 }
 
 ##
-# Obtain and install the letsencrypt certificate for this site
+# Obtain and install the letsencrypt certificate for this site.
+# Note: this works because we have already set up the Apache structure
+# for the placeholder site.
 # return: 1 for success
 sub obtainLetsEncryptCertificate {
     my $self = shift;
