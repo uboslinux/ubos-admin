@@ -70,17 +70,14 @@ sub deployOrCheck {
     trace( 'apache2::deployOrCheck', $roleName, $doIt, $appConfig->appConfigId, $installable->packageName );
 
     my $installableRoleJson = $installable->installableJson->{roles}->{$roleName};
-    if( $installableRoleJson  ) {
+    if( $installableRoleJson && $doIt ) {
         my $apache2modules = $installableRoleJson->{apache2modules};
         my $numberActivated = 0;
-        if( $appConfig->site && $appConfig->site->hasTls ) {
-            push @$apache2modules, 'ssl';
-        }
-        if( $doIt && $apache2modules ) {
+        if( $apache2modules ) {
             $numberActivated += UBOS::Apache2::activateApacheModules( @$apache2modules );
         }
         my $phpModules = $installableRoleJson->{phpmodules};
-        if( $doIt && $phpModules ) {
+        if( $phpModules ) {
             $numberActivated += UBOS::Apache2::activatePhpModules( @$phpModules );
         }
         if( $numberActivated ) {
@@ -111,6 +108,13 @@ sub setupSiteOrCheck {
     my $sitesWellknownDir    = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
 
     if( $doIt ) {
+        if( $site->hasTls ) {
+            my $numberActivated += UBOS::Apache2::activateApacheModules( 'ssl' );
+            if( $numberActivated ) {
+                UBOS::Apache2::restart(); # reload seems to be insufficient
+            }
+        }
+
         unless( -d $siteDocumentDir ) {
             UBOS::Utils::mkdirDashP( $siteDocumentDir, 0755 );
 
