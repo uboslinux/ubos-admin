@@ -126,7 +126,6 @@ sub resumeSite {
     $triggers->{'tomcat8-reload'} = 1;
 }
 
-
 ##
 # Do what is necessary to remove a Site.
 # $site: the Site
