@@ -707,6 +707,10 @@ sub _deployOrCheck {
 
     trace( 'Site::_deployOrCheck', $doIt, $self->siteId );
 
+    if( $doIt ) {
+        UBOS::Host::siteDeploying( $self );
+    }
+
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
@@ -778,6 +782,9 @@ sub _undeployOrCheck {
 
     trace( 'Site::_undeployOrCheck', $doIt, $self->siteId );
 
+    if( $doIt ) {
+        UBOS::Host::siteUndeploying( $self );
+    }
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $ret &= $appConfig->undeployOrCheck( $doIt, $triggers );
@@ -898,6 +905,8 @@ sub addDeployAppConfiguration {
     my $triggers  = shift;
 
     trace( 'Site::addDeployAppConfiguration', $appConfig->appConfigId, $self->siteId );
+
+    UBOS::Host::siteDeploying( $self );
 
     push @{$self->appConfigs},           $appConfig;
     push @{$self->{json}->{appconfigs}}, $appConfig->appConfigurationJson;

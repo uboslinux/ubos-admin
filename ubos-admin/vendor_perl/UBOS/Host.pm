@@ -284,6 +284,15 @@ sub hostnamesOfSites {
 }
 
 ##
+# A site is about to be deployed
+# $site: the newly to-be deployed or updated site
+sub siteDeploying {
+    my $site = shift;
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'deployed', $siteId, $hostname );
+}
+
+##
 # A site has been deployed.
 # $site: the newly deployed or updated site
 sub siteDeployed {
@@ -310,8 +319,15 @@ sub siteDeployed {
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
 
     $_sites = undef;
+}
 
-    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'deployed', $siteId, $hostname );
+##
+# A site is about to be undeployed
+# $site: the to-be undeployed site
+sub siteUndeploying {
+    my $site = shift;
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'undeployed', $siteId, $hostname );
 }
 
 ##
@@ -329,8 +345,6 @@ sub siteUndeployed {
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-full.json" );
 
     $_sites = undef;
-
-    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'undeployed', $siteId, $hostname );
 }
 
 ##

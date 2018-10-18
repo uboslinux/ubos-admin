@@ -91,8 +91,6 @@ sub finishUpdate {
 
             debugAndSuspend( 'Run upgraders at site', $site->siteId );
             $ret &= $site->runUpgraders();
-
-            UBOS::Host::siteDeployed( $site );
         }
         $deployTriggers->{'httpd-restart'} = 1;
 
