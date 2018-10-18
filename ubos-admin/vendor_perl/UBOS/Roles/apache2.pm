@@ -559,9 +559,10 @@ sub obtainLetsEncryptCertificate {
             \$err );
 
     if( $ret ) {
-        trace( 'Letsencrypt said:', $err ); # strange formatting in stdout, let's not use this
         warning( "Obtaining certificate from letsencrypt failed. proceeding without certificate or TLS/SSL.\n"
-                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly." );
+                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
+                 . "Letsencrypt message:\n"
+                 . $err );
         return 0;
     }
     return 1;
