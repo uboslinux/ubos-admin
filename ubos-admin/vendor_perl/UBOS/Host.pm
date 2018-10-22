@@ -34,14 +34,15 @@ my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var m
 my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
 my $STATE_CALLBACKS_DIR    = '/etc/ubos/state-callbacks';
 
-my $_hostVars              = undef; # allocated as needed
-my $_rolesOnHostInSequence = undef; # allocated as needed
-my $_rolesOnHost           = undef; # allocated as needed
-my $_sites                 = undef; # allocated as needed
-my $_allNics               = undef; # allocated as needed
-my $_physicalNics          = undef; # allocated as needed
-my $_gpgHostKeyFingerprint = undef; # allocated as needed
-my $_currentState          = undef;
+my $_hostVars                      = undef; # allocated as needed
+my $_rolesOnHostInSequence         = undef; # allocated as needed
+my $_rolesOnHost                   = undef; # allocated as needed
+my $_sites                         = undef; # allocated as needed
+my $_allNics                       = undef; # allocated as needed
+my $_physicalNics                  = undef; # allocated as needed
+my $_gpgHostKeyFingerprint         = undef; # allocated as needed
+my $_letsEncryptCertificatesStatus = undef; # allocated as needed
+my $_currentState                  = undef;
 
 ##
 # Obtain the Variables object for the Host.
@@ -289,7 +290,9 @@ sub hostnamesOfSites {
 sub siteDeploying {
     my $site = shift;
 
-    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'deployed', $siteId, $hostname );
+    trace( 'Host::siteDeploying', $site->siteId() );
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'siteDeploying', $site );
 }
 
 ##
@@ -301,11 +304,10 @@ sub siteDeployed {
     my $siteId         = $site->siteId;
     my $siteJson       = $site->siteJson;
     my $publicSiteJson = $site->publicSiteJson;
-    my $hostname       = $site->hostname;
 
     trace( 'Host::siteDeployed', $siteId );
 
-    my $now = UBOS::Utils::now();
+    my $now         = UBOS::Utils::now();
     my $lastUpdated = UBOS::Utils::time2string( $now );
 
     $siteJson->{lastupdated}       = $lastUpdated;
@@ -318,6 +320,8 @@ sub siteDeployed {
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-full.json",  $siteJson,       0600, 'root', 'root' );
     UBOS::Utils::writeJsonToFile( "$SITE_JSON_DIR/$siteId-world.json", $publicSiteJson, 0644, 'root', 'root' );
 
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 1, 'siteDeployed', $site );
+
     $_sites = undef;
 }
 
@@ -327,7 +331,9 @@ sub siteDeployed {
 sub siteUndeploying {
     my $site = shift;
 
-    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'undeployed', $siteId, $hostname );
+    trace( 'Host::siteUndeploying', $site->siteId() );
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'siteUndeploying', $site );
 }
 
 ##
@@ -336,15 +342,16 @@ sub siteUndeploying {
 sub siteUndeployed {
     my $site = shift;
 
-    my $siteId   = $site->siteId;
-    my $hostname = $site->hostname;
+    my $siteId = $site->siteId;
 
     trace( 'Host::siteUndeployed', $siteId );
 
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-world.json" );
     UBOS::Utils::deleteFile( "$SITE_JSON_DIR/$siteId-full.json" );
 
-    $_sites = undef;
+    $_sites = undef; # before the callback
+
+    UBOS::Utils::invokeCallbacks( $HOSTNAME_CALLBACKS_DIR, 0, 'siteUndeployed', $site );
 }
 
 ##
@@ -497,19 +504,19 @@ sub executeTriggers {
 sub setState {
     my $newState = shift;
 
-    info( 'Host::setState', $newState );
-
     my %permittedStates = (
-        'Operational'   => 1,
-        'InMaintenance' => 1,
-        'ShuttingDown'  => 1,
-        'Rebooting'     => 1,
-        'Error'         => 1
+        'Operational'   => 'operational',
+        'InMaintenance' => 'in maintenance',
+        'ShuttingDown'  => 'shutting down',
+        'Rebooting'     => 'rebooting',
+        'Error'         => 'error'
     );
     unless( $permittedStates{$newState} ) {
         error( 'Unknown UBOS state:', $newState );
         return 1;
     }
+    info( 'Setting device state to:', $permittedStates{$newState} );
+
     $_currentState = $newState;
 
     my $ret = UBOS::Utils::invokeCallbacks( $STATE_CALLBACKS_DIR, 1, 'stateChanged', $newState );
@@ -1361,6 +1368,65 @@ END
         return $ret;
     }
     return '';
+}
+
+##
+# Smart factory method to obtain information about all Letsencrypt certificates on this host
+# $force: if true, do not use any cached values
+# return: hash, keyed by hostname
+sub determineLetsEncryptCertificatesStatus {
+    my $force = shift || 0;
+
+    if( !$_letsEncryptCertificatesStatus || $force ) {
+        my $out;
+        if( UBOS::Utils::myexec(
+                'TERM=dumb'
+                . ' certbot certificates',
+                undef,
+                \$out,
+                \$out )) {
+            warning( "certbot certificates invocation failed" );
+            return {};
+        }
+
+        $_letsEncryptCertificatesStatus = {};
+
+        my @chunks = split( /Certificate Name:/, $out );
+        shift @chunks; # discard first one
+        foreach my $chunk ( @chunks ) {
+            my $domain = undef;
+            my $valid;
+            my $certPath;
+            my $keyPath;
+
+            my @lines = split( /\n/, $chunk );
+            foreach my $line ( @lines ) {
+                if( $line =~ m!Domains:\s*(\S+)! ) {
+                    $domain = $1;
+                } elsif( $line =~ m!Expiry Date:.*\(([^)]+)\)! ) {
+                    my $validInvalid = $1;
+                    if( $validInvalid =~ m!INVALID! ) {
+                        $valid = 0;
+                    } else {
+                        $valid = 1;
+                    }
+                } elsif( $line =~ m!Certificate Path:\s* (\S+)! ) {
+                    $certPath = $1;
+
+                } elsif( $line =~ m!Private Key Path:\s* (\S+)! ) {
+                    $keyPath = $1;
+                }
+            }
+            if( $domain ) {
+                $_letsEncryptCertificatesStatus->{$domain} = {
+                    'isvalid'  => $valid,
+                    'certpath' => $certPath,
+                    'keypath'  => $keyPath
+                };
+            }
+        }
+    }
+    return $_letsEncryptCertificatesStatus;
 }
 
 ##

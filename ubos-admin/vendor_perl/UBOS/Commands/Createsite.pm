@@ -668,18 +668,6 @@ sub run {
         debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
         UBOS::Host::executeTriggers( $suspendTriggers );
 
-        if( $newSite->hasLetsEncryptTls() && !$newSite->hasLetsEncryptCerts()) {
-            info( 'Obtaining letsencrypt certificate' );
-            debugAndSuspend();
-
-            my $success = $newSite->obtainLetsEncryptCertificate();
-            unless( $success ) {
-                $newSite->unsetLetsEncryptTls;
-                $tls = 0;
-            }
-            # proceed anyway, so don't set $ret
-        }
-
         my $deployUndeployTriggers = {};
         debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );

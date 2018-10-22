@@ -348,37 +348,16 @@ CONTENT
         $siteFileContent .= <<CONTENT;
 
     SSLEngine on
-CONTENT
 
-        if( $site->hasLetsEncryptTls ) {
-            my $letsEncryptLiveDir = $site->vars()->getResolve( 'apache2.letsencrypt.livedir' );
-
-            $siteFileContent .= <<CONTENT;
-
-    # Letsencrypt key
-    SSLCertificateKeyFile $letsEncryptLiveDir/$hostname/privkey.pem
-
-    # Letsencrypt cert
-    SSLCertificateFile $letsEncryptLiveDir/$hostname/fullchain.pem
-CONTENT
-            # see https://github.com/certbot/certbot/issues/608
-
-        } else {
-            $siteFileContent .= <<CONTENT;
-
-    # our own key
     SSLCertificateKeyFile $sslDir/$siteId.key
-
-    # our own cert
     SSLCertificateFile $sslDir/$siteId.crt
 CONTENT
-            if( $sslCaCert ) {
-                $siteFileContent .= <<CONTENT;
+        if( $sslCaCert ) {
+            $siteFileContent .= <<CONTENT;
 
     # the CA certs explaining where our clients got their certs from
     SSLCACertificateFile $sslDir/$siteId.cacrt
 CONTENT
-            }
         }
     }
 
@@ -513,19 +492,27 @@ sub removeSite {
 }
 
 ##
-# Determine whether we already have letsencrypt certificates for this role for the given site
+# Determine whether we already have a letsencrypt certificate for this role for the given site
 # $site: the Site
 # return: 0 or 1
-sub hasLetsEncryptCerts {
+sub hasLetsEncryptCert {
     my $self = shift;
     my $site = shift;
 
-    my $hostname           = $site->hostname;
-    my $letsEncryptLiveDir = $site->vars()->getResolve( 'apache2.letsencrypt.livedir' );
+    unless( $site->hasLetsEncryptTls()) {
+        return 0;
+    }
+    if( $site->tlsKey() && $site->tlsCert() ) {
+        return 1;
+    }
 
-    return    ( -e "$letsEncryptLiveDir/$hostname/privkey.pem" )
-           && ( -e "$letsEncryptLiveDir/$hostname/cert.pem" )
-           && ( -e "$letsEncryptLiveDir/$hostname/chain.pem" );
+    my $status   = UBOS::Host::determineLetsEncryptCertificatesStatus();
+    my $hostname = $site->hostname;
+
+    unless( exists( $status->{$hostname} )) {
+        return 0;
+    }
+    return $status->{$hostname}->{isvalid};
 }
 
 ##
@@ -556,6 +543,7 @@ sub obtainLetsEncryptCertificate {
             . " --email '" . $adminHash->{email} . "'"
             . ' --agree-tos'
             . ' --no-self-upgrade'
+            . ' --non-interactive'
             . " --webroot-path '" . $siteWellKnownDir . "'"
             . " -d '" . $hostname . "'",
             undef,
@@ -568,6 +556,12 @@ sub obtainLetsEncryptCertificate {
                  . "Letsencrypt message:\n"
                  . $err );
         return 0;
+    }
+    my $letsEncryptInfo = UBOS::Host::determineLetsEncryptCertificatesStatus( 1 );
+    if( exists( $letsEncryptInfo->{$hostname} )) {
+        $site->setTlsKeyAndCert(
+                UBOS::Utils::slurpFile( $letsEncryptInfo->{$hostname}->{keypath} ),
+                UBOS::Utils::slurpFile( $letsEncryptInfo->{$hostname}->{certpath} ));
     }
     return 1;
 }
@@ -585,6 +579,7 @@ sub removeLetsEncryptCertificate {
     my $ret = UBOS::Utils::myexec(
             'TERM=dumb'
             . ' certbot delete'
+            . ' --non-interactive'
             . " --cert-name '" . $hostname . "'",
             undef,
             \$out,

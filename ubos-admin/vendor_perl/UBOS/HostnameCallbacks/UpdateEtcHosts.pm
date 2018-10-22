@@ -20,14 +20,26 @@ my $HOSTS_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE #
 # 192.168.140.1 example.com # s1234567890
 
 ##
-# A site has been deployed to this host
-# $siteId: the id of the site
-# $hostname: the hostname of the site
+# A site is deploying to this host
+# $site: the Site
 # @nics: the network interfaces on which the site can be reached
-sub deployed {
-    my $siteId   = shift;
-    my $hostname = shift;
-    my @nics     = @_;
+sub siteDeploying {
+    my $site = shift;
+    my @nics = @_;
+
+    # noop
+}
+
+##
+# A site has been deployed to this host
+# $site: the Site
+# @nics: the network interfaces on which the site can be reached
+sub siteDeployed {
+    my $site = shift;
+    my @nics = @_;
+
+    my $siteId   = $site->siteId();
+    my $hostname = $site->hostname();
 
     unless( '*' eq $hostname ) {
         my @ips = ();
@@ -49,14 +61,26 @@ sub deployed {
 }
 
 ##
-# A site has been undeployed from this host
-# $siteId: the id of the site
-# $hostname: the hostname of the site
+# A site is undeploying from this host
+# $site: the Site
 # @nics: the network interfaces on which the site can be reached
-sub undeployed {
-    my $siteId   = shift;
-    my $hostname = shift;
-    my @nics     = @_;
+sub siteUndeploying {
+    my $site = shift;
+    my @nics = @_;
+
+    # noop
+}
+
+##
+# A site has been undeployed from this host
+# $site: the Site
+# @nics: the network interfaces on which the site can be reached
+sub siteUndeployed {
+    my $site = shift;
+    my @nics = @_;
+
+    my $siteId   = $site->siteId();
+    my $hostname = $site->hostname();
 
     unless( '*' eq $hostname ) {
         my( $before, $after ) = _parseEtcHosts();

@@ -282,19 +282,18 @@ sub hasLetsEncryptTls {
 }
 
 ##
-# Determine whether we already have letsencrypt certificates for this site
+# Determine whether we already have a letsencrypt certificate for this site
 # return: 0 or 1
-sub hasLetsEncryptCerts {
+sub hasLetsEncryptCert {
     my $self = shift;
 
-    my $ret = 0;
+    my $ret         = 0;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( @rolesOnHost ) {
-        if( $role->hasLetsEncryptCerts( $self )) {
+        if( $role->hasLetsEncryptCert( $self )) {
             return 1;
         }
     }
-
     return 0;
 }
 
@@ -356,6 +355,19 @@ sub deleteTlsInfo {
     if( defined( $json->{tls} )) {
         delete $json->{tls};
     }
+}
+
+##
+# Set a new key and certificate for this site
+# $key the new key
+# $crt the new cert
+sub setTlsKeyAndCert {
+    my $self = shift;
+    my $key  = shift;
+    my $crt  = shift;
+
+    $self->{json}->{tls}->{key} = $key;
+    $self->{json}->{tls}->{crt} = $crt;
 }
 
 ##
@@ -718,6 +730,17 @@ sub _deployOrCheck {
             $ret &= $role->setupSiteOrCheck( $self, $doIt, $triggers );
         }
     }
+    if( $doIt && $self->hasLetsEncryptTls() && !$self->hasLetsEncryptCert() ) {
+        my $success = 1;
+        foreach my $role ( @rolesOnHost ) {
+            $success &= $role->obtainLetsEncryptCertificate( $self );
+        }
+        unless( $success ) {
+            warning( 'Failed to obtain letsencrypt certificate for site', $self->hostname, '(', $self->siteId, '). Deploying site without TLS.' );
+            $self->unsetLetsEncryptTls;
+        }
+        $ret &= $success;
+    }
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $ret &= $appConfig->deployOrCheck( $doIt, $triggers );
     }
@@ -982,23 +1005,6 @@ sub mayContextBeAdded {
 }
 
 ##
-# Obtain and install the letsencrypt certificate for this site.
-# Note: this works because we have already set up the Apache structure
-# for the placeholder site.
-# return: 1 for success
-sub obtainLetsEncryptCertificate {
-    my $self = shift;
-
-    my $ret = 1;
-    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
-    foreach my $role ( @rolesOnHost ) {
-        $ret &= $role->obtainLetsEncryptCertificate( $self );
-    }
-
-    return $ret;
-}
-
-##
 # Remove the letsencrypt certificate for this site
 # return: 1 for success
 sub removeLetsEncryptCertificate {
@@ -1110,18 +1116,6 @@ sub _checkJson {
         if( exists( $json->{tls}->{letsencrypt} )) {
             unless( $json->{tls}->{letsencrypt} == JSON::true ) {
                 $@ = 'Site JSON: tls section: letsencrypt, if given, must be true';
-                return 0;
-            }
-            if( exists( $json->{tls}->{key} )) {
-                $@ = 'Site JSON: tls section: key must not be given if letsencrypt is set';
-                return 0;
-            }
-            if( exists( $json->{tls}->{crt} )) {
-                $@ = 'Site JSON: tls section: crt must not be given if letsencrypt is set';
-                return 0;
-            }
-            if( exists( $json->{tls}->{cacrt} )) {
-                $@ = 'Site JSON: tls section: cacrt must not be given if letsencrypt is set';
                 return 0;
             }
         } else {

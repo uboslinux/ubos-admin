@@ -605,18 +605,6 @@ sub restoreSites {
     foreach my $siteNew ( @sitesNew ) {
         debugAndSuspend( 'Setting up placeholder for site', $siteNew->siteId );
         $ret &= $siteNew->setupPlaceholder( $suspendTriggers ); # show "coming soon"
-
-        if( $siteNew->hasLetsEncryptTls() && !$siteNew->hasLetsEncryptCerts()) {
-            info( 'Obtaining letsencrypt certificate for site', $siteNew->hostname, '(', $siteNew->siteId, ')' );
-
-            debugAndSuspend( 'Obtaining letsencrypt certificate for site', $siteNew->siteId );
-            my $success = $siteNew->obtainLetsEncryptCertificate();
-            unless( $success ) {
-                warning( 'Failed to obtain letsencrypt certificate for site', $siteNew->hostname, '(', $siteNew->siteId, '). Deploying site without TLS.' );
-                $siteNew->unsetLetsEncryptTls;
-            }
-            $ret &= $success;
-        }
     }
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );

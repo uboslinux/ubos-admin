@@ -295,24 +295,6 @@ sub run {
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    my @letsEncryptCertsNeededSites = grep { $_->hasLetsEncryptTls() && !$_->hasLetsEncryptCerts() } @newSites;
-    if( @letsEncryptCertsNeededSites ) {
-        if( @letsEncryptCertsNeededSites > 1 ) {
-            info( 'Obtaining letsencrypt certificates' );
-        } else {
-            info( 'Obtaining letsencrypt certificate' );
-        }
-        foreach my $site ( @letsEncryptCertsNeededSites ) {
-            debugAndSuspend( 'Obtain letsencrypt certificate for site', $site->siteId() );
-            my $success = $site->obtainLetsEncryptCertificate();
-            unless( $success ) {
-                warning( 'Failed to obtain letsencrypt certificate for site', $site->hostname, '(', $site->siteId, '). Deploying site without TLS.' );
-                $site->unsetLetsEncryptTls;
-            }
-            $ret &= $success;
-        }
-    }
-
     info( 'Backing up, undeploying and redeploying' );
     my $backupFailed = 0;
 
@@ -394,7 +376,7 @@ sub run {
     unless( $ret ) {
         error( "Deploy failed." );
     }
-        
+
     return $ret;
 }
 
