@@ -163,6 +163,9 @@ sub new {
     }
 
     my $json = $manifestFileReader->( $packageName );
+    unless( $json ) {
+        return undef;
+    }
 
     $self->{json}                   = $json;
     $self->{packageName}            = $packageName;

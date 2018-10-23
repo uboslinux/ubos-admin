@@ -412,7 +412,12 @@ sub run {
             if( UBOS::Host::ensurePackages( [ $appId, @accIds ], $quiet ) < 0 ) {
                 fatal( 'Cannot find installable:', $@ );
             }
-            my $app             = UBOS::App->new( $appId );
+
+            my $app = UBOS::App->new( $appId );
+            unless( $app ) {
+                fatal( 'Package exists but is not an app:', $appId );
+            }
+
             my $custPointValues = {};
             my %accs            = (); # map name->Accessory
 
@@ -426,7 +431,9 @@ sub run {
                 if( UBOS::Host::ensurePackages( \@currentAccList, $quiet ) >= 0 ) {
                     foreach my $currentAccId ( @currentAccList ) {
                         my $acc = UBOS::Accessory->new( $currentAccId );
-
+                        unless( $acc ) {
+                            fatal( 'Package exists but is not an accessory: ', $currentAccId );
+                        }
                         # don't repeat accessories
                         map {
                             unless( exists( $accs{$_} )) {
@@ -499,6 +506,9 @@ sub run {
             }
 
             my $app = UBOS::App->new( $appId );
+            unless( $app ) {
+                error( 'Package exists but is not an app:', $appId );
+            }
 
             my $context         = undef;
             my $custPointValues = {};
@@ -540,7 +550,7 @@ sub run {
 
                 my %currentAccs;
                 map { $currentAccs{$_} = $_ } split( /[\s,]+/, $accessories );
-                while( %currentAccs && !$askUserAgain ) {
+                ACCS: while( %currentAccs && !$askUserAgain ) {
                     # accessories can require other accessories, and so forth
                     my %nextAccs;
 
@@ -548,6 +558,10 @@ sub run {
                     if( UBOS::Host::ensurePackages( \@currentAccList, $quiet ) >= 0 ) {
                         foreach my $currentAccId ( @currentAccList ) {
                             my $acc = UBOS::Accessory->new( $currentAccId );
+                            unless( $acc ) {
+                                error( 'Package exists but it not an accessory. Please re-enter:', $currentAccId );
+                                last ACCS;
+                            }
 
                             # don't repeat accessories
                             map {
