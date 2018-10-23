@@ -11,6 +11,7 @@ package UBOS::Install::AbstractDiskLayout;
 
 use fields qw( devicetable );
 
+use Cwd 'abs_path';
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -388,35 +389,38 @@ sub _determineDeviceFact {
     unless( $facts ) {
         $facts = {}; # default
 
-        if( ! -e $path ) {
-            $facts->{devicetype} = 'missing';
+        if( -e $path ) {
+            my $absPath = abs_path( $path );
 
-        } elsif( -f $path ) {
-            $facts->{devicetype} = 'file';
+            if( -f $absPath ) {
+                $facts->{devicetype} = 'file';
 
-        } elsif( -d $path ) {
-            $facts->{devicetype} = 'directory';
+            } elsif( -d $absPath ) {
+                $facts->{devicetype} = 'directory';
 
-        } elsif( -b $path ) {
+            } elsif( -b $absPath ) {
 
-            my $out;
-            UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n '$path'", undef, \$out );
+                my $out;
+                UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n '$absPath'", undef, \$out );
 
-            my $deviceName = $path;
-            $deviceName =~ s!(.*/)!!;
+                my $deviceName = $absPath;
+                $deviceName =~ s!(.*/)!!;
 
-            my $json = UBOS::Utils::readJsonFromString( $out );
+                my $json = UBOS::Utils::readJsonFromString( $out );
 
-            foreach my $deviceEntry ( @{$json->{blockdevices}} ) {
-                if( $deviceName eq $deviceEntry->{name} ) {
-                    $facts->{devicetype} = $deviceEntry->{type};
-                    $facts->{partuuid}   = $deviceEntry->{partuuid};
-                    $facts->{mountpoint} = $deviceEntry->{mountpoint};
+                foreach my $deviceEntry ( @{$json->{blockdevices}} ) {
+                    if( $deviceName eq $deviceEntry->{name} ) {
+                        $facts->{devicetype} = $deviceEntry->{type};
+                        $facts->{partuuid}   = $deviceEntry->{partuuid};
+                        $facts->{mountpoint} = $deviceEntry->{mountpoint};
+                    }
                 }
             }
-        }
-        unless( keys %$facts ) {
-            warning( 'Cannot determine type of path:', $path );
+            unless( keys %$facts ) {
+                warning( 'Cannot determine type of path:', $path );
+            }
+        } else {
+            $facts->{devicetype} = 'missing';
         }
         $pathFacts->{$path} = $facts;
     }
