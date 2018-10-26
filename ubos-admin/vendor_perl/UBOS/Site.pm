@@ -525,69 +525,101 @@ sub appConfigAtContext {
 }
 
 ##
-# Print this site in human-readable form.
-# $detail: 1: only siteid,
-#          2: plus hostname, apps, accessories,
-#          3: plus customizationpoints
+# Print this Site's SiteId
+sub printSiteId {
+    my $self = shift;
+
+    print $self->siteId . "\n";
+}
+
+##
+# Print this Site in varying levels of detail
+# $detail: the level of detail
 sub print {
     my $self   = shift;
     my $detail = shift || 2;
 
+    if( $detail > 1 ) {
+        print 'Site ';
+    }
+    print $self->hostname;
+    if( $self->hasTls ) {
+        print ' (TLS)';
+    }
+    if( $detail > 2 ) {
+        print ' (' . $self->siteId . ')';
+    }
+    print ':';
     if( $detail <= 1 ) {
-        print $self->siteId . "\n";
-
-    } else {
-        print "Site";
-        if( $self->hasTls ) {
-            print " (TLS)";
+        my $nAppConfigs = @{$self->appConfigs};
+        if( $nAppConfigs == 1 ) {
+            print ' 1 app';
+        } elsif( $nAppConfigs ) {
+            print " $nAppConfigs apps";
+        } else {
+            print ' no apps';
         }
-        print ": " . $self->hostname;
-        print " (" . $self->siteId . ")\n";
-        if( $detail >= 2 ) {
-            foreach my $isDefault ( 1, 0 ) {
-                foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
-                    if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
-                        print '    Context: ';
+    }
+    print "\n";
 
-                        my $context = $appConfig->context;
-                        if( $isDefault && $appConfig->isDefault ) {
-                            print '(default) ';
-                        } else {
-                            print '          ';
-                        }
-                        if( $context ) {
-                            print $context;
-                        } elsif( defined( $context )) {
-                            print '<root>';
-                        } else {
-                            print '<none>';
-                        }
+    if( $detail > 1 ) {
+        foreach my $isDefault ( 1, 0 ) {
+            my $hasDefault   = grep { $_->isDefault } @{$self->appConfigs};
+            my $defaultSpace = $hasDefault ? '         ' : '';
+
+            foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
+                if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
+                    print '    ';
+
+                    my $context = $appConfig->context;
+                    if( $isDefault && $appConfig->isDefault ) {
+                        print '(default)';
+                    } else {
+                        print $defaultSpace;
+                    }
+                    print ' ';
+                    if( $context ) {
+                        print $context;
+                    } elsif( defined( $context )) {
+                        print '<root>';
+                    } else {
+                        print '<none>';
+                    }
+                    if( $detail > 2 ) {
                         print ' ('. $appConfig->appConfigId . ')';
-                        if( $detail < 3 ) {
-                            print ': ' . $appConfig->app->packageName;
-                            foreach my $acc ( $appConfig->accessories ) {
-                                print ' ' . $acc->packageName;
+                    }
+                    if( $detail < 3 ) {
+                        print ': ' . $appConfig->app->packageName;
+                        my $nAcc = $appConfig->accessories();
+                        if( $nAcc == 1 ) {
+                            print ' (1 accessory)';
+                        } elsif( $nAcc ) {
+                            print " ($nAcc accessories)";
+                        }
+                        print "\n";
+                    } else {
+                        print "\n";
+
+                        my $custPoints = $appConfig->customizationPoints;
+                        foreach my $installable ( $appConfig->installables ) {
+                            print '          ';
+                            if( $installable == $appConfig->app ) {
+                                print 'app:      ';
+                            } else {
+                                print 'accessory: ';
                             }
-                            print "\n";
-                        } else {
-                            print "\n";
+                            print $installable->packageName . "\n";
+                            if( $custPoints ) {
+                                my $installableCustPoints = $custPoints->{$installable->packageName};
+                                if( defined( $installableCustPoints )) {
+                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                                        my $custPointValueStruct = $installableCustPoints->{$custPointName};
+                                        my $value = $custPointValueStruct->{value};
 
-                            my $custPoints = $appConfig->customizationPoints;
-                            foreach my $installable ( $appConfig->installables ) {
-                                print '          ';
-                                if( $installable == $appConfig->app ) {
-                                    print 'app:      ';
-                                } else {
-                                    print 'accessory: ';
-                                }
-                                print $installable->packageName . "\n";
-                                if( $custPoints ) {
-                                    my $installableCustPoints = $custPoints->{$installable->packageName};
-                                    if( defined( $installableCustPoints )) {
-                                        foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                                            my $custPointValue = $installableCustPoints->{$custPointName};
-
-                                            print '                     customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                                        if( length( $value ) < 60 ) {
+                                            print '                     customizationpoint ' . $custPointName . ': ' . $value . "\n";
+                                        } else {
+                                            print '                     customizationpoint ' . $custPointName . ': ' . substr( $value, 0, 60 ) . "...\n";
                                         }
                                     }
                                 }
@@ -598,6 +630,22 @@ sub print {
             }
         }
     }
+}
+
+##
+# Print this Site in the brief format
+sub printBrief {
+    my $self = shift;
+
+    return $self->print( 1 );
+}
+
+##
+# Print this Site in the detailed format
+sub printDetail {
+    my $self = shift;
+
+    return $self->print( 3 );
 }
 
 ##

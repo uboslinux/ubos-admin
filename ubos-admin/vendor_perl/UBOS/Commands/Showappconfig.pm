@@ -27,7 +27,10 @@ sub run {
     my $logConfigFile = undef;
     my $debug         = undef;
     my $json          = 0;
+    my $detail        = 0;
     my $brief         = 0;
+    my $idsOnly       = 0;
+
     my $siteId;
     my $host;
     my $appConfigId;
@@ -36,22 +39,27 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'      => \$verbose,
-            'logConfig=s'   => \$logConfigFile,
-            'debug'         => \$debug,
-            'json'          => \$json,
-            'brief'         => \$brief,
-            'siteid=s'      => \$siteId,
-            'hostname=s'    => \$host,
-            'appconfigid=s' => \$appConfigId,
-            'context=s'     => \$context,
-            'url=s'         => \$url );
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
+            'json'             => \$json,
+            'detail'           => \$detail,
+            'brief'            => \$brief,
+            'ids-only|idsonly' => \$idsOnly,
+            'siteid=s'         => \$siteId,
+            'hostname=s'       => \$host,
+            'appconfigid=s'    => \$appConfigId,
+            'context=s'        => \$context,
+            'url=s'            => \$url );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( $json && $brief )
+        || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $detail && $brief )
+        || ( $brief && $idsOnly )
+        || ( $idsOnly && $detail )
         || ( $appConfigId && ( $siteId || $host || defined( $context ) || $url ))
         || ( $siteId && $host )
         || ( $siteId && $url )
@@ -105,8 +113,17 @@ sub run {
     if( $json ) {
         UBOS::Utils::writeJsonToStdout( $appConfig->appConfigurationJson );
 
-    } else { # human-readable, brief or not
-        $appConfig->print( $brief ? 1 : 2 );
+    } elsif( $idsOnly ) {
+        $appConfig->printAppConfigId();
+
+    } elsif( $brief ) {
+        $appConfig->printBrief();
+
+    } elsif( $detail ) {
+        $appConfig->printDetail();
+
+    } else {
+        $appConfig->print();
     }
 
     return 1;
@@ -162,8 +179,14 @@ HHH
             '--json' => <<HHH,
     Use JSON as the output format, instead of human-readable text.
 HHH
-            '--brief' => <<HHH
-    Only show the appconfigid.
+            '--detail' => <<HHH,
+    Show more detail.
+HHH
+            '--brief' => <<HHH,
+    Show less detail.
+HHH
+            '--ids-only' => <<HHH
+    Show Site and AppConfiguration ids only.
 HHH
         }
     };

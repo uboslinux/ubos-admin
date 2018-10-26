@@ -29,25 +29,33 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $debug         = undef;
+    my $json          = 0;
+    my $detail        = 0;
+    my $brief         = 0;
+    my $idsOnly       = 0;
     my $in            = undef;
     my $url           = undef;
-    my $json          = 0;
-    my $brief         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'debug'       => \$debug,
-            'in=s'        => \$in,
-            'url=s'       => \$url,
-            'json'        => \$json,
-            'brief'       => \$brief );
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
+            'json'             => \$json,
+            'detail'           => \$detail,
+            'brief'            => \$brief,
+            'ids-only|idsonly' => \$idsOnly,
+            'in=s'             => \$in,
+            'url=s'            => \$url );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
+        || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $detail && $brief )
+        || ( $brief && $idsOnly )
+        || ( $idsOnly && $detail )
         || @args
         || ( !$in && !$url )
         || ( $in && $url )
@@ -107,8 +115,23 @@ sub run {
     foreach my $siteId ( sort keys %$sites ) {
         if( $json ) {
             $jsonOutput->{'sites'}->{$siteId} = $sites->{$siteId}->siteJson();
+
+        } elsif( $idsOnly ) {
+            foreach my $siteId ( sort keys %$sites ) {
+                $sites->{$siteId}->printSiteId();
+            }
+        } elsif( $brief ) {
+            foreach my $siteId ( sort keys %$sites ) {
+                $sites->{$siteId}->printBrief();
+            }
+        } elsif( $detail ) {
+            foreach my $siteId ( sort keys %$sites ) {
+                $sites->{$siteId}->printDetail();
+            }
         } else {
-            $sites->{$siteId}->print( $brief ? 1 : 2 );
+            foreach my $siteId ( sort keys %$sites ) {
+                $sites->{$siteId}->print();
+            }
         }
 
         map { $seenAppConfigIds->{ $_->appConfigId } = 1; } @{ $sites->{$siteId}->appConfigs };
@@ -121,12 +144,17 @@ sub run {
                 $jsonOutput->{'appconfigs'}->{$appConfigId} = $appConfigs->{$appConfigId}->appConfigurationJson();
             }
         } else {
-            unless( $brief ) {
-                print "=== Unattached AppConfigurations ===\n";
-            }
+            if( $brief ) {
+                foreach my $appConfigId ( @unattachedAppConfigIds ) {
+                    $appConfigs->{$appConfigId}->printAppConfigId();
+                }
 
-            foreach my $appConfigId ( @unattachedAppConfigIds ) {
-                $appConfigs->{$appConfigId}->print( $brief ? 1 : 2 );
+            } else {
+                print "=== Unattached AppConfigurations ===\n";
+
+                foreach my $appConfigId ( @unattachedAppConfigIds ) {
+                    $appConfigs->{$appConfigId}->print();
+                }
             }
         }
     }
@@ -168,9 +196,14 @@ HHH
             '--json' => <<HHH,
     Use JSON as the output format, instead of human-readable text.
 HHH
-            '--brief' => <<HHH
-    Only show the site ids and AppConfiguration ids of unattached
-    AppConfigurations.
+            '--detail' => <<HHH,
+    Show more detail.
+HHH
+            '--brief' => <<HHH,
+    Show less detail.
+HHH
+            '--ids-only' => <<HHH
+    Show Site and AppConfiguration ids only.
 HHH
         }
     };

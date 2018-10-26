@@ -682,62 +682,87 @@ sub checkCompleteCustomizationPointValues {
 }
 
 ##
-# Print this appconfiguration in human-readable form.
-# $detail: 1: only appconfigid,
-#          2: plus app, accessories,
-#          3: plus customizationpoints
+# Print this AppConfiguration's AppConfigId
+sub printAppConfigId {
+    my $self = shift;
+
+    print $self->appConfigId . "\n";
+}
+
+##
+# Print this AppConfiguration in human-readable form.
+# $detail: the level of detail
 sub print {
     my $self   = shift;
     my $detail = shift || 2;
 
-    if( $detail <= 1 ) {
-        print $self->appConfigId . "\n";
+    if( $detail > 1 ) {
+        print 'AppConfiguration: ';
+    }
 
+    my $context = $self->context;
+    if( $context ) {
+        print $context;
+    } elsif( defined( $context )) {
+        print '<root>';
     } else {
-        print "AppConfiguration: ";
+        print '<none>';
+    }
 
-        my $context = $self->context;
-        if( $context ) {
-            print $context;
-        } elsif( defined( $context )) {
-            print '<root>';
-        } else {
-            print '<none>';
-        }
+    if( $detail > 2 ) {
+        print ' (' . $self->appConfigId . ')';
+    }
 
-        print " (" . $self->appConfigId . ")";
-
-        if( $detail < 3 ) {
-            print ': ' . $self->app->packageName;
+    if( $detail < 3 ) {
+        print ': ' . $self->app->packageName;
+        if( $detail > 1 ) {
             foreach my $acc ( $self->accessories ) {
                 print ' ' . $acc->packageName;
             }
-            print "\n";
-        } else {
-            print "\n";
+        }
+        print "\n";
 
-            my $custPoints = $self->customizationPoints;
-            foreach my $installable ( $self->installables ) {
-                print '    ';
-                if( $installable == $self->app ) {
-                    print 'app:      ';
-                } else {
-                    print 'accessory: ';
-                }
-                print $installable->packageName . "\n";
-                if( $custPoints ) {
-                    my $installableCustPoints = $custPoints->{$installable->packageName};
-                    if( defined( $installableCustPoints )) {
-                        foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                            my $custPointValue = $installableCustPoints->{$custPointName};
+    } else {
+        print "\n";
 
-                            print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
-                        }
+        my $custPoints = $self->customizationPoints;
+        foreach my $installable ( $self->installables ) {
+            print '    ';
+            if( $installable == $self->app ) {
+                print 'app:      ';
+            } else {
+                print 'accessory: ';
+            }
+            print $installable->packageName . "\n";
+            if( $custPoints ) {
+                my $installableCustPoints = $custPoints->{$installable->packageName};
+                if( defined( $installableCustPoints )) {
+                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                        my $custPointValue = $installableCustPoints->{$custPointName};
+
+                        print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
                     }
                 }
             }
         }
     }
 }
+
+##
+# Print this AppConfiguration in the brief format
+sub printBrief {
+    my $self = shift;
+
+    return $self->print( 1 );
+}
+
+##
+# Print this AppConfiguration in the detailed format
+sub printDetail {
+    my $self = shift;
+
+    return $self->print( 3 );
+}
+
 
 1;

@@ -28,20 +28,31 @@ sub run {
     my $logConfigFile = undef;
     my $debug         = undef;
     my $json          = 0;
+    my $detail        = 0;
     my $brief         = 0;
+    my $idsOnly       = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'debug'       => \$debug,
-            'json'        => \$json,
-            'brief'       => \$brief );
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
+            'json'             => \$json,
+            'detail'           => \$detail,
+            'brief'            => \$brief,
+            'ids-only|idsonly' => \$idsOnly );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $json && $brief ) || @args || ( $verbose && $logConfigFile )) {
+    if(    !$parseOk
+        || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $detail && $brief )
+        || ( $brief && $idsOnly )
+        || ( $idsOnly && $detail )
+        || @args
+        || ( $verbose && $logConfigFile ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
@@ -54,9 +65,21 @@ sub run {
         }
         UBOS::Utils::writeJsonToStdout( $sitesJson );
 
+    } elsif( $idsOnly ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->printSiteId();
+        }
+    } elsif( $brief ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->printBrief();
+        }
+    } elsif( $detail ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->printDetail();
+        }
     } else {
         foreach my $siteId ( sort keys %$sites ) {
-            $sites->{$siteId}->print( $brief ? 1 : 2 );
+            $sites->{$siteId}->print();
         }
     }
 
@@ -91,8 +114,14 @@ HHH
             '--json' => <<HHH,
     Use JSON as the output format, instead of human-readable text.
 HHH
-            '--brief' => <<HHH
-    Only show the siteids.
+            '--detail' => <<HHH,
+    Show more detail.
+HHH
+            '--brief' => <<HHH,
+    Show less detail.
+HHH
+            '--ids-only' => <<HHH
+    Show Site and AppConfiguration ids only.
 HHH
         }
     };

@@ -27,24 +27,37 @@ sub run {
     my $logConfigFile = undef;
     my $debug         = undef;
     my $json          = 0;
+    my $detail        = 0;
     my $brief         = 0;
+    my $idsOnly       = 0;
     my $siteId;
     my $host;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'debug'       => \$debug,
-            'json'        => \$json,
-            'brief'       => \$brief,
-            'siteid=s'    => \$siteId,
-            'hostname=s'  => \$host );
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
+            'json'             => \$json,
+            'detail'           => \$detail,
+            'brief'            => \$brief,
+            'ids-only|idsonly' => \$idsOnly,
+            'siteid=s'         => \$siteId,
+            'hostname=s'       => \$host );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $json && $brief ) || ( !$siteId && !$host ) || ( $siteId && $host ) || @args || ( $verbose && $logConfigFile )) {
+    if(    !$parseOk
+        || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $detail && $brief )
+        || ( $brief && $idsOnly )
+        || ( $idsOnly && $detail )
+        || ( !$siteId && !$host )
+        || ( $siteId && $host )
+        || @args
+        || ( $verbose && $logConfigFile ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
@@ -64,8 +77,17 @@ sub run {
     if( $json ) {
         UBOS::Utils::writeJsonToStdout( $site->siteJson );
 
-    } else { # human-readable, brief or not
-        $site->print( $brief ? 1 : 2 );
+    } elsif( $idsOnly ) {
+        $site->printSiteId();
+
+    } elsif( $brief ) {
+        $site->printBrief();
+
+    } elsif( $detail ) {
+        $site->printDetail();
+
+    } else {
+        $site->print();
     }
 
     return 1;
@@ -107,8 +129,14 @@ HHH
             '--json' => <<HHH,
     Use JSON as the output format, instead of human-readable text.
 HHH
-            '--brief' => <<HHH
-    Only show the siteid.
+            '--detail' => <<HHH,
+    Show more detail.
+HHH
+            '--brief' => <<HHH,
+    Show less detail.
+HHH
+            '--ids-only' => <<HHH
+    Show Site and AppConfiguration ids only.
 HHH
         }
     };
