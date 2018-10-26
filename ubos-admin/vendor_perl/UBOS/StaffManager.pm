@@ -140,12 +140,12 @@ sub checkStaffDevice {
         $retFsLabel = $fsLabel;
     }
 
-    unless( $ret ) {
+    if( $ret ) {
+        if( $label && ( !defined( $retFsLabel ) || ( $retFsLabel ne $LABEL ))) {
+            labelDeviceAsStaff( $ret );
+        }
+    } else {
         $@ = 'No partition suitable as UBOS staff found on: ' . $device;
-    }
-
-    if( $label && ( $retFsLabel ne $LABEL )) {
-        labelDeviceAsStaff( $ret );
     }
 
     return $ret;
