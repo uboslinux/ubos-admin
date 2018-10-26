@@ -124,7 +124,7 @@ sub checkStaffDevice {
     # NAME="sda1" TYPE="part" FSTYPE="ext4" LABEL=""
     # NAME="sda2" TYPE="part" FSTYPE="vfat" LABEL=""
 
-    while( $out =~ m!NAME="([^"]+)"\s+TYPE="([^"]+)"\s+FSTYPE="([^"]+)"\s+LABEL="([^"]+)"!g ) {
+    while( $out =~ m!NAME="([^"]+)"\s+TYPE="([^"]+)"\s+FSTYPE="([^"]*)"\s+LABEL="([^"]*)"!g ) {
         my( $name, $type, $fstype, $fsLabel ) = ( "/dev/$1", $2, $3, $4 );
         unless( $fstype eq 'vfat' ) {
             next;
