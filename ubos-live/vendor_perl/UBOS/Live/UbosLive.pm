@@ -57,35 +57,40 @@ sub isRegisteredWithUbosLive {
 }
 
 ##
-# Start UBOS Live.
+# Activate UBOS Live.
 # return: 1 if successful
-sub startUbosLive {
+sub ubosLiveActivate {
 
-    trace( 'UbosLive::startUbosLive' );
+    trace( 'UbosLive::ubosLiveActivate' );
 
     my $out;
-    my $status  = UBOS::Utils::myexec( 'systemctl start '  . $SERVICE, undef, \$out, \$out );
-    $status    |= UBOS::Utils::myexec( 'systemctl enable ' . $SERVICE, undef, \$out, \$out );
+    my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $SERVICE, undef, \$out, \$out );
+    if( $status ) {
+        warning( 'systemctl enable --now', $SERVICE, ':', $out );
+    }
 
     return $status == 0;
 }
 
 ##
-# Stop UBOS Live.
-sub stopUbosLive {
+# Deactivate UBOS Live.
+# return: 1 if successful
+sub ubosLiveDeactivate {
 
-    trace( 'UbosLive::stopUbosLive' );
+    trace( 'UbosLive::ubosLiveDeactivate' );
 
     my $out;
-    my $status  = UBOS::Utils::myexec( 'systemctl disable ' . $SERVICE, undef, \$out, \$out );
-    $status    |= UBOS::Utils::myexec( 'systemctl stop '    . $SERVICE, undef, \$out, \$out );
+    my $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $SERVICE, undef, \$out, \$out );
+    if( $status ) {
+        warning( 'systemctl disable --now', $SERVICE, ':', $out );
+    }
 
     return $status == 0;
 }
 
 ##
-# Is UBOS Live running?
-sub isUbosLiveRunning {
+# Is UBOS Live active?
+sub isUbosLiveActive {
 
     my $out;
     my $status = UBOS::Utils::myexec( 'systemctl status ' . $SERVICE, undef, \$out, \$out );
@@ -94,7 +99,7 @@ sub isUbosLiveRunning {
 }
 
 ##
-# If UBOS Live is currently running, restart it
+# If UBOS Live is currently active, restart it
 sub _restartUbosLiveIfNeeded() {
 
     if( isUbosLiveRunning()) {

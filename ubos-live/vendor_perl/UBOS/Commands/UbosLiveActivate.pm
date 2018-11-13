@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that starts the UBOS Live service
+# Command that activates UBOS Live
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -8,7 +8,7 @@
 use strict;
 use warnings;
 
-package UBOS::Commands::StartUbosLive;
+package UBOS::Commands::UbosLiveActivate;
 
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
@@ -54,7 +54,7 @@ sub run {
             fatal( 'Already registered with UBOS Live. Do not provide a --registrationurl.' );
         }
 
-    } else {            
+    } else {
         unless( $token ) {
             fatal( 'Not yet registered With UBOS Live. You must provide a --token argument.' );
         }
@@ -63,11 +63,11 @@ sub run {
         }
     }
 
-    if( UBOS::Live::UbosLive::isUbosLiveRunning()) {
-        fatal( 'UBOS Live is running already.' );
+    if( UBOS::Live::UbosLive::isUbosLiveActive()) {
+        fatal( 'UBOS Live is active already.' );
     }
 
-    return UBOS::Live::UbosLive::startUbosLive();
+    return UBOS::Live::UbosLive::ubosLiveActivate();
 }
 
 ##
@@ -76,13 +76,13 @@ sub run {
 sub synopsisHelp {
     return {
         'summary' => <<SSS,
-    Start the UBOS Live service for this device.
+    Activate UBOS Live for this device.
 SSS
         'cmds' => {
             <<SSS => <<HHH,
     [--token <token>]
 SSS
-    Start the UBOS Live service for this device. On the first
+    Activate UBOS Live for this device. On the first
     invocation, the UBOS Live token <token> must be provided.
 HHH
          },

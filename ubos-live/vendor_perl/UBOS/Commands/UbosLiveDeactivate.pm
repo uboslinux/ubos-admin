@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that stops the UBOS Live service
+# Command that deactivates UBOS Live
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -8,7 +8,7 @@
 use strict;
 use warnings;
 
-package UBOS::Commands::StopUbosLive;
+package UBOS::Commands::UbosLiveDeactivate;
 
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Live::UbosLive;
@@ -41,11 +41,11 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    unless( UBOS::Live::UbosLive::isUbosLiveRunning()) {
-        fatal( 'UBOS Live is not running.' );
+    unless( UBOS::Live::UbosLive::isUbosLiveActive()) {
+        fatal( 'UBOS Live is not active.' );
     }
 
-    return UBOS::Live::UbosLive::stopUbosLive();
+    return UBOS::Live::UbosLive::ubosLiveDeactivate();
 }
 
 ##
@@ -54,11 +54,11 @@ sub run {
 sub synopsisHelp {
     return {
         'summary' => <<SSS,
-    Stop the UBOS Live service for this device.
+    Deactivate UBOS Live for this device.
 SSS
         'cmds' => {
             '' => <<HHH,
-    Stop the UBOS Live service for this device.
+    Deactivate UBOS Live for this device.
 HHH
          },
         'args' => {
