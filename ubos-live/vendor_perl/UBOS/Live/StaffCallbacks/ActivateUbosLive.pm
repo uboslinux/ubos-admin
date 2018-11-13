@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Register with UBOS Live.
+# Staff callback to activate UBOS Live.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -8,7 +8,7 @@
 use strict;
 use warnings;
 
-package UBOS::Live::StaffCallbacks::RegisterWithUbosLive;
+package UBOS::Live::StaffCallbacks::ActivateUbosLive;
 
 use UBOS::Host;
 use UBOS::Live::UbosLive;
@@ -25,9 +25,9 @@ sub performAtLoad {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
 
-    trace( 'RegisterWithUbosLive::performAtLoad', $staffRootDir, $isActualStaffDevice );
+    trace( 'ActivateUbosLive::performAtLoad', $staffRootDir, $isActualStaffDevice );
 
-    return registerWithUbosLive( $staffRootDir );
+    return activateUbosLive( $staffRootDir );
 }
 
 ##
@@ -39,17 +39,17 @@ sub performAtSave {
     my $staffRootDir        = shift;
     my $isActualStaffDevice = shift;
 
-    trace( 'RegisterWithUbosLive::performAtSave', $staffRootDir, $isActualStaffDevice );
+    trace( 'ActivateUbosLive::performAtSave', $staffRootDir, $isActualStaffDevice );
 
     # no op
     return 0;
 }
 
 ##
-# Register with UBOS Live.
+# Activate UBOS Live in this Staff callback.
 # $staffRootDir the root directory of the Staff
 # return: number of errors
-sub registerWithUbosLive {
+sub activateUbosLive {
     my $staffRootDir = shift;
 
     my $skipFile = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
@@ -58,7 +58,7 @@ sub registerWithUbosLive {
         info( 'Skipping UBOS Live: user has chosen to self-administer' );
         return 0;
     }
-    if( UBOS::Live::UbosLive::isRegisteredWithUbosLive()) {
+    if( UBOS::Live::UbosLive::isUbosLiveActive()) {
         return 0;
     }
 
