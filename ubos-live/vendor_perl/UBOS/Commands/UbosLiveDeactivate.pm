@@ -41,11 +41,13 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    unless( UBOS::Live::UbosLive::isUbosLiveActive()) {
-        fatal( 'UBOS Live is not active.' );
-    }
+    if( UBOS::Live::UbosLive::ubosLiveDeactivate()) {
+        return 0;
 
-    return UBOS::Live::UbosLive::ubosLiveDeactivate();
+    } else {
+        error( 'Failed to deactivate UBOS Live:', $@ );
+        return 1;
+    }
 }
 
 ##

@@ -1,0 +1,9 @@
+[Unit]
+Description=Check UBOS Live status
+
+[Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-live-status-check
+ExecStart=/usr/share/ubos-live/bin/ubos-live-status-check
+
+[Install]
+WantedBy=basic.target

@@ -10,66 +10,82 @@ use warnings;
 
 package UBOS::Live::UbosLive;
 
+use Switch;
 use UBOS::Logging;
 use UBOS::Host;
 use UBOS::Utils;
+use WWW::Curl::Easy;
 
-my $OPENVPN_CLIENT_CONFIG  = '/etc/openvpn/client/ubos-live.conf';
-my $SERVICE_CERT_DIR       = '/etc/ubos-live-certificates';
-my $CLIENT_CERT_DIR        = '/etc/ubos-live';
-my $OPENVPN_CLIENT_KEY     = $CLIENT_CERT_DIR . '/client.key';
-my $OPENVPN_CLIENT_CSR     = $CLIENT_CERT_DIR . '/client.csr';
-my $OPENVPN_CLIENT_CRT     = $CLIENT_CERT_DIR . '/client.crt';
-my $MAX_REGISTRATION_TRIES = 5;
-my $REGISTRATION_DELAY     = 5;
-my $REGISTRATION_URL       = 'https://api.live.ubos.net/reg/register-device';
-my $SERVICE                = 'openvpn-client@ubos-live.service';
+my $OPENVPN_CLIENT_CONFIG    = '/etc/openvpn/client/ubos-live.conf';
+my $SERVICE_CERT_DIR         = '/etc/ubos-live-certificates';
+my $CLIENT_CERT_DIR          = '/etc/ubos-live';
+my $OPENVPN_CLIENT_KEY       = $CLIENT_CERT_DIR . '/client.key';
+my $OPENVPN_CLIENT_CSR       = $CLIENT_CERT_DIR . '/client.csr';
+my $OPENVPN_CLIENT_CRT       = $CLIENT_CERT_DIR . '/client.crt';
+my $CONF                     = $CLIENT_CERT_DIR . '/ubos-live.json';
+my $MAX_REGISTRATION_TRIES   = 5;
+my $REGISTRATION_DELAY       = 5;
+my $REGISTRATION_URL         = 'https://api.live.ubos.net/reg/register-device';
+my $DEVICE_STATUS_PARENT_URL = 'https://api.live.ubos.net/status/device';
+my $OPENVPN_SERVICE          = 'openvpn-client@ubos-live.service';
+my $STATUS_TIMER             = 'ubos-live-status-check.timer';
 
-##
-# Register for UBOS Live.
-# $token: token provided
-# $registrationurl: non-default registration URL, if any
-# return: number of errors
-sub registerWithUbosLive {
-    my $token           = shift;
-    my $registrationurl = shift || $REGISTRATION_URL;
-
-    trace( 'UbosLive::registerWithUbosLive', $token, $registrationurl );
-
-    my $errors = 0;
-
-    $errors += _ensureOpenvpnKeyCsr();
-    unless( $errors ) {
-        $errors += _ensureRegistered( $token, $registrationurl );
-    }
-    unless( $errors ) {
-        $errors += _ensureOpenvpnClientConfig();
-    }
-
-    return $errors;
-}
+my $conf = undef; # content of the $CONF file; cached
 
 ##
-# Determine whether this host is registered for UBOS Live.
-# return: true or false
-sub isRegisteredWithUbosLive {
-    return -e $OPENVPN_CLIENT_CRT;
+# Invoked periodically, this checks on the status of UBOS Live for this
+# device, and performs necessary actions
+sub checkStatus {
+
+    my $hostId    = UBOS::Host::hostId();
+    my $statusUrl = $DEVICE_STATUS_PARENT_URL . $hostId;
+
+    my $response;
+    my $curl = WWW::Curl::Easy->new;
+    $curl->setopt( CURLOPT_URL,       $statusUrl );
+    $curl->setopt( CURLOPT_WRITEDATA, $response );
+
+    my $retCode  = $curl->perform;
+    my $httpCode = $curl->getinfo( CURLINFO_HTTP_CODE );
+
+    if( $retcode != 0 || $httpCode !~ m!^200 ! ) {
+        warning( 'UBOS Live status check failed:', $retCode, $curl->strerror( $retCode ), $httpCode, $curl->errbuf, ':', $response );
+        return 0;
+    }
+
+    trace( 'UBOS Live status check:', $retCode, $curl->strerror( $retCode ), $httpCode, ':', $response );
+
+    $response =~ s!^\s+!!;
+    $response =~ s!\s+$!!;
+
+    if( $response eq 'ubos-live-inactive' {
+        _deactivateIfNeeded();
+
+    } elsif( $response =~ m!^ubos-live-active! ) {
+        _activateIfNeeded();
+
+        if( $response eq 'ubos-live-active/ubos-live-operational' ) {
+            _makeOperationalIfNeeded();
+        } else {
+            _makeNonOperationalIfNeeded();
+        }
+
+    } else {
+        warning( 'Unexpected UBOS Live state:', $response );
+        return 0;
+    }
 }
 
 ##
 # Activate UBOS Live.
+# $token: if provided, use this token
+# $registrationUrl: if provided, use this registration URL
 # return: 1 if successful
 sub ubosLiveActivate {
+    my $token           = shift;
+    my $registrationUrl = shift;
 
-    trace( 'UbosLive::ubosLiveActivate' );
-
-    my $out;
-    my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $SERVICE, undef, \$out, \$out );
-    if( $status ) {
-        warning( 'systemctl enable --now', $SERVICE, ':', $out );
-    }
-
-    return $status == 0;
+    _activateIfNeeded( $token, $registrationUrl );
 }
 
 ##
@@ -77,15 +93,7 @@ sub ubosLiveActivate {
 # return: 1 if successful
 sub ubosLiveDeactivate {
 
-    trace( 'UbosLive::ubosLiveDeactivate' );
-
-    my $out;
-    my $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $SERVICE, undef, \$out, \$out );
-    if( $status ) {
-        warning( 'systemctl disable --now', $SERVICE, ':', $out );
-    }
-
-    return $status == 0;
+    _deactivateIfNeeded();
 }
 
 ##
@@ -93,40 +101,145 @@ sub ubosLiveDeactivate {
 sub isUbosLiveActive {
 
     my $out;
-    my $status = UBOS::Utils::myexec( 'systemctl status ' . $SERVICE, undef, \$out, \$out );
+    my $status = UBOS::Utils::myexec( 'systemctl status ' . $STATUS_TIMER, undef, \$out, \$out );
 
     return $status == 0;
+}
+
+##
+# Is UBOS Live operational?
+sub isUbosLiveOperational {
+
+    my $out;
+    my $status = UBOS::Utils::myexec( 'systemctl status ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+
+    return $status == 0;
+}
+
+##
+# If not already active, activate UBOS Live
+sub _activateIfNeeded() {
+    my $token           = shift || _generateRegistrationToken();
+    my $registrationUrl = shift || $REGISTRATION_URL;
+
+    trace( 'UbosLive::_activateIfNeeded'. $token, $registrationUrl );
+
+    if( isUbosLiveActive()) {
+        return 0;
+    }
+
+    my $errors = 0;
+    $errors += _ensureOpenvpnKeyCsr();
+    unless( $errors ) {
+        $errors += _ensureRegistered( $token, $registrationUrl );
+    }
+    unless( $errors ) {
+        $errors += _ensureOpenvpnClientConfig();
+    }
+
+    if( $errors ) {
+        return 0;
+    }
+
+    my $confJson = {
+        'token'  => $token,
+        'status' => 'active'
+    };
+    setConf( $confJson );
+
+    my $out;
+    my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $STATUS_TIMER, undef, \$out, \$out );
+    if( $status ) {
+        warning( 'systemctl enable --now', $STATUS_TIMER, ':', $out );
+    }
+
+    return $status == 0;
+}
+
+
+##
+# If not already inactive, deactivate UBOS Live
+sub _deactivateIfNeeded() {
+
+    trace( 'UbosLive::_deactivateIfNeeded' );
+
+    my $errors = 0;
+    my $out;
+
+    my $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $STATUS_TIMER, undef, \$out, \$out );
+    if( $status ) {
+        error( 'systemctl disable --now', $STATUS_TIMER, ':', $out );
+        ++$errors;
+    }
+
+    $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+    if( $status ) {
+        error( 'systemctl disable --now', $OPENVPN_SERVICE, ':', $out );
+        ++$errors;
+    }
+
+    my $confJson = getConf();
+    $conf->{status} = 'inactive';
+    setConf( $confJson );
+
+    return $errors == 0;
+}
+
+##
+# If not already operational, make UBOS Live operational
+sub _makeOperationalIfNeeded() {
+
+    $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+    if( $status ) {
+        error( 'systemctl enable --now', $OPENVPN_SERVICE, ':', $out );
+        ++$errors;
+    }
+
+    return $errors == 0;
+}
+
+##
+# If not already non-operational, make UBOS Live non-operational
+sub _makeNonOperationalIfNeeded() {
+
+    $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+    if( $status ) {
+        error( 'systemctl disable --now', $OPENVPN_SERVICE, ':', $out );
+        ++$errors;
+    }
+
+    return $errors == 0;
 }
 
 ##
 # If UBOS Live is currently active, restart it
 sub _restartUbosLiveIfNeeded() {
 
-    if( isUbosLiveRunning()) {
+    if( isUbosLiveOperational()) {
         my $out;
-        UBOS::Utils::myexec( 'systemctl restart  ' . $SERVICE, undef, \$out, \$out );
+        UBOS::Utils::myexec( 'systemctl restart  ' . $OPENVPN_SERVICE, undef, \$out, \$out );
     }
-}
-
-##
-# Invoked when the package installs
-sub postInstall {
-    postUpgrade();
-}
-
-##
-# Invoked when the package upgrades
-sub postUpgrade {
-    # UBOS Live may or may not be active
-
-    if( -e $OPENVPN_CLIENT_CONFIG ) {
-        _ensureOpenvpnClientConfig();
-    }
-    _createUser();
-    _copyAuthorizedKeys();
-    _restartUbosLiveIfNeeded();
-
     return 0;
+}
+
+##
+# Get the current configuration as saved locally
+# return: status JSON, or undef
+sub getConf {
+
+    unless( $_conf ) {
+        $_conf = UBOS::Utils::readJsonFromFile( $CONF );
+    }
+    return $_conf;
+}
+
+##
+# Save the current configuration locally
+# $conf: the local configuration JSON
+sub setConf {
+    my $conf = shift;
+
+    UBOS::Utils::writeJsonToFile( $CONF, $conf );
 }
 
 ##
@@ -277,13 +390,13 @@ CONTENT
 ##
 # Because the systemd-sysusers hook only runs after the package install
 # script is completed, we run it ourselves from the package install script.
-sub _createUser {
+sub _ensureUser {
     UBOS::Utils::myexec( "systemd-sysusers /usr/lib/sysusers.d/ubos-live.conf" );
 }
 
 ##
 # Copy the authorized SSH keys into ~ubos-live/.ssh/authorized_keys
-sub _copyAuthorizedKeys {
+sub _ensureAuthorizedKeys {
     my $keys = UBOS::Utils::slurpFile( '/usr/share/ubos-live/authorized_keys' );
     if( $keys ) {
         my $dir = '/var/ubos-live/.ssh';
@@ -297,7 +410,7 @@ sub _copyAuthorizedKeys {
 ##
 # Generate a random registration token.
 # return: the token
-sub generateRegistrationToken {
+sub _generateRegistrationToken {
     # 32 hex in groups of 4
     my $ret;
     my $sep = '';
@@ -306,6 +419,31 @@ sub generateRegistrationToken {
         $sep = '-';
     }
     return $ret;
+}
+
+##
+# Invoked when the package installs
+sub postInstall {
+
+    _ensureOpenvpnClientConfig();
+
+    _ensureUser();
+    _ensureAuthorizedKeys();
+
+    _restartUbosLiveIfNeeded();
+
+    return 0;
+}
+
+##
+# Invoked when the package upgrades
+sub postUpgrade {
+
+    _ensureOpenvpnClientConfig();
+
+    _restartUbosLiveIfNeeded();
+
+    return 0;
 }
 
 1;

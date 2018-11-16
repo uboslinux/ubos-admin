@@ -1,0 +1,11 @@
+[Unit]
+Description=Check UBOS Live status
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1d
+AccuracySec=1h
+Unit=ubos-live-status-check.service
+
+[Install]
+WantedBy=timers.target

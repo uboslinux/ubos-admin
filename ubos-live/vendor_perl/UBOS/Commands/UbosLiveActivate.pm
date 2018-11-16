@@ -11,7 +11,7 @@ use warnings;
 package UBOS::Commands::UbosLiveActivate;
 
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Host;
+
 use UBOS::Live::UbosLive;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -46,28 +46,13 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( UBOS::Live::UbosLive::isRegisteredWithUbosLive()) {
-        if( $token ) {
-            fatal( 'Already registered with UBOS Live. Do not provide a --token.' );
-        }
-        if( $registrationurl ) {
-            fatal( 'Already registered with UBOS Live. Do not provide a --registrationurl.' );
-        }
+    if( UBOS::Live::UbosLive::ubosLiveActivate( $token, $registrationUrl )) {
+        return 0;
 
     } else {
-        unless( $token ) {
-            fatal( 'Not yet registered With UBOS Live. You must provide a --token argument.' );
-        }
-        if( UBOS::Live::UbosLive::registerWithUbosLive( $token, $registrationurl )) {
-            fatal( 'Registration failed' );
-        }
+        error( 'Failed to activate UBOS Live:', $@ );
+        return 1;
     }
-
-    if( UBOS::Live::UbosLive::isUbosLiveActive()) {
-        fatal( 'UBOS Live is active already.' );
-    }
-
-    return UBOS::Live::UbosLive::ubosLiveActivate();
 }
 
 ##
@@ -82,9 +67,11 @@ SSS
             <<SSS => <<HHH,
     [--token <token>]
 SSS
-    Activate UBOS Live for this device. On the first
-    invocation, the UBOS Live token <token> must be provided.
+    Activate UBOS Live for this device. If provided, use registration
+    token <token>; otherwise use the existing one, or generate a new one.
 HHH
+    # --registrationurl is for development/testing only, so not documented
+
          },
         'args' => {
             '--verbose' => <<HHH,

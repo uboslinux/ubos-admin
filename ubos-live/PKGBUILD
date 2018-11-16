@@ -11,6 +11,7 @@ options=('!strip')
 depends=(
     'coreutils'
     'openvpn'
+    'perl-www-curl'
     'ubos-admin'
     'ubos-live-certificates'
 )
@@ -30,6 +31,9 @@ package() {
 # Put obtained certificate(s) here; also, ssh keys
     install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/usr/share/ubos-live
 
+# Systemd
+    install -D -m644 ${startdir}/systemd/* -t ${pkgdir}/usr/lib/systemd/system/
+
 # Initialize on boot with staff
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
 
@@ -37,6 +41,7 @@ package() {
     install -D -m755 ${startdir}/vendor_perl/UBOS/Commands/*.pm            -t ${pkgdir}${_vendor_perl}/UBOS/Commands/
     install -D -m755 ${startdir}/vendor_perl/UBOS/Live/*.pm                -t ${pkgdir}${_vendor_perl}/UBOS/Live/
     install -D -m755 ${startdir}/vendor_perl/UBOS/Live/StaffCallbacks/*.pm -t ${pkgdir}${_vendor_perl}/UBOS/Live/StaffCallbacks/
+    install -D -m755 ${startdir}/bin/*                                     -t ${pkgdir}/usr/share/${pkgname}/bin/
 
 # Insert inlined images
     perl -p -i \

@@ -27,7 +27,22 @@ sub performAtLoad {
 
     trace( 'ActivateUbosLive::performAtLoad', $staffRootDir, $isActualStaffDevice );
 
-    return activateUbosLive( $staffRootDir );
+    # activate UBOS Live unless there's a skip file
+
+    my $skipFile = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
+    if( -e "$staffRootDir/$skipFile" ) {
+        info( 'Skipping UBOS Live: user has chosen to self-administer' );
+        return 0;
+    }
+
+    if( UBOS::Live::UbosLive::ubosLiveActivate()) {
+        return 0;
+
+    } elsif( !UBOS::Live::UbosLive::isUbosLiveActive() ) {
+        error( 'Failed to activate UBOS Live:', $@ );
+        return 1;
+
+    } # else: could not activate because it was active already
 }
 
 ##
@@ -41,55 +56,37 @@ sub performAtSave {
 
     trace( 'ActivateUbosLive::performAtSave', $staffRootDir, $isActualStaffDevice );
 
-    # no op
-    return 0;
-}
-
-##
-# Activate UBOS Live in this Staff callback.
-# $staffRootDir the root directory of the Staff
-# return: number of errors
-sub activateUbosLive {
-    my $staffRootDir = shift;
-
-    my $skipFile = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
-
-    if( -e "$staffRootDir/$skipFile" ) {
-        info( 'Skipping UBOS Live: user has chosen to self-administer' );
-        return 0;
-    }
-    if( UBOS::Live::UbosLive::isUbosLiveActive()) {
-        return 0;
-    }
+    # Write the UBOS Live info to the Staff
 
     my $hostId  = UBOS::Host::hostId();
     my $infoDir = "flock/$hostId/device-info";
+    my $errors  = 0;
 
-    unless( -d "$staffRootDir/$infoDir" ) {
-        UBOS::Utils::mkdirDashP( "$staffRootDir/$infoDir" );
-    }
+    my $conf = $UBOS::Live::UbosLive::CONF;
+    if( $conf ) {
+        my $confJson = UBOS::Utils::readJsonFromFile( $conf );
+        if( $confJson ) {
+            unless( -d "$staffRootDir/$infoDir" ) {
+                UBOS::Utils::mkdirDashP( "$staffRootDir/$infoDir" );
+            }
 
-    my $token = UBOS::Live::UbosLive::generateRegistrationToken();
-    unless( UBOS::Live::UbosLive::registerWithUbosLive( $token )) {
-        my $json = {
-            'token' => $token
-        };
-
-        unless( UBOS::Utils::writeJsonToFile( "$staffRootDir/$infoDir/ubos-live.json", $json )) {
-            warning( 'Failed to write file:', "$staffRootDir/$infoDir/ubos-live.json" );
-        }
-
-        if( UBOS::Live::UbosLive::startUbosLive()) {
-            return 0;
+            unless( UBOS::Utils::writeJsonToFile( "$staffRootDir/$infoDir/ubos-live.json", $confJson )) {
+                error( 'Failed to write file:', "$staffRootDir/$infoDir/ubos-live.json" );
+                ++$errors;
+            }
         } else {
-            error( 'Failed to start UBOS Live:', $@ );
-            return 1;
+            error( $@ );
+            ++$errors;
         }
 
-    } else {
-        error( $@ );
-        return 1;
+    } elsif( -e "$staffRootDir/$infoDir/ubos-live.json" ) {
+        unless( UBOS::Utils::deleteFile( "$staffRootDir/$infoDir/ubos-live.json" )) {
+            error( 'Failed to delete file:', "$staffRootDir/$infoDir/ubos-live.json" );
+            ++$errors;
+        }
     }
+    return $errors;
 }
+
 
 1;
