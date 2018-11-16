@@ -10,7 +10,6 @@ use warnings;
 
 package UBOS::Live::UbosLive;
 
-use Switch;
 use UBOS::Logging;
 use UBOS::Host;
 use UBOS::Utils;
@@ -30,7 +29,7 @@ my $DEVICE_STATUS_PARENT_URL = 'https://api.live.ubos.net/status/device';
 my $OPENVPN_SERVICE          = 'openvpn-client@ubos-live.service';
 my $STATUS_TIMER             = 'ubos-live-status-check.timer';
 
-my $conf = undef; # content of the $CONF file; cached
+my $_conf = undef; # content of the $CONF file; cached
 
 ##
 # Invoked periodically, this checks on the status of UBOS Live for this
@@ -48,7 +47,7 @@ sub checkStatus {
     my $retCode  = $curl->perform;
     my $httpCode = $curl->getinfo( CURLINFO_HTTP_CODE );
 
-    if( $retcode != 0 || $httpCode !~ m!^200 ! ) {
+    if( $retCode != 0 || $httpCode !~ m!^200 ! ) {
         warning( 'UBOS Live status check failed:', $retCode, $curl->strerror( $retCode ), $httpCode, $curl->errbuf, ':', $response );
         return 0;
     }
@@ -58,7 +57,7 @@ sub checkStatus {
     $response =~ s!^\s+!!;
     $response =~ s!\s+$!!;
 
-    if( $response eq 'ubos-live-inactive' {
+    if( $response eq 'ubos-live-inactive' ) {
         _deactivateIfNeeded();
 
     } elsif( $response =~ m!^ubos-live-active! ) {
@@ -145,7 +144,7 @@ sub _activateIfNeeded() {
         'token'  => $token,
         'status' => 'active'
     };
-    setConf( $confJson );
+    _setConf( $confJson );
 
     my $out;
     my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $STATUS_TIMER, undef, \$out, \$out );
@@ -163,6 +162,11 @@ sub _deactivateIfNeeded() {
 
     trace( 'UbosLive::_deactivateIfNeeded' );
 
+    my $confJson = _getConf();
+    unless( $confJson ) {
+        return 0;
+    }
+
     my $errors = 0;
     my $out;
 
@@ -178,9 +182,8 @@ sub _deactivateIfNeeded() {
         ++$errors;
     }
 
-    my $confJson = getConf();
-    $conf->{status} = 'inactive';
-    setConf( $confJson );
+    $confJson->{status} = 'inactive';
+    _setConf( $confJson );
 
     return $errors == 0;
 }
@@ -189,7 +192,12 @@ sub _deactivateIfNeeded() {
 # If not already operational, make UBOS Live operational
 sub _makeOperationalIfNeeded() {
 
-    $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+    trace( 'UbosLive::_makeOperationalIfNeeded' );
+
+    my $errors = 0;
+    my $out;
+
+    my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
     if( $status ) {
         error( 'systemctl enable --now', $OPENVPN_SERVICE, ':', $out );
         ++$errors;
@@ -202,7 +210,12 @@ sub _makeOperationalIfNeeded() {
 # If not already non-operational, make UBOS Live non-operational
 sub _makeNonOperationalIfNeeded() {
 
-    $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+    trace( 'UbosLive::_makeNonOperationalIfNeeded' );
+
+    my $errors = 0;
+    my $out;
+
+    my $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
     if( $status ) {
         error( 'systemctl disable --now', $OPENVPN_SERVICE, ':', $out );
         ++$errors;
@@ -225,21 +238,23 @@ sub _restartUbosLiveIfNeeded() {
 ##
 # Get the current configuration as saved locally
 # return: status JSON, or undef
-sub getConf {
+sub _getConf {
 
     unless( $_conf ) {
-        $_conf = UBOS::Utils::readJsonFromFile( $CONF );
+        if( -e $CONF ) {
+            $_conf = UBOS::Utils::readJsonFromFile( $CONF );
+        }
     }
     return $_conf;
 }
 
 ##
 # Save the current configuration locally
-# $conf: the local configuration JSON
-sub setConf {
-    my $conf = shift;
+# $confJson: the local configuration JSON
+sub _setConf {
+    my $confJson = shift;
 
-    UBOS::Utils::writeJsonToFile( $CONF, $conf );
+    UBOS::Utils::writeJsonToFile( $CONF, $confJson );
 }
 
 ##

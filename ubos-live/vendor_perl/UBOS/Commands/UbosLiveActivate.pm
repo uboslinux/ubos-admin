@@ -30,19 +30,23 @@ sub run {
     my $verbose         = 0;
     my $logConfigFile   = undef;
     my $token           = undef;
-    my $registrationurl = undef;
+    my $registrationUrl = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'          => \$verbose,
             'logConfig=s'       => \$logConfigFile,
             'token=s'           => \$token,
-            'registrationurl=s' => \$registrationurl );
+            'registrationurl=s' => \$registrationUrl );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || @args || ( $verbose && $logConfigFile )) {
+    if(    !$parseOk
+        || @args
+        || ( $verbose && $logConfigFile )
+        || ( $registrationUrl && $registrationUrl !~ m!^https?://! ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
