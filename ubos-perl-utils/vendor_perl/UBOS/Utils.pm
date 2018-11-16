@@ -1195,20 +1195,28 @@ sub deviceClass {
     unless( $_deviceClass ) {
         # now we guess
         my $out;
-        myexec( 'uname -a', undef, \$out, undef );
-        if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
-            $_deviceClass = 'rpi';
-        } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
-            $_deviceClass = 'rpi2';
-        } elsif( $out =~ m!espressobin.*aarch64! ) {
-            $_deviceClass = 'espressobin';
-        } elsif( $out =~ m!x86_64! ) {
-            my $out;
-            if( myexec( 'pacman -Qs virtualbox-guest', undef, \$out, \$out ) == 0 ) {
-                $_deviceClass = 'vbox';
-            } elsif( myexec( 'pacman -Qs linux-ec2', undef, \$out, \$out ) == 0 ) {
-                $_deviceClass = 'ec2';
-            } else {
+        myexec( 'systemd-detect-virt', undef, \$out, undef );
+        if( $out =~ m!systemd-nspawn! ) {
+            $_deviceClass = 'container';
+
+        } elsif( $out =~ m!xen! ) {
+            $_deviceClass = 'ec2';
+
+        } elsif( $out =~ m!oracle! ) {
+            $_deviceClass = 'vbox';
+
+        } else {
+            myexec( 'uname -a', undef, \$out, undef );
+            if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
+                $_deviceClass = 'rpi';
+
+            } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
+                $_deviceClass = 'rpi2';
+
+            } elsif( $out =~ m!espressobin.*aarch64! ) {
+                $_deviceClass = 'espressobin';
+
+            } elsif( $out =~ m!x86_64! ) {
                 $_deviceClass = 'pc';
             }
         }
