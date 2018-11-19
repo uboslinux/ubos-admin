@@ -198,9 +198,12 @@ sub guessStaffDevice {
 sub formatStaffDevice {
     my $device = shift;
 
+    $device = UBOS::Utils::absReadlink( $device ); # udev may not be fast enough for this script, so go to /dev/sdX
+
     unless( -b $device ) {
         fatal( 'Not a block device:', $device );
     }
+
 
     # If this is a device without a partition table, create one
     my $out;

@@ -11,6 +11,7 @@ use warnings;
 package UBOS::Utils;
 
 use Exporter qw( import myexec );
+use File::Spec;
 use File::Temp;
 use JSON;
 use Lchown;
@@ -517,6 +518,27 @@ sub symlink {
         error( 'Failed to symlink', $oldfile, $newfile );
     }
 
+    return $ret;
+}
+
+##
+# Resolve the target of a symbolic link to an absolute path.
+# If this is not a symbolic link, resolve the path to an absolute path
+# $path: the path
+# return: the absolute path for $path, or its target if $path is a symbolic link
+sub absReadlink {
+    my $path = shift;
+
+    my $ret;
+    if( -l $path ) {
+        if( $path =~ m!^(.*)/[^/]+$! ) {
+            $ret = File::Spec->rel2abs( readlink( $path ), $1 );
+        } else {
+            $ret = File::Spec->rel2abs( readlink( $path ), '' );
+        }
+    } else {
+        $ret = File::Spec->rel2abs( $path );
+    }
     return $ret;
 }
 
