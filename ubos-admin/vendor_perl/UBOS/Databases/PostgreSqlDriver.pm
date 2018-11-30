@@ -65,10 +65,12 @@ sub ensureRunning {
 # Execute a command as administrator
 # $cmd: command, must not contain single quotes
 # $stdin: content to pipe into stdin, if any
+# $stdoutP: where to write output, if any
 # return: success or fail
 sub executeCmdAsAdmin {
-    my $cmd   = shift;
-    my $stdin = shift;
+    my $cmd     = shift;
+    my $stdin   = shift;
+    my $stdoutP = shift;
 
     ensureRunning();
 
@@ -76,8 +78,11 @@ sub executeCmdAsAdmin {
 
     my $out;
     my $err;
+    unless( $stdoutP ) {
+        $stdoutP = \$out;
+    }
     my $ret = 1;
-    if( UBOS::Utils::myexec( "su - postgres -c '$cmd'", $stdin, \$out, \$err )) {
+    if( UBOS::Utils::myexec( "su - postgres -c '$cmd'", $stdin, $stdoutP, \$err )) {
         $ret = 0;
     }
     return $ret;
@@ -111,6 +116,50 @@ sub executeCmdPipeAsAdmin {
         $ret = 0;
     }
     return $ret;
+}
+
+##
+# Change ownership of all tables, sequences and views in a
+# database to a new role. This is needed after restore from backup.
+# $dbName: name of the database
+# $role: name of the new owner
+# return: true or false
+sub changeSchemaOwnership {
+    my $dbName = shift;
+    my $role   = shift;
+
+    # see https://stackoverflow.com/questions/1348126/modify-owner-on-all-tables-simultaneously-in-postgresql/13535184#13535184
+    # but REASSIGN_OWNED does not work for owner postgres, and might (not tested) not work for
+    # non-existing owners upon restore
+
+    my %types = (
+        'pg_tables'                    => 'tablename',
+        'information_schema.sequences' => 'sequence_name',
+        'information_schema.views'     => 'table_name'
+    );
+
+    my $errors = 0;
+    foreach my $type ( sort keys %types ) {
+        my $key = $types{$type};
+
+        if( executeCmdAsAdmin( "psql -qAt -c \"select $key from $types where schemaname = \\\"public\\\";\" \"$dbName\"", undef, \$out )) {
+            error( 'Failed to find', $type, 'in', $dbName );
+            ++$errors;
+
+        } else {
+            $out =~ s!^\s+!!;
+            $out =~ s!\s+$!!;
+
+            my @tables = split( /\s+/, $out );
+            foreach my $table ( @tables ) {
+                if( executeCmdAsAdmin( "psql -c \"alter table \\\"$table\\\" owner to \\\"$role\\\"\" $dbName" )) {
+                    error( 'Failed to change ownership of', $table, 'in', $dbName );
+                    ++$errors;
+                }
+            }
+        }
+    }
+    return $errors == 0;
 }
 
 ## ---- INSTANCE METHODS ---- ##
