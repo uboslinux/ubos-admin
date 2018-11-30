@@ -167,18 +167,13 @@ sub mountDisks {
             next;
         }
 
-        unless( -d "$target$mountPoint" ) {
-            UBOS::Utils::mkdir( "$target$mountPoint" );
-        }
+        # don't swapon swap devices during install
+        if( $mountPoint =~ m!^/! ) { # don't mount devices that don't start with /
 
-        if( $fs eq 'swap' ) {
-            foreach my $device ( @devices ) {
-                debugAndSuspend( 'Swapon device', $device );
-                if( UBOS::Utils::myexec( "swapon '$device'" )) {
-                    ++$errors;
-                }
+            unless( -d "$target$mountPoint" ) {
+                UBOS::Utils::mkdir( "$target$mountPoint" );
             }
-        } elsif( $mountPoint =~ m!^/! ) { # don't mount devices that don't start with /
+
             my $firstDevice = $devices[0];
 
             debugAndSuspend( 'Mount device', $firstDevice, 'at', "$target$mountPoint", 'with', $fs );
@@ -209,14 +204,7 @@ sub umountDisks {
             next;
         }
 
-        if( 'swap' eq $fs ) {
-            foreach my $device ( @{$entry->{devices}} ) {
-                debugAndSuspend( 'Swapoff device', $device );
-                if( UBOS::Utils::myexec( "swapoff '$device'" )) {
-                    ++$errors;
-                }
-            }
-        } elsif( $mountPoint =~ m!^/! ) { # don't umount devices that don't start with /
+        if( $mountPoint =~ m!^/! ) { # don't umount devices that don't start with /
             debugAndSuspend( 'Umount ', $mountPoint );
             if( UBOS::Utils::myexec( "umount '$target$mountPoint'" )) {
                 ++$errors;

@@ -31,7 +31,6 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-raspberry-pi';
     }
-
     $self->SUPER::new( @args );
 
     return $self;
@@ -150,7 +149,6 @@ CONTENT
 
     return 0;
 }
-
 
 ##
 # Returns the arch for this device.
