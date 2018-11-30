@@ -237,7 +237,7 @@ sub read {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
             my $siteJson = readJsonFromString( $siteJsonContent );
-            my $site     = UBOS::Site->new( $siteJson, 0, 1, sub { return readManifestFromZip( $self->{zip}, shift ); } );
+            my $site     = UBOS::Site->new( $siteJson, 0, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             unless( $site ) {
                 fatal( $@ );
@@ -253,7 +253,7 @@ sub read {
         my $appConfigJsonContent = $self->{zip}->contents( $appConfigJsonFile );
         if( $appConfigJsonContent ) {
             my $appConfigJson = readJsonFromString( $appConfigJsonContent );
-            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, undef, sub { return readManifestFromZip( $self->{zip}, shift ); } );
+            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, undef, 0, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
 
