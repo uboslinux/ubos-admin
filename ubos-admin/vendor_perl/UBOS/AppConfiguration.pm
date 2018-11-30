@@ -165,7 +165,7 @@ sub installables {
 }
 
 ##
-# Obtain the installable at this AppCOnfiguration with the provided name
+# Obtain the Installable at this AppConfiguration with the provided name
 # $package: name of the package
 # return: installable, or undef
 sub installable {

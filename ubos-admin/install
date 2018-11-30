@@ -68,8 +68,8 @@ post_upgrade() {
         rm /usr/lib/jvm/default-runtime
     fi
     if [ ! -d /usr/lib/jvm ]; then
-	    mkdir -m755 /usr/lib/jvm
-	fi
+        mkdir -m755 /usr/lib/jvm
+    fi
     ln -sf java-8-openjdk/jre /usr/lib/jvm/default
     ln -sf java-8-openjdk/jre /usr/lib/jvm/default-runtime
 
