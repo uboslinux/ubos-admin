@@ -570,7 +570,9 @@ sub _initialize {
         unless( defined( $context )) {
             $context = $self->{app}->defaultContext();
         }
-        $self->{json}->{context} = $context;
+        if( defined( $context )) {
+            $self->{json}->{context} = $context;
+        }
     }
 
     return 1;
@@ -582,6 +584,9 @@ sub _initialize {
 sub isValidContext {
     my $context = shift;
 
+    unless( defined( $context )) {
+        return 1; # undefined context is fine, e.g. amazonses
+    }
     if( $context =~ m!^(/[-_\.a-zA-Z0-9]+)?$! ) {
         return 1;
     } else {
