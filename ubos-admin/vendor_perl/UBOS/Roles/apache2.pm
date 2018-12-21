@@ -220,6 +220,8 @@ $serverDeclaration
     AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
 
     Alias /\.well-known/ $siteWellKnownDir/.well-known/
+
+    AliasMatch ^.*$ "$siteDocumentRoot/index.html"
 </VirtualHost>
 CONTENT
 
