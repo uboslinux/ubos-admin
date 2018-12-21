@@ -389,7 +389,9 @@ sub _determineDeviceFact {
             } elsif( -b $absPath ) {
 
                 my $out;
-                UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n '$absPath'", undef, \$out );
+                if( UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n '$absPath'", undef, \$out )) {
+                    fatal( 'lsblk of device failed:', $absPath );
+                }
 
                 my $deviceName = $absPath;
                 $deviceName =~ s!(.*/)!!;
