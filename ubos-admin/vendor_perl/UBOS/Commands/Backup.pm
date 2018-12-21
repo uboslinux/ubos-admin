@@ -40,6 +40,7 @@ sub run {
     my $context       = undef;
     my $noTls         = undef;
     my $noTorKey      = undef;
+    my $encryptId     = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -53,7 +54,8 @@ sub run {
             'appconfigid=s' => \@appConfigIds,
             'context=s'     => \$context,
             'notls'         => \$noTls,
-            'notorkey'      => \$noTorKey );
+            'notorkey'      => \$noTorKey,
+            'encryptid=s'   => \$encryptId );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -69,6 +71,14 @@ sub run {
 
     if( -e $out && !$force ) {
         fatal( 'Output file exists already. Use --force to overwrite.' );
+    }
+
+    my $tmpOut;
+    if( $encryptId ) {
+        $tmpOut = File::Temp->new( UNLINK => 1 )->filename;
+
+    } else {
+        $tmpOut = $out;
     }
 
     # Don't need to do any cleanup of siteIds or appConfigIds, BackupUtils::performBackup
@@ -100,9 +110,17 @@ sub run {
     UBOS::Host::preventInterruptions();
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
-    my $ret = UBOS::BackupUtils::performBackup( $backup, $out, \@siteIds, \@appConfigIds, $noTls, $noTorKey );
+    my $ret = UBOS::BackupUtils::performBackup( $backup, $tmpOut, \@siteIds, \@appConfigIds, $noTls, $noTorKey );
     unless( $ret ) {
         error( $@ );
+    }
+
+    if( $encryptId ) {
+        my $err;
+
+        if( UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$tmpOut' > '$out'", undef, undef, \$err )) {
+            warning( 'Encryption failed:', $err );
+        }
     }
 
     return $ret;
