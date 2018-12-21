@@ -138,6 +138,7 @@ sub ensureConfigFiles {
 ##
 # Activate one ore more Apache modules
 # @modules: list of module names
+# return: number of activated modules
 sub activateApacheModules {
     my @modules = @_;
 

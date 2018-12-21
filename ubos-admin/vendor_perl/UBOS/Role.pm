@@ -417,9 +417,9 @@ sub obtainLetsEncryptCertificate {
 }
 
 ##
-# If this role needs (needed) a letsencrypt certificate, remove it.
+# If this role needs (needed) a letsencrypt certificate, deactivate it.
 # $site: the site that needs (needed) the certificate
-sub removeLetsEncryptCertificate {
+sub deactivateLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 

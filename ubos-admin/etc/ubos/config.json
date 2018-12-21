@@ -33,11 +33,7 @@
         "sitesdir"               : "/ubos/http/sites",
         "ssldir"                 : "/etc/httpd/ssl",
         "siteswellknowndir"      : "/ubos/http/wellknown",
-        "placeholdersitesdir"    : "/srv/http/placeholders",
-
-        "letsencrypt" : {
-            "livedir" : "/etc/letsencrypt/live"
-        }
+        "placeholdersitesdir"    : "/srv/http/placeholders"
     },
 
     "tomcat8" : {

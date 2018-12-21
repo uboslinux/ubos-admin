@@ -1053,15 +1053,15 @@ sub mayContextBeAdded {
 }
 
 ##
-# Remove the letsencrypt certificate for this site
+# Deactivate the LetsEncrypt certificate for this site
 # return: 1 for success
-sub removeLetsEncryptCertificate {
+sub deactivateLetsEncryptCertificate {
     my $self = shift;
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( reverse @rolesOnHost ) {
-        $ret &= $role->removeLetsEncryptCertificate( $self );
+        $ret &= $role->deactivateLetsEncryptCertificate( $self );
     }
 
     return $ret;

@@ -14,6 +14,7 @@ use base qw( UBOS::Role );
 use fields;
 
 use UBOS::Host;
+use UBOS::LetsEncrypt;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -194,6 +195,7 @@ sub setupPlaceholderSite {
 
     my $siteId            = $site->siteId;
     my $hostname          = $site->hostname;
+    my $port              = $site->port;
     my $siteFile          = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
     my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
@@ -203,14 +205,60 @@ sub setupPlaceholderSite {
         error( 'Placeholder site', $placeholderName, 'does not exist at', $siteDocumentRoot );
     }
 
-    my $content .= <<CONTENT;
+    if( $site->hasTls ) {
+        my $numberActivated += UBOS::Apache2::activateApacheModules( 'ssl' );
+        if( $numberActivated ) {
+            UBOS::Apache2::restart(); # reload seems to be insufficient
+        }
+    }
+
+    my $siteFileContent .= <<CONTENT;
 #
 # Apache config fragment for placeholder site $siteId (placeholder $placeholderName) at host $hostname
 #
 # Generated automatically, do not modify.
 #
+CONTENT
+
+    my $sslDir;
+    my $sslKey;
+    my $sslCert;
+    my $sslCaCert;
+
+    if( $site->hasTls ) {
+        $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
+$serverDeclaration
+
+    RewriteEngine On
+    RewriteRule ^(.*)\$ https://%{HTTP_HOST}\$1 [R=301,L]
+    # This also works for wildcard hostnames
+</VirtualHost>
+CONTENT
+
+        $sslDir       = $site->vars()->getResolve( 'apache2.ssldir' );
+        $sslKey       = $site->tlsKey;
+        $sslCert      = $site->tlsCert;
+        $sslCaCert    = $site->tlsCaCert;
+
+        my $group = $site->vars()->getResolve( 'apache2.gname' );
+
+        if( $sslKey ) {
+            UBOS::Utils::saveFile( "$sslDir/$siteId.key",   $sslKey,    0440, 'root', $group ); # avoid overwrite by apache
+        }
+        if( $sslCert ) {
+            UBOS::Utils::saveFile( "$sslDir/$siteId.crt",   $sslCert,   0440, 'root', $group );
+        }
+        if( $sslCaCert ) {
+            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
+        }
+
+    } # else No SSL
+
+    $siteFileContent .= <<CONTENT;
+
+<VirtualHost *:$port>
 $serverDeclaration
 
     DocumentRoot "$siteDocumentRoot"
@@ -221,11 +269,32 @@ $serverDeclaration
 
     Alias /\.well-known/ $siteWellKnownDir/.well-known/
 
-    AliasMatch ^.*$ "$siteDocumentRoot/index.html"
+    AliasMatch ^.*\$ "$siteDocumentRoot/index.html"
+CONTENT
+
+    if( $site->hasTls ) {
+        $siteFileContent .= <<CONTENT;
+
+    SSLEngine on
+
+    SSLCertificateKeyFile $sslDir/$siteId.key
+    SSLCertificateFile $sslDir/$siteId.crt
+CONTENT
+        if( $sslCaCert ) {
+            $siteFileContent .= <<CONTENT;
+
+    # the CA certs explaining where our clients got their certs from
+    SSLCACertificateFile $sslDir/$siteId.cacrt
+CONTENT
+        }
+    }
+
+    $siteFileContent .= <<CONTENT;
+
 </VirtualHost>
 CONTENT
 
-    UBOS::Utils::saveFile( $siteFile, $content );
+    UBOS::Utils::saveFile( $siteFile, $siteFileContent );
 
     $triggers->{'httpd-reload'} = 1;
 
@@ -508,17 +577,17 @@ sub hasLetsEncryptCert {
         return 1;
     }
 
-    my $status   = UBOS::Host::determineLetsEncryptCertificatesStatus();
-    my $hostname = $site->hostname;
-
-    unless( exists( $status->{$hostname} )) {
-        return 0;
+    my $status = UBOS::LetsEncrypt::determineCertificateStatus( $site->hostname );
+    if( $status ) {
+        return $status->{isvalid};
+    } else {
+        return undef;
     }
-    return $status->{$hostname}->{isvalid};
 }
 
 ##
-# If this role needs a letsencrypt certificate, obtain it.
+# If this role needs a letsencrypt certificate, obtain it. If we already
+# have a non-active one, use that instead and attempt to renew.
 # $site: the site that needs the certificate
 # return: 1 if succeeded
 sub obtainLetsEncryptCertificate {
@@ -536,62 +605,32 @@ sub obtainLetsEncryptCertificate {
         UBOS::Utils::mkdirDashP( $siteWellKnownDir );
     }
 
-    my $out;
-    my $err;
-    my $ret = UBOS::Utils::myexec(
-            'TERM=dumb'
-            . ' certbot certonly'
-            . ' --webroot'
-            . " --email '" . $adminHash->{email} . "'"
-            . ' --agree-tos'
-            . ' --no-self-upgrade'
-            . ' --non-interactive'
-            . " --webroot-path '" . $siteWellKnownDir . "'"
-            . " -d '" . $hostname . "'",
-            undef,
-            \$out,
-            \$err );
-
-    if( $ret ) {
-        warning( "Obtaining certificate from letsencrypt failed. proceeding without certificate or TLS/SSL.\n"
-                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
-                 . "Letsencrypt message:\n"
-                 . $err );
-        return 0;
+    if( UBOS::LetsEncrypt::makeCertificateRenew( $hostname )) {
+        UBOS::LetsEncrypt::renewCertificate( $hostname );
+    } else {
+        UBOS::LetsEncrypt::obtainCertificate( $hostname, $siteWellKnownDir, $adminHash->{email} );
     }
-    my $letsEncryptInfo = UBOS::Host::determineLetsEncryptCertificatesStatus( 1 );
-    if( exists( $letsEncryptInfo->{$hostname} )) {
+
+    my $letsEncryptStatus = UBOS::LetsEncrypt::determineCertificateStatus( $hostname, 1 );
+    if( $letsEncryptStatus && $letsEncryptStatus->{isvalid} ) {
         $site->setTlsKeyAndCert(
-                UBOS::Utils::slurpFile( $letsEncryptInfo->{$hostname}->{keypath} ),
-                UBOS::Utils::slurpFile( $letsEncryptInfo->{$hostname}->{certpath} ));
+                UBOS::Utils::slurpFile( $letsEncryptStatus->{keypath} ),
+                UBOS::Utils::slurpFile( $letsEncryptStatus->{certpath} ));
     }
     return 1;
 }
 
 ##
-# If this role needs (needed) a letsencrypt certificate, remove it.
+# If this role needs (needed) a letsencrypt certificate, deactivate it.
 # $site: the site that needs (needed) the certificate
-sub removeLetsEncryptCertificate {
+sub deactivateLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 
     my $hostname = $site->hostname;
 
-    my $out;
-    my $ret = UBOS::Utils::myexec(
-            'TERM=dumb'
-            . ' certbot delete'
-            . ' --non-interactive'
-            . " --cert-name '" . $hostname . "'",
-            undef,
-            \$out,
-            \$out );
-
-    if( $ret ) {
-        trace( 'Letsencrypt said:', $out );
-        return 0;
-    }
-    return 1;
+    my $ret = UBOS::LetsEncrypt::makeCertificateNoRenew( $hostname );
+    return $ret;
 }
 
 # === Manifest checking routines from here ===

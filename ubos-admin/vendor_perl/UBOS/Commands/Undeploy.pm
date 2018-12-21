@@ -193,8 +193,7 @@ sub run {
             $ret &= $oldSite->undeploy( $undeployTriggers );
 
             if( $oldSite->hasLetsEncryptTls()) {
-                # If we don't do this, a new site with the same hostname may be deployed, and then things get messy
-                $ret &= $oldSite->removeLetsEncryptCertificate();
+                $ret &= $oldSite->deactivateLetsEncryptCertificate();
             }
         }
 

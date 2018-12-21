@@ -25,14 +25,14 @@ use UBOS::Variables;
 use Socket;
 use Sys::Hostname qw();
 
-my $HOST_CONF_FILE         = '/etc/ubos/config.json';
+my $HOST_CONF_FILE          = '/etc/ubos/config.json';
 
-my $SITE_JSON_DIR          = vars()->getResolve( 'host.sitejsondir' );
-my $AFTER_BOOT_FILE        = vars()->getResolve( 'host.afterbootfile' );
-my $READY_FILE             = '/run/ubos-admin-ready';
-my $LAST_UPDATE_FILE       = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
-my $HOSTNAME_CALLBACKS_DIR = '/etc/ubos/hostname-callbacks';
-my $STATE_CALLBACKS_DIR    = '/etc/ubos/state-callbacks';
+my $SITE_JSON_DIR           = vars()->getResolve( 'host.sitejsondir' );
+my $AFTER_BOOT_FILE         = vars()->getResolve( 'host.afterbootfile' );
+my $READY_FILE              = '/run/ubos-admin-ready';
+my $LAST_UPDATE_FILE        = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
+my $HOSTNAME_CALLBACKS_DIR  = '/etc/ubos/hostname-callbacks';
+my $STATE_CALLBACKS_DIR     = '/etc/ubos/state-callbacks';
 
 my $_hostVars                      = undef; # allocated as needed
 my $_rolesOnHostInSequence         = undef; # allocated as needed
@@ -41,7 +41,6 @@ my $_sites                         = undef; # allocated as needed
 my $_allNics                       = undef; # allocated as needed
 my $_physicalNics                  = undef; # allocated as needed
 my $_gpgHostKeyFingerprint         = undef; # allocated as needed
-my $_letsEncryptCertificatesStatus = undef; # allocated as needed
 my $_currentState                  = undef;
 
 ##
@@ -1368,65 +1367,6 @@ END
         return $ret;
     }
     return '';
-}
-
-##
-# Smart factory method to obtain information about all Letsencrypt certificates on this host
-# $force: if true, do not use any cached values
-# return: hash, keyed by hostname
-sub determineLetsEncryptCertificatesStatus {
-    my $force = shift || 0;
-
-    if( !$_letsEncryptCertificatesStatus || $force ) {
-        my $out;
-        if( UBOS::Utils::myexec(
-                'TERM=dumb'
-                . ' certbot certificates',
-                undef,
-                \$out,
-                \$out )) {
-            warning( "certbot certificates invocation failed" );
-            return {};
-        }
-
-        $_letsEncryptCertificatesStatus = {};
-
-        my @chunks = split( /Certificate Name:/, $out );
-        shift @chunks; # discard first one
-        foreach my $chunk ( @chunks ) {
-            my $domain = undef;
-            my $valid;
-            my $certPath;
-            my $keyPath;
-
-            my @lines = split( /\n/, $chunk );
-            foreach my $line ( @lines ) {
-                if( $line =~ m!Domains:\s*(\S+)! ) {
-                    $domain = $1;
-                } elsif( $line =~ m!Expiry Date:.*\(([^)]+)\)! ) {
-                    my $validInvalid = $1;
-                    if( $validInvalid =~ m!INVALID! ) {
-                        $valid = 0;
-                    } else {
-                        $valid = 1;
-                    }
-                } elsif( $line =~ m!Certificate Path:\s* (\S+)! ) {
-                    $certPath = $1;
-
-                } elsif( $line =~ m!Private Key Path:\s* (\S+)! ) {
-                    $keyPath = $1;
-                }
-            }
-            if( $domain ) {
-                $_letsEncryptCertificatesStatus->{$domain} = {
-                    'isvalid'  => $valid,
-                    'certpath' => $certPath,
-                    'keypath'  => $keyPath
-                };
-            }
-        }
-    }
-    return $_letsEncryptCertificatesStatus;
 }
 
 ##
