@@ -142,7 +142,8 @@ sub changeSchemaOwnership {
     foreach my $type ( sort keys %types ) {
         my $key = $types{$type};
 
-        if( executeCmdAsAdmin( "psql -qAt -c \"select $key from $types where schemaname = \\\"public\\\";\" \"$dbName\"", undef, \$out )) {
+        my $out;
+        if( executeCmdAsAdmin( "psql -qAt -c \"select $key from $type where schemaname = \\\"public\\\";\" \"$dbName\"", undef, \$out )) {
             error( 'Failed to find', $type, 'in', $dbName );
             ++$errors;
 
