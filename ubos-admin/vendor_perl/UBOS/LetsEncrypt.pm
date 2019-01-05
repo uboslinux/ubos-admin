@@ -10,6 +10,8 @@ use warnings;
 
 package UBOS::LetsEncrypt;
 
+use UBOS::Logging;
+
 my $LETSENCRYPT_RENEW_DIR   = '/etc/letsencrypt/renew';
 my $LETSENCRYPT_NORENEW_DIR = '/etc/letsencrypt/norenew';
 
