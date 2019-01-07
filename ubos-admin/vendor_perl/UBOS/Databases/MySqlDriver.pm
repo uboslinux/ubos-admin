@@ -265,6 +265,7 @@ sub defaultPort {
 # $privileges: string containing required database privileges, like "create, insert"
 # $charset: default database character set name
 # $collate: default database collation name
+# $description: description of the database
 # return: success or fail
 sub provisionLocalDatabase {
     my $self                = shift;
@@ -275,6 +276,7 @@ sub provisionLocalDatabase {
     my $privileges          = shift;
     my $charset             = shift || 'utf8';
     my $collate             = shift;
+    my $description         = shift; # ignored; MySQL does not know what to do with this
 
     trace( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 

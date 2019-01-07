@@ -128,7 +128,8 @@ sub provisionLocalDatabase {
             $json->{dbUserLidCredType},
             $privileges,
             $charset,
-            $collate );
+            $collate,
+            "$appConfigId / $installableId / $itemName" );
 
     _updateResourcesCacheEntry( $key, $json );
 

@@ -46,7 +46,37 @@ sub ensureRunning {
 
     if( UBOS::Utils::isDirEmpty( $dataDir )) {
         debugAndSuspend( 'Init postgres database' );
-        executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D \"$dataDir\"" );
+
+        my $initDbCmd = 'initdb';
+        # let's not specify authentication here; instead, we overwrite the file
+        $initDbCmd .= ' --encoding=UTF8';
+        $initDbCmd .= ' --locale=en_US.UTF-8';
+        $initDbCmd .= ' --pgdata="' . $dataDir . '"';
+        executeCmdAsAdmin( $initDbCmd );
+
+        # tighten down authentication
+        UBOS::Utils::saveFile( "$dataDir/pg_hba.conf", <<CONTENT );
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow password-less login by the postgres user
+local   all             postgres                                trust
+host    all             postgres        127.0.0.1/32            trust
+host    all             postgres        ::1/128                 trust
+
+# All other users need passwords
+local   all             all                                     scram-sha-256
+host    all             all             127.0.0.1/32            scram-sha-256
+host    all             all             ::1/128                 scram-sha-256
+
+# local: Unix domain socket connections
+# host:  IPv4 or IPv6 local connections
+# No replication
+
+CONTENT
+
+        my $postgresConf = UBOS::Utils::slurpFile( "$dataDir/postgresql.conf" );
+        $postgresConf =~ s!^\s*(#\s*)?password_encryption\s*=\s*(\S+)!password_encryption = scram-sha-256!m;
+        UBOS::Utils::saveFile( "$dataDir/postgresql.conf", $postgresConf );
 
         my $out;
         my $err;
@@ -84,6 +114,7 @@ sub executeCmdAsAdmin {
     my $ret = 1;
     if( UBOS::Utils::myexec( "su - postgres -c '$cmd'", $stdin, $stdoutP, \$err )) {
         $ret = 0;
+        $@   = $err;
     }
     return $ret;
 }
@@ -202,6 +233,7 @@ sub defaultPort {
 # $privileges: string containing required database privileges, like "readWrite, dbAdmin"
 # $charset: default database character set name
 # $collate: default database collation name
+# $description: description of the database
 # return: success or fail
 sub provisionLocalDatabase {
     my $self                = shift;
@@ -212,21 +244,51 @@ sub provisionLocalDatabase {
     my $privileges          = shift;
     my $charset             = shift || 'UNICODE';
     my $collate             = shift;
+    my $description         = shift;
 
     trace( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
     my $ret = 1;
+
+    # create database
+    my $createDbSql = 'createdb';
+    $createDbSql .= " --encoding=$charset";
     if( $collate ) {
-        $ret &= executeCmdAsAdmin( "createdb -E $charset --lc-collate=$collate \"$dbName\"" );
-    } else {
-        $ret &= executeCmdAsAdmin( "createdb -E $charset \"$dbName\"" );
+        $createDbSql .= " --lc-collate=$collate";
     }
-    $ret &= executeCmdAsAdmin( "createuser \"$dbUserLid\"" );
+    $createDbSql .= " \"$dbName\"";
+    $createDbSql .= " \"$description\"";
 
+    unless( executeCmdAsAdmin( $createDbSql )) {
+        error( 'Postgres createdb:', $@ );
+        $ret = 0;
+    }
+
+    # create user
+    unless( executeCmdAsAdmin( "createuser \"$dbUserLid\"" )) {
+        error( 'Postgres createuser:', $@ );
+        $ret = 0;
+    }
+
+    # set password for user
+    unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER ROLE \"$dbUserLid\" WITH PASSWORD '$dbUserLidCredential'" )) {
+         # value needs ' not "
+        error( 'Postgres alter role:', $@ );
+        $ret = 0;
+    }
+
+    # The create table etc statements have not been executed at this point.
+    # So we need to set default privileges so they apply to tables created
+    # in the future.
     # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql
-    $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" );
-    $ret &= executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT USAGE ON SEQUENCES TO \"$dbUserLid\"" );
-
+    unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" )) {
+        error( 'Postgres alter default privileges (1):', $@ );
+        $ret = 0;
+    }
+    unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT USAGE ON SEQUENCES TO \"$dbUserLid\"" )) {
+        error( 'Postgres alter default privileges (2):', $@ );
+        $ret = 0;
+    }
     return $ret;
 }
 
