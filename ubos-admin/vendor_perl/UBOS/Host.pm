@@ -613,16 +613,20 @@ sub updateCode {
     UBOS::Utils::saveFile( $LAST_UPDATE_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
 
     # if installed kernel package is now different from running kernel: signal to reboot
-    my $kernelPackageName = UBOS::Utils::kernelPackageName();
+    my $kernelPackageName = UBOS::Utils::kernelPackageName(); # e.g. 4.20.arch1-1
     if( $kernelPackageName ) { # This will be undef in a container, so a container will never reboot automatically
         my $kernelPackageVersion = packageVersion( $kernelPackageName );
         if( $kernelPackageVersion ) {
             my $kernelVersion;
-            myexec( 'uname -r', undef, \$kernelVersion );
+            myexec( 'uname -r', undef, \$kernelVersion ); # e.g. 4.20.0-arch1-1-ARCH
             $kernelVersion =~ s!^\s+!!;
             $kernelVersion =~ s!\s+$!!;
             $kernelVersion =~ s!-arch!.arch!; # they don't agree on . vs -
+                # now we are at: 4.20.0.arch1-1-ARCH
             $kernelVersion =~ s!-ARCH$!!;     # somehow there's a -ARCH at the end
+                # now we are at: 4.20.0.arch1-1
+            $kernelVersion =~ s!\.0\.0!.!;    # take .0 out as package version does not use it (special case: 0)
+                # now we are at: 4.20.arch1-1
 
             if( $kernelPackageVersion ne $kernelVersion && "$kernelPackageVersion-ec2" ne $kernelVersion ) {
                 # apparently the EC2 kernel version has a trailing -ec2
