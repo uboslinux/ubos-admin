@@ -111,8 +111,11 @@ sub executeCmdAsAdmin {
     unless( $stdoutP ) {
         $stdoutP = \$out;
     }
+    my $escapedCmd = $cmd;
+    $escapedCmd =~ s!'!'"'"'!g;
+
     my $ret = 1;
-    if( UBOS::Utils::myexec( "su - postgres -c '$cmd'", $stdin, $stdoutP, \$err )) {
+    if( UBOS::Utils::myexec( "su - postgres -c '$escapedCmd'", $stdin, $stdoutP, \$err )) {
         $ret = 0;
         $@   = $err;
     }
@@ -159,38 +162,41 @@ sub changeSchemaOwnership {
     my $dbName = shift;
     my $role   = shift;
 
-    # see https://stackoverflow.com/questions/1348126/modify-owner-on-all-tables-simultaneously-in-postgresql/13535184#13535184
+    # see https://stackoverflow.com/questions/1348126/modify-owner-on-all-tables-simultaneously-in-postgresql/13535184
     # but REASSIGN_OWNED does not work for owner postgres, and might (not tested) not work for
     # non-existing owners upon restore
 
-    my %types = (
-        'pg_tables'                    => 'tablename',
-        'information_schema.sequences' => 'sequence_name',
-        'information_schema.views'     => 'table_name'
-    );
+    # construct commands
+    my $sql = <<SQL;
+SELECT 'ALTER TABLE '|| schemaname || '.' || tablename ||' OWNER TO "$role";'
+FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')
+ORDER BY schemaname, tablename;
 
+SELECT 'ALTER SEQUENCE '|| sequence_schema || '.' || sequence_name ||' OWNER TO "$role";'
+FROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')
+ORDER BY sequence_schema, sequence_name;
+
+SELECT 'ALTER VIEW '|| table_schema || '.' || table_name ||' OWNER TO "$role";'
+FROM information_schema.views WHERE NOT table_schema IN ('pg_catalog', 'information_schema')
+ORDER BY table_schema, table_name;
+SQL
+
+    my $sql2; # commands
     my $errors = 0;
-    foreach my $type ( sort keys %types ) {
-        my $key = $types{$type};
 
-        my $out;
-        if( executeCmdAsAdmin( "psql -qAt -c \"select $key from $type where schemaname = \\\"public\\\";\" \"$dbName\"", undef, \$out )) {
-            error( 'Failed to find', $type, 'in', $dbName );
-            ++$errors;
-
-        } else {
-            $out =~ s!^\s+!!;
-            $out =~ s!\s+$!!;
-
-            my @tables = split( /\s+/, $out );
-            foreach my $table ( @tables ) {
-                if( executeCmdAsAdmin( "psql -c \"alter table \\\"$table\\\" owner to \\\"$role\\\"\" $dbName" )) {
-                    error( 'Failed to change ownership of', $table, 'in', $dbName );
-                    ++$errors;
-                }
+    if( executeCmdAsAdmin( "psql -qAt \"$dbName\"", $sql, \$sql2 )) {
+        if( $sql2 ) {
+            unless( executeCmdAsAdmin( "psql -qAt \"$dbName\"", $sql2 )) {
+                error( 'Changing ownership of postgresql database objects failed' );
+                ++$errors;
             }
-        }
+        } # else there is nothing to do
+
+    } else {
+        error( 'Determining SQL commands to change ownership of postgresql database objects failed' );
+        ++$errors;
     }
+
     return $errors == 0;
 }
 
