@@ -1142,8 +1142,9 @@ sub _checkJson {
                 return 0;
             }
         }
-        if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} =~ m!^\s! || $json->{admin}->{credential} =~ m!\s$! ) {
-            $@ = 'Site JSON: admin section: invalid credential, must be string without leading or trailing white space';
+        if( ref( $json->{admin}->{credential} ) || $json->{admin}->{credential} !~ m!^\S[\S ]{6,30}\S$! ) {
+            # Use same regex as in Createsite
+            $@ = 'Site JSON: admin section: invalid credential, must be string of at least 8 characters without leading or trailing white space.';
             return 0;
         }
     }

@@ -210,14 +210,15 @@ sub run {
             if( $jsonTemplate && defined( $jsonTemplate->{admin} ) && defined( $jsonTemplate->{admin}->{credential} )) {
                 $adminCredential = $jsonTemplate->{admin}->{credential};
             } else {
-                $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{4,30}\S$', undef, 1 );
+                $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{6,30}\S$', undef, 1 );
+                # Use same regex as in Site::_checkJson
             }
             if( $adminCredential =~ m!s3cr3t!i ) {
                 error( "Not that one!" );
             } elsif( $adminCredential eq $adminUserId ) {
                 error( "Password must be different from username." );
             } elsif( length( $adminCredential ) < 6 ) {
-                error( "At least 6 characters please." );
+                error( "At least 8 characters please." );
             } else {
                 last;
             }
