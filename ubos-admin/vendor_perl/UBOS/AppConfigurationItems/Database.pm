@@ -175,13 +175,13 @@ sub restore {
 
     my $bucket = $self->{json}->{retentionbucket};
     my $name   = $self->{json}->{name};
-    my $tmpDir = $vars->getResolve( 'host.tmpdir', '/tmp' );
 
     trace( 'Database::restore', $bucket, $name );
 
     my $ret = 1;
-    my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
-    unless( $backupContext->restore( $bucket, $tmp->filename )) {
+
+    my $restoreFrom = $backupContext->restore( $bucket );
+    unless( $restoreFrom ) {
         error( 'Cannot restore database: bucket:', $bucket, 'context:', $backupContext->asString() );
         $ret = 0;
         return $ret;
@@ -192,7 +192,7 @@ sub restore {
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
                     $name,
-                    $tmp->filename );
+                    $restoreFrom );
     if( $dbName ) {
         my $dbType = $self->{role}->name();
         # now insert those values into the vars object

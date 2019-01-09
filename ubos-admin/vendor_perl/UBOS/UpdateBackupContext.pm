@@ -90,19 +90,12 @@ sub addDirectoryHierarchy {
 ##
 # Callback by which an AppConfigurationItem can restore a file from a Backup
 # $bucket: the name of the bucket from which the file is to be restored
-# $fileName: name of the file in the filesystem to be written
-# return: success or fail
+# return: name of the file
 sub restore {
     my $self     = shift;
     my $bucket   = shift;
-    my $fileName = shift;
 
-    # keep attributes, and don't follow symlinks
-    if( UBOS::Utils::myexec( "mv '" . $self->{contextPathInBackup} . "/$bucket' '$fileName'" )) {
-        return 0;
-    }
-
-    return 1;
+    return $self->{contextPathInBackup} . "/$bucket";
 }
 
 ##
