@@ -69,9 +69,9 @@ sub checkInstallableManifestForRole {
         'sqlscript'  => 1,
         'exec'       => 1
     };
-    
+
     $self->SUPER::checkManifestForRoleGenericAppConfigItems( $roleName, $installable, $jsonFragment, $databaseOrScript, $retentionBuckets, $skipFilesystemChecks, $vars );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(  $roleName, $installable, $jsonFragment, $perlOrSql, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(  $roleName, $installable, $jsonFragment, $perlOrSql, $skipFilesystemChecks, $vars );
 }
 
 1;

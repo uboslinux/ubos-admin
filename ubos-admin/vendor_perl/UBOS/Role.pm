@@ -681,7 +681,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'source' must be string" );
                         }
                         foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
+                            if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
@@ -694,7 +694,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         }
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{template} ), $name )) {
+                                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{template} ), $name )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
                                 }
                             }
@@ -720,7 +720,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     }
                     unless( $skipFilesystemChecks ) {
                         foreach my $name ( @names ) {
-                            unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
+                            if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
                                 $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
                             }
                         }
@@ -737,7 +737,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         # Symlinks get to have variables in their sources
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                unless( $name  && UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
+                                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
                                 }
                             }
@@ -832,14 +832,17 @@ sub checkManifestForRoleGenericAppConfigItems {
 # $installable: the installable whose manifest is being checked
 # $jsonFragment: the JSON fragment that deals with this role
 # $allowedTypes: hash of allowed types
+# $skipFilesystemChecks: if true, do not check the Site or Installable JSONs against the filesystem.
+#       This is needed when reading Site JSON files in (old) backups
 # $vars: the Variables object that knows about symbolic names and variables
 sub checkManifestForRoleGenericInstallersEtc {
-    my $self         = shift;
-    my $roleName     = shift;
-    my $installable  = shift;
-    my $jsonFragment = shift;
-    my $allowedTypes = shift;
-    my $vars         = shift;
+    my $self                 = shift;
+    my $roleName             = shift;
+    my $installable          = shift;
+    my $jsonFragment         = shift;
+    my $allowedTypes         = shift;
+    my $skipFilesystemChecks = shift;
+    my $vars                 = shift;
 
     my $codeDir = $vars->getResolve( 'package.codedir' );
 
@@ -865,14 +868,14 @@ sub checkManifestForRoleGenericInstallersEtc {
                 if( ref( $item->{source} )) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'source' must be string" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $item->{source} ))) {
+                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $item->{source} ))) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid source" );
                 }
             } else {
                 unless( $item->{template} ) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template" );
                 }
-                unless( UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $item->{template} ))) {
+                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $item->{template} ))) {
                     $installable->myFatal( "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid template" );
                 }
                 if( ref( $item->{templatelang} )) {

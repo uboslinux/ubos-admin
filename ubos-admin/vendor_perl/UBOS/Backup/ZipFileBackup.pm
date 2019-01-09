@@ -233,11 +233,14 @@ sub read {
 
     my $ret = $self;
 
+    # Note that this creates AppConfiguration instances that are part of
+    # a Site, and additional ones that aren't, even if they are part of
+    # the same Site.
     foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
             my $siteJson = readJsonFromString( $siteJsonContent );
-            my $site     = UBOS::Site->new( $siteJson, 0, sub { return readManifestFromZip( $self->{zip}, shift ); } );
+            my $site     = UBOS::Site->new( $siteJson, 0, 1, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             unless( $site ) {
                 fatal( $@ );
@@ -253,7 +256,7 @@ sub read {
         my $appConfigJsonContent = $self->{zip}->contents( $appConfigJsonFile );
         if( $appConfigJsonContent ) {
             my $appConfigJson = readJsonFromString( $appConfigJsonContent );
-            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, undef, 0, sub { return readManifestFromZip( $self->{zip}, shift ); } );
+            my $appConfig     = UBOS::AppConfiguration->new( $appConfigJson, undef, 1, sub { return readManifestFromZip( $self->{zip}, shift ); } );
 
             $self->{appConfigs}->{$appConfig->appConfigId()} = $appConfig;
 

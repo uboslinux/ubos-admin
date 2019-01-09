@@ -73,7 +73,7 @@ sub checkInstallableManifestForRole {
     };
 
     $self->SUPER::checkManifestForRoleGenericAppConfigItems(   $roleName, $installable, $jsonFragment, $noDatabase, $retentionBuckets, $skipFilesystemChecks, $vars );
-    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $noDatabase, $vars );
+    $self->SUPER::checkManifestForRoleGenericInstallersEtc(    $roleName, $installable, $jsonFragment, $noDatabase, $skipFilesystemChecks, $vars );
 }
 
 1;

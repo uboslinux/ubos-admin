@@ -17,7 +17,7 @@ use UBOS::Utils;
 use JSON;
 use MIME::Base64;
 
-use fields qw( json manifestFileReader appConfigs vars);
+use fields qw( json skipFilesystemChecks manifestFileReader appConfigs vars);
 
 my $WILDCARDHOSTNAME = "__wildcard";
 
@@ -29,10 +29,11 @@ my $WILDCARDHOSTNAME = "__wildcard";
 # $manifestFileReader: pointer to a method that knows how to read manifest files
 # return: Site object
 sub new {
-    my $self               = shift;
-    my $json               = shift;
-    my $fillInTemplate     = shift || 0;
-    my $manifestFileReader = shift || \&UBOS::Host::defaultManifestFileReader;
+    my $self                 = shift;
+    my $json                 = shift;
+    my $fillInTemplate       = shift || 0;
+    my $skipFilesystemChecks = shift;
+    my $manifestFileReader   = shift || \&UBOS::Host::defaultManifestFileReader;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -42,8 +43,9 @@ sub new {
         $json->{tls} = $json->{ssl};
         delete $json->{ssl};
     }
-    $self->{json}               = $json;
-    $self->{manifestFileReader} = $manifestFileReader;
+    $self->{json}                 = $json;
+    $self->{skipFilesystemChecks} = $skipFilesystemChecks;
+    $self->{manifestFileReader}   = $manifestFileReader;
 
     unless( $self->_checkJson( $fillInTemplate )) {
         return undef;
@@ -484,7 +486,8 @@ sub appConfigs {
         my $jsonAppConfigs = $self->{json}->{appconfigs};
         $self->{appConfigs} = [];
         foreach my $current ( @$jsonAppConfigs ) {
-            push @{$self->{appConfigs}}, UBOS::AppConfiguration->new( $current, $self, $self->{manifestFileReader} );
+            push @{$self->{appConfigs}},
+                 UBOS::AppConfiguration->new( $current, $self, $self->{skipFilesystemChecks}, $self->{manifestFileReader} );
         }
     }
     return $self->{appConfigs};
