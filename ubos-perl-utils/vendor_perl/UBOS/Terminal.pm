@@ -15,7 +15,8 @@ use Term::ANSIColor;
 
 our @EXPORT = qw( colPrint
                   colPrintTrace colPrintInfo colPrintDebug colPrintWarning colPrintError colPrintFatal
-                  colPrintAskSection colPrintAsk );
+                  colPrintAskSection colPrintAsk
+                  askAnswer );
 
 unless( -t STDOUT ) {
     $ENV{ANSI_COLORS_DISABLED}++ ;
@@ -100,6 +101,48 @@ sub colPrintAskSection {
     my $c = shift;
 
     print( colored( $c, 'green' ));
+}
+
+##
+# Ask the user a question and return the answer
+# $q: the question text
+# $regex: regular expression that defines valid input
+# $dontTrim: if false, trim whitespace
+# $blank: if true, blank terminal echo
+# return: the answer
+sub askAnswer {
+    my $q        = shift;
+    my $regex    = shift || '.?';
+    my $dontTrim = shift || 0;
+    my $blank    = shift;
+
+    my $ret;
+    while( 1 ) {
+        colPrintAsk( $q );
+
+        if( $blank ) {
+            system('stty','-echo');
+        }
+        $ret = <STDIN>;
+        if( $blank ) {
+            system('stty','echo');
+            colPrint( "\n" );
+        }
+        if( defined( $ret )) { # apparently ^D becomes undef
+            if( $dontTrim ) { # just remove trailing \n
+                $ret =~ s!\n$!!;
+            } else {
+                $ret =~ s!\s+$!!;
+                $ret =~ s!^\s+!!;
+            }
+            if( $ret =~ $regex ) {
+                last;
+            } else {
+                error( "(input not valid: regex is $regex)" );
+            }
+        }
+    }
+    return $ret;
 }
 
 1;
