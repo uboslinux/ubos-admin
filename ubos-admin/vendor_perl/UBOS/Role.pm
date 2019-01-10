@@ -570,7 +570,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": must specify source" );
                 }
                 if( ref( $appConfigItem->{source} )) {
-                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
+                    $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'source' must be string" );
                 }
                 if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ))) {
                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid source: " . $appConfigItem->{source} );
