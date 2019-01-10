@@ -343,6 +343,7 @@ sub importLocalDatabase {
 
     trace( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $compress, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
 
+    my $cmd;
     if( $compress ) {
         if( $compress eq 'gz' ) {
             $cmd = "zcat '$fileName' | psql -v HISTFILE=/dev/null '$dbName'";
