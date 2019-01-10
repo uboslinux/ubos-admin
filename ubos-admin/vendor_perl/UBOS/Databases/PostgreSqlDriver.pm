@@ -301,7 +301,7 @@ sub exportLocalDatabase {
 
     trace( 'PostgreSqlDriver::exportLocalDatabase', $dbName, $compress );
 
-    my $tmpDir   = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/tmp' );
+    my $tmpDir = UBOS::Host::tmpdir();
     my $fileName;
 
     my $cmd = "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"";

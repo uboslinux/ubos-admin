@@ -96,7 +96,8 @@ sub restore {
     unless( $member ) {
         return undef;
     }
-    my $tmpDir  = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/tmp' );
+
+    my $tmpDir  = UBOS::Host::tmpdir();
     my $tmpFile = File::Temp->new( UNLINK => 1, TMPDIR => $tmpDir );
     if( $self->{backup}->{zip}->extractMember( $member, $tmpFile->filename )) {
         return undef;

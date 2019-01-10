@@ -2,6 +2,7 @@
 #
 # Command that asks the user about the site they want to create, and
 # then deploys the site.
+# then deploys the site.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -121,7 +122,7 @@ sub run {
                     fatal( 'A site with this hostname is deployed already. Cannot create a new site from this template:', $hostname );
                 }
             } else {
-                $hostname = ask( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
+                $hostname = askAnswer( "Hostname (or * for any): ", '^[a-z0-9]([-_a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-_a-z0-9]*[a-z0-9])?)*$|^\*$' );
             }
 
             if( '*' eq $hostname ) {
@@ -201,10 +202,10 @@ sub run {
         $siteId = UBOS::Host::createNewSiteId();
     }
     unless( $adminUserId ) {
-        $adminUserId = ask( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
+        $adminUserId = askAnswer( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
     }
     unless( $adminUserName ) {
-        $adminUserName = ask( 'Site admin user name (e.g. John Doe): ', '\S+' );
+        $adminUserName = askAnswer( 'Site admin user name (e.g. John Doe): ', '\S+' );
     }
 
     while( !$adminCredential ) {
@@ -212,7 +213,7 @@ sub run {
             if( $jsonTemplate && defined( $jsonTemplate->{admin} ) && defined( $jsonTemplate->{admin}->{credential} )) {
                 $adminCredential = $jsonTemplate->{admin}->{credential};
             } else {
-                $adminCredential = ask( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{6,30}\S$', undef, 1 );
+                $adminCredential = askAnswer( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{6,30}\S$', undef, 1 );
                 # Use same regex as in Site::_checkJson
             }
             if( $adminCredential =~ m!s3cr3t!i ) {
@@ -225,7 +226,7 @@ sub run {
                 last;
             }
         }
-        my $adminCredential2 = ask( 'Repeat site admin user password: ', undef, undef, 1 );
+        my $adminCredential2 = askAnswer( 'Repeat site admin user password: ', undef, undef, 1 );
         if( $adminCredential ne $adminCredential2 ) {
             error( "Passwords did not match!" );
             $adminCredential = undef;
@@ -234,7 +235,7 @@ sub run {
         }
     }
     while( !$adminEmail ) {
-        $adminEmail = ask( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
+        $adminEmail = askAnswer( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
         if( $adminEmail =~ m!foo\@bar.com! ) {
             error( "Not that one!" );
             $adminEmail = undef;
@@ -285,7 +286,7 @@ sub run {
         } else {
             # not self-signed
             while( 1 ) {
-                $tlsKey = ask( 'SSL/TLS private key file: ' );
+                $tlsKey = askAnswer( 'SSL/TLS private key file: ' );
                 unless( $tlsKey ) {
                     redo;
                 }
@@ -302,7 +303,7 @@ sub run {
             }
 
             while( 1 ) {
-                $tlsCrt = ask( 'Certificate file (only domain cert, or entire chain): ' );
+                $tlsCrt = askAnswer( 'Certificate file (only domain cert, or entire chain): ' );
                 unless( $tlsCrt ) {
                     redo;
                 }
@@ -319,7 +320,7 @@ sub run {
             }
 
             while( 1 ) {
-                $tlsCrtChain = ask( 'Certificate chain file (enter blank if chain was already contained in certificate file): ' );
+                $tlsCrtChain = askAnswer( 'Certificate chain file (enter blank if chain was already contained in certificate file): ' );
                 unless( $tlsCrtChain ) {
                     $tlsCrtChain = undef;
                     last;
@@ -337,7 +338,7 @@ sub run {
             }
 
             while( 1 ) {
-                $tlsCaCrt = ask( 'Client certificate chain file (or enter blank if none): ' );
+                $tlsCaCrt = askAnswer( 'Client certificate chain file (or enter blank if none): ' );
                 unless( $tlsCaCrt ) {
                     $tlsCaCrt = undef;
                     last;
@@ -492,7 +493,7 @@ sub run {
             my %accs = ();
 
             while( 1 ) {
-                $appId = ask( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
+                $appId = askAnswer( $counter . " app to run (or leave empty when no more apps): ", '^[-._a-z0-9]+$|^$' );
                 if( !$appId || UBOS::Host::ensurePackages( $appId, $quiet ) >= 0 ) {
                     last;
                 }
@@ -521,7 +522,7 @@ sub run {
             if( defined( $defaultContext )) {
                 colPrint( "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n" );
                 while( 1 ) {
-                    $context = ask( 'Enter context path: ' );
+                    $context = askAnswer( 'Enter context path: ' );
 
                     if( !UBOS::AppConfiguration::isValidContext( $context )) {
                         error( "Invalid context path. A valid context path is either empty or starts with a slash; no spaces or additional slashes" );
@@ -547,7 +548,7 @@ sub run {
 
             while( 1 ) {
                 my $askUserAgain = 0;
-                my $accessories = ask( "Any accessories for $appId? Enter list: " );
+                my $accessories = askAnswer( "Any accessories for $appId? Enter list: " );
                 $accessories =~ s!^\s+!!;
                 $accessories =~ s!\s+$!!;
 
@@ -723,47 +724,6 @@ sub run {
 }
 
 ##
-# Ask the user a question
-# $q: the question text
-# $regex: regular expression that defines valid input
-# $dontTrim: if false, trim whitespace
-# $blank: if true, blank terminal echo
-sub ask {
-    my $q        = shift;
-    my $regex    = shift || '.?';
-    my $dontTrim = shift || 0;
-    my $blank    = shift;
-
-    my $ret;
-    while( 1 ) {
-        colPrintAsk( $q );
-
-        if( $blank ) {
-            system('stty','-echo');
-        }
-        $ret = <STDIN>;
-        if( $blank ) {
-            system('stty','echo');
-            colPrint( "\n" );
-        }
-        if( defined( $ret )) { # apparently ^D becomes undef
-            if( $dontTrim ) { # just remove trailing \n
-                $ret =~ s!\n$!!;
-            } else {
-                $ret =~ s!\s+$!!;
-                $ret =~ s!^\s+!!;
-            }
-            if( $ret =~ $regex ) {
-                last;
-            } else {
-                error( "(input not valid: regex is $regex)" );
-            }
-        }
-    }
-    return $ret;
-}
-
-##
 # Handle customization points
 # $custPointValues: insert into this Site JSON fragment here
 # $custPointValuesFromTemplate: if defined, holds values from the provided site template
@@ -811,7 +771,7 @@ sub _askForCustomizationPoints {
                                      && $custPointDef->{private}
                                      && 'text' ne $custPointDef->{type} );
 
-                    my $value = ask(
+                    my $value = askAnswer(
                             (( ref( $installable ) =~ m!App! ) ? 'App ' : 'Accessory ' )
                             . $installable->packageName
                             . ( $askAll ? ' allows' : ' requires' )

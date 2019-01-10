@@ -318,7 +318,7 @@ sub resumeSite {
     my $sitesDocumentRootDir   = UBOS::Host::vars()->getResolve( 'apache2.sitesdir' );
     my $sitesWellknownDir      = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
     my $appConfigFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
-    my $tmpDir                 = UBOS::Host::vars()->getResolve( 'host.tmpdir' );
+    my $tmpDir                 = UBOS::Host::tmpdir();
     my $siteId                 = $site->siteId;
     my $hostname               = $site->hostname;
     my $port                   = $site->port;

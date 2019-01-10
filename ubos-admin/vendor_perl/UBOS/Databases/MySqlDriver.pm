@@ -359,7 +359,7 @@ sub exportLocalDatabase {
         return 0;
     }
 
-    my $tmpDir   = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/tmp' );
+    my $tmpDir = UBOS::Host::tmpdir();
     my $fileName;
 
     my $cmd = "mysqldump -u $rootUser -p$rootPass $dbName";

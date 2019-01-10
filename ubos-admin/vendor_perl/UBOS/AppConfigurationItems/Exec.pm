@@ -118,7 +118,7 @@ sub _runIt {
     }
 
     if( $doIt ) {
-        my $tmpDir  = $vars->getResolve( 'host.tmpdir', '/tmp' );
+        my $tmpDir  = UBOS::Host::tmpdir();
         my $parFile = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
 
         my $json = $vars->asJson();

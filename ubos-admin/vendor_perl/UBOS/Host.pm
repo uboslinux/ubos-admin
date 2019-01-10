@@ -72,6 +72,18 @@ sub hostname {
 }
 
 ##
+# Obtain the location for temporary files. This will also create the
+# configured tmp directory if it does not exist yet.
+# return: path
+sub tmpdir {
+    my $ret = vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
+    unless( -d $ret ) {
+        UBOS::Utils::mkdirDashP( $ret );
+    }
+    return $ret;
+}
+
+##
 # Determine all Sites currently installed on this host.
 # return: hash of siteId to Site
 sub sites {
