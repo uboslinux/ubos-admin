@@ -152,6 +152,7 @@ sub undeployOrCheck {
 # $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+# $compress: compression method to use, or undef
 # return: success or fail
 sub backup {
     my $self          = shift;
@@ -159,6 +160,9 @@ sub backup {
     my $vars          = shift;
     my $backupContext = shift;
     my $filesToDelete = shift;
+    my $compress      = shift;
+
+    # Note: compress is currently not used; not sure it is useful here
 
     my $bucket = $self->{json}->{retentionbucket};
     my $names  = $self->{json}->{names};

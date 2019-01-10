@@ -194,12 +194,15 @@ sub resume {
 # $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+# $compress: compression method to use, or undef
+# return: success or fail
 sub backup {
     my $self          = shift;
     my $dir           = shift;
     my $vars          = shift;
     my $backupContext = shift;
     my $filesToDelete = shift;
+    my $compress      = shift;
 
     error( 'AppConfigurationItem::backup: cannot perform', $self );
 

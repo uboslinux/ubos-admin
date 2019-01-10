@@ -50,8 +50,16 @@ sub addFile {
     my $fileToAdd = shift;
     my $bucket    = shift;
 
+    my $dest;
+    if( $fileToAdd =~ m!\.([^\./]+)$! ) {
+        # Keep the extension
+        $dest = "$bucket.$1";
+    } else {
+        $dest = $bucket;
+    }
+
     # keep attributes, and don't follow symlinks
-    if( UBOS::Utils::myexec( "cp -pP '$fileToAdd' '" . $self->{contextPathInBackup} . "/$bucket'" )) {
+    if( UBOS::Utils::myexec( "cp -pP --reflink=auto '$fileToAdd' '" . $self->{contextPathInBackup} . "/$dest'" )) {
         return 0;
     }
 
@@ -90,12 +98,17 @@ sub addDirectoryHierarchy {
 ##
 # Callback by which an AppConfigurationItem can restore a file from a Backup
 # $bucket: the name of the bucket from which the file is to be restored
-# return: name of the file
+# return: name of the file, or undef if not found
 sub restore {
     my $self     = shift;
     my $bucket   = shift;
 
-    return $self->{contextPathInBackup} . "/$bucket";
+    my $ret = $self->{contextPathInBackup} . "/$bucket";
+    if( -r $ret ) {
+        return $ret;
+    } else {
+        return undef;
+    }
 }
 
 ##

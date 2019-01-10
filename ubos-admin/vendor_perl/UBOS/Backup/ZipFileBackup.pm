@@ -175,6 +175,7 @@ sub create {
                                 if( $item ) {
                                     debugAndSuspend( 'Backup item', $itemCount, 'role', $roleName, 'installable', $packageName, 'appConfig', $appConfigId );
                                     $ret &= $item->backup( $dir, $vars, $backupContext, \@filesToDelete );
+                                            # never specify compress here: zip will do it
                                 }
                             }
                             ++$itemCount;

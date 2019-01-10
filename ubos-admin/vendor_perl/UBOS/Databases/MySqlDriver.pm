@@ -344,14 +344,14 @@ SQL
 ##
 # Export the data at a local database
 # $dbName: name of the database to unprovision
-# $fileName: name of the file to create with the exported data
-# return: success or fail
+# $compress: compression method to use, or undef
+# return: name of the file to create with the exported data
 sub exportLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
-    my $fileName = shift;
+    my $compress = shift;
 
-    trace( 'MySqlDriver::exportLocalDatabase', $dbName );
+    trace( 'MySqlDriver::exportLocalDatabase', $dbName, $compress );
 
     my( $rootUser, $rootPass ) = findRootUserPass();
     unless( $rootUser ) {
@@ -359,16 +359,34 @@ sub exportLocalDatabase {
         return 0;
     }
 
-    if( UBOS::Utils::myexec( "mysqldump -u $rootUser -p$rootPass $dbName > '$fileName'" )) {
-        return 0;
+    my $tmpDir   = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/tmp' );
+    my $fileName;
+
+    my $cmd = "mysqldump -u $rootUser -p$rootPass $dbName";
+    if( $compress ) {
+        if( $compress eq 'gz' ) {
+            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
+            $cmd .= ' | gzip - ';
+        } else {
+            warning( 'Unknown compression method:', $compress );
+            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+        }
+    } else {
+        $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
     }
-    return 1;
+    $cmd .= " > '$fileName'";
+
+    if( UBOS::Utils::myexec( $cmd )) {
+        return undef;
+    }
+    return $fileName;
 }
 
 ##
 # Import data into a local database, overwriting its previous content
 # $dbName: name of the database to unprovision
-# $fileName: name of the file to create with the exported data
+# $fileName: name of the file to read from
+# $compress: compression method to use, or undef
 # $dbUserLid: database username to use
 # $dbUserLidCredential: credential for the database user to use
 # $dbUserLidCredTypeL: type of credential for the database user to use
@@ -377,15 +395,27 @@ sub importLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
     my $fileName            = shift;
+    my $compress            = shift;
     my $dbUserLid           = shift;
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
 
-    trace( 'MySqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
+    trace( 'MySqlDriver::importLocalDatabase', $dbName, $fileName, $compress, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
 
     my( $rootUser, $rootPass ) = findRootUserPass();
 
-    if( UBOS::Utils::myexec( "mysql -u $rootUser -p$rootPass $dbName < '$fileName'" )) {
+    my $cmd;
+    if( $compress ) {
+        if( $compress eq 'gz' ) {
+            $cmd = "zcat '$fileName' | mysql -u '$rootUser' '-p$rootPass' '$dbName'";
+        } else {
+            error( 'Unknown compression method:', $compress );
+            return 0;
+        }
+    } else {
+        $cmd = "mysql -u '$rootUser' '-p$rootPass' '$dbName' < '$fileName'";
+    }
+    if( UBOS::Utils::myexec( $cmd )) {
         return 0;
     }
     return 1;

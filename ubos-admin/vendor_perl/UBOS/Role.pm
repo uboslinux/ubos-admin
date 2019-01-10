@@ -934,6 +934,9 @@ sub _checkRetention {
         if( ref( $appConfigItem->{retentionbucket} )) {
             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
         }
+        unless( $appConfigItem->{retentionbucket} =~ m!^[_a-zA-Z0-9]+$! ) {
+            $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be a valid identifier" );
+        }
         if( $retentionBuckets->{$appConfigItem->{retentionbucket}} ) {
             $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
         }

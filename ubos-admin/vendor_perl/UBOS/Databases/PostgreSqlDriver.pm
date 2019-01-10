@@ -123,36 +123,6 @@ sub executeCmdAsAdmin {
 }
 
 ##
-# Execute a command as administrator
-# $cmd: command, must not contain single quotes
-# $stdinFile: name of the file piped to stdin
-# $stdoutFile: name of the file piped into from stdout
-sub executeCmdPipeAsAdmin {
-    my $cmd        = shift;
-    my $stdinFile  = shift;
-    my $stdoutFile = shift;
-
-    ensureRunning();
-
-    trace( 'PostgreSqlDriver::executeCmdPipeAsAdmin', $cmd, $stdinFile, $stdoutFile );
-
-    my $fullCommand = "su - postgres -c '$cmd'";
-    if( $stdinFile ) {
-        $fullCommand .= " < $stdinFile";
-    }
-    if( $stdoutFile ) {
-        $fullCommand .= " > $stdoutFile";
-    } else {
-        $fullCommand .= ' > /dev/null';
-    }
-    my $ret = 1;
-    if( UBOS::Utils::myexec( $fullCommand )) {
-        $ret = 0;
-    }
-    return $ret;
-}
-
-##
 # Change ownership of all tables, sequences and views in a
 # database to a new role. This is needed after restore from backup.
 # $dbName: name of the database
@@ -322,17 +292,33 @@ sub unprovisionLocalDatabase {
 ##
 # Export the data at a local database
 # $dbName: name of the database to unprovision
-# $fileName: name of the file to create with the exported data
-# return: success or fail
+# $compress: compression method to use, or undef
+# return: name of the file to create with the exported data
 sub exportLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
-    my $fileName = shift;
+    my $compress = shift;
 
-    trace( 'PostgreSqlDriver::exportLocalDatabase', $dbName );
+    trace( 'PostgreSqlDriver::exportLocalDatabase', $dbName, $compress );
 
-    # --clean will drop the schema, which means we lose GRANTs on it
-    my $ret = executeCmdPipeAsAdmin( "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"", undef, $fileName );
+    my $tmpDir   = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/tmp' );
+    my $fileName;
+
+    my $cmd = "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"";
+    if( $compress ) {
+         if( $compress eq 'gz' ) {
+            $cmd .= " | gzip -";
+            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
+        } else {
+            warning( 'Unknown compression method:', $compress );
+            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+        }
+    } else {
+        $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+    }
+    $cmd .= " > '$fileName'";
+
+    my $ret = executeCmdAsAdmin( $cmd );
 
     return $ret;
 }
@@ -340,7 +326,8 @@ sub exportLocalDatabase {
 ##
 # Import data into a local database, overwriting its previous content
 # $dbName: name of the database to unprovision
-# $fileName: name of the file to create with the exported data
+# $fileName: name of the file to read from
+# $compress: compression method to use, or undef
 # $dbUserLid: database username to use
 # $dbUserLidCredential: credential for the database user to use
 # $dbUserLidCredTypeL: type of credential for the database user to use
@@ -349,13 +336,25 @@ sub importLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
     my $fileName            = shift;
+    my $compress            = shift;
     my $dbUserLid           = shift;
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
 
-    trace( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
+    trace( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $compress, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
 
-    my $ret = executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef );
+    if( $compress ) {
+        if( $compress eq 'gz' ) {
+            $cmd = "zcat '$fileName' | psql -v HISTFILE=/dev/null '$dbName'";
+        } else {
+            error( 'Unknown compression method:', $compress );
+            return 0;
+        }
+    } else {
+        $cmd = "psql -v HISTFILE=/dev/null '$dbName' < '$fileName'";
+    }
+
+    my $ret = executeCmdAsAdmin( $cmd );
 
     return $ret;
 }

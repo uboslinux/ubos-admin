@@ -53,7 +53,15 @@ sub addFile {
 
     trace( 'ZipFileBackupContext::addFile', $fileToAdd, $bucket );
 
-    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket )) {
+    my $dest;
+    if( $fileToAdd =~ m!\.([^\./]+)$! ) {
+        # Keep the extension
+        $dest = "$bucket.$1";
+    } else {
+        $dest = $bucket;
+    }
+
+    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $dest )) {
         return 1;
     }
     return 0;
@@ -77,7 +85,7 @@ sub addDirectoryHierarchy {
 ##
 # Callback by which an AppConfigurationItem can restore a file from a Backup
 # $bucket: the name of the bucket from which the file is to be restored
-# return: name of the file
+# return: name of the file, or undef if not found
 sub restore {
     my $self     = shift;
     my $bucket   = shift;

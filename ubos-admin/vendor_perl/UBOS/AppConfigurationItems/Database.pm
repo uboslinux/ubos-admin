@@ -131,6 +131,7 @@ sub undeployOrCheck {
 # $vars: the Variables object that knows about symbolic names and variables
 # $backupContext: the Backup Context object
 # $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+# $compress: compression method to use, or undef
 # return: success or fail
 sub backup {
     my $self          = shift;
@@ -138,27 +139,29 @@ sub backup {
     my $vars          = shift;
     my $backupContext = shift;
     my $filesToDelete = shift;
+    my $compress      = shift;
 
     my $bucket = $self->{json}->{retentionbucket};
     my $name   = $self->{json}->{name};
-    my $tmpDir = $vars->getResolve( 'host.tmpdir', '/tmp' );
 
     trace( 'Database::backup', $bucket, $name );
 
-    my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
-
-    my $ret = $self->exportLocalDatabase(
+    my $exportedFile = $self->exportLocalDatabase(
             $self->{appConfig}->appConfigId,
             $self->{installable}->packageName,
             $name,
-            $tmp->filename );
+            $compress );
 
-    if( $ret ) {
-        $ret &= $backupContext->addFile( $tmp->filename, $bucket );
+    if( $exportedFile ) {
+        my $ret = $backupContext->addFile( $exportedFile, $bucket );
 
-        push @$filesToDelete, $tmp->filename;
+        push @$filesToDelete, $exportedFile;
+
+        return $ret;
+
+    } else {
+        return 0;
     }
-    return $ret;
 }
 
 ##
@@ -180,7 +183,15 @@ sub restore {
 
     my $ret = 1;
 
+    my $compress    = undef;
     my $restoreFrom = $backupContext->restore( $bucket );
+    unless( $restoreFrom ) {
+        # try compressed
+        $restoreFrom = $backupContext->restore( "$bucket.gz" );
+        if( $restoreFrom ) {
+            $compress = 'gz';
+        }
+    }
     unless( $restoreFrom ) {
         error( 'Cannot restore database: bucket:', $bucket, 'context:', $backupContext->asString() );
         $ret = 0;
@@ -192,7 +203,8 @@ sub restore {
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
                     $name,
-                    $restoreFrom );
+                    $restoreFrom,
+                    $compress );
     if( $dbName ) {
         my $dbType = $self->{role}->name();
         # now insert those values into the vars object
@@ -213,14 +225,14 @@ sub restore {
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
-# $fileName: the file to write to
-# return: success or fail
+# $compress: compression method to use, or undef
+# return: the filename written to, or undef
 sub exportLocalDatabase {
     my $self          = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
-    my $fileName      = shift;
+    my $compress      = shift;
 
     my $dbType = $self->{role}->name();
 
@@ -233,7 +245,7 @@ sub exportLocalDatabase {
         return 0;
     }
 
-    return $dbDriver->exportLocalDatabase( $dbName, $fileName );
+    return $dbDriver->exportLocalDatabase( $dbName, $compress );
 }
 
 ##
@@ -241,7 +253,8 @@ sub exportLocalDatabase {
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
-# $fileName: the file to write to
+# $fileName: the file to read from
+# $compress: decompression method to use, or undef
 # return: ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType ) or 0
 sub importLocalDatabase {
     my $self          = shift;
@@ -249,6 +262,7 @@ sub importLocalDatabase {
     my $installableId = shift;
     my $itemName      = shift;
     my $fileName      = shift;
+    my $compress      = shift;
 
     my $dbType = $self->{role}->name();
 
@@ -261,7 +275,7 @@ sub importLocalDatabase {
         return 0;
     }
 
-    if( $dbDriver->importLocalDatabase( $dbName, $fileName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )) {
+    if( $dbDriver->importLocalDatabase( $dbName, $fileName, $compress, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )) {
         return ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
     } else {
         return 0;

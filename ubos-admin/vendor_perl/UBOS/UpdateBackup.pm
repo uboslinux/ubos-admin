@@ -64,8 +64,8 @@ sub create {
 
     trace( 'UpdateBackup::create', keys %$sites );
 
-    $self->{startTime}  = UBOS::Utils::time2string( time() );
-    $self->{sites}      = $sites;
+    $self->{startTime} = UBOS::Utils::time2string( time() );
+    $self->{sites}     = $sites;
 
     unless( -d $updateBackupDir ) {
         UBOS::Utils::mkdirDashP( $updateBackupDir, 0700, undef, undef, 0755 );
@@ -114,7 +114,11 @@ sub create {
                                 }
                                 my $item = $role->instantiateAppConfigurationItem( $appConfigItem, $appConfig, $installable );
                                 if( $item ) {
-                                    $ret &= $item->backup( $dir, $vars, $backupContext, \@filesToDelete );
+                                    my $compress = undef;
+                                    if( ref( $item ) eq 'UBOS::AppConfigurationItems::Database' ) {
+                                        $compress = 'gz'; # compress database dumps
+                                    }
+                                    $ret &= $item->backup( $dir, $vars, $backupContext, \@filesToDelete, $compress );
                                 }
                             }
                         }
