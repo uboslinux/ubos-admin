@@ -12,7 +12,6 @@ use warnings;
 package UBOS::Commands::SetupShepherd;
 
 use Cwd;
-use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Logging;

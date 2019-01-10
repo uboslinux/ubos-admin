@@ -16,6 +16,7 @@ use UBOS::Accessory;
 use UBOS::App;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Variables;
 
 use fields qw{json skipFilesystemChecks manifestFileReader site app accessories vars};
@@ -691,7 +692,7 @@ sub checkCompleteCustomizationPointValues {
 sub printAppConfigId {
     my $self = shift;
 
-    print $self->appConfigId . "\n";
+    colPrint( $self->appConfigId . "\n" );
 }
 
 ##
@@ -702,50 +703,50 @@ sub print {
     my $detail = shift || 2;
 
     if( $detail > 1 ) {
-        print 'AppConfiguration: ';
+        colPrint( 'AppConfiguration: ' );
     }
 
     my $context = $self->context;
     if( $context ) {
-        print $context;
+        colPrint( $context );
     } elsif( defined( $context )) {
-        print '<root>';
+        colPrint( '<root>' );
     } else {
-        print '<none>';
+        colPrint( '<none>' );
     }
 
     if( $detail > 2 ) {
-        print ' (' . $self->appConfigId . ')';
+        colPrint( ' (' . $self->appConfigId . ')' );
     }
 
     if( $detail < 3 ) {
-        print ': ' . $self->app->packageName;
+        colPrint( ': ' . $self->app->packageName );
         if( $detail > 1 ) {
             foreach my $acc ( $self->accessories ) {
-                print ' ' . $acc->packageName;
+                colPrint( ' ' . $acc->packageName );
             }
         }
-        print "\n";
+        colPrint( "\n" );
 
     } else {
-        print "\n";
+        colPrint( "\n" );
 
         my $custPoints = $self->customizationPoints;
         foreach my $installable ( $self->installables ) {
-            print '    ';
+            colPrint( '    ' );
             if( $installable == $self->app ) {
-                print 'app:      ';
+                colPrint( 'app:      ' );
             } else {
-                print 'accessory: ';
+                colPrint( 'accessory: ' );
             }
-            print $installable->packageName . "\n";
+            colPrint( $installable->packageName . "\n" );
             if( $custPoints ) {
                 my $installableCustPoints = $custPoints->{$installable->packageName};
                 if( defined( $installableCustPoints )) {
                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                         my $custPointValue = $installableCustPoints->{$custPointName};
 
-                        print '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n";
+                        colPrint( '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n" );
                     }
                 }
             }

@@ -14,6 +14,7 @@ use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -42,7 +43,7 @@ sub run {
 
     my $active     = UBOS::Networking::NetConfigUtils::activeNetConfigName();
     my $netConfigs = UBOS::Networking::NetConfigUtils::findNetConfigs();
-    print UBOS::Utils::hashAsColumns(
+    colPrint( UBOS::Utils::hashAsColumns(
             $netConfigs,
             sub {
                 my $netConfig = shift;
@@ -56,7 +57,7 @@ sub run {
                     $text .= ' (active).';
                 }
                 return $text;
-            } );
+            } ));
 
     return 1;
 }

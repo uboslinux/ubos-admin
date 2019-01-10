@@ -17,6 +17,7 @@ use Storable qw( dclone );
 use UBOS::AnyBackup;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -104,8 +105,8 @@ sub run {
         $jsonOutput->{'appconfigs'} = {};
 
     } elsif( !$brief ) {
-        print "Type:    " . $backup->backupType      . "\n";
-        print "Created: " . $backup->startTimeString . "\n";
+        colPrint( "Type:    " . $backup->backupType      . "\n" );
+        colPrint( "Created: " . $backup->startTimeString . "\n" );
     }
 
     my $sites      = $backup->sites();
@@ -150,7 +151,7 @@ sub run {
                 }
 
             } else {
-                print "=== Unattached AppConfigurations ===\n";
+                colPrint( "=== Unattached AppConfigurations ===\n" );
 
                 foreach my $appConfigId ( @unattachedAppConfigIds ) {
                     $appConfigs->{$appConfigId}->print();

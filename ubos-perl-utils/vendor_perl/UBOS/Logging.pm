@@ -15,6 +15,7 @@ use Cwd 'abs_path';
 use Exporter qw( import );
 use Log::Log4perl qw( :easy );
 use Log::Log4perl::Level;
+use UBOS::Terminal;
 
 our @EXPORT = qw( debugAndSuspend trace info notice warning error fatal );
 my $LOG;
@@ -204,9 +205,9 @@ sub debugAndSuspend {
 
     if( $DEBUG ) {
         if( @msg ) {
-            print STDERR ( "DEBUG: " . _constructMsg( @msg ) ."\n" );
+            colPrintDebug( "DEBUG: " . _constructMsg( @msg ) ."\n" );
         }
-        print STDERR "** Hit return to continue. ***\n";
+        colPrintDebug( "** Hit return to continue. ***\n" );
         getc();
     }
     return $DEBUG;

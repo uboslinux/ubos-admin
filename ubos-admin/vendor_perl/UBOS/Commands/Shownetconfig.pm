@@ -14,6 +14,7 @@ use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -49,7 +50,7 @@ sub run {
     if( $json ) {
         UBOS::Utils::writeJsonToStdout( $activeConfig );
     } else {
-        print UBOS::Utils::hashAsColumns(
+        colPrint( UBOS::Utils::hashAsColumns(
                 $activeConfig,
                 sub {
                     my $netconfig = shift;
@@ -104,7 +105,7 @@ sub run {
                         }
                     }
                     return $s;
-                } );
+                } ));
     }
 
     return 1;

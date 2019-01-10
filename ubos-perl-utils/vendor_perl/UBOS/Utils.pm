@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::Utils;
 
-use Exporter qw( import myexec );
+use Exporter qw( import );
 use File::Spec;
 use File::Temp;
 use JSON;
@@ -595,6 +595,22 @@ sub copyRecursively {
     my $to   = shift;
 
     if( myexec( "cp -d -r -p --reflink=auto '$from' '$to'" )) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+##
+# Move a file or directory tree
+# $from: old name
+# $to: new name
+# return: 1 if success
+sub move {
+    my $from = shift;
+    my $to   = shift;
+
+    if( myexec( "mv '$from' '$to'" )) {
         return 0;
     } else {
         return 1;

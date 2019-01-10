@@ -13,6 +13,7 @@ package UBOS::Site;
 use UBOS::AppConfiguration;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 use JSON;
 use MIME::Base64;
@@ -532,7 +533,7 @@ sub appConfigAtContext {
 sub printSiteId {
     my $self = shift;
 
-    print $self->siteId . "\n";
+    colPrint( $self->siteId . "\n" );
 }
 
 ##
@@ -543,27 +544,27 @@ sub print {
     my $detail = shift || 2;
 
     if( $detail > 1 ) {
-        print 'Site ';
+        colPrint( 'Site ' );
     }
-    print $self->hostname;
+    colPrint( $self->hostname );
     if( $self->hasTls ) {
-        print ' (TLS)';
+        colPrint( ' (TLS)' );
     }
     if( $detail > 2 ) {
-        print ' (' . $self->siteId . ')';
+        colPrint( ' (' . $self->siteId . ')' );
     }
-    print ':';
+    colPrint( ':' );
     if( $detail <= 1 ) {
         my $nAppConfigs = @{$self->appConfigs};
         if( $nAppConfigs == 1 ) {
-            print ' 1 app';
+            colPrint( ' 1 app' );
         } elsif( $nAppConfigs ) {
-            print " $nAppConfigs apps";
+            colPrint( " $nAppConfigs apps" );
         } else {
-            print ' no apps';
+            colPrint( ' no apps' );
         }
     }
-    print "\n";
+    colPrint( "\n" );
 
     if( $detail > 1 ) {
         foreach my $isDefault ( 1, 0 ) {
@@ -572,46 +573,46 @@ sub print {
 
             foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
                 if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
-                    print '    ';
+                    colPrint( '    ' );
 
                     my $context = $appConfig->context;
                     if( $isDefault && $appConfig->isDefault ) {
-                        print '(default)';
+                        colPrint( '(default)' );
                     } else {
-                        print $defaultSpace;
+                        colPrint( $defaultSpace );
                     }
-                    print ' ';
+                    colPrint( ' ' );
                     if( $context ) {
-                        print $context;
+                        colPrint( $context );
                     } elsif( defined( $context )) {
-                        print '<root>';
+                        colPrint( '<root>' );
                     } else {
-                        print '<none>';
+                        colPrint( '<none>' );
                     }
                     if( $detail > 2 ) {
-                        print ' ('. $appConfig->appConfigId . ')';
+                        colPrint( ' ('. $appConfig->appConfigId . ')' );
                     }
                     if( $detail < 3 ) {
-                        print ': ' . $appConfig->app->packageName;
+                        colPrint( ': ' . $appConfig->app->packageName );
                         my $nAcc = $appConfig->accessories();
                         if( $nAcc == 1 ) {
-                            print ' (1 accessory)';
+                            colPrint( ' (1 accessory)' );
                         } elsif( $nAcc ) {
-                            print " ($nAcc accessories)";
+                            colPrint( " ($nAcc accessories)" );
                         }
-                        print "\n";
+                        colPrint( "\n" );
                     } else {
-                        print "\n";
+                        colPrint( "\n" );
 
                         my $custPoints = $appConfig->customizationPoints;
                         foreach my $installable ( $appConfig->installables ) {
-                            print '          ';
+                            colPrint( '          ' );
                             if( $installable == $appConfig->app ) {
-                                print 'app:      ';
+                                colPrint( 'app:      ' );
                             } else {
-                                print 'accessory: ';
+                                colPrint( 'accessory: ' );
                             }
-                            print $installable->packageName . "\n";
+                            colPrint( $installable->packageName . "\n" );
                             if( $custPoints ) {
                                 my $installableCustPoints = $custPoints->{$installable->packageName};
                                 if( defined( $installableCustPoints )) {
@@ -620,9 +621,9 @@ sub print {
                                         my $value = $custPointValueStruct->{value};
 
                                         if( length( $value ) < 60 ) {
-                                            print '                     customizationpoint ' . $custPointName . ': ' . $value . "\n";
+                                            colPrint( '                     customizationpoint ' . $custPointName . ': ' . $value . "\n" );
                                         } else {
-                                            print '                     customizationpoint ' . $custPointName . ': ' . substr( $value, 0, 60 ) . "...\n";
+                                            colPrint( '                     customizationpoint ' . $custPointName . ': ' . substr( $value, 0, 60 ) . "...\n" );
                                         }
                                     }
                                 }

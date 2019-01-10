@@ -15,10 +15,12 @@ use Cwd;
 use File::Basename;
 use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
+use Term::ANSIColor;
 use UBOS::Host;
 use UBOS::Installable;
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
+use UBOS::Terminal;
 use UBOS::UpdateBackup;
 use UBOS::Utils;
 
@@ -105,7 +107,7 @@ sub run {
     }
 
     if( !$jsonTemplate && !$quiet ) {
-        print "** First a few questions about the website that you are about to create:\n";
+        colPrintAskSection( "First a few questions about the website that you are about to create:\n" );
     }
 
 # Determine hostname
@@ -255,7 +257,7 @@ sub run {
         } elsif( $selfSigned ) {
 
             unless( $quiet ) {
-                print "Generating TLS keys...\n";
+                colPrintInfo( "Generating TLS keys...\n" );
             }
 
             my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
@@ -392,7 +394,7 @@ sub run {
     }
 
     if( !$jsonTemplate && !$quiet ) {
-        print "** Now a few questions about the app(s) you are going to deploy to this site:\n";
+        colPrintAskSection( "Now a few questions about the app(s) you are going to deploy to this site:\n" );
     }
 
     if( $jsonTemplate && defined( $jsonTemplate->{wellknown} )) {
@@ -517,7 +519,7 @@ sub run {
             my $defaultContext = $app->defaultContext;
             my $fixedContext   = $app->fixedContext;
             if( defined( $defaultContext )) {
-                print "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n";
+                colPrint( "App $appId suggests context path " . ( $defaultContext ? $defaultContext : '<empty string> (i.e. root of site)' ) . "\n" );
                 while( 1 ) {
                     $context = ask( 'Enter context path: ' );
 
@@ -668,7 +670,7 @@ sub run {
         $newSite->checkDeployable();
 
         unless( $quiet ) {
-            print "Deploying...\n";
+            colPrint( "Deploying...\n" );
         }
 
         # May not be interrupted, bad things may happen if it is
@@ -709,9 +711,9 @@ sub run {
         if( $ret ) {
             $hostname = $newSite->hostname(); # tor site might have generated the hostname
             if( $tls ) {
-                print "Installed site $siteId at https://$hostname/\n";
+                colPrint( "Installed site $siteId at https://$hostname/\n" );
             } else {
-                print "Installed site $siteId at http://$hostname/\n";
+                colPrint( "Installed site $siteId at http://$hostname/\n" );
             }
         } else {
             error( "Createsite failed." );
@@ -734,7 +736,7 @@ sub ask {
 
     my $ret;
     while( 1 ) {
-        print $q;
+        colPrintAsk( $q );
 
         if( $blank ) {
             system('stty','-echo');
@@ -742,7 +744,7 @@ sub ask {
         $ret = <STDIN>;
         if( $blank ) {
             system('stty','echo');
-            print "\n";
+            colPrint( "\n" );
         }
         if( defined( $ret )) { # apparently ^D becomes undef
             if( $dontTrim ) { # just remove trailing \n

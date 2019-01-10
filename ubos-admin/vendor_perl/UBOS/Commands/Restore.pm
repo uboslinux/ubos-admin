@@ -24,6 +24,7 @@ use UBOS::AnyBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -413,7 +414,7 @@ sub restoreAppConfigs {
 
     if( $showIds ) {
         foreach my $newAppConfigId ( @appConfigIdsToRestore ) {
-            print $newAppConfigId . "\n";
+            colPrint( $newAppConfigId . "\n" );
         }
     }
 
@@ -661,9 +662,9 @@ sub restoreSites {
 
     if( $showIds ) {
         foreach my $siteNew ( @sitesNew ) {
-            print $siteNew->siteId . "\n";
+            colPrint( $siteNew->siteId . "\n" );
             foreach my $appConfigNew ( @{$siteNew->appConfigs} ) {
-                print '    ' . $appConfigNew->appConfigId . "\n";
+                colPrint( '    ' . $appConfigNew->appConfigId . "\n" );
             }
         }
     }

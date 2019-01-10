@@ -14,6 +14,7 @@ use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -145,7 +146,7 @@ MSG
                         $msg .= "\n";
                     }
                 }
-                print $msg;
+                colPrint( $msg );
             }
         }
     }
@@ -188,7 +189,7 @@ MSG
             $out =~ s!\s+$!!;
             $out =~ s!\n!\n    !g;
             $msg .= '    ' . $out . "\n";
-            print( $msg );
+            colPrint( $msg );
         }
     }
 
@@ -244,7 +245,7 @@ MSG
             $out =~ s!\s+$!!;
             $out =~ s!\n!\n    !g;
             $msg .= '    ' . $out . "\n";
-            print( $msg );
+            colPrint( $msg );
         }
     }
 
@@ -256,9 +257,9 @@ MSG
             $json->{lastupdated} = $lastUpdated;
         } else {
             if( defined( $lastUpdated )) {
-                print( "last updated: $lastUpdated\n" );
+                colPrint( "last updated: $lastUpdated\n" );
             } else {
-                print( "last updated: <unknown>\n" );
+                colPrint( "last updated: <unknown>\n" );
             }
         }
     }
@@ -286,7 +287,7 @@ pacnew:
         Here's the list:
 MSG
                 $msg .= '    ' . join( "\n    ", @items ) . "\n";
-                print( $msg );
+                colPrint( $msg );
             }
         }
     }

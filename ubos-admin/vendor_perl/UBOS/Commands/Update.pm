@@ -21,6 +21,7 @@ use UBOS::BackupUtils;
 use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::UpdateBackup;
 use UBOS::Utils;
 
@@ -213,10 +214,10 @@ sub run {
         }
 
         if( $stage1Only ) {
-            print "Stopping after stage 1 as requested. To complete the update:\n";
-            print "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n";
-            print "2. If you installed a new kernel: reboot. Stage 2 of the update will run automatically\n";
-            print "3. If you did not reboot: manually run stage 2: $stage2Cmd\n";
+            colPrint( "Stopping after stage 1 as requested. To complete the update:\n" );
+            colPrint( "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n" );
+            colPrint( "2. If you installed a new kernel: reboot. Stage 2 of the update will run automatically\n" );
+            colPrint( "3. If you did not reboot: manually run stage 2: $stage2Cmd\n" );
             exit 0;
         }
 

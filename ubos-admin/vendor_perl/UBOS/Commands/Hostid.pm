@@ -14,6 +14,7 @@ use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -42,7 +43,7 @@ sub run {
 
     my $hostid = UBOS::Host::hostId();
 
-    print( "$hostid\n" );
+    colPrint( "$hostid\n" );
 
     return 1;
 }

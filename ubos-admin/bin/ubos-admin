@@ -11,6 +11,7 @@ use warnings;
 use Fcntl ':flock';
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 my $commands = UBOS::Utils::findPerlShortModuleNamesInPackage( 'UBOS::Commands' );
@@ -64,9 +65,7 @@ if( $commandPackage ) {
 sub checkOnlyOne {
     # See __DATA__ at end of file
     unless( flock( DATA, LOCK_EX|LOCK_NB )) {
-        print STDERR <<END;
-Another copy of ubos-admin is running already. Please try again later.
-END
+        colPrintError( 'Another copy of ubos-admin is running already. Please try again later.' );
         exit -2;
     }
 }
@@ -87,9 +86,7 @@ sub synopsisHelpQuit {
     if( $helpFor ) {
         my $package = $commands->{$helpFor};
         unless( $package ) {
-            print STDERR <<END;
-Command does not exist: ubos-admin $helpFor
-END
+            colPrintError( "Command does not exist: ubos-admin $helpFor" );
             exit -1;
         }
 
@@ -101,17 +98,17 @@ END
                 $summary =~ s!^\s+!!gm;
                 $summary =~ s!\s+$!!gm;
 
-                print "$summary\n\n";
+                colPrint( "$summary\n\n" );
             }
             if( exists( $synopsisHelp->{'detail'} )) {
                 my $detail = $synopsisHelp->{'detail'};
                 $detail =~ s!^\s+!!gm;
                 $detail =~ s!\s+$!!gm;
 
-                print "$detail\n\n";
+                colPrint( "$detail\n\n" );
             }
 
-            print "It can be invoked as follows:\n\n";
+            colPrint( "It can be invoked as follows:\n\n" );
 
             foreach my $invocation ( sort keys %{$synopsisHelp->{'cmds'}} ) {
                 my $help = $synopsisHelp->{'cmds'}->{$invocation};
@@ -122,11 +119,11 @@ END
                 $help =~ s!\s+$!!gm;
                 $help =~ s!^!        !gm;
 
-                print "    $cmd $helpFor" . ( $invocation ? " $invocation" : '' ) . "\n";
-                print "$help\n\n";
+                colPrint( "    $cmd $helpFor" . ( $invocation ? " $invocation" : '' ) . "\n" );
+                colPrint( "$help\n\n" );
             }
             if( exists( $synopsisHelp->{'args'} )) {
-                print "Optional arguments:\n\n";
+                colPrint( "Optional arguments:\n\n" );
                 foreach my $arg ( sort keys %{$synopsisHelp->{'args'}} ) {
                     my $help = $synopsisHelp->{'args'}->{$arg};
 
@@ -136,18 +133,18 @@ END
                     $help =~ s!\s+$!!gm;
                     $help =~ s!^!        !gm;
 
-                    print "    $arg\n";
-                    print "$help\n\n";
+                    colPrint( "    $arg\n" );
+                    colPrint( "$help\n\n" );
                 }
             }
         } else {
-            print "This command exists but has no help text.\n";
+            colPrint( "This command exists but has no help text.\n" );
         }
 
     } else {
         # !$helpFor
         if( $long ) {
-            print <<END;
+            colPrint( <<END );
 
 ubos-admin is the central UBOS administration command.
 For more information about UBOS, visit http://ubos.net/
@@ -156,7 +153,7 @@ This command may be invoked in the following ways:
 
 END
         } else {
-            print "Synopsis:\n";
+            colPrint( "Synopsis:\n" );
         }
 
         foreach my $subCommand ( sort keys %$commands ) {
@@ -165,7 +162,7 @@ END
 
             if( $synopsisHelp ) { # skip commands that don't have this
 
-                print "    $cmd $subCommand [<args>...]\n";
+                colPrint( "    $cmd $subCommand [<args>...]\n" );
 
                 if( $long && exists( $synopsisHelp->{'summary'} )) {
                     my $help = $synopsisHelp->{'summary'};
@@ -173,21 +170,21 @@ END
                     $help =~ s!\s+$!!gm;
                     $help =~ s!^!        !gm;
 
-                    print "$help\n\n";
+                    colPrint( "$help\n\n" );
                 }
             }
         }
 
-        print "    $cmd --help\n";
+        colPrint( "    $cmd --help\n" );
         if( $long ) {
-            print <<END;
+            colPrint( <<END );
         Display help text.
 
 END
         }
-        print "    $cmd <command> --help\n";
+        colPrint( "    $cmd <command> --help\n" );
         if( $long ) {
-            print <<END;
+            colPrint( <<END );
         Display help text for this command.
 
 END

@@ -12,7 +12,6 @@ use warnings;
 package UBOS::Commands::ReadConfigurationFromStaff;
 
 use Cwd;
-use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
 use UBOS::Logging;

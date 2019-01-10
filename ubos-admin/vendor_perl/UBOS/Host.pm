@@ -19,6 +19,7 @@ use UBOS::Roles::mysql;
 use UBOS::Roles::postgresql;
 use UBOS::Roles::tomcat8;
 use UBOS::Site;
+use UBOS::Terminal;
 use UBOS::Tor;
 use UBOS::Utils qw( readJsonFromFile myexec );
 use UBOS::Variables;
@@ -552,7 +553,7 @@ sub updateCode {
             error( 'Command failed:', $cmd, "\n$out" );
 
         } elsif( UBOS::Logging::isTraceActive() ) {
-            print $out;
+            colPrint( $out );
         }
     }
 
@@ -563,7 +564,7 @@ sub updateCode {
         if( myexec( "pacman -Q $pack 2> /dev/null && pacman -S $pack --noconfirm || true", undef, \$out, \$out ) != 0 ) {
             error( 'Checking/upgrading package failed:', $pack, "\n$out" );
         } elsif( UBOS::Logging::isTraceActive() ) {
-            print $out;
+            colPrint( $out );
         }
         if( $out ) {
             if( $out !~ m!warning.*reinstalling!i ) {
@@ -582,7 +583,7 @@ sub updateCode {
         error( 'Command failed:', $cmd, "\n$out" );
 
     } elsif( UBOS::Logging::isTraceActive() ) {
-        print $out;
+        colPrint( $out );
     }
 
     if( $showPackages ) {
@@ -591,13 +592,13 @@ sub updateCode {
         my @upgraded  = map { my $s = $_; $s =~ s!^.*upgrading\s+!!;  $s =~ s!\.\.\.\s*!!; $s; } grep /^upgrading / , @lines;
 
         if( @installed ) {
-            print 'Packages installed: ' . join( ' ', @installed ) . "\n";
+            colPrint( 'Packages installed: ' . join( ' ', @installed ) . "\n" );
         }
         if( @firstUpgraded || @upgraded ) {
-            print 'Packages upgraded: ' . join( ' ', @firstUpgraded, @upgraded ) . "\n";
+            colPrint( 'Packages upgraded: ' . join( ' ', @firstUpgraded, @upgraded ) . "\n" );
         }
         if( scalar( @firstUpgraded ) + scalar( @installed ) + scalar( @upgraded ) == 0 ) {
-            print "No packages installed or upgraded.\n";
+            colPrint( "No packages installed or upgraded.\n" );
         }
     }
 
@@ -686,7 +687,7 @@ sub ensurePackages {
 
     if( @filteredPackageList ) {
         unless( $quiet ) {
-            print "Downloading packages...\n";
+            colPrint( "Downloading packages...\n" );
         }
         my $out;
         my $cmd = 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList );
@@ -742,9 +743,9 @@ sub installPackageFiles {
     }
     if( $showPackages ) {
         if( @$packageFiles ) {
-            print 'Packages installed: ' . join( ' ', @$packageFiles ) . "\n";
+            colPrint( 'Packages installed: ' . join( ' ', @$packageFiles ) . "\n" );
         } else {
-            print "No packages installed.\n";
+            colPrint( "No packages installed.\n" );
         }
     }
     return 0 + ( @$packageFiles );
@@ -1321,7 +1322,7 @@ sub checkReady {
     my $out;
     myexec( 'systemctl is-system-running', undef, \$out );
     if( $out =~ m!starting!i ) {
-        print <<END;
+        error( <<END );
 UBOS is not done initializing yet. Please wait until:
     systemctl is-system-running
 says "running" or until this message goes away.
@@ -1335,13 +1336,9 @@ END
         if( myexec( 'systemctl is-failed ' . $service, undef, \$out ) == 0 ) {
             # if is-failed is true, attempt to restart
             if( $< != 0 ) {
-                print <<END;
-Required service $service has failed. Try invoking your command again using 'sudo'.
-END
+                error( "Required service $service has failed. Try invoking your command again using 'sudo'." );
             } else {
-                print <<END;
-Required service $service has failed. Attempting to restart. Try invoking your command again in a little while.
-END
+                error( "Required service $service has failed. Attempting to restart. Try invoking your command again in a little while." );
                 myexec( 'systemctl restart ' . $service );
             }
             return undef;
@@ -1350,13 +1347,9 @@ END
     foreach my $service ( @services ) {
         if( myexec( 'systemctl is-active ' . $service, undef, \$out )) {
             if( $< != 0 ) {
-                print <<END;
-Required service $service is not active. Try invoking your command again using 'sudo'.
-END
+                error( "Required service $service is not active. Try invoking your command again using 'sudo'." );
             } else {
-                print <<END;
-Required service $service is not active. Attempting to start. Try invoking your command again in a little while.
-END
+                error( "Required service $service is not active. Attempting to start. Try invoking your command again in a little while." );
                 myexec( 'systemctl start ' . $service );
             }
             return undef;
