@@ -732,6 +732,32 @@ sub checkInstallableManifestForRole {
             ++$modulesIndex;
         }
     }
+    if( $jsonFragment->{status} ) {
+        my $codeDir = $vars->getResolve( 'package.codedir' );
+
+        unless( ref( $jsonFragment->{phpmodules} ) eq 'HASH' ) {
+            $installable->myFatal( "roles section: role $roleName: status is not a hash" );
+        }
+        unless( exists( $jsonFragment->{status}->{type} )) {
+            $installable->myFatal( "roles section: role $roleName: status: field 'type' must exist" );
+        }
+        if( ref( $jsonFragment->{status}->{type} )) {
+            $installable->myFatal( "roles section: role $roleName: status: field 'type' must be string" );
+        }
+        if( $jsonFragment->{status}->{type} ne 'perlscript' && $jsonFragment->{status}->{type} ne 'exec' ) {
+            $installable->myFatal( "roles section: role $roleName: status has unknown or disallowed type"
+                                   . ". Allowed types are: perlscript and exec." );
+        }
+        unless( $jsonFragment->{status}->{source} ) {
+            $installable->myFatal( "roles section: role $roleName: status must specify source" );
+        }
+        if( ref( $jsonFragment->{status}->{source} )) {
+            $installable->myFatal( "roles section: role $roleName: status must be string" );
+        }
+        if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $jsonFragment->{status}->{source} ))) {
+            $installable->myFatal( "roles section: role $roleName: status has invalid source: " . $jsonFragment->{status}->{source} );
+        }
+    }
 
     my $noDatabase = {
         'directory'       => 1,
