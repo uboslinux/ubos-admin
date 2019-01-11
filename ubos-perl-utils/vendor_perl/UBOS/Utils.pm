@@ -1162,6 +1162,9 @@ ISSUE
     $issue .= <<ISSUE;
 +--------------------------------------------------------------------------+
 
+Note: run 'sudo ubos-admin update' to get the latest version.
+      and: frequent backups with 'sudo ubos-admin backup' are recommended.
+
 ISSUE
     UBOS::Utils::saveFile( $target . '/etc/issue', $issue, 0644, 'root', 'root' );
 }
