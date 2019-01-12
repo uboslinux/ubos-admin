@@ -345,7 +345,7 @@ SQL
 # Export the data at a local database
 # $dbName: name of the database to unprovision
 # $compress: compression method to use, or undef
-# return: name of the file to create with the exported data
+# return: name of the file that has the exported data, or undef if error
 sub exportLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
@@ -377,6 +377,7 @@ sub exportLocalDatabase {
     $cmd .= " > '$fileName'";
 
     if( UBOS::Utils::myexec( $cmd )) {
+        UBOS::Utils::deleteFile( $fileName );
         return undef;
     }
     return $fileName;

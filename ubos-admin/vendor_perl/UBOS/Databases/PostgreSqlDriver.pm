@@ -95,27 +95,29 @@ CONTENT
 # Execute a command as administrator
 # $cmd: command, must not contain single quotes
 # $stdin: content to pipe into stdin, if any
-# $stdoutP: where to write output, if any
+# $outputFile: name of the file to write the output to, if any
 # return: success or fail
 sub executeCmdAsAdmin {
-    my $cmd     = shift;
-    my $stdin   = shift;
-    my $stdoutP = shift;
+    my $cmd        = shift;
+    my $stdin      = shift;
+    my $outputFile = shift;
 
     ensureRunning();
 
-    trace( 'PostgreSqlDriver::executeCmdAsAdmin', $cmd, $stdin );
+    trace( 'PostgreSqlDriver::executeCmdAsAdmin', $cmd, $stdin, $outputFile );
 
     my $out;
     my $err;
-    unless( $stdoutP ) {
-        $stdoutP = \$out;
-    }
     my $escapedCmd = $cmd;
     $escapedCmd =~ s!'!'"'"'!g;
 
+    my $fullCmd = "su - postgres -c '$escapedCmd'";
+    if( $outputFile ) {
+        $fullCmd .= " > '$outputFile'";
+    }
+
     my $ret = 1;
-    if( UBOS::Utils::myexec( "su - postgres -c '$escapedCmd'", $stdin, $stdoutP, \$err )) {
+    if( UBOS::Utils::myexec( $fullCmd, $stdin, \$out, \$err )) {
         $ret = 0;
         $@   = $err;
     }
@@ -293,7 +295,7 @@ sub unprovisionLocalDatabase {
 # Export the data at a local database
 # $dbName: name of the database to unprovision
 # $compress: compression method to use, or undef
-# return: name of the file to create with the exported data
+# return: name of the file that has the exported data, or undef if error
 sub exportLocalDatabase {
     my $self     = shift;
     my $dbName   = shift;
@@ -302,25 +304,30 @@ sub exportLocalDatabase {
     trace( 'PostgreSqlDriver::exportLocalDatabase', $dbName, $compress );
 
     my $tmpDir = UBOS::Host::tmpdir();
-    my $fileName;
+    my $file;
 
     my $cmd = "pg_dump --no-owner --no-privileges --disable-triggers \"$dbName\"";
     if( $compress ) {
          if( $compress eq 'gz' ) {
             $cmd .= " | gzip -";
-            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
+            $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
         } else {
             warning( 'Unknown compression method:', $compress );
-            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+            $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
         }
     } else {
-        $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+        $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
     }
-    $cmd .= " > '$fileName'";
 
-    my $ret = executeCmdAsAdmin( $cmd );
+    my $fileName = $file->filename();
+    my $ret      = executeCmdAsAdmin( $cmd, undef, $fileName );
+    if( $ret ) {
+        return $fileName;
 
-    return $ret;
+    } else {
+        UBOS::Utils::deleteFile( $fileName );
+        return undef;
+    }
 }
 
 ##
