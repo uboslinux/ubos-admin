@@ -196,8 +196,6 @@ sub myexec {
     my $outFile;
     my $errFile;
 
-    trace( 'Exec:', $cmd );
-
     $cmd = "( $cmd )"; # in case it is several commands
 
     if( $tee && ( !defined( $outContentP ) || $outContentP != $errContentP )) {
@@ -230,6 +228,8 @@ sub myexec {
             }
         }
     }
+
+    trace( 'Exec:', $cmd );
 
     system( $cmd );
     my $ret = $?;
@@ -1389,7 +1389,7 @@ sub invokeMethod {
     my $methodName = shift;
     my @args       = @_;
 
-    my $ret;
+    my @ret;
     if( $methodName =~ m!^(.*)((?:::)|(?:->))(.*)! ) {
         my $packageName     = $1;
         my $operator        = $2;
@@ -1398,15 +1398,15 @@ sub invokeMethod {
         eval "require $packageName" || warning( "Cannot read $packageName:", $@ );
 
         if( $operator eq '::' ) {
-            $ret = &{\&{$methodName}}( @args );
+            @ret = &{\&{$methodName}}( @args );
         } else {
-            $ret = $packageName->$shortMethodName( @args );
+            @ret = $packageName->$shortMethodName( @args );
         }
     } else {
-        $ret = &{\&{$methodName}}( @args );
+        @ret = &{\&{$methodName}}( @args );
     }
 
-    return $ret;
+    return wantarray ? @ret : ( @ret ? $ret[0] : undef );
 }
 
 ##
