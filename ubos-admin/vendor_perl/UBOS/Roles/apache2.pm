@@ -220,12 +220,14 @@ sub setupPlaceholderSite {
 #
 CONTENT
 
-    my $sslDir;
+    my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
     my $sslKey;
     my $sslCert;
     my $sslCaCert;
 
-    if( $site->hasTls ) {
+    if( $site->hasTls && -e "$sslDir/$siteId.key" && -e "$sslDir/$siteId.crt" ) {
+        # make sure we have the credentials; it might be letsencrypt before
+        # we have them
         $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
@@ -237,21 +239,16 @@ $serverDeclaration
 </VirtualHost>
 CONTENT
 
-        $sslDir       = $site->vars()->getResolve( 'apache2.ssldir' );
-        $sslKey       = $site->tlsKey;
-        $sslCert      = $site->tlsCert;
-        $sslCaCert    = $site->tlsCaCert;
+        $sslKey    = $site->tlsKey;
+        $sslCert   = $site->tlsCert;
+        $sslCaCert = $site->tlsCaCert;
 
         my $group = $site->vars()->getResolve( 'apache2.gname' );
+        UBOS::Utils::saveFile( "$sslDir/$siteId.key",   $sslKey,    0440, 'root', $group ); # avoid overwrite by apache
+        UBOS::Utils::saveFile( "$sslDir/$siteId.crt",   $sslCert,   0440, 'root', $group );
 
-        if( $sslKey ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.key",   $sslKey,    0440, 'root', $group ); # avoid overwrite by apache
-        }
-        if( $sslCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.crt",   $sslCert,   0440, 'root', $group );
-        }
         if( $sslCaCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
+            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0440, 'root', $group );
         }
 
     } # else No SSL
