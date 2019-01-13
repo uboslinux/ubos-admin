@@ -49,7 +49,7 @@ sub restart {
 # $command: the Apache systemd command, such as 'restart' or 'reload'
 # $max: maximum seconds to wait until returning from this method
 # $poll: seconds (may be fraction) between subsequent reads of the log
-# return: 0: success, 1: timeout
+# return: 0: success, 1: timeout or other failure
 sub _syncApacheCtl {
     my $command = shift;
     my $max     = shift || 15;
@@ -62,7 +62,18 @@ sub _syncApacheCtl {
     my $lastPos = sysseek( FH, 0, SEEK_END );
     close( FH );
 
-    UBOS::Utils::myexec( "systemctl $command httpd" );
+    my $out;
+    if( UBOS::Utils::myexec( "systemctl $command httpd.service", undef, \$out, \$out )) {
+        error( 'httpd.service', $command, 'failed:', $out );
+        if( $out =~ m!is not active, cannot reload! ) {
+            if( UBOS::Utils::myexec( "systemctl restart httpd.service", undef, \$out, \$out )) {
+                error( 'httpd.service restart failed:', $out );
+                return 1;
+            }
+        } else {
+            return 1;
+        }
+    }
 
     my( $seconds, $microseconds ) = gettimeofday;
     my $until = $seconds + 0.000001 * $microseconds + $max;
