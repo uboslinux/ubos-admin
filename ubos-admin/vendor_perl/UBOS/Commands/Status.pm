@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that determines and prints the current state of the device.
+# Command that determines and prints the current status of the device.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -12,10 +12,20 @@ package UBOS::Commands::Status;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use POSIX;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
+
+my %defaultDiskFields = ();
+map { $defaultDiskFields{$_} = 1; } qw (
+    size
+    mountpoint
+    fsuse%
+    fssize
+    type
+); # name is shown separately
 
 ##
 # Execute this command.
@@ -33,11 +43,12 @@ sub run {
     my $debug           = undef;
     my $showJson        = 0;
     my $showAll         = 0;
-    my $showPacnew      = 0;
+    my $showDetail      = 0;
     my $showDisks       = 0;
-    my $showMemory      = 0;
-    my $showUptime      = 0;
     my $showLastUpdated = 0;
+    my $showMemory      = 0;
+    my $showPacnew      = 0;
+    my $showUptime      = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -46,21 +57,31 @@ sub run {
             'debug'        => \$debug,
             'json'         => \$showJson,
             'all'          => \$showAll,
-            'pacnew'       => \$showPacnew,
+            'detail'       => \$showDetail,
             'disks'        => \$showDisks,
+            'lastupdated'  => \$showLastUpdated,
             'memory'       => \$showMemory,
-            'uptime'       => \$showUptime,
-            'lastupdated'  => \$showLastUpdated );
+            'pacnew'       => \$showPacnew,
+            'uptime'       => \$showUptime );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( !$parseOk || ( $showAll && ($showPacnew || $showDisks || $showMemory || $showUptime )) || @args || ( $verbose && $logConfigFile )) {
+    if(    !$parseOk
+        || ( $showAll && ( $showPacnew || $showDisks || $showMemory || $showUptime ))
+        || ( $showJson && $showDetail )
+        || @args
+        || ( $verbose && $logConfigFile ))
+    {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
+
     if( $showAll ) {
-        $showPacnew = 1;
-        $showDisks  = 1;
+        $showDisks       = 1;
+        $showMemory      = 1;
+        $showPacnew      = 1;
+        $showUptime      = 1;
+        $showLastUpdated = 1;
 
     } elsif( !$showPacnew && !$showDisks && !$showMemory && !$showUptime && !$showLastUpdated ) {
         # default
@@ -70,7 +91,10 @@ sub run {
         $showLastUpdated = 1;
     }
 
-    my $json = $showJson ? {} : undef;
+    my $json = {
+        'hostid'           => UBOS::Host::hostId(),
+        'ubos-admin-ready' => UBOS::Host::checkReady()
+    }; # We create a JSON file, and either emit that, or format it to text
 
     if( $showDisks ) {
         trace( 'Checking disks' );
@@ -80,172 +104,28 @@ sub run {
         UBOS::Utils::myexec( "lsblk --json --output-all --paths", undef, \$out );
         if( $out ) {
             my $newJson = UBOS::Utils::readJsonFromString( $out );
-            if( $json ) {
-                $json->{blockdevices} = [];
-                foreach my $blockdevice ( @{$newJson->{blockdevices}} ) {
-                    my $name       = $blockdevice->{name};
-                    my $fstype     = $blockdevice->{fstype};
-                    my $mountpoint = $blockdevice->{mountpoint};
+            $json->{blockdevices} = [];
+            foreach my $blockdevice ( @{$newJson->{blockdevices}} ) {
+                my $name       = $blockdevice->{name};
+                my $fstype     = $blockdevice->{fstype};
+                my $mountpoint = $blockdevice->{mountpoint};
 
-                    if( $fstype ) {
-                        $blockdevice->{usage} = _usageAsJson( $name, $fstype, $mountpoint );
-                    }
-
-                    foreach my $child ( @{$blockdevice->{children}} ) {
-                        my $childName       = $child->{name};
-                        my $childFstype     = $child->{fstype};
-                        my $childMountpoint = $child->{mountpoint};
-
-                        if( $childFstype ) {
-                            $child->{usage} = _usageAsJson( $childName, $childFstype, $childMountpoint );
-                        }
-                    }
-
-                    push @{$json->{blockdevices}}, $blockdevice;
+                if( $fstype ) {
+                    $blockdevice->{usage} = _usageAsJson( $name, $fstype, $mountpoint );
                 }
 
-            } else {
-                my $msg = <<MSG;
-disks:
-MSG
-                foreach my $blockdevice ( @{$newJson->{blockdevices}} ) {
-                    my $name       = $blockdevice->{name};
-                    my $fstype     = $blockdevice->{fstype};
-                    my $mountpoint = $blockdevice->{mountpoint};
+                foreach my $child ( @{$blockdevice->{children}} ) {
+                    my $childName       = $child->{name};
+                    my $childFstype     = $child->{fstype};
+                    my $childMountpoint = $child->{mountpoint};
 
-                    $msg .= "    $name";
-                    if( $fstype ) {
-                        $msg .= ", fstype $fstype";
-                        $msg .= ", used " . _usageAsText( $name, $fstype, $mountpoint );
-                    }
-                    if( $mountpoint ) {
-                        $msg .= ", mounted at $mountpoint";
-                    } else {
-                        $msg .= ", not mounted";
-                    }
-                    $msg .= "\n";
-
-                    foreach my $child ( @{$blockdevice->{children}} ) {
-                        my $childName       = $child->{name};
-                        my $childFstype     = $child->{fstype};
-                        my $childMountpoint = $child->{mountpoint};
-
-                        $msg .= "    $childName";
-                        if( $childFstype ) {
-                            $msg .= ", fstype $childFstype";
-                            $msg .= ", " . _usageAsText( $childName, $childFstype, $childMountpoint );
-
-                            if( $childMountpoint ) {
-                                $msg .= ", mounted at $childMountpoint";
-                            } else {
-                                $msg .= ", not mounted";
-                            }
-                        } else {
-                            $msg .= ", no filesystem";
-                        }
-                        $msg .= "\n";
+                    if( $childFstype ) {
+                        $child->{usage} = _usageAsJson( $childName, $childFstype, $childMountpoint );
                     }
                 }
-                colPrint( $msg );
+
+                push @{$json->{blockdevices}}, $blockdevice;
             }
-        }
-    }
-
-    if( $showMemory ) {
-        trace( 'Checking memory' );
-
-        my $out;
-        debugAndSuspend( 'Executing free' );
-        UBOS::Utils::myexec( "free -lht", undef, \$out );
-
-        if( $json ) {
-            $json->{memory} = {};
-
-            my @lines = split /\n/, $out;
-            my $header = shift @lines;
-            $header =~ s!^\s+!!;
-            $header =~ s!\s+$!!;
-            my @headerFields = split /\s+/, $header;
-            foreach my $line ( @lines ) {
-                $line =~ s!^\s+!!;
-                $line =~ s!\s+$!!;
-                my @fields = split /\s+/, $line;
-                my $key    = shift @fields;
-                my $max    = @headerFields;
-                if( $max > @fields ) {
-                    $max = @fields;
-                }
-                $key =~ s!:!!;
-                $key = lc( $key );
-                for( my $i=0 ; $i<$max ; ++$i ) {
-                    $json->{memory}->{$key}->{$headerFields[$i]} = $fields[$i];
-                }
-            }
-        } else {
-            my $msg = <<MSG;
-memory:
-MSG
-            $out =~ s!^\s+!!;
-            $out =~ s!\s+$!!;
-            $out =~ s!\n!\n    !g;
-            $msg .= '    ' . $out . "\n";
-            colPrint( $msg );
-        }
-    }
-
-    if( $showUptime ) {
-        trace( 'Checking uptime' );
-
-        my $out;
-        debugAndSuspend( 'Executing w' );
-        UBOS::Utils::myexec( "w -f -u", undef, \$out );
-
-        if( $json ) {
-            $json->{uptime} = {};
-            $json->{uptime}->{users} = [];
-
-            my @lines = split /\n/, $out;
-            my $first = shift @lines;
-
-            if( $first =~ m!^\s*(\d+:\d+:\d+)\s*up\s*([^,]+),\s*(\d+)\s*users?,\s*load\s*average:\s*([^,]+),\s*([^,]+),\s*([^,]+)\s*$! ) {
-                $json->{uptime}->{time}      = $1;
-                $json->{uptime}->{uptime}    = $2;
-                $json->{uptime}->{nusers}    = $3;
-                $json->{uptime}->{loadavg1}  = $4;
-                $json->{uptime}->{loadavg5}  = $5;
-                $json->{uptime}->{loadavg15} = $6;
-            }
-
-            shift @lines; # remove line "USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT"
-            foreach my $line ( @lines ) {
-                if( $line =~ m!^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*?)\s*$! ) {
-                    push @{$json->{uptime}->{users}}, {
-                        'user'  => $1,
-                        'tty'   => $2,
-                        'from'  => $3,
-                        'login' => $4,
-                        'idle'  => $5,
-                        'jcpu'  => $6,
-                        'pcpu'  => $7,
-                        'what'  => $8,
-                    };
-                }
-            }
-
-            my $ready = UBOS::Host::checkReady();
-            if( defined( $ready )) {
-                $json->{'ubos-admin-ready'} = $ready;
-            }
-
-        } else {
-            my $msg = <<MSG;
-uptime:
-MSG
-            $out =~ s!^\s+!!;
-            $out =~ s!\s+$!!;
-            $out =~ s!\n!\n    !g;
-            $msg .= '    ' . $out . "\n";
-            colPrint( $msg );
         }
     }
 
@@ -253,13 +133,36 @@ MSG
         trace( 'Determining when last updated' );
 
         my $lastUpdated = UBOS::Host::lastUpdated();
-        if( $json ) {
-            $json->{lastupdated} = $lastUpdated;
-        } else {
-            if( defined( $lastUpdated )) {
-                colPrint( "last updated: $lastUpdated\n" );
-            } else {
-                colPrint( "last updated: <unknown>\n" );
+        $json->{lastupdated} = $lastUpdated;
+    }
+
+    if( $showMemory ) {
+        trace( 'Checking memory' );
+
+        my $out;
+        debugAndSuspend( 'Executing free' );
+        UBOS::Utils::myexec( "free --bytes --lohi --total", undef, \$out );
+
+        $json->{memory} = {};
+
+        my @lines = split /\n/, $out;
+        my $header = shift @lines;
+        $header =~ s!^\s+!!;
+        $header =~ s!\s+$!!;
+        my @headerFields = map { my $s = $_; $s =~ s!/!!; $s; } split /\s+/, $header;
+        foreach my $line ( @lines ) {
+            $line =~ s!^\s+!!;
+            $line =~ s!\s+$!!;
+            my @fields = split /\s+/, $line;
+            my $key    = shift @fields;
+            my $max    = @headerFields;
+            if( $max > @fields ) {
+                $max = @fields;
+            }
+            $key =~ s!:!!;
+            $key = lc( $key );
+            for( my $i=0 ; $i<$max ; ++$i ) {
+                $json->{memory}->{$key}->{$headerFields[$i]} = $fields[$i];
             }
         }
     }
@@ -273,29 +176,205 @@ MSG
 
         if( $out ) {
             my @items = split /\n/, $out;
-            if( $json ) {
-                $json->{pacnew} = \@items;
-            } else {
-                my $count = scalar @items;
-                my $msg = <<MSG;
-pacnew:
-    Explanation: You manually modified $count configuration file(s) that need an
-        upgrade. Because you modified them, UBOS cannot automatically upgrade
-        them. Instead, the new versions were saved next to the modified files
-        with the extension .pacnew. Please review them, one by one, update them,
-        and when you are done, remove the version with the .pacnew extension.
-        Here's the list:
-MSG
-                $msg .= '    ' . join( "\n    ", @items ) . "\n";
-                colPrint( $msg );
+            $json->{pacnew} = \@items;
+        }
+    }
+
+    if( $showUptime ) {
+        trace( 'Checking uptime' );
+
+        my $out;
+        debugAndSuspend( 'Executing w' );
+        UBOS::Utils::myexec( "w -f -u", undef, \$out );
+
+        $json->{uptime} = {};
+        $json->{uptime}->{users} = [];
+
+        my @lines = split /\n/, $out;
+        my $first = shift @lines;
+
+        if( $first =~ m!^\s*(\d+:\d+:\d+)\s*up\s*(.+),\s*(\d+)\s*users?,\s*load\s*average:\s*([^,]+),\s*([^,]+),\s*([^,]+)\s*$! ) {
+            $json->{uptime}->{time}      = $1;
+            $json->{uptime}->{uptime}    = $2;
+            $json->{uptime}->{nusers}    = $3;
+            $json->{uptime}->{loadavg1}  = $4;
+            $json->{uptime}->{loadavg5}  = $5;
+            $json->{uptime}->{loadavg15} = $6;
+        }
+
+        shift @lines; # remove line "USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT"
+        foreach my $line ( @lines ) {
+            if( $line =~ m!^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*?)\s*$! ) {
+                push @{$json->{uptime}->{users}}, {
+                    'user'  => $1,
+                    'tty'   => $2,
+                    'from'  => $3,
+                    'login' => $4,
+                    'idle'  => $5,
+                    'jcpu'  => $6,
+                    'pcpu'  => $7,
+                    'what'  => $8,
+                };
             }
         }
     }
 
-    if( keys %$json ) {
+    if( $showJson ) {
         UBOS::Utils::writeJsonToStdout( $json );
+
+    } else {
+        # print to console
+        my $out  = 'Status: host ' . $json->{hostid} . "\n";
+        $out .= '=' x ( length( $out )-1 ) . "\n";
+
+        $out .= "Ready:\n";
+        if( exists( $json->{'ubos-admin-ready'} ) && exists( $json->{'ubos-admin-ready'} )) {
+            $out .= '    Since: ' . _formatTimeStamp( $json->{'ubos-admin-ready'} ) . "\n";
+        } else {
+            $out .= "    NOT READY\n";
+        }
+
+        if( exists( $json->{lastupdated} )) {
+            $out .= '    last updated: ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+        }
+
+        if( exists( $json->{uptime} )) {
+            my $uptime = $json->{uptime};
+            $out .= "Uptime:\n";
+            $out .= '    for:      ' . $uptime->{uptime} . "\n";
+            $out .= '    load avg: ' . $uptime->{loadavg1}  . ' (1 min) '
+                                     . $uptime->{loadavg5}  . ' (5 min) '
+                                     . $uptime->{loadavg15} . " (15 min)\n";
+
+            if( $showDetail ) {
+                $out .= '    users:    ' .  $uptime->{nusers} . "\n";
+            }
+        }
+
+        if( exists( $json->{blockdevices} )) {
+            $out .= "Disks:\n";
+            foreach my $blockDevice ( @{$json->{blockdevices}} ) {
+                $out .= "    " . $blockDevice->{name} . "\n";
+                foreach my $att ( sort keys %$blockDevice ) {
+                    my $val = $blockDevice->{$att};
+                    if( _printDiskAtt( $att, $val, $showDetail )) {
+                        $out .= "        $att: $val\n";
+                    }
+                }
+                if( exists( $blockDevice->{children} )) {
+                    foreach my $childBlockDevice ( @{$blockDevice->{children}} ) {
+                        $out .= "        " . $childBlockDevice->{name} . "\n";
+                        foreach my $att ( sort keys %$childBlockDevice ) {
+                            my $val = $childBlockDevice->{$att};
+                            if( _printDiskAtt( $att, $val, $showDetail )) {
+                                $out .= "            $att: $val\n";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if( exists( $json->{memory} )) {
+            $out .= "Memory:             total       used        free        shared      buff/cache  available \n";
+
+            my @memcats;
+            if( $showDetail ) {
+                @memcats = qw( mem low high swap total );
+            } else {
+                @memcats = qw( mem swap total );
+            }
+
+            foreach my $memcat ( @memcats ) {
+                my $mem = $json->{memory}->{$memcat};
+                $out .= sprintf(
+                        "    %-10s %11s %11s %11s %11s %11s %11s\n",
+                        uc( substr( $memcat, 0, 1 )) . substr( $memcat, 1 ) . ':',
+                        exists( $mem->{total} )     ? _formatBytes( $mem->{total} )     : '',
+                        exists( $mem->{used} )      ? _formatBytes( $mem->{used} )      : '',
+                        exists( $mem->{free} )      ? _formatBytes( $mem->{free} )      : '',
+                        exists( $mem->{shared} )    ? _formatBytes( $mem->{shared} )    : '',
+                        exists( $mem->{buffcache} ) ? _formatBytes( $mem->{buffcache} ) : '',
+                        exists( $mem->{available} ) ? _formatBytes( $mem->{available} ) : '');
+            }
+        }
+
+        if( exists( $json->{pacnew} )) {
+            $out .= "Pacnew:\n";
+
+            if( $showDetail ) {
+                $out .= "    Changed config files:\n";
+                $out .= join( '', map( "        $_\n", @{$json->{pacnew}} ));
+            } else {
+                $out .= "    Number of changed config files: " . ( 0 + @{$json->{pacnew}} ) . "\n";
+            }
+        }
+
+        colPrint( $out );
     }
+
     return 1;
+}
+
+##
+# Helper method to determine whether to print a block device attribute
+# $name: name of the attribute
+# $value: value of the attribute
+# $showDetail: show detail, or not
+# return: true or false
+sub _printDiskAtt {
+    my $name       = shift;
+    my $value      = shift;
+    my $showDetail = shift;
+
+    if( ref( $value )) {
+        return 0;
+    }
+    unless( defined( $value )) {
+        return 0;
+    }
+    if( $showDetail ) {
+        return 1;
+    }
+    return $defaultDiskFields{$name};
+}
+
+##
+# Helper method to format integers with byte sizes with prefix
+# $n: the number
+# return: formatted
+sub _formatBytes {
+    my $n = shift;
+
+    my @units = ( '  B', qw( kiB MiB GiB TiB ));
+    my $fract = '';
+    foreach my $unit ( @units ) {
+        if( $n < 1024 ) {
+            return "$n$fract $unit";
+        }
+        my $floor = floor( $n/1024 );
+        $fract = floor( 10 * ( $n/1024 - $floor ));
+        if( $fract == 0 ) {
+            $fract = '';
+        } else {
+            $fract = ".$fract";
+        }
+        $n = $floor;
+    }
+    return "$n$fract " . $units[-1];
+}
+
+##
+# Format a time stamp
+# $ts: time stamp
+# return: formatted
+sub _formatTimeStamp {
+    my $ts = shift;
+
+    if( $ts =~ m!^(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)! ) {
+        return "$1/$2/$3 $4:$5:$6";
+    } else {
+        return $ts; # best we can do
+    }
 }
 
 ##
@@ -338,35 +417,6 @@ sub _usageAsJson {
 }
 
 ##
-# Helper method to determine the disk usage of a partition
-# $device: the device, e.g. /dev/sda1
-# $fstype: the file system type, e.g. btrfs
-# $mountpoint: the mount point, e.g. /var
-# return: a string showing usage
-sub _usageAsText {
-    my $device     = shift;
-    my $fstype     = shift;
-    my $mountpoint = shift;
-
-    if( 'btrfs' eq $fstype ) {
-        my $out;
-        UBOS::Utils::myexec( "btrfs filesystem df -h '$mountpoint'", undef, \$out );
-        $out =~ s/\n/; /g;
-        return $out;
-
-    } else {
-        my $out;
-        UBOS::Utils::myexec( "df -h '$device' --output=used,size,pcent", undef, \$out );
-        my @lines = split( "\n", $out );
-        my $data  = pop @lines;
-        $data =~ s!^\s+!!;
-        $data =~ s!\s+$!!;
-        my ( $used, $size, $pcent ) = split( /\s+/, $data );
-        return "used $used of $size ($pcent)";
-    }
-}
-
-##
 # Return help text for this command.
 # return: hash of synopsis to help text
 sub synopsisHelp {
@@ -376,19 +426,20 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--disks] [--memory] [--pacnew] [--uptime]
+    [--disks] [--lastupdated] [--memory] [--pacnew] [--uptime]
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
-    * disks:  report on attached disks and their usage.
-    * memory: report how much RAM and swap memory is being used.
-    * pacnew: report on manually modified configuration files.
-    * uptime: report how long the device has been up since last boot.
+    * disks:       report on attached disks and their usage.
+    * lastupdated: report when the device was last updated
+    * memory:      report how much RAM and swap memory is being used.
+    * pacnew:      report on manually modified configuration files.
+    * uptime:      report how long the device has been up since last boot.
 HHH
             <<SSS => <<HHH
     --all
 SSS
-    Show the full status of the device.
+    Report on all subjects
 HHH
         },
         'args' => {
@@ -400,6 +451,9 @@ HHH
 HHH
             '--json' => <<HHH,
     Use JSON as the output format, instead of human-readable text.
+HHH
+            '--detail' => <<HHH,
+    Show all detail. Must not be used together with --json.
 HHH
         }
     };
