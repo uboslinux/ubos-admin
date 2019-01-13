@@ -27,6 +27,11 @@ map { $defaultDiskFields{$_} = 1; } qw (
     type
 ); # name is shown separately
 
+
+# above these we report problems
+my $PROBLEM_DISK_PERCENT         = 70;
+my $PROBLEM_LOAD_PER_CPU_PERCENT = 70;
+
 ##
 # Execute this command.
 # return: 1 if ok, 0 if error
@@ -44,6 +49,7 @@ sub run {
     my $showJson        = 0;
     my $showAll         = 0;
     my $showDetail      = 0;
+    my $showCpu         = 0;
     my $showDisks       = 0;
     my $showLastUpdated = 0;
     my $showMemory      = 0;
@@ -58,6 +64,7 @@ sub run {
             'json'         => \$showJson,
             'all'          => \$showAll,
             'detail'       => \$showDetail,
+            'cpu'          => \$showCpu,
             'disks'        => \$showDisks,
             'lastupdated'  => \$showLastUpdated,
             'memory'       => \$showMemory,
@@ -77,13 +84,20 @@ sub run {
     }
 
     if( $showAll ) {
+        $showCpu         = 1;
         $showDisks       = 1;
         $showMemory      = 1;
         $showPacnew      = 1;
         $showUptime      = 1;
         $showLastUpdated = 1;
 
-    } elsif( !$showPacnew && !$showDisks && !$showMemory && !$showUptime && !$showLastUpdated ) {
+    } elsif(    !$showCpu
+             && !$showDisks
+             && !$showMemory
+             && !$showPacnew
+             && !$showUptime
+             && !$showLastUpdated )
+    {
         # default
         $showDisks       = 1;
         $showMemory      = 1;
@@ -95,6 +109,47 @@ sub run {
         'hostid'           => UBOS::Host::hostId(),
         'ubos-admin-ready' => UBOS::Host::checkReady()
     }; # We create a JSON file, and either emit that, or format it to text
+
+    my $nCpu;
+    my %loads;
+
+    # always get CPU, so we know how many cores
+    # don't always display
+    if( 1 ) {
+        trace( 'Checking CPU' );
+
+        my $out;
+        debugAndSuspend( 'Executing lscpu' );
+        UBOS::Utils::myexec( "lscpu --json", undef, \$out );
+        if( $out ) {
+            my $newJson  = UBOS::Utils::readJsonFromString( $out );
+            my $addJson = {};
+
+            my %relevants = (
+                        'Architecture'        => 'architecture',
+                        'CPU\(s\)'            => 'ncpu',
+                        'Vendor ID'           => 'vendorid',
+                        'Model name'          => 'modelname',
+                        'CPU MHz'             => 'cpumhz',
+                        'Virtualization type' => 'virttype'
+            );
+            foreach my $entry ( @{$newJson->{lscpu}} ) {
+                foreach my $relevant ( keys %relevants ) {
+                    if( $entry->{field} =~ m!$relevant! ) {
+                        $addJson->{$relevants{$relevant}} = $entry->{data};
+                    }
+                }
+            }
+            if( $addJson->{ncpu} =~ m!^(\d+)-(\d+)$! ) {
+                $nCpu = $2 - $1;
+            } else {
+                warning( 'Failed to parse nCPU field:', $addJson->{ncpu} );
+            }
+            if( $showCpu ) {
+                $json->{cpu} = $addJson;
+            }
+        }
+    }
 
     if( $showDisks ) {
         trace( 'Checking disks' );
@@ -180,32 +235,38 @@ sub run {
         }
     }
 
-    if( $showUptime ) {
+    # always get uptime, so we know the load
+    # don't always display
+    if( 1 ) {
         trace( 'Checking uptime' );
 
         my $out;
         debugAndSuspend( 'Executing w' );
         UBOS::Utils::myexec( "w -f -u", undef, \$out );
 
-        $json->{uptime} = {};
-        $json->{uptime}->{users} = [];
+        my $uptime = {};
+        $uptime->{users} = [];
 
         my @lines = split /\n/, $out;
         my $first = shift @lines;
 
         if( $first =~ m!^\s*(\d+:\d+:\d+)\s*up\s*(.+),\s*(\d+)\s*users?,\s*load\s*average:\s*([^,]+),\s*([^,]+),\s*([^,]+)\s*$! ) {
-            $json->{uptime}->{time}      = $1;
-            $json->{uptime}->{uptime}    = $2;
-            $json->{uptime}->{nusers}    = $3;
-            $json->{uptime}->{loadavg1}  = $4;
-            $json->{uptime}->{loadavg5}  = $5;
-            $json->{uptime}->{loadavg15} = $6;
+            $uptime->{time}      = $1;
+            $uptime->{uptime}    = $2;
+            $uptime->{nusers}    = $3;
+            $uptime->{loadavg1}  = $4;
+            $uptime->{loadavg5}  = $5;
+            $uptime->{loadavg15} = $6;
+
+            $loads{1}  = $uptime->{loadavg1};
+            $loads{5}  = $uptime->{loadavg5};
+            $loads{15} = $uptime->{loadavg15};
         }
 
         shift @lines; # remove line "USER     TTY      FROM             LOGIN@   IDLE   JCPU   PCPU WHAT"
         foreach my $line ( @lines ) {
             if( $line =~ m!^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*?)\s*$! ) {
-                push @{$json->{uptime}->{users}}, {
+                push @{$uptime->{users}}, {
                     'user'  => $1,
                     'tty'   => $2,
                     'from'  => $3,
@@ -217,25 +278,55 @@ sub run {
                 };
             }
         }
+
+        if( $showUptime ) {
+            $json->{uptime} = $uptime;
+        }
     }
 
     if( $showJson ) {
         UBOS::Utils::writeJsonToStdout( $json );
 
     } else {
-        # print to console
+        # will print to console
         my $out  = 'Status: host ' . $json->{hostid} . "\n";
         $out .= '=' x ( length( $out )-1 ) . "\n";
 
-        $out .= "Ready:\n";
+        colPrint( $out );
+
+        my @problems;
+
+        if( keys %loads && $nCpu ) {
+            foreach my $period ( keys %loads ) {
+                if( $loads{$period} / $nCpu * 100 >= $PROBLEM_LOAD_PER_CPU_PERCENT ) {
+                    push @problems,
+                            'High CPU load: '
+                            . join( ' ', map { $loads{$_} . " ($_ min)" }
+                                        sort { $a <=> $b }
+                                        keys %loads )
+                            . " with $nCpu CPUs.";
+                    last;
+                }
+            }
+        } else {
+            push @problems, 'Failed to determine loads and/or number CPUs';
+        }
+
+        $out = "Ready:\n";
         if( exists( $json->{'ubos-admin-ready'} ) && exists( $json->{'ubos-admin-ready'} )) {
-            $out .= '    Since: ' . _formatTimeStamp( $json->{'ubos-admin-ready'} ) . "\n";
+            $out .= '    since: ' . _formatTimeStamp( $json->{'ubos-admin-ready'} ) . "\n";
         } else {
             $out .= "    NOT READY\n";
         }
 
         if( exists( $json->{lastupdated} )) {
             $out .= '    last updated: ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+        }
+
+        if( exists( $json->{cpu} )) {
+            $out .= "CPU:\n";
+            $out .= '    number:         ' . $json->{cpu}->{ncpu} . "\n";
+            $out .= '    virtualization: ' . $json->{cpu}->{virttype} . "\n";
         }
 
         if( exists( $json->{uptime} )) {
@@ -259,6 +350,13 @@ sub run {
                     my $val = $blockDevice->{$att};
                     if( _printDiskAtt( $att, $val, $showDetail )) {
                         $out .= "        $att: $val\n";
+                    }
+                    if( $att eq 'fsuse%' && defined( $val )) {
+                        my $numVal = $val;
+                        $numVal =~ s!%!!;
+                        if( $numVal > $PROBLEM_DISK_PERCENT ) {
+                            push @problems, 'Disk ' . $blockDevice->{name} . ' is almost full: ' . $val;
+                        }
                     }
                 }
                 if( exists( $blockDevice->{children} )) {
@@ -307,6 +405,10 @@ sub run {
             } else {
                 $out .= "    Number of changed config files: " . ( 0 + @{$json->{pacnew}} ) . "\n";
             }
+        }
+
+        if( @problems ) {
+            colPrintWarning( "\nProblems:\n" . join( "", map { "    * $_\n" } @problems ) . "\n" );
         }
 
         colPrint( $out );
