@@ -12,6 +12,7 @@ package UBOS::Terminal;
 
 use Exporter qw( import );
 use Term::ANSIColor;
+use UBOS::Logging;
 
 our @EXPORT = qw( colPrint
                   colPrintTrace colPrintInfo colPrintDebug colPrintWarning colPrintError colPrintFatal
@@ -138,7 +139,7 @@ sub askAnswer {
             if( $ret =~ $regex ) {
                 last;
             } else {
-                error( "(input not valid: regex is $regex)" );
+                UBOS::Logging::error( "(input not valid: regex is $regex)" );
             }
         }
     }
