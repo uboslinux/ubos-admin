@@ -16,28 +16,35 @@ use UBOS::Logging;
 use UBOS::Utils;
 
 ##
-# Perform the core backup function.
-# $backup: the backup type to use, as instantiated object of the right type
-# $backupOut: the file to write the backup to
-# @siteIds: the SiteIds of the Sites to back up
-# @appConfigIds: the AppConfigIds of the AppConfigs to back up
-# $noTls: if true, no TLS info (key, cert...) will be backed up
-# $noTorKey: if true, for Tor sites, the Tor private key will not be backed up
-# return: 1 if ok, 0 if error
-sub performBackup {
+# Shortcut to analyze and perform a backup
+sub analyzePerformBackup {
     my $backup        = shift;
     my $backupOut     = shift;
-    my @siteIds       = @{shift()};
-    my @appConfigIds  = @{shift()};
+    my $siteIdsP      = shift;
+    my $appConfigIdsP = shift;
     my $noTls         = shift;
     my $noTorKey      = shift;
 
-    my $ret = 1;
+    my( $sitesP, $appConfigsP ) = analyzeBackup( $siteIdsP, $appConfigIdsP );
+    if( $sitesP ) {
+        return performBackUp( $backup, $backupOut, $sitesP, $appConfigsP, $noTls, $noTorKey );
+    } else {
+        return undef;
+    }
+}
+
+##
+# Analyze the provided parameters and determine what to do
+# @siteIds: the SiteIds of the Sites to back up
+# @appConfigIds: the AppConfigIds of the AppConfigs to back up
+# return: ( list of Sites, list of AppConfigurations ) to back up
+sub analyzeBackup {
+    my @siteIds       = @{shift()};
+    my @appConfigIds  = @{shift()};
 
     # first make sure there is no overlap between them
-    my $sites         = {};
-    my $appConfigs    = {};
-    my $torSitesCount = 0;
+    my $sites      = {};
+    my $appConfigs = {};
 
     foreach my $appConfigId ( @appConfigIds ) {
         my $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
@@ -72,23 +79,37 @@ sub performBackup {
             }
             $appConfigs->{$appConfig->appConfigId} = $appConfig;
         }
-        if( $site->isTor() ) {
-            ++$torSitesCount;
-        }
     }
     if( keys %$appConfigs == 0 ) {
-        $@ = 'No sites found. Nothing to do.';
+        $@ = 'No installed apps found. Nothing to do.';
         return undef;
     }
+    return( [ values %$sites ], [ values %$appConfigs ] );
+}
 
-    if( $noTorKey && !$torSitesCount ) {
-        fatal( 'No Tor site found, but --notorkey specified.' );
-    }
+##
+# Perform the core backup function.
+# $backup: the backup type to use, as instantiated object of the right type
+# $backupOut: the file to write the backup to
+# @sites: list of Sites to back up
+# @appConfigs: list of AppConfigurations to back up
+# $noTls: if true, no TLS info (key, cert...) will be backed up
+# $noTorKey: if true, for Tor sites, the Tor private key will not be backed up
+# return: 1 if ok, 0 if error
+sub performBackup {
+    my $backup     = shift;
+    my $backupOut  = shift;
+    my @sites      = @{shift()};
+    my @appConfigs = @{shift()};
+    my $noTls      = shift;
+    my $noTorKey   = shift;
+
+    my $ret = 1;
 
     my $sitesToSuspendResume = {};
 
     # We have all AppConfigs of all Sites, so doing this is sufficient
-    foreach my $appConfig ( values %$appConfigs ) {
+    foreach my $appConfig ( @appConfigs ) {
         my $site = $appConfig->site;
         $sitesToSuspendResume->{$site->siteId} = $site; # may be set more than once
     }
@@ -106,7 +127,7 @@ sub performBackup {
 
     info( 'Creating and exporting backup' );
 
-    $ret &= $backup->create( [ values %$sites ], [ values %$appConfigs ], $noTls, $noTorKey, $backupOut );
+    $ret &= $backup->create( \@sites, \@appConfigs, $noTls, $noTorKey, $backupOut );
 
     info( 'Resuming sites' );
 

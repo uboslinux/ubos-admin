@@ -20,6 +20,7 @@ depends=(
     'perl-cgi'
     'perl-dbi'
     'perl-net-ip'
+    'perl-uri'
     'php-apache'
     'php-intl'
     'snapper'
@@ -40,7 +41,7 @@ package() {
 # Code
     install -D -m755 ${startdir}/bin/ubos-admin -t ${pkgdir}/usr/bin/
 
-    for d in AppConfigurationItems Backup Commands Databases HostnameCallbacks \
+    for d in AppConfigurationItems Backup Commands Databases DataTransferProtocols HostnameCallbacks \
              Networking Networking/NetConfigs Roles StaffCallbacks TemplateProcessor; do
         for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
             if [ -r "$f" ]; then

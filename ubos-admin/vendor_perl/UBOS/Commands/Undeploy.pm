@@ -155,7 +155,7 @@ sub run {
         trace( 'ZipFileBackup of sites:', @siteIdsToBackup );
 
         my $backup = UBOS::Backup::ZipFileBackup->new();
-        my $status = UBOS::BackupUtils::performBackup( $backup, $backupFile, \@siteIds, [], $noTls, $noTorKey );
+        my $status = UBOS::BackupUtils::analyzePerformBackup( $backup, $backupFile, \@siteIds, [], $noTls, $noTorKey );
         unless( $status ) {
             warning( 'Backup failed. Not undeploying sites.', $@ );
             $backupFailed = 1;

@@ -53,6 +53,11 @@ sub addFile {
 
     trace( 'ZipFileBackupContext::addFile', $fileToAdd, $bucket );
 
+    if( ref( $fileToAdd ) || ref( $bucket )) {
+        error( 'Invalid data type for addFile', ref( $fileToAdd ) || $fileToAdd, ref( $bucket ) || $bucket );
+        return 0;
+    }
+
     my $dest;
     if( $fileToAdd =~ m!\.([^\./]+)$! ) {
         # Keep the extension
