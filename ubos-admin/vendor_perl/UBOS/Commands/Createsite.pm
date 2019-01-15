@@ -235,7 +235,7 @@ sub run {
         }
     }
     while( !$adminEmail ) {
-        $adminEmail = askAnswer( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9.-]*[a-z]$' );
+        $adminEmail = askAnswer( 'Site admin user e-mail (e.g. foo@bar.com): ', '^[a-z0-9._%+-]+@[a-z0-9-]+\.[a-z0-9.-]*[a-z]$' );
         if( $adminEmail =~ m!foo\@bar.com! ) {
             error( "Not that one!" );
             $adminEmail = undef;

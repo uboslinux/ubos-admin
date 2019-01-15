@@ -1156,7 +1156,7 @@ sub _checkJson {
         $@ = 'Site JSON: admin section: missing email';
         return 0;
     }
-    if( ref( $json->{admin}->{email} ) || $json->{admin}->{email} !~ m/^[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]$/i ) {
+    if( ref( $json->{admin}->{email} ) || $json->{admin}->{email} !~ m/^[A-Z0-9._%+-]+@[A-Z0-9-]+\.[A-Z0-9.-]*[A-Z]$/i ) {
         $@ = 'Site JSON: admin section: invalid email, is: ' . $json->{admin}->{email};
         return 0;
     }
