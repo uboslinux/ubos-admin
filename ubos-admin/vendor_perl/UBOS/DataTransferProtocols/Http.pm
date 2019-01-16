@@ -39,12 +39,12 @@ sub parseLocation {
     my $method = undef;
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'method', => \$method );
-    unless( $parseOk ) {
+            'method=s', => \$method );
+    if( !$parseOk || @$argsP ) {
         return undef;
     }
 
-    $$configChangedP ||= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'http', 'method', $method );
+    $$configChangedP |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'http', 'method', $method );
 
     unless( ref( $self )) {
         $self = fields::new( $self );

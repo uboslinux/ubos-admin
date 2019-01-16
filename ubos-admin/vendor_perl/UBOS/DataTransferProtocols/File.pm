@@ -44,7 +44,7 @@ sub parseLocation {
     my $parseOk = GetOptionsFromArray(
             $argsP,
             'force', => \$force );
-    unless( $parseOk ) {
+    if( !$parseOk || @$argsP ) {
         return undef;
     }
 

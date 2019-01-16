@@ -40,7 +40,7 @@ sub parseLocation {
     my $parseOk = GetOptionsFromArray(
             $argsP,
             'method', => \$method );
-    unless( $parseOk ) {
+    if( !$parseOk || @$argsP ) {
         return undef;
     }
 
@@ -49,7 +49,7 @@ sub parseLocation {
     }
     $self->SUPER::new( $location, protocol() );
 
-    $$configChangedP ||= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'https', 'method', $method );
+    $$configChangedP |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'https', 'method', $method );
 
     return $self;
 }

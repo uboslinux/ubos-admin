@@ -97,9 +97,9 @@ sub run {
         $config = {}; # by default we have nothing
     }
 
-    $configChanged ||= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'encryptid', $encryptId );
-    $configChanged ||= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'notls', $noTls );
-    $configChanged ||= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'notorkey', $noTorKey );
+    $configChanged |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'encryptid', $encryptId );
+    $configChanged |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'notls', $noTls );
+    $configChanged |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'notorkey', $noTorKey );
 
     # Don't need to do any cleanup of siteIds or appConfigIds, BackupUtils::performBackup
     # does that for us
@@ -182,6 +182,9 @@ sub run {
             $name = sprintf( "appconfig-multi-%s-%s.ubos-backup", $hostId, $now );
         }
         $toFile .= $name;
+        if( $encryptId ) {
+            $toFile .= '.gpg';
+        }
 
         trace( 'Generated new file name in directory:', $toDirectory, $toFile );
     }
@@ -190,30 +193,32 @@ sub run {
         fatal( $@ );
     }
 
-    my $tmpToFile;
-    if( !$transferProtocol->isLocal() || $encryptId ) {
-        my $tmpDir = UBOS::Host::vars()->get( 'host.tmpdir' );
-        $tmpToFile = File::Temp->new( UNLINK => 1, DIR => $tmpDir )->filename;
-
+    my $localStagingFile;
+    if( $transferProtocol->isLocal()) {
+        $localStagingFile = $toFile;
     } else {
-        $tmpToFile = $toFile;
+        $localStagingFile = File::Temp->new( UNLINK => 1, DIR => UBOS::Host::tmpdir() )->filename;
     }
 
-    trace( 'Performing backup to:', $tmpToFile );
+    trace( 'Performing backup to:', $localStagingFile );
 
     my $backup = UBOS::Backup::ZipFileBackup->new();
-    my $ret = UBOS::BackupUtils::performBackup( $backup, $tmpToFile, $sitesP, $appConfigsP, $noTls, $noTorKey );
+    my $ret = UBOS::BackupUtils::performBackup( $backup, $localStagingFile, $sitesP, $appConfigsP, $noTls, $noTorKey );
     unless( $ret ) {
         error( 'performBackup:', $@ );
     }
 
+    my $encryptedStagingFile;
     if( $encryptId ) {
-        trace( 'Encrypting:', $encryptId, $tmpToFile, $toFile );
+        trace( 'Encrypting:', $encryptId, $localStagingFile );
+
+        $encryptedStagingFile = File::Temp->new( UNLINK => 1, DIR => UBOS::Host::tmpdir() )->filename;
 
         my $err;
-        if( UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$tmpToFile' > '$toFile'", undef, undef, \$err )) {
-            warning( 'Encryption failed:', $err );
+        if( UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$localStagingFile' > '$encryptedStagingFile'", undef, undef, \$err )) {
+            fatal( 'Encryption failed:', $err );
         }
+        UBOS::Utils::deleteFile( $localStagingFile ); # free up space asap
     }
 
     if( $configChanged && !$noStoreConfig ) {
@@ -226,8 +231,11 @@ sub run {
 
     debugAndSuspend( 'Sending data' );
 
-    $ret &= $transferProtocol->send( $tmpToFile, $toFile, $config );
+    $ret &= $transferProtocol->send( $encryptedStagingFile || $localStagingFile, $toFile, $config );
 
+    if( $ret ) {
+        info( 'Backup saved to:', $toFile );
+    }
     return $ret;
 }
 

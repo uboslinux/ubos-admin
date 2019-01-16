@@ -30,18 +30,18 @@ sub availableDataTransferProtocols {
 ##
 # Factory method for all the subclasses.
 # $location: the location to parse
-# $argsP: array of remaining command-line arguments
+# @args: all other arguments
 sub parseLocation {
     my $self     = shift;
     my $location = shift;
-    my $argsP    = shift;
+    my @args     = @_;
 
     my $transferProtocols = availableDataTransferProtocols();
     my $protocol          = undef;
 
     foreach my $shortPackageName ( sort keys %$transferProtocols ) {
         my $package  = $transferProtocols->{$shortPackageName};
-        $protocol    = UBOS::Utils::invokeMethod( $package . '->parseLocation', $location, $argsP );
+        $protocol    = UBOS::Utils::invokeMethod( $package . '->parseLocation', $location, @args );
         if( $protocol ) {
             last;
         }
@@ -119,7 +119,9 @@ sub overrideConfigValue {
             } # else continue
         }
     }
-    $config->{$protocol}->{$key} = $value;
+    if( defined( $value )) {
+        $config->{$protocol}->{$key} = $value;
+    }
     return 1;
 }
 
