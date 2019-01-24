@@ -19,17 +19,16 @@ use URI;
 
 ##
 # Factory method.
+# If successful, return instance. If not, return undef.
 # $location: the location to parse
+# $dataTransferConfig: data transfer configuration options
 # $argsP: array of remaining command-line arguments
-# $config: configuration options
-# $configChangedP: set to 1 if this method changed at least one configuration option
 # return: instance or undef
 sub parseLocation {
-    my $self           = shift;
-    my $location       = shift;
-    my $argsP          = shift;
-    my $config         = shift;
-    my $configChangedP = shift;
+    my $self               = shift;
+    my $location           = shift;
+    my $dataTransferConfig = shift;
+    my $argsP              = shift;
 
     my $uri = URI->new( $location );
     if( !$uri->scheme() || $uri->scheme() ne protocol() ) {
@@ -44,12 +43,12 @@ sub parseLocation {
         return undef;
     }
 
+    $dataTransferConfig->setValue( 'http', 'method', $method );
+
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $location, protocol() );
-
-    $$configChangedP |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'https', 'method', $method );
 
     return $self;
 }
@@ -78,17 +77,18 @@ sub isValidToFile {
 # Send a local file to location via this protocol.
 # $localFile: the local file
 # $toFile: the ultimate destination as a file URL
-# $config: configuration options
+# $dataTransferConfig: data transfer configuration options
 # return: success or fail
 sub send {
-    my $self      = shift;
-    my $localFile = shift;
-    my $toFile    = shift;
-    my $config    = shift;
+    my $self               = shift;
+    my $localFile          = shift;
+    my $toFile             = shift;
+    my $dataTransferConfig = shift;
 
     my $cmd = "curl -T '$localFile'";
-    if( exists( $config->{https} ) && exists( $config->{https}->{method} )) {
-        $cmd .= ' -X ' . $config->{https}->{method};
+    my $method = $dataTransferConfig->getValue( 'https', 'method' );
+    if( $method ) {
+        $cmd .= " -X $method";
     }
     $cmd .= " '$toFile'";
 
@@ -114,7 +114,8 @@ sub protocol {
 # return: description
 sub description {
     return <<TXT;
-The HTTPS protocol (HTTP over SSL/TLS).  Add --method <method> to specify the HTTP method to use.
+The HTTPS protocol (HTTP over SSL/TLS). Options:
+    --method <method> to specify a non-default HTTP method to use.
 TXT
 }
 

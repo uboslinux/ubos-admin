@@ -10,15 +10,13 @@ use warnings;
 
 package UBOS::Commands::Backup;
 
-use Getopt::Long qw( GetOptionsFromArray :config pass_through );
+use Getopt::Long qw( GetOptionsFromArray :config pass_through ); # for parsing by BackupOperation, DataTransferProtocol
 use UBOS::AbstractDataTransferProtocol;
-use UBOS::BackupUtils;
+use UBOS::BackupOperation;
 use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
-
-my $DEFAULT_CONFIG_FILE = '/etc/ubos/backup-config.json';
 
 ##
 # Execute this command.
@@ -31,78 +29,55 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my $configFile    = undef;
-    my $toFile        = undef;
-    my $toDirectory   = undef;
-    my $force         = 0;
-    my @siteIds       = ();
-    my @hosts         = ();
-    my @appConfigIds  = ();
-    my $context       = undef;
-    my $noTls         = undef;
-    my $noTorKey      = undef;
-    my $noStoreConfig = undef;
-    my $encryptId     = undef;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $force             = 0;
+    my @siteIds           = ();
+    my @hosts             = ();
+    my @appConfigIds      = ();
+    my $context           = undef;
 
-    my $parseOk = GetOptionsFromArray( # no $parseOk -- we may not be done with parsing
+    my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'      => \$verbose,
-            'logConfig=s'   => \$logConfigFile,
-            'debug'         => \$debug,
-            'config=s',     => \$configFile,
-            'tofile=s',     => \$toFile,
-            'todirectory=s' => \$toDirectory,
-            'siteid=s'      => \@siteIds,
-            'hostname=s'    => \@hosts,
-            'appconfigid=s' => \@appConfigIds,
-            'context=s'     => \$context,
-            'notls'         => \$noTls,
-            'notorkey'      => \$noTorKey,
-            'nostoreconfig' => \$noStoreConfig,
-            'encryptid=s'   => \$encryptId );
+            'verbose+'                        => \$verbose,
+            'logConfig=s'                     => \$logConfigFile,
+            'debug'                           => \$debug,
+            'siteid=s'                        => \@siteIds,
+            'hostname=s'                      => \@hosts,
+            'appconfigid=s'                   => \@appConfigIds,
+            'context=s'                       => \$context );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( !$toFile && !$toDirectory )
-        || ( $toFile && $toDirectory )
-        || ( $configFile && $noStoreConfig )
         || ( @appConfigIds && ( @siteIds + @hosts ))
-        || ( $verbose && $logConfigFile ) )
+        || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $config;
-    my $configChanged = 0;
-    my $firstTime     = 1;
-    if( $configFile ) {
-        unless( -e $configFile ) {
-            fatal( 'Specified config file does not exist:', $configFile );
+    my $backupOperation = UBOS::BackupOperation::parseArgumentsPartial( \@args );
+    unless( $backupOperation ) {
+        if( $@ ) {
+            fatal( $@ );
+        } else {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
         }
-    } else {
-        $configFile = $DEFAULT_CONFIG_FILE;
-    }
-    if( !$noStoreConfig && -e $configFile ) {
-        $config = UBOS::Utils::readJsonFromFile( $configFile );
-        unless( $config ) {
-            fatal( 'Failed to parse config file:', $configFile );
-        }
-        $firstTime = 0;
-    } else {
-        $config = {}; # by default we have nothing
     }
 
-    $configChanged |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'encryptid', $encryptId );
-    $configChanged |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'notls', $noTls );
-    $configChanged |= UBOS::AbstractDataTransferProtocol::overrideConfigValue( $config, 'backup', 'notorkey', $noTorKey );
+    if( @args ) {
+        # some are left over
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
 
-    # Don't need to do any cleanup of siteIds or appConfigIds, BackupUtils::performBackup
-    # does that for us
+    if( $backupOperation->isNoOp() ) {
+        fatal( 'No backup parameters given, unclear what to do.' );
+    }
+
+    # Don't need to do any cleanup of siteIds or appConfigIds:
+    # BackupOperation does that for us
 
     trace( 'Validating sites and appconfigs given in the command-line arguments' );
 
@@ -129,113 +104,58 @@ sub run {
         }
     }
 
-    my $transferProtocol = UBOS::AbstractDataTransferProtocol->parseLocation(
-            $toFile || $toDirectory,
-            \@args,
-            $config,
-            \$configChanged );
-    unless( $transferProtocol ) {
-        fatal( 'Cannot determine the data transfer protocol from the arguments', $toFile || '-', $toDirectory || '-' );
-    }
-    if( @args ) {
-         # some are left over
-        fatal( 'Invalid options for data transfer protocol:', @args );
-    }
-    trace( 'Found transfer protocol:', $transferProtocol );
-
-    # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
-
-    my( $sitesP, $appConfigsP ) = UBOS::BackupUtils::analyzeBackup( \@siteIds, \@appConfigIds );
-    unless( $sitesP ) {
+    unless( $backupOperation->analyze( \@siteIds, \@appConfigIds )) {
         error( $@ );
         return 0;
     }
 
-    trace( 'Analyzed what needs backing up. Sites: ', @$sitesP );
-    trace( 'Analyzed what needs backing up. AppConfigs: ', @$appConfigsP );
-
-    if( $toDirectory ) {
-        # i.e. $out is undef
-        $toFile = $toDirectory;
-        unless( $toFile =~ m!/$! ) {
-            $toFile .= '/';
-        }
-
-        # generate local name
-        my $name;
-        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime( time() );
-        my $now = sprintf( "%04d%02d%02d%02d%02d%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec );
-
-        if( @$sitesP == 1 ) {
-            $name = sprintf( "site-%s-%s.ubos-backup", $sitesP->[0]->siteId(), $now );
-
-        } elsif( @$sitesP ) {
-            my $hostId = lc( UBOS::Host::hostId());
-            $name = sprintf( "site-multi-%s-%s.ubos-backup", $hostId, $now );
-
-        } elsif( @$appConfigsP == 1 ) {
-            $name = sprintf( "appconfig-%s-%s.ubos-backup", $appConfigsP->[0]->appConfigId(), $now );
-
-        } else {
-            my $hostId = lc( UBOS::Host::hostId());
-            $name = sprintf( "appconfig-multi-%s-%s.ubos-backup", $hostId, $now );
-        }
-        $toFile .= $name;
-        if( $encryptId ) {
-            $toFile .= '.gpg';
-        }
-
-        trace( 'Generated new file name in directory:', $toDirectory, $toFile );
+    unless( $backupOperation->constructCheckPipeline()) {
+        error( $@ );
+        return 0;
     }
 
-    unless( $transferProtocol->isValidToFile( $toFile )) {
-        fatal( $@ );
+    # May not be interrupted, bad things may happen if it is
+    UBOS::Host::preventInterruptions();
+
+    info( 'Suspending sites' );
+
+    my $ret = 1;
+    my @sitesToSuspendResume = $backupOperation->getSitesToSuspendResume();
+
+    my $suspendTriggers = {};
+    foreach my $site ( @sitesToSuspendResume ) {
+        debugAndSuspend( 'Site', $site->siteId() );
+        $ret &= $site->suspend( $suspendTriggers );
     }
 
-    my $localStagingFile;
-    if( $transferProtocol->isLocal()) {
-        $localStagingFile = $toFile;
-    } else {
-        $localStagingFile = File::Temp->new( UNLINK => 1, DIR => UBOS::Host::tmpdir() )->filename;
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
+    UBOS::Host::executeTriggers( $suspendTriggers );
+
+    unless( $backupOperation->doBackup()) {
+        error( $@ );
+        # do not return
     }
 
-    trace( 'Performing backup to:', $localStagingFile );
+    info( 'Resuming sites' );
 
-    my $backup = UBOS::Backup::ZipFileBackup->new();
-    my $ret = UBOS::BackupUtils::performBackup( $backup, $localStagingFile, $sitesP, $appConfigsP, $noTls, $noTorKey );
-    unless( $ret ) {
-        error( 'performBackup:', $@ );
+    my $resumeTriggers = {};
+    foreach my $site ( @sitesToSuspendResume ) {
+        debugAndSuspend( 'Site', $site->siteId() );
+        $ret &= $site->resume( $resumeTriggers );
+    }
+    debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
+    UBOS::Host::executeTriggers( $resumeTriggers );
+
+    unless( $backupOperation->doUpload()) {
+        error( $@ );
+        return 0;
     }
 
-    my $encryptedStagingFile;
-    if( $encryptId ) {
-        trace( 'Encrypting:', $encryptId, $localStagingFile );
-
-        $encryptedStagingFile = File::Temp->new( UNLINK => 1, DIR => UBOS::Host::tmpdir() )->filename;
-
-        my $err;
-        if( UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$localStagingFile' > '$encryptedStagingFile'", undef, undef, \$err )) {
-            fatal( 'Encryption failed:', $err );
-        }
-        UBOS::Utils::deleteFile( $localStagingFile ); # free up space asap
+    unless( $backupOperation->finish()) {
+        error( $@ );
+        return 0;
     }
 
-    if( $configChanged && !$noStoreConfig ) {
-        unless( $firstTime ) {
-            info( 'Configuration changed. Defaults were updated.' );
-        }
-
-        UBOS::Utils::writeJsonToFile( $configFile, $config, 0600 );
-    }
-
-    debugAndSuspend( 'Sending data' );
-
-    $ret &= $transferProtocol->send( $encryptedStagingFile || $localStagingFile, $toFile, $config );
-
-    if( $ret ) {
-        info( 'Backup saved to:', $toFile );
-    }
     return $ret;
 }
 
@@ -259,13 +179,13 @@ SSS
 DDD
         'cmds' => {
             <<SSS => <<HHH,
-    --tofile <backupfileurl>
+    --backuptofile <backupfileurl>
 SSS
     Back up to into the named file <backupfileurl>, which can be a local file
     name or a URL.
 HHH
             <<SSS => <<HHH
-    --todirectory <backupdirurl>
+    --backuptodirectory <backupdirurl>
 SSS
     Back up to a file with an auto-generated name, which will be located in
     the directory <backupdirurl>, which can be a local directory name or a URL
@@ -292,8 +212,7 @@ HHH
     using GPG key id <id> in the current user's GPG keychain.
 HHH
             '--config <configfile>' => <<HHH,
-    Use an alternate configuration file. Default location of the
-    configuration file is at $DEFAULT_CONFIG_FILE.
+    Use an alternate configuration file than the default.
 HHH
             '--nostoreconfig' => <<HHH,
     Do not store credentials or other configuration for future

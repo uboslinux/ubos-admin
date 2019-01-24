@@ -80,49 +80,16 @@ sub location {
 ##
 # Send a local file to location via this protocol.
 # $localFile: the local file
+# $toFile: the ultimate destination as a file URL
+# $config: configuration options
 # return: success or fail
 sub send {
     my $self      = shift;
     my $localFile = shift;
+    my $toFile    = shift;
+    my $config    = shift;
 
     fatal( 'Must be overridden:', ref( $self ));
-}
-
-##
-# Helper method to override a value in the config hash and report
-# whether a change occurred.
-# $config: the config hash
-# $protocol: name of the protocol, for finding the right section
-# $key: name of the setting within the protocol
-# $value: the new value
-# return true if the setting was changed
-sub overrideConfigValue {
-    my $config   = shift;
-    my $protocol = shift;
-    my $key      = shift;
-    my $value    = shift;
-
-    if(    exists( $config->{$protocol} )
-        && exists( $config->{$protocol}->{$key} ))
-    {
-        my $existingValue = $config->{$protocol}->{$key};
-
-        if( defined( $value )) {
-            if( defined( $existingValue )) {
-                if( $config->{$protocol}->{$key} eq $value ) {
-                    return 0;
-                } # else continue
-            } # else continue
-        } else {
-            if( !defined( $existingValue )) {
-                return 0;
-            } # else continue
-        }
-    }
-    if( defined( $value )) {
-        $config->{$protocol}->{$key} = $value;
-    }
-    return 1;
 }
 
 1;

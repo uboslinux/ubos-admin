@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.327
+pkgver=0.328
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -41,7 +41,7 @@ package() {
 # Code
     install -D -m755 ${startdir}/bin/ubos-admin -t ${pkgdir}/usr/bin/
 
-    for d in AppConfigurationItems Backup Commands Databases DataTransferProtocols HostnameCallbacks \
+    for d in AppConfigurationItems Backup BackupOperations Commands Databases DataTransferProtocols HostnameCallbacks \
              Networking Networking/NetConfigs Roles StaffCallbacks TemplateProcessor; do
         for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
             if [ -r "$f" ]; then

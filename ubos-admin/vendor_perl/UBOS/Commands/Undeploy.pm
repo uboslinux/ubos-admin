@@ -12,8 +12,8 @@ package UBOS::Commands::Undeploy;
 
 use Cwd;
 use File::Basename;
-use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupUtils;
+use Getopt::Long qw( GetOptionsFromArray :config pass_through ); # for parsing by DataTransferProtocol
+use UBOS::BackupOperation;
 use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
@@ -31,31 +31,23 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my @siteIds       = ();
-    my @hosts         = ();
-    my $all           = 0;
-    my $file          = undef;
-    my $backupFile    = undef;
-    my $force         = 0;
-    my $noTls         = undef;
-    my $noTorKey      = undef;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my @siteIds           = ();
+    my @hosts             = ();
+    my $all               = 0;
+    my $file              = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'    => \$verbose,
-            'logConfig=s' => \$logConfigFile,
-            'debug'       => \$debug,
-            'siteid=s'    => \@siteIds,
-            'hostname=s'  => \@hosts,
-            'all'         => \$all,
-            'file=s'      => \$file,
-            'backup=s'    => \$backupFile,
-            'force',      => \$force,
-            'notls'       => \$noTls,
-            'notorkey'    => \$noTorKey );
+            'verbose+'                        => \$verbose,
+            'logConfig=s'                     => \$logConfigFile,
+            'debug'                           => \$debug,
+            'siteid=s'                        => \@siteIds,
+            'hostname=s'                      => \@hosts,
+            'all'                             => \$all,
+            'file=s'                          => \$file );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -67,14 +59,23 @@ sub run {
         || ( @siteIds && $file )
         || ( @hosts && $file )
         || ( $all && ( @siteIds || @hosts || $file ))
-        || (( $force || $noTls || $noTorKey ) && !$backupFile )
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( $backupFile && -e $backupFile && !$force ) {
-        fatal( 'Backup file exists already. Use --force to overwrite.' );
+    my $backupOperation = UBOS::BackupOperation::parseArgumentsPartial( \@args );
+    unless( $backupOperation ) {
+        if( $@ ) {
+            fatal( $@ );
+        } else {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
+    }
+
+    if( @args ) {
+        # some are left over
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     trace( 'Looking for site(s)' );
@@ -148,33 +149,13 @@ sub run {
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    my $backupFailed = 0;
-    if( $backupFile ) {
-        info( 'Backing up' );
-        my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
-        trace( 'ZipFileBackup of sites:', @siteIdsToBackup );
+    info( 'Backing up' );
 
-        my $backup = UBOS::Backup::ZipFileBackup->new();
-        my $status = UBOS::BackupUtils::analyzePerformBackup( $backup, $backupFile, \@siteIds, [], $noTls, $noTorKey );
-        unless( $status ) {
-            warning( 'Backup failed. Not undeploying sites.', $@ );
-            $backupFailed = 1;
-        }
-    }
+    $backupOperation->setBackupThis( [ values %$oldSites ], [] );
+    my $backupSucceeded  = $backupOperation->constructCheckPipeline();
+    $backupSucceeded    &= $backupOperation->doBackup();
 
-    if( $backupFailed ) {
-        info( 'Resuming sites' );
-
-        my $resumeTriggers = {};
-        foreach my $site ( values %$oldSites ) {
-            debugAndSuspend( 'Resuming site', $site->siteId() );
-            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-        }
-        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-        UBOS::Host::executeTriggers( $resumeTriggers );
-        $ret = 0;
-
-    } else {
+    if( $backupSucceeded ) {
         trace( 'Disabling site(s)' );
 
         my $disableTriggers = {};
@@ -205,7 +186,28 @@ sub run {
         unless( $ret ) {
             error( "Undeploy failed." );
         }
+
+    } else {
+        info( 'Resuming sites' );
+
+        my $resumeTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
+        $ret = 0;
     }
+
+    unless( $backupOperation->doUpload()) {
+        error( $@ );
+    }
+
+    unless( $backupOperation->finish()) {
+        error( $@ );
+    }
+
     return $ret;
 }
 
@@ -248,14 +250,18 @@ SSS
 HHH
         },
         'args' => {
-            '--backup <backupfile>' => <<HHH,
+            '--backuptofile <backupfileurl>' => <<HHH,
     Before updating the site(s), back up all data from all affected sites
     by saving all data from all apps and accessories at those sites into
-    local file <backupfile>.
+    the named file <backupfileurl>, which can be a local file name or a URL.
 HHH
-            '--force' => <<HHH,
-    If a backup is to be created, and the backup file exists already,
-    overwrite instead of aborting.
+            '--backuptodirectory <backupdirurl>' => <<HHH,
+SSS
+    Before updating the site(s), back up all data from all affected sites
+    by saving all data from all apps and accessories at those sites into
+    a file with an auto-generated name, which will be located in the
+    directory <backupdirurl>, which can be a local directory name or a URL
+    referring to a directory.
 HHH
             '--notls' => <<HHH,
     If a backup is to be created, and a site uses TLS, do not put the TLS

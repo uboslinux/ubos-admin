@@ -24,16 +24,14 @@ use URI;
 # Factory method.
 # If successful, return instance. If not, return undef.
 # $location: the location to parse
+# $dataTransferConfig: data transfer configuration options
 # $argsP: array of remaining command-line arguments
-# $config: configuration options
-# $configChangedP: set to 1 if this method changed at least one configuration option
 # return: instance or undef
 sub parseLocation {
-    my $self           = shift;
-    my $location       = shift;
-    my $argsP          = shift;
-    my $config         = shift;
-    my $configChangedP = shift;
+    my $self               = shift;
+    my $location           = shift;
+    my $dataTransferConfig = shift;
+    my $argsP              = shift;
 
     my $uri = URI->new( $location );
     if( $uri->scheme() && $uri->scheme() ne protocol() ) {

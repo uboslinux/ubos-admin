@@ -56,7 +56,7 @@ sub colPrintDebug {
 sub colPrintWarning {
     my $c = shift;
 
-    print( colored( $c, 'cyan' ));
+    print( colored( $c, 'magenta' ));
 }
 
 ##
@@ -65,7 +65,7 @@ sub colPrintWarning {
 sub colPrintInfo {
     my $c = shift;
 
-    print( colored( $c, 'white' ));
+    print( colored( $c, 'cyan' ));
 }
 
 ##

@@ -16,8 +16,8 @@ package UBOS::Commands::Update;
 use Cwd;
 use File::Basename;
 use File::Temp;
-use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::BackupUtils;
+use Getopt::Long qw( GetOptionsFromArray :config pass_through ); # for parsing by BackupOperation, DataTransferProtocol
+use UBOS::BackupOperation;
 use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
 use UBOS::Logging;
@@ -36,61 +36,56 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
-    my $verbose          = 0;
-    my $logConfigFile    = undef;
-    my $debug            = undef;
-    my $restIsPackages   = 0;
-    my @packageFiles     = ();
-    my $backupFile       = undef;
-    my $force            = 0;
-    my $noTls            = undef;
-    my $noTorKey         = undef;
-    my $reboot           = 0;
-    my $noreboot         = 0;
-    my $nosync           = 0;
-    my $noPackageUpgrade = 0;
-    my $noSnap           = 0;
-    my $showPackages     = 0;
-    my $stage1Only       = 0;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $restIsPackages    = 0;
+    my @packageFiles      = ();
+    my $reboot            = 0;
+    my $noreboot          = 0;
+    my $nosync            = 0;
+    my $noPackageUpgrade  = 0;
+    my $noSnap            = 0;
+    my $showPackages      = 0;
+    my $stage1Only        = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'         => \$verbose,
-            'logConfig=s'      => \$logConfigFile,
-            'debug'            => \$debug,
-            'pkgFiles'         => \$restIsPackages,
-            'backup=s'         => \$backupFile,
-            'force',           => \$force,
-            'notls'            => \$noTls,
-            'notorkey'         => \$noTorKey,
-            'reboot'           => \$reboot,
-            'noreboot'         => \$noreboot,
-            'nosynchronize'    => \$nosync,
-            'nosnapshot'       => \$noSnap,
-            'showpackages'     => \$showPackages,
-            'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development
-            'stage1Only'       => \$stage1Only ); # This option is not public
+            'verbose+'                        => \$verbose,
+            'logConfig=s'                     => \$logConfigFile,
+            'debug'                           => \$debug,
+            'pkgFiles'                        => \$restIsPackages,
+            'reboot'                          => \$reboot,
+            'noreboot'                        => \$noreboot,
+            'nosynchronize'                   => \$nosync,
+            'nosnapshot'                      => \$noSnap,
+            'showpackages'                    => \$showPackages,
+            'nopackageupgrade'                => \$noPackageUpgrade, # This option is not public, but helpful for development
+            'stage1Only'                      => \$stage1Only ); # This option is not public
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    if( $restIsPackages ) {
-        @packageFiles = @args;
-        @args         = ();
-    }
-
     if(    !$parseOk
-        || @args
         || ( @packageFiles && $noPackageUpgrade )
         || ( $reboot && $noreboot )
-        || (( $force || $noTls || $noTorKey ) && !$backupFile )
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( $backupFile && -e $backupFile && !$force ) {
-        fatal( 'Backup file exists already. Use --force to overwrite.' );
+    my $backupOperation = UBOS::BackupOperation::parseArgumentsPartial( \@args );
+    unless( $backupOperation ) {
+        if( $@ ) {
+            fatal( $@ );
+        } else {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
+    }
+
+    if( $restIsPackages ) {
+        @packageFiles = @args;
+        @args         = ();
     }
 
     # Need to keep a copy of the logConfigFile, new package may not have it any more
@@ -125,7 +120,7 @@ sub run {
 
     UBOS::UpdateBackup::checkReadyOrQuit();
 
-    my $backupFailed = 0;
+    my $backupSucceeded = 1;
 
     if( keys %$oldSites ) {
         info( 'Suspending sites' );
@@ -140,19 +135,10 @@ sub run {
 
         info( 'Backing up' );
 
-        if( $backupFile ) {
-            my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
-            trace( 'ZipFileBackup of sites:', @siteIdsToBackup );
+        my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
+        $backupSucceeded = $backupOperation->performBackupOfSuspendedSites( \@siteIdsToBackup );
 
-            my $backup = UBOS::Backup::ZipFileBackup->new();
-            my $status = UBOS::BackupUtils::analyzePerformBackup( $backup, $backupFile, \@siteIdsToBackup, [], $noTls, $noTorKey );
-            unless( $status ) {
-                error( 'Backup failed. Not updating.', $@ );
-                $backupFailed = 1;
-            }
-        }
-
-        unless( $backupFailed ) {
+        if( $backupSucceeded ) {
             my $updateBackup = UBOS::UpdateBackup->new();
             debugAndSuspend( 'Backup old sites', keys %$oldSites );
             $ret &= $updateBackup->create( $oldSites );
@@ -170,14 +156,10 @@ sub run {
         }
 
     } else {
-        if( $backupFile ) {
-            info( 'No need to suspend or backup sites, none deployed' );
-        } else {
-            info( 'No need to suspend sites, none deployed' );
-        }
+        info( 'No need to suspend or backup sites, none deployed' );
     }
 
-    if( $backupFailed ) {
+    unless( $backupSucceeded ) {
         info( 'Resuming sites' );
 
         my $resumeTriggers = {};
@@ -328,14 +310,18 @@ SSS
 HHH
         },
         'args' => {
-            '--backup <backupfile>' => <<HHH,
-    Before updating the device, back up all data from all deployed sites
-    by saving all data from all apps and accessories into local file
-    <backupfile>.
+            '--backuptofile <backupfileurl>' => <<HHH,
+    Before updating the site(s), back up all data from all affected sites
+    by saving all data from all apps and accessories at those sites into
+    the named file <backupfileurl>, which can be a local file name or a URL.
 HHH
-            '--force' => <<HHH,
-    If a backup is to be created, and the backup file exists already,
-    overwrite instead of aborting.
+            '--backuptodirectory <backupdirurl>' => <<HHH,
+SSS
+    Before updating the site(s), back up all data from all affected sites
+    by saving all data from all apps and accessories at those sites into
+    a file with an auto-generated name, which will be located in the
+    directory <backupdirurl>, which can be a local directory name or a URL
+    referring to a directory.
 HHH
             '--notls' => <<HHH,
     If a backup is to be created, and a site uses TLS, do not put the TLS

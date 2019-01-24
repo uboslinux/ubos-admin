@@ -85,7 +85,7 @@ sub create {
 
     my $ret = 1;
 
-    trace( 'ZipFileBackup::create', $outFile );
+    trace( 'ZipFileBackup::create', $sites, $appConfigs, $noTls, $noTorKey, $outFile );
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{zip}        = Archive::Zip->new();
