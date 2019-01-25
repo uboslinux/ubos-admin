@@ -170,6 +170,9 @@ sub makeCertificateNoRenew {
 
     my $from = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
     if( -e $from ) {
+        unless( -d $LETSENCRYPT_NORENEWAL_DIR ) {
+            UBOS::Utils::mkdirDashP( $LETSENCRYPT_NORENEWAL_DIR );
+        }
         my $to = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
         if( UBOS::Utils::move( $from, $to )) {
             return 1;
