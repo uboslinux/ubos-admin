@@ -12,8 +12,8 @@ package UBOS::LetsEncrypt;
 
 use UBOS::Logging;
 
-my $LETSENCRYPT_RENEW_DIR   = '/etc/letsencrypt/renew';
-my $LETSENCRYPT_NORENEW_DIR = '/etc/letsencrypt/norenew';
+my $LETSENCRYPT_RENEWAL_DIR   = '/etc/letsencrypt/renewal';
+my $LETSENCRYPT_NORENEWAL_DIR = '/etc/letsencrypt/norenewal';
 
 my $_letsEncryptCertificatesStatus = undef; # allocated as needed
 
@@ -168,9 +168,9 @@ sub determineCertificateStatus {
 sub makeCertificateNoRenew {
     my $hostname = shift;
 
-    my $from = "$LETSENCRYPT_RENEW_DIR/$hostname.conf";
+    my $from = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
     if( -e $from ) {
-        my $to = "$LETSENCRYPT_NORENEW_DIR/$hostname.conf";
+        my $to = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
         if( UBOS::Utils::move( $from, $to )) {
             return 1;
         } else {
@@ -191,9 +191,9 @@ sub makeCertificateNoRenew {
 sub makeCertificateRenew {
     my $hostname = shift;
 
-    my $from = "$LETSENCRYPT_NORENEW_DIR/$hostname.conf";
+    my $from = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
     if( -e $from ) {
-        my $to = "$LETSENCRYPT_RENEW_DIR/$hostname.conf";
+        my $to = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
         if( UBOS::Utils::move( $from, $to )) {
             return 1;
         } else {
