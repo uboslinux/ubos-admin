@@ -53,7 +53,6 @@ sub run {
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || @args
         || ( !@siteIds && !@hosts && !$all && !$file )
         || ( @siteIds && @hosts )
         || ( @siteIds && $file )
