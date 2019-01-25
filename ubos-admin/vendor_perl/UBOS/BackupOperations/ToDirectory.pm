@@ -17,6 +17,8 @@ use fields qw( toDirectory );
 use UBOS::Logging;
 use UBOS::Utils;
 
+use UBOS::AbstractDataTransferProtocol;
+
 ##
 # Constructor
 # $toDirectory: name of the destination directory

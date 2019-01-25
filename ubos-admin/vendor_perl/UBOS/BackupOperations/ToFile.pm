@@ -13,6 +13,10 @@ package UBOS::BackupOperations::ToFile;
 use base qw( UBOS::BackupOperation );
 use fields qw();
 
+use UBOS::AbstractDataTransferProtocol;
+use UBOS::Logging;
+use UBOS::Utils;
+
 ##
 # Constructor
 # $toFile: name of the destination file
