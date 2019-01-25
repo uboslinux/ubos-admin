@@ -43,7 +43,13 @@ sub parseLocation {
         return undef;
     }
 
-    $dataTransferConfig->setValue( 'http', 'method', $method );
+    if( $method ) {
+        $method = uc( $method );
+        if( $method ne 'PUT' && $method ne 'POST' ) {
+            fatal( 'HTTP methods may only be PUT or POST, not:', $method );
+        }
+        $dataTransferConfig->setValue( 'http', 'method', $method );
+    }
 
     unless( ref( $self )) {
         $self = fields::new( $self );

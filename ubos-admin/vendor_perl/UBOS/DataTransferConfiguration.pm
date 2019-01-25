@@ -13,6 +13,9 @@ package UBOS::DataTransferConfiguration;
 
 use fields qw( config configChanged configFirstTime configFile noStoreConfig );
 
+use UBOS::Logging;
+use UBOS::Utils;
+
 ##
 # Constructor.
 # $defaultConfigFile: the name of the default configuration file
@@ -148,7 +151,7 @@ sub saveIfNeeded {
     }
     if( $self->{configChanged} ) {
         if( UBOS::Utils::writeJsonToFile( $self->{configFile}, $self->{config}, 0600 )) {
-            if( $self->{firstTime} ) {
+            if( $self->{configFirstTime} ) {
                 info( 'Data transfer config saved as defaults for next time.' );
             } else {
                 info( 'Data transfer config changed. Defaults were updated.' );

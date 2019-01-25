@@ -118,7 +118,7 @@ sub new {
     my $ignoreDataTransferConfig = shift;
     my $argP                     = shift;
 
-    trace( 'UbackupOperation::new', $noTls, $noTorKey, $encryptId, $dataTransferConfigFile, $ignoreDataTransferConfig, @$argP );
+    trace( 'BackupOperation::new', $noTls, $noTorKey, $encryptId, $dataTransferConfigFile, $ignoreDataTransferConfig, @$argP );
 
     unless( ref( $self )) {
         $self = fields::new( $self );
@@ -266,9 +266,6 @@ sub doBackup {
 
     trace( 'BackupOperation::doBackup' );
 
-use Data::Dumper;
-print Dumper( $self );
-
     my $backup = UBOS::Backup::ZipFileBackup->new();
     my $ret    = $backup->create(
             [ values %{$self->{sitesToBackup}} ],
@@ -324,7 +321,9 @@ sub finish {
 
     trace( 'BackupOperation::finish' );
 
-    return $self->{dataTransferConfiguration}->saveIfNeeded();
+    $self->{dataTransferConfiguration}->saveIfNeeded();
+
+    return 1;
 }
 
 ##
@@ -335,7 +334,7 @@ sub mkTempFile {
     my $self = shift;
 
     my $tmp = File::Temp->new( UNLINK => 1, DIR => UBOS::Host::tmpdir() );
-    push @{$self->{tmpFiles}}, $tmp;
+    push @{$self->{deleteFiles}}, $tmp;
 
     return $tmp->filename;
 }

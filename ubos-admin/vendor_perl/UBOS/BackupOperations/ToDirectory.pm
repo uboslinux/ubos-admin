@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 #
 # A BackupOperation to a local or remote directory with a generated file name.
 #
@@ -12,6 +13,9 @@ package UBOS::BackupOperations::ToDirectory;
 
 use base   qw( UBOS::BackupOperation );
 use fields qw( toDirectory );
+
+use UBOS::Logging;
+use UBOS::Utils;
 
 ##
 # Constructor
@@ -62,11 +66,12 @@ sub new {
 sub constructCheckPipeline {
     my $self = shift;
 
+    my $encryptId = $self->{dataTransferConfiguration}->getValue( 'backup', 'encryptid' );
     my $uploadFile = constructFileName(
             $self->{toDirectory},
             $self->{sitesToBackup},
             $self->{appConfigsToBackup},
-            $self->{encryptId} );
+            $encryptId );
 
     $self->{uploadFile} = $uploadFile;
 
@@ -77,8 +82,8 @@ sub constructCheckPipeline {
 # Construct a filename for the backup in a particular directory, given
 # which items are supposed to be backed up, and given encryption.
 # $backupToDirectory: the directory into which to back up
-# @$sitesP: list of Sites to back up
-# @$appConfigsP: list of AppConfigurations to back up
+# %$sitesP: hash of Sites to back up
+# %$appConfigsP: hash of AppConfigurations to back up
 # $encryptId: optional identifier of the encryption key
 # return: file name
 sub constructFileName {
@@ -97,15 +102,17 @@ sub constructFileName {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime( UBOS::Utils::now() );
     my $now = sprintf( "%04d%02d%02d%02d%02d%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec );
 
-    if( @$sitesP == 1 ) {
-        $name = sprintf( "site-%s-%s.ubos-backup", $sitesP->[0]->siteId(), $now );
+    if( keys %$sitesP == 1 ) {
+        my $siteId = ( keys %$sitesP )[0];
+        $name = sprintf( "site-%s-%s.ubos-backup", $siteId, $now );
 
-    } elsif( @$sitesP ) {
+    } elsif( keys %$sitesP ) {
         my $hostId = lc( UBOS::Host::hostId());
         $name = sprintf( "site-multi-%s-%s.ubos-backup", $hostId, $now );
 
-    } elsif( @$appConfigsP == 1 ) {
-        $name = sprintf( "appconfig-%s-%s.ubos-backup", $appConfigsP->[0]->appConfigId(), $now );
+    } elsif( keys %$appConfigsP == 1 ) {
+        my $appConfigId = ( keys %$appConfigsP )[0];
+        $name = sprintf( "appconfig-%s-%s.ubos-backup", $appConfigId, $now );
 
     } else {
         my $hostId = lc( UBOS::Host::hostId());
