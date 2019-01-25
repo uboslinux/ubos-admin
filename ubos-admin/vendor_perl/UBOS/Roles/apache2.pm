@@ -225,9 +225,15 @@ CONTENT
     my $sslCert;
     my $sslCaCert;
 
-    if( $site->hasTls && -e "$sslDir/$siteId.key" && -e "$sslDir/$siteId.crt" ) {
-        # make sure we have the credentials; it might be letsencrypt before
-        # we have them
+    # While this might become a TLS site, we may not have letsencrypt
+    # certs yet at this point; if so, we set it up as http
+
+    my $tlsNow = $site->hasTls && -e "$sslDir/$siteId.key" && -e "$sslDir/$siteId.crt";
+    unless( $tlsNow ) {
+        $port = 80;
+    }
+
+    if( $tlsNow ) {
         $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
@@ -269,7 +275,7 @@ $serverDeclaration
     AliasMatch ^.*\$ "$siteDocumentRoot/index.html"
 CONTENT
 
-    if( $site->hasTls ) {
+    if( $tlsNow ) {
         $siteFileContent .= <<CONTENT;
 
     SSLEngine on
