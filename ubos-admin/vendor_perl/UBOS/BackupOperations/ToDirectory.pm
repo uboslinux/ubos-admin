@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-
 #
 # A BackupOperation to a local or remote directory with a generated file name.
 #
@@ -14,10 +13,9 @@ package UBOS::BackupOperations::ToDirectory;
 use base   qw( UBOS::BackupOperation );
 use fields qw( toDirectory );
 
+use UBOS::AbstractDataTransferProtocol;
 use UBOS::Logging;
 use UBOS::Utils;
-
-use UBOS::AbstractDataTransferProtocol;
 
 ##
 # Constructor
