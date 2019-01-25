@@ -286,12 +286,12 @@ sub restoreAppConfiguration {
     my $appConfigOnHost   = shift;
     my $migrationTable    = shift;
 
+    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigIdOnHost );
+
     my $ret                 = 1;
     my $zip                 = $self->{zip};
     my $appConfigIdInBackup = $appConfigInBackup->appConfigId;
     my $appConfigIdOnHost   = $appConfigOnHost->appConfigId;
-
-    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigIdOnHost );
 
     my $rolesOnHost = UBOS::Host::rolesOnHost();
 
