@@ -565,20 +565,13 @@ sub print {
 
     if( $detail > 1 ) {
         foreach my $isDefault ( 1, 0 ) {
-            my $hasDefault   = grep { $_->isDefault } @{$self->appConfigs};
-            my $defaultSpace = $hasDefault ? '         ' : '';
+            my $hasDefault = grep { $_->isDefault } @{$self->appConfigs};
 
             foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
                 if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
                     colPrint( '    ' );
 
                     my $context = $appConfig->context;
-                    if( $isDefault && $appConfig->isDefault ) {
-                        colPrint( '(default)' );
-                    } else {
-                        colPrint( $defaultSpace );
-                    }
-                    colPrint( ' ' );
                     if( $context ) {
                         colPrint( $context );
                     } elsif( defined( $context )) {
@@ -586,11 +579,14 @@ sub print {
                     } else {
                         colPrint( '<none>' );
                     }
+                    if( $isDefault && $appConfig->isDefault ) {
+                        colPrint( ' default' );
+                    }
                     if( $detail > 2 ) {
-                        colPrint( ' ('. $appConfig->appConfigId . ')' );
+                        colPrint( ' ' . $appConfig->appConfigId );
                     }
                     if( $detail < 3 ) {
-                        colPrint( ': ' . $appConfig->app->packageName );
+                        colPrint( ' : ' . $appConfig->app->packageName );
                         my $nAcc = $appConfig->accessories();
                         if( $nAcc == 1 ) {
                             colPrint( ' (1 accessory)' );
@@ -603,9 +599,9 @@ sub print {
 
                         my $custPoints = $appConfig->customizationPoints;
                         foreach my $installable ( $appConfig->installables ) {
-                            colPrint( '          ' );
+                            colPrint( '        ' );
                             if( $installable == $appConfig->app ) {
-                                colPrint( 'app:      ' );
+                                colPrint( 'app:       ' );
                             } else {
                                 colPrint( 'accessory: ' );
                             }
@@ -617,11 +613,9 @@ sub print {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
                                         my $value = $custPointValueStruct->{value};
 
-                                        if( length( $value ) < 60 ) {
-                                            colPrint( '            customizationpoint: ' . $custPointName . ': ' . $value . "\n" );
-                                        } else {
-                                            colPrint( '            customizationpoint: ' . $custPointName . ': ' . substr( $value, 0, 60 ) . "...\n" );
-                                        }
+                                        colPrint( '            customizationpoint: ' . $custPointName . ': ' );
+                                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+                                        colPrint( "\n" );
                                     }
                                 }
                             }
