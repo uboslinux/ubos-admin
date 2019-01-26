@@ -618,9 +618,9 @@ sub print {
                                         my $value = $custPointValueStruct->{value};
 
                                         if( length( $value ) < 60 ) {
-                                            colPrint( '                     customizationpoint ' . $custPointName . ': ' . $value . "\n" );
+                                            colPrint( '            customizationpoint: ' . $custPointName . ': ' . $value . "\n" );
                                         } else {
-                                            colPrint( '                     customizationpoint ' . $custPointName . ': ' . substr( $value, 0, 60 ) . "...\n" );
+                                            colPrint( '            customizationpoint: ' . $custPointName . ': ' . substr( $value, 0, 60 ) . "...\n" );
                                         }
                                     }
                                 }
