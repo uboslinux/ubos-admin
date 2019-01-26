@@ -543,9 +543,6 @@ sub print {
     my $self   = shift;
     my $detail = shift || 2;
 
-    if( $detail > 1 ) {
-        colPrint( 'Site ' );
-    }
     colPrint( $self->hostname );
     if( $self->hasTls ) {
         colPrint( ' (TLS)' );
