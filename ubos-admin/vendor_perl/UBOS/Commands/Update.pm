@@ -135,7 +135,7 @@ sub run {
 
         info( 'Backing up' );
 
-        $backupOperation->setSitesToBackUp( %oldSites );
+        $backupOperation->setSitesToBackUp( $oldSites );
         $backupSucceeded &= $backupOperation->constructCheckPipeline();
         $backupSucceeded &= $backupOperation->doBackup();
 
