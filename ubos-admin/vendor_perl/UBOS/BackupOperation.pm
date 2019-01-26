@@ -235,7 +235,7 @@ sub setSitesToBackUp {
     $self->{appConfigsToBackup}   = {};
 
     foreach my $site ( values %$sitesToBackup ) {
-        map{ $self->{appConfigsToBackup}->{ $_->appConfigId() } = $_; } $site->appConfigs();
+        map{ $self->{appConfigsToBackup}->{ $_->appConfigId() } = $_; } @{$site->appConfigs()};
     }
 }
 
