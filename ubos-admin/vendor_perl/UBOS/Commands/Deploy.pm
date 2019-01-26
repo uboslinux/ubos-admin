@@ -297,7 +297,7 @@ sub run {
 
     info( 'Backing up, undeploying and redeploying' );
 
-    $backupOperation->setBackupThis( \@newSites, [] );
+    $backupOperation->setSitesToBackUp( \%newSitesHash );
     my $backupSucceeded  = $backupOperation->constructCheckPipeline();
     $backupSucceeded    &= $backupOperation->doBackup();
 

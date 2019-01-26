@@ -150,7 +150,7 @@ sub run {
 
     info( 'Backing up' );
 
-    $backupOperation->setBackupThis( [ values %$oldSites ], [] );
+    $backupOperation->setSitesToBackUp( $oldSites );
     my $backupSucceeded  = $backupOperation->constructCheckPipeline();
     $backupSucceeded    &= $backupOperation->doBackup();
 

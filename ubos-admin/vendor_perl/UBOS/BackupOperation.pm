@@ -17,16 +17,23 @@ package UBOS::BackupOperation;
 
 use fields qw( dataTransferConfiguration dataTransferProtocol
                sitesToBackup appConfigsToBackup
+               sitesToSuspendResume
                stageToEncryptFile
                stageToUploadFile uploadFile
                deleteFiles );
 
-# stageToEncryptFile: the output of the backup process before encryption
-# stageToUploadFile:  the output of the encryption process before upload;
-#                     same as stageToEncryptFile if no encryption
-# uploadFile:         full network path of the uploaded file's final destination
-# deleteFiles:        keep those File::Temp objects around so they won't get
-#                     deleted prematurely
+# sitesToBackup:        hash of the sites whose site information (not appconfig)
+#                       should be written into the backup
+# appConfigsToBackup:   hash of the appconfigs whose information (not site)
+#                       should be written into the backup
+# sitesToSuspendResume: if sites are backed up, same as sitesToBackup
+#                       if appconfigs are backed up, their sites
+# stageToEncryptFile:   the output of the backup process before encryption
+# stageToUploadFile:    the output of the encryption process before upload;
+#                       same as stageToEncryptFile if no encryption
+# uploadFile:           full network path of the uploaded file's final destination
+# deleteFiles:          keep those File::Temp objects around so they won't get
+#                       deleted prematurely
 
 use Getopt::Long qw( GetOptionsFromArray :config pass_through );
 use UBOS::BackupOperations::NoOp;
@@ -158,10 +165,11 @@ sub analyze {
 
     trace( 'BackupOperation::analyze', @siteIds, @appConfigIds );
 
-    # first make sure there is no overlap between them
-    my $sites      = {};
-    my $appConfigs = {};
+    my $sites                = {};
+    my $appConfigs           = {};
+    my $sitesToSuspendResume = {};
 
+    # first make sure there is no overlap between them
     foreach my $appConfigId ( @appConfigIds ) {
         my $appConfig = UBOS::Host::findAppConfigurationByPartialId( $appConfigId );
         unless( $appConfig ) {
@@ -171,6 +179,9 @@ sub analyze {
             fatal( 'Appconfigid specified more than once:', $appConfig->appConfigId );
         }
         $appConfigs->{$appConfig->appConfigId} = $appConfig;
+
+        my $site = $appConfig->site();
+        $sitesToSuspendResume->{$site->siteId} = $site;
     }
     foreach my $siteId ( @siteIds ) {
         my $site = UBOS::Host::findSiteByPartialId( $siteId );
@@ -180,11 +191,13 @@ sub analyze {
         if( exists( $sites->{$site->siteId} )) {
             fatal( 'Siteid specified more than once:', $site->siteId );
         }
-        $sites->{$site->siteId} = $site;
+        $sites->{$site->siteId}                = $site;
+        $sitesToSuspendResume->{$site->siteId} = $site;
     }
 
     if( !@appConfigIds && !@siteIds ) {
-        $sites = UBOS::Host::sites();
+        $sites                = UBOS::Host::sites();
+        $sitesToSuspendResume = $sites;
     }
     foreach my $site ( values %$sites ) {
         my $appConfigsAtSite = $site->appConfigs;
@@ -200,29 +213,30 @@ sub analyze {
     trace( 'Analyzed what needs backing up. Sites: ',      values %$sites );
     trace( 'Analyzed what needs backing up. AppConfigs: ', values %$appConfigs );
 
-    $self->{sitesToBackup}      = $sites;
-    $self->{appConfigsToBackup} = $appConfigs;
+    $self->{sitesToBackup}        = $sites;
+    $self->{appConfigsToBackup}   = $appConfigs;
+    $self->{sitesToSuspendResume} = $sitesToSuspendResume;
 
     return 1;
 }
 
 ##
-# As an alternative to analyze, if we know already what we need to back up,
-# specify it here.
-# @$sitesToBackup: array of sites to back up
-# @$appConfigsToBackup: array of AppConfigurations to back up
-sub setBackupThis {
-    my $self               = shift;
-    my @sitesToBackup      = @{shift()};
-    my @appConfigsToBackup = @{shift()};
+# As an alternative to analyze, set the sites to backup here. This
+# implies all the AppConfigurations at all those sites as well.
+# %$sitesToBackup: hash of sites to back up: siteId to Site
+sub setSitesToBackUp {
+    my $self          = shift;
+    my $sitesToBackup = shift;
 
-    trace( 'BackupOperation::setBackupThis', @sitesToBackup, @appConfigsToBackup );
+    trace( 'BackupOperation::setSitesToBackUp', keys %$sitesToBackup );
 
-    $self->{sitesToBackup}      = {};
-    $self->{appConfigsToBackup} = {};
+    $self->{sitesToBackup}        = $sitesToBackup;
+    $self->{sitesToSuspendResume} = $sitesToBackup; # same
+    $self->{appConfigsToBackup}   = {};
 
-    map{ $self->{sitesToBackup     }->{ $_->siteId()      } = $_; } @sitesToBackup;
-    map{ $self->{appConfigsToBackup}->{ $_->appConfigId() } = $_; } @appConfigsToBackup;
+    foreach my $site ( values %$sitesToBackup ) {
+        map{ $self->{appConfigsToBackup}->{ $_->appConfigId() } = $_; } site->appConfigs();
+    }
 }
 
 ##
@@ -256,6 +270,17 @@ sub constructCheckPipeline {
 
     my $ret = $self->{dataTransferProtocol}->isValidToFile( $self->{uploadFile} );
     return $ret;
+}
+
+##
+# Perform a backup while sites are suspended already.
+# %$sitesToBackupP: hash of sites to back up
+# return: true or false
+sub performBackupOfSuspendedSites {
+    my $self           = shift;
+    my $sitesToBackupP = shift;
+
+    trace( 'BackupOperation::performBackupOfSuspendedSites' );
 }
 
 ##

@@ -135,8 +135,9 @@ sub run {
 
         info( 'Backing up' );
 
-        my @siteIdsToBackup = map { $_->siteId() } values %$oldSites;
-        $backupSucceeded = $backupOperation->performBackupOfSuspendedSites( \@siteIdsToBackup );
+        $backupOperation->setSitesToBackUp( %oldSites );
+        $backupSucceeded &= $backupOperation->constructCheckPipeline();
+        $backupSucceeded &= $backupOperation->doBackup();
 
         if( $backupSucceeded ) {
             my $updateBackup = UBOS::UpdateBackup->new();
