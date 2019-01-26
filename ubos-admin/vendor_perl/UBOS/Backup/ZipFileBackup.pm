@@ -286,7 +286,7 @@ sub restoreAppConfiguration {
     my $appConfigOnHost   = shift;
     my $migrationTable    = shift;
 
-    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigIdInBackup, $appConfigIdOnHost );
+    trace( 'ZipFileBackup::restoreAppConfiguration', $siteIdInBackup, $siteIdOnHost, $appConfigInBackup, $appConfigOnHost );
 
     my $ret                 = 1;
     my $zip                 = $self->{zip};
