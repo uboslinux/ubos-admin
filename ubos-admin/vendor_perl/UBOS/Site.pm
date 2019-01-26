@@ -259,16 +259,7 @@ sub hasTls {
     my $self = shift;
 
     my $json = $self->{json};
-    if( !defined( $json->{tls} )) {
-        return 0;
-    }
-    if( defined( $json->{tls}->{key} )) {
-        return 1;
-    }
-    if( defined( $json->{tls}->{letsencrypt} ) && $json->{tls}->{letsencrypt} ) {
-        return 1;
-    }
-    return 0;
+    return defined( $json->{tls} );
 }
 
 ##
