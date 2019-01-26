@@ -235,7 +235,7 @@ sub setSitesToBackUp {
     $self->{appConfigsToBackup}   = {};
 
     foreach my $site ( values %$sitesToBackup ) {
-        map{ $self->{appConfigsToBackup}->{ $_->appConfigId() } = $_; } site->appConfigs();
+        map{ $self->{appConfigsToBackup}->{ $_->appConfigId() } = $_; } $site->appConfigs();
     }
 }
 
@@ -270,17 +270,6 @@ sub constructCheckPipeline {
 
     my $ret = $self->{dataTransferProtocol}->isValidToFile( $self->{uploadFile} );
     return $ret;
-}
-
-##
-# Perform a backup while sites are suspended already.
-# %$sitesToBackupP: hash of sites to back up
-# return: true or false
-sub performBackupOfSuspendedSites {
-    my $self           = shift;
-    my $sitesToBackupP = shift;
-
-    trace( 'BackupOperation::performBackupOfSuspendedSites' );
 }
 
 ##

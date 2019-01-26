@@ -43,6 +43,20 @@ sub analyze {
 
 ##
 # Override and do nothing
+sub setSitesToBackUp {
+
+    return 1;
+}
+
+##
+# Override and do nothing
+sub getSitesToSuspendResume {
+
+    return 1;
+}
+
+##
+# Override and do nothing
 sub constructCheckPipeline {
 
     return 1;
