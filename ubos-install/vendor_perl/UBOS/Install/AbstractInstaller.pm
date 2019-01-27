@@ -568,7 +568,7 @@ sub installPackages {
 #    print $tmpConfigFile UBOS::Utils::slurpFile( $pacmanConfigFile );
 #    close $tmpConfigFile;
 
-#    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target )); 
+#    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target ));
 
     my $cmd = "pacman"
 #            . " --sysroot '$target'"
@@ -793,6 +793,11 @@ sub configureNetworkd {
 
     UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' );
     UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' );
+
+    # remove [!UNAVAIL=return]
+    my $nsswitch = UBOS::Utils::slurpFile( $target . '/etc/nsswitch.conf' );
+    $nsswitch =~ s/\[!UNAVAIL=return\] *//;
+    UBOS::Utils::saveFile( $target . '/etc/nsswitch.conf', $nsswitch );
 
     return 0;
 }
