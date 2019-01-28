@@ -365,7 +365,7 @@ sub exportLocalDatabase {
     my $cmd = "mysqldump -u $rootUser -p$rootPass $dbName";
     if( $compress ) {
         if( $compress eq 'gz' ) {
-            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
+            $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
             $cmd .= ' | gzip - ';
         } else {
             warning( 'Unknown compression method:', $compress );
