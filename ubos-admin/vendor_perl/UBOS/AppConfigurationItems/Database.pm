@@ -153,7 +153,7 @@ sub backup {
             $compress );
 
     if( $exportedFile ) {
-        my $ret = $backupContext->addFile( $exportedFile->filename, $bucket );
+        my $ret = $backupContext->addFile( $exportedFile, $bucket );
 
         push @$filesToDelete, $exportedFile;
 

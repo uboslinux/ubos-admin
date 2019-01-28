@@ -360,7 +360,7 @@ sub exportLocalDatabase {
     }
 
     my $tmpDir = UBOS::Host::tmpdir();
-    my $fileName;
+    my $file;
 
     my $cmd = "mysqldump -u $rootUser -p$rootPass $dbName";
     if( $compress ) {
@@ -369,11 +369,13 @@ sub exportLocalDatabase {
             $cmd .= ' | gzip - ';
         } else {
             warning( 'Unknown compression method:', $compress );
-            $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+            $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
         }
     } else {
-        $fileName = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
+        $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
     }
+    my $fileName = $file->filename();
+
     $cmd .= " > '$fileName'";
 
     if( UBOS::Utils::myexec( $cmd )) {
