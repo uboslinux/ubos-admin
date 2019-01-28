@@ -350,20 +350,28 @@ sub importLocalDatabase {
 
     trace( 'PostgreSqlDriver::importLocalDatabase', $dbName, $fileName, $compress, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType );
 
+    # The tmp file ($fileName) is not accessible to user postgres, so
+    # executeCmdAsAdmin cannot easily be used; do it without it here
+
     my $cmd;
     if( $compress ) {
         if( $compress eq 'gz' ) {
-            $cmd = "zcat '$fileName' | psql -v HISTFILE=/dev/null '$dbName'";
+            $cmd = "zcat '$fileName' | su - postgres -c \"psql -v HISTFILE=/dev/null '$dbName'\"";
         } else {
             error( 'Unknown compression method:', $compress );
             return 0;
         }
     } else {
-        $cmd = "psql -v HISTFILE=/dev/null '$dbName' < '$fileName'";
+        $cmd = "cat '$fileName' | su - postgres -c \"psql -v HISTFILE=/dev/null '$dbName'\"";
     }
 
-    my $ret = executeCmdAsAdmin( $cmd );
-
+    my $ret = 1;
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
+        $ret = 0;
+        $@   = $err;
+    }
     return $ret;
 }
 

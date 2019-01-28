@@ -224,6 +224,7 @@ sub run {
 
 ##
 # Call if we restore appconfigurations, not sites
+# return: 1 if ok, 0 if error
 sub restoreAppConfigs {
     my @appConfigIds    = @{shift()};
     my @toSiteIds       = @{shift()};
@@ -423,6 +424,7 @@ sub restoreAppConfigs {
 
 ##
 # Called if we restore entire sites
+# return: 1 if ok, 0 if error
 sub restoreSites {
     my @siteIds         = @{shift()};
     my @hostnames       = @{shift()};
