@@ -62,13 +62,13 @@ sub parseArgumentsPartial {
 
     my $parseOk = GetOptionsFromArray(
             $argP,
-            'backuptofile|tofile=s',             => \$backupToFile,
-            'backuptodirectory|todirectory=s'    => \$backupToDirectory,
-            'nobackuptls'                        => \$noTls,
-            'nobackuptorkey'                     => \$noTorKey,
-            'backupencryptid|encryptid=s'        => \$encryptId,
-            'backupdatatransferconfigfile=s',    => \$dataTransferConfigFile,
-            'ignorebackupdatatransferconfigfile' => \$ignoreDataTransferConfig );
+            'backuptofile|tofile=s',          => \$backupToFile,
+            'backuptodirectory|todirectory=s' => \$backupToDirectory,
+            'nobackuptls'                     => \$noTls,
+            'nobackuptorkey'                  => \$noTorKey,
+            'backupencryptid|encryptid=s'     => \$encryptId,
+            'backupdatatransferconfigfile=s', => \$dataTransferConfigFile,
+            'nobackupdatatransferconfigfile'  => \$ignoreDataTransferConfig );
 
     if(     !$parseOk
         || ( $backupToFile && $backupToDirectory )

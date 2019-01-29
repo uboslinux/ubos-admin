@@ -200,25 +200,25 @@ HHH
             '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
 HHH
-            '--notls' => <<HHH,
+            '--nobackuptls' => <<HHH,
     If a site uses TLS, do not put the TLS key and certificate into the
     backup.
 HHH
-            '--notorkey' => <<HHH,
+            '--nobackuptorkey' => <<HHH,
     If a site is on the Tor network, do not put the Tor key into the
     backup.
 HHH
-            '--encryptid <id>' => <<HHH,
+            '--backupencryptid <id>' => <<HHH,
     If given, the backup file will be gpg-encrypted,
     using GPG key id <id> in the current user's GPG keychain.
 HHH
-            '--config <configfile>' => <<HHH,
-    Use an alternate configuration file than the default.
+            '--backupdatatransferconfigfile <configfile>' => <<HHH,
+    Use an alternate data transfer configuration file than the default.
 HHH
-            '--nostoreconfig' => <<HHH,
+            '--nobackupdatatransferconfigfile' => <<HHH,
     Do not store credentials or other configuration for future
     reuse. Do not use already-stored configuration information either.
-    If this is given, do not specify --config <configfile>.
+    If this is given, do not specify --backupdatatransferconfigfile <configfile>.
 HHH
             '--siteid <siteid>' => <<HHH,
     Only back up the site with site id <siteid>. This option may be
