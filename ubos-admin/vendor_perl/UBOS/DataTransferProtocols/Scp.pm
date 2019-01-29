@@ -43,8 +43,8 @@ sub parseLocation {
     my $limit  = undef;
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'idfile|i=s' => \$idfile,
-            'limit=s'    => \$limit );
+            'idfile=s' => \$idfile,
+            'limit=s'  => \$limit );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -120,10 +120,11 @@ sub send {
 
     $cmd .=  "'$localFile'";
 
-    my $uri  = URI->new( $toFile ); # scp://user@host/path -> user@host:path
-    my $dest = $uri->userinfo();    # we know it's there
-    $dest .= '@' . $uri->authority();
-    $dest .= ':' . $uri->path();
+    my $uri      = URI->new( $toFile ); # scp://user@host/path -> user@host:path
+    my $dest     = $uri->authority();
+    my $destPath = $uri->path();
+    $destPath =~ s!^/!!; # remove leading slash
+    $dest .= ":$destPath";
 
     info( 'Uploading to', $dest );
 
@@ -131,7 +132,7 @@ sub send {
 
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, undef, \$err )) {
-        error( 'Upload failed to:', $dest, $err );
+        $@ = "Upload failed to: $toFile : $err";
         return 0;
     }
     return 1;

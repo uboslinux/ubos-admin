@@ -121,11 +121,13 @@ sub send {
         $cmd .= " --bwlimit '$limit'"; # $data transfer limit
     }
 
-    $cmd .=  "'$localFile'";
+    $cmd .=  " '$localFile'";
 
-    my $uri  = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
-    my $dest = $uri->authority();
-    $dest .= ':' . $uri->path();
+    my $uri      = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
+    my $dest     = $uri->authority();
+    my $destPath = $uri->path();
+    $destPath =~ s!^/!!; # remove leading slash
+    $dest .= ":$destPath";
 
     info( 'Uploading to', $dest );
 
@@ -133,7 +135,7 @@ sub send {
 
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, undef, \$err )) {
-        error( 'Upload failed to:', $dest, $err );
+        $@ = "Upload failed to: $toFile : $err";
         return 0;
     }
     return 1;

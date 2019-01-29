@@ -113,14 +113,11 @@ sub send {
         $cmd .= " -l '$limit'"; # $data transfer limit
     }
 
-    my $uri  = URI->new( $toFile ); # sftp://user@host/path
-
-    $cmd .= ' ' . $uri->authority();
-
-    my $dest = $uri->userinfo();    # we know it's there
-    $dest .= '@' . $uri->authority();
-    $dest .= ':' . $uri->path();
-
+    my $uri      = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
+    my $dest     = $uri->authority();
+    my $destPath = $uri->path();
+    $destPath =~ s!^/!!; # remove leading slash
+    $dest .= ":$destPath";
 
     $cmd .= " '$toFile'";
 
@@ -128,7 +125,7 @@ sub send {
 
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, undef, \$err )) {
-        error( 'Upload failed to:', $toFile, $err );
+        $@ = "Upload failed to: $toFile : $err";
         return 0;
     }
     return 1;
