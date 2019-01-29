@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# The HTTPS data transfer protocol.
+# The secure-copy data transfer protocol.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -8,7 +8,7 @@
 use strict;
 use warnings;
 
-package UBOS::DataTransferProtocols::Https;
+package UBOS::DataTransferProtocols::Scp;
 
 use base qw( UBOS::AbstractDataTransferProtocol );
 use fields;
@@ -35,21 +35,31 @@ sub parseLocation {
     if( !$uri->scheme() || $uri->scheme() ne protocol() ) {
         return undef;
     }
+    if( !$uri->userinfo()) {
+        fatal( 'Need to provide user info in the URL, e.g. scp://joe@example.com/destination' );
+    }
 
-    my $method = undef;
+    my $idfile = undef;
+    my $limit  = undef;
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'method', => \$method );
+            'idfile|i=s' => \$idfile,
+            'limit=s'    => \$limit );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
 
-    if( $method ) {
-        $method = uc( $method );
-        if( $method ne 'PUT' && $method ne 'POST' ) {
-            fatal( 'HTTPS methods may only be PUT or POST, not:', $method );
+    if( $idfile ) {
+        unless( -r $idfile ) {
+            fatal( 'File cannot be read:', $idfile );
         }
-        $dataTransferConfig->setValue( 'https', 'method', $method );
+        $dataTransferConfig->setValue( 'scp', 'idfile', $idfile );
+    }
+    if( $limit ) {
+        unless( $limit =~ m!^\d+$! ) {
+            fatal( 'Limit must be a positive integer:', $limit );
+        }
+        $dataTransferConfig->setValue( 'scp', 'limit', $limit );
     }
 
     unless( ref( $self )) {
@@ -92,18 +102,36 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $cmd = "curl -T '$localFile'";
-    my $method = $dataTransferConfig->getValue( 'https', 'method' );
-    if( $method ) {
-        $cmd .= " -X $method";
-    }
-    $cmd .= " '$toFile'";
+    my $idfile = $dataTransferConfig->getValue( 'scp', 'idfile' );
+    my $limit  = $dataTransferConfig->getValue( 'scp', 'limit' );
 
-    info( 'Uploading to', $toFile );
+    my $cmd = 'scp';
+    $cmd .= ' -B'; # batch mode
+    $cmd .= ' -C'; # compression
+    $cmd .= ' -p'; # preserve timestamps etc
+    $cmd .= ' -q'; # quiet mode
+
+    if( $idfile ) {
+        $cmd .= " -i '$idfile'"; # private key
+    }
+    if( $limit ) {
+        $cmd .= " -l '$limit'"; # $data transfer limit
+    }
+
+    $cmd .=  "'$localFile'";
+
+    my $uri  = URI->new( $toFile ); # scp://user@host/path -> user@host:path
+    my $dest = $uri->userinfo();    # we know it's there
+    $dest .= '@' . $uri->authority();
+    $dest .= ':' . $uri->path();
+
+    info( 'Uploading to', $dest );
+
+    $cmd .= " '$dest'";
 
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, undef, \$err )) {
-        error( 'Upload failed to:', $toFile, $err );
+        error( 'Upload failed to:', $dest, $err );
         return 0;
     }
     return 1;
@@ -113,7 +141,7 @@ sub send {
 # The supported protocol.
 # return: the protocol
 sub protocol {
-    return 'https';
+    return 'scp';
 }
 
 ##
@@ -121,8 +149,10 @@ sub protocol {
 # return: description
 sub description {
     return <<TXT;
-The HTTPS protocol (HTTP over SSL/TLS). Options:
-    --method <method> : use the HTTP method <method>.
+The scp protocol. Options:
+    --limit <limit>   : limits the used bandwidth, specified in Kbit/s.
+    --idfile <idfile> : selects the file from which the identity (private key)
+                        for public key authentication is read.
 TXT
 }
 

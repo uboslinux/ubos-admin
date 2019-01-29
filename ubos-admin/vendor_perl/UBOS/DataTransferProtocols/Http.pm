@@ -11,6 +11,7 @@ use warnings;
 package UBOS::DataTransferProtocols::Http;
 
 use base qw( UBOS::AbstractDataTransferProtocol );
+use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
@@ -121,7 +122,7 @@ sub protocol {
 sub description {
     return <<TXT;
 The HTTP protocol. Options:
-    --method <method> to specify a non-default HTTP method to use.
+    --method <method> : use the HTTP method <method>.
 TXT
 }
 

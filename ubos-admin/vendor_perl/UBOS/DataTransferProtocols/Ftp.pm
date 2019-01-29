@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# A transfer protocol to/from a local file.
+# The SFTP data transfer protocol.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -8,13 +8,11 @@
 use strict;
 use warnings;
 
-package UBOS::DataTransferProtocols::File;
+package UBOS::DataTransferProtocols::Ftp;
 
 use base qw( UBOS::AbstractDataTransferProtocol );
-use fields qw( force );
+use fields qw( passiveMode );
 
-use Cwd 'abs_path';
-use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
 use UBOS::Utils;
@@ -34,14 +32,17 @@ sub parseLocation {
     my $argsP              = shift;
 
     my $uri = URI->new( $location );
-    if( $uri->scheme() && $uri->scheme() ne protocol() ) {
+    if( !$uri->scheme() || $uri->scheme() ne protocol() ) {
         return undef;
     }
+    if( !$uri->userinfo()) {
+        fatal( 'Need to provide user info in the URL, e.g. ftp://joe@example.com/destination' );
+    }
 
-    my $force = undef; # let's not put this into the config store
-    my $parseOk = GetOptionsFromArray(
+    my $passiveMode = undef;
+    my $parseOk     = GetOptionsFromArray(
             $argsP,
-            'force', => \$force );
+            'passive' => \$passiveMode );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -50,7 +51,7 @@ sub parseLocation {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $location, protocol() );
-    $self->{force} = $force;
+    $self->{passiveMode} = $passiveMode ? 1 : 0;
 
     return $self;
 }
@@ -61,7 +62,7 @@ sub parseLocation {
 sub isLocal {
     my $self = shift;
 
-    return 1;
+    return 0;
 }
 
 ##
@@ -72,23 +73,6 @@ sub isValidToFile {
     my $self   = shift;
     my $toFile = shift;
 
-    my $uri = URI->new( $toFile );
-    $toFile = $uri->path();
-
-    if( -e $toFile ) {
-        if( -d $toFile ) {
-            fatal( 'Specified output file is a directory:', $toFile );
-
-        } elsif( !$self->{force} ) {
-            fatal( 'Output file exists already. Use --force to overwrite.' );
-        }
-    }
-
-    my $parent = dirname( $toFile );
-    unless( -d $parent ) {
-        fatal( 'Parent directory does not exist for:', $toFile );
-    }
-
     return 1;
 }
 
@@ -96,26 +80,36 @@ sub isValidToFile {
 # Send a local file to location via this protocol.
 # $localFile: the local file
 # $toFile: the ultimate destination as a file URL
-# $config: configuration options
+# $dataTransferConfig: data transfer configuration options
 # return: success or fail
 sub send {
-    my $self      = shift;
-    my $localFile = shift;
-    my $toFile    = shift;
-    my $config    = shift;
+    my $self               = shift;
+    my $localFile          = shift;
+    my $toFile             = shift;
+    my $dataTransferConfig = shift;
 
-    my $uri = URI->new( $toFile );
-    $toFile = $uri->path();
+    my $uri  = URI->new( $toFile ); # sftp://user@host/path
 
-    if( abs_path( $localFile ) eq abs_path( $toFile )) {
-        trace( 'No need to copy file:', $localFile );
-        return 1; # nothing to do
+    my $cmd = 'ftp -n';
+    $cmd .= ' ' . $uri->authority();
+
+    my $script = 'user ' . $uri->userinfo() . "\n";
+    $script .= 'pass ' . $uri->userinfo() . "\n";
+    $script .= "binary\n";
+
+    if( $self->{passiveMode} ) {
+        $script .= "passive\n";
     }
+    $script .= 'put ' . $localFile . ' ' . $uri->path() . "\n";
+    $script .= "quit\n";
 
-    my $cmd = "cp --reflink=auto '$localFile' '" . $toFile . "'";
+print( "XXX ftp script:\n" . $script );
+
+    info( 'Uploading to', $toFile );
+
     my $err;
-    if( UBOS::Utils::myexec( $cmd, undef, undef, \$err ) && $err !~ m!are the same file! ) {
-        error( 'Copy failed to:', $self->{path}, ':', $err );
+    if( UBOS::Utils::myexec( $cmd, $script, undef, \$err )) {
+        error( 'Upload failed to:', $toFile, $err );
         return 0;
     }
     return 1;
@@ -125,7 +119,7 @@ sub send {
 # The supported protocol.
 # return: the protocol
 sub protocol {
-    return 'file';
+    return 'sftp';
 }
 
 ##
@@ -133,9 +127,8 @@ sub protocol {
 # return: description
 sub description {
     return <<TXT;
-Local file copy. Options:
-    --force : overwrite an already-existing file.
-    --force : overwrite an already-existing file.
+The FTP protocol. Options:
+    --passive : use passive mode
 TXT
 }
 
