@@ -1,0 +1,17 @@
+developer=http://indiecomputing.com/
+url=${developer}
+maintainer=${developer}
+pkgname=$(basename $(pwd))
+pkgver=0.1
+pkgrel=1
+pkgdesc="Adds rsync-over-ssh data transfer protocol to ubos-admin"
+arch=('any')
+license=("GPL")
+options=('!strip')
+depends=('ubos-admin' 'rsync')
+_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
+
+package() {
+# Code
+    install -D -m0755 ${startdir}/vendor_perl/UBOS/DataTransferProtocols/* -t ${pkgdir}${_vendor_perl}/UBOS/DataTransferProtocols/
+}
