@@ -119,10 +119,10 @@ sub send {
 
     my $out;
     if( UBOS::Utils::myexec( $cmd, $script, \$out, \$out )) {
-        error( 'Upload failed to:', $toFile, $out );
+        $@ = 'Upload failed to: ' . $toFile . ' : ' . $out;
         return 0;
     } elsif( $out =~ m!Permission denied! || $out =~ m!No such! ) {
-        error( 'Upload failed to:', $toFile, $out );
+        $@ = 'Upload failed to: ' . $toFile . ' : ' . $out;
         return 0;
     }
     return 1;

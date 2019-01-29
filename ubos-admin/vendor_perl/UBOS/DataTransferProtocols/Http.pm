@@ -103,7 +103,7 @@ sub send {
 
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, undef, \$err )) {
-        error( 'Upload failed to:', $toFile, $err );
+        $@ = 'Upload failed to: ' . $toFile . ' : ' . $err;
         return 0;
     }
     return 1;
