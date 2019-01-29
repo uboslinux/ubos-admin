@@ -93,7 +93,7 @@ sub send {
     my $uri  = URI->new( $toFile ); # ftp://user@host/path
 
     my $cmd  = 'ftp -n';
-    $cmd    .= ' ' . $uri->authority();
+    $cmd    .= ' ' . $uri->host();
 
     my $script  = 'quote user ' . $uri->userinfo() . "\n";
     $script    .= 'quote pass ' . $uri->userinfo() . "\n";
@@ -107,7 +107,7 @@ sub send {
     if( $localDir ) {
         $script .= "lcd $localDir\n";
     }
-    my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( File::Spec->rel2abs( $toFile ) );
+    my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( $uri->path() );
     if( $remoteDir ) {
         $script .= "cd $remoteDir\n";
     }
@@ -115,13 +115,14 @@ sub send {
     $script .= "put $localFilename $remoteFilename\n";
     $script .= "quit\n";
 
-print( "XXX ftp script:\n" . $script );
-
     info( 'Uploading to', $toFile );
 
-    my $err;
-    if( UBOS::Utils::myexec( $cmd, $script, undef, \$err )) {
-        error( 'Upload failed to:', $toFile, $err );
+    my $out;
+    if( UBOS::Utils::myexec( $cmd, $script, \$out, \$out )) {
+        error( 'Upload failed to:', $toFile, $out );
+        return 0;
+    } elsif( $out =~ m!Permission denied! || $out =~ m!No such! ) {
+        error( 'Upload failed to:', $toFile, $out );
         return 0;
     }
     return 1;
