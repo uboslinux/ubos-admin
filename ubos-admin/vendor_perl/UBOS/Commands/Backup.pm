@@ -173,6 +173,7 @@ SSS
     To determine which are available on this device, run the command
     'ubos-admin list-data-transfer-protocols'. Some of those may provide
     additional options to this command.
+
     Unless --nostoreconfig is given, the provided encryption and data transfer
     options will be stored in a config file for reuse in the future;
     this allows subsequent invocations of the same command to be simpler.
