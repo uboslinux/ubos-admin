@@ -92,12 +92,12 @@ sub send {
 
     my $uri  = URI->new( $toFile ); # ftp://user@host/path
 
-    my $cmd = 'ftp -n';
-    $cmd .= ' ' . $uri->authority();
+    my $cmd  = 'ftp -n';
+    $cmd    .= ' ' . $uri->authority();
 
-    my $script = 'quote user ' . $uri->userinfo() . "\n";
-    $script .= 'quote pass ' . $uri->userinfo() . "\n";
-    $script .= "binary\n";
+    my $script  = 'quote user ' . $uri->userinfo() . "\n";
+    $script    .= 'quote pass ' . $uri->userinfo() . "\n";
+    $script    .= "binary\n";
 
     if( $self->{passiveMode} ) {
         $script .= "passive\n";
@@ -105,14 +105,14 @@ sub send {
 
     my( $localFilename, $localDir, $localSuffix ) = fileparse( File::Spec->rel2abs( $localFile ) );
     if( $localDir ) {
-        $script .= 'lcd ' . $localDir;
+        $script .= "lcd $localDir\n";
     }
     my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( File::Spec->rel2abs( $toFile ) );
     if( $remoteDir ) {
-        $script .= 'cd ' . $remoteDir;
+        $script .= "cd $remoteDir\n";
     }
 
-    $script .= 'put ' . $localFilename . ' ' . $remoteFilename . "\n";
+    $script .= "put $localFilename $remoteFilename\n";
     $script .= "quit\n";
 
 print( "XXX ftp script:\n" . $script );
