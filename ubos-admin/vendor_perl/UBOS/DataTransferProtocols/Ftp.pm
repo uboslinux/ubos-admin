@@ -13,6 +13,8 @@ package UBOS::DataTransferProtocols::Ftp;
 use base qw( UBOS::AbstractDataTransferProtocol );
 use fields qw( passiveMode );
 
+use File::Basename;
+use File::Spec;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
 use UBOS::Utils;
@@ -88,19 +90,29 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $uri  = URI->new( $toFile ); # sftp://user@host/path
+    my $uri  = URI->new( $toFile ); # ftp://user@host/path
 
     my $cmd = 'ftp -n';
     $cmd .= ' ' . $uri->authority();
 
-    my $script = 'user ' . $uri->userinfo() . "\n";
-    $script .= 'pass ' . $uri->userinfo() . "\n";
+    my $script = 'quote user ' . $uri->userinfo() . "\n";
+    $script .= 'quote pass ' . $uri->userinfo() . "\n";
     $script .= "binary\n";
 
     if( $self->{passiveMode} ) {
         $script .= "passive\n";
     }
-    $script .= 'put ' . $localFile . ' ' . $uri->path() . "\n";
+
+    my( $localFilename, $localDir, $localSuffix ) = fileparse( File::Spec->rel2abs( $localFile ) );
+    if( $localDir ) {
+        $script .= 'lcd ' . $localDir;
+    }
+    my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( File::Spec->rel2abs( $toFile ) );
+    if( $remoteDir ) {
+        $script .= 'cd ' . $remoteDir;
+    }
+
+    $script .= 'put ' . $localFilename . ' ' . $remoteFilename . "\n";
     $script .= "quit\n";
 
 print( "XXX ftp script:\n" . $script );
@@ -119,7 +131,7 @@ print( "XXX ftp script:\n" . $script );
 # The supported protocol.
 # return: the protocol
 sub protocol {
-    return 'sftp';
+    return 'ftp';
 }
 
 ##
