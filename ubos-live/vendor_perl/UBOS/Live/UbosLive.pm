@@ -22,14 +22,36 @@ my $OPENVPN_CLIENT_KEY       = $CLIENT_CERT_DIR . '/client.key';
 my $OPENVPN_CLIENT_CSR       = $CLIENT_CERT_DIR . '/client.csr';
 my $OPENVPN_CLIENT_CRT       = $CLIENT_CERT_DIR . '/client.crt';
 my $CONF                     = $CLIENT_CERT_DIR . '/ubos-live.json';
+my $SUBDOMAIN                = $CLIENT_CERT_DIR . '/subdomain';
 my $MAX_REGISTRATION_TRIES   = 5;
 my $REGISTRATION_DELAY       = 5;
-my $REGISTRATION_URL         = 'https://api.live.ubos.net/reg/register-device';
-my $DEVICE_STATUS_PARENT_URL = 'https://api.live.ubos.net/status/device';
+my $API_HOST_PREFIX          = 'https://api.live';
+my $REGISTRATION_URL         = '.ubos.net/reg/register-device';
+my $DEVICE_STATUS_PARENT_URL = '.ubos.net/status/device';
 my $OPENVPN_SERVICE          = 'openvpn-client@ubos-live.service';
 my $STATUS_TIMER             = 'ubos-live-status-check.timer';
 
-my $_conf = undef; # content of the $CONF file; cached
+my $_conf      = undef; # content of the $CONF file; cached
+my $_subdomain = undef;
+
+##
+# Determine which subdomain to use when contacting cloud. By default, production (empty).
+sub _getSubdomain() {
+    unless( defined( $_subdomain )) {
+        if( -e $_subdomain ) {
+            $_subdomain = UBOS::Utils::slurpFile( $CLOUD );
+            $_subdomain =~ s!^\s+!!;
+            $_subdomain =~ s!\s+$!!;
+            $_subdomain =~ s!/!!g;
+            if( $_subdomain ) {
+                $_subdomain = ".$_subdomain";
+            }
+        } else {
+            $_subdomain = '.green'; # defaults to production
+        }
+    }
+    return $_subdomain;
+}
 
 ##
 # Invoked periodically, this checks on the status of UBOS Live for this
@@ -37,7 +59,7 @@ my $_conf = undef; # content of the $CONF file; cached
 sub checkStatus {
 
     my $hostId    = UBOS::Host::hostId();
-    my $statusUrl = $DEVICE_STATUS_PARENT_URL . $hostId;
+    my $statusUrl = $API_HOST_PREFIX . _subdomain() . $DEVICE_STATUS_PARENT_URL . $hostId;
 
     my $response;
     my $curl = WWW::Curl::Easy->new;
@@ -64,9 +86,9 @@ sub checkStatus {
         _activateIfNeeded();
 
         if( $response eq 'ubos-live-active/ubos-live-operational' ) {
-            _makeOperationalIfNeeded();
+            _makeOperationalIfNeeded( $response );
         } else {
-            _makeNonOperationalIfNeeded();
+            _makeNonOperationalIfNeeded( $response );
         }
 
     } else {
@@ -119,11 +141,12 @@ sub isUbosLiveOperational {
 # If not already active, activate UBOS Live
 sub _activateIfNeeded() {
     my $token           = shift || _generateRegistrationToken();
-    my $registrationUrl = shift || $REGISTRATION_URL;
+    my $registrationUrl = shift || ( $API_HOST_PREFIX . _subdomain() . $REGISTRATION_URL;
 
     trace( 'UbosLive::_activateIfNeeded'. $token, $registrationUrl );
 
     if( isUbosLiveActive()) {
+        $@ = 'UBOS Live is active already';
         return 0;
     }
 
@@ -137,12 +160,13 @@ sub _activateIfNeeded() {
     }
 
     if( $errors ) {
+        $@ = "There were $error errors.";
         return 0;
     }
 
     my $confJson = {
         'token'  => $token,
-        'status' => 'active'
+        'status' => 'ubos-live-active' # subclass unclear so far
     };
     _setConf( $confJson );
 
@@ -164,6 +188,7 @@ sub _deactivateIfNeeded() {
 
     my $confJson = _getConf();
     unless( $confJson ) {
+        $@ = 'UBOS Live is not active';
         return 0;
     }
 
@@ -182,17 +207,21 @@ sub _deactivateIfNeeded() {
         ++$errors;
     }
 
-    $confJson->{status} = 'inactive';
+    $confJson->{status} = 'ubos-live-inactive';
     _setConf( $confJson );
+
+    $@ = "There were $error errors.";
 
     return $errors == 0;
 }
 
 ##
 # If not already operational, make UBOS Live operational
+# $liveStatus: the new status value as obtained from the cloud
 sub _makeOperationalIfNeeded() {
+    my $liveStatus = shift;
 
-    trace( 'UbosLive::_makeOperationalIfNeeded' );
+    trace( 'UbosLive::_makeOperationalIfNeeded', $liveStatus );
 
     my $errors = 0;
     my $out;
@@ -203,14 +232,22 @@ sub _makeOperationalIfNeeded() {
         ++$errors;
     }
 
+    my $confJson = _getConf();
+    $confJson->{status} = $liveStatus;
+    _setConf( $confJson );
+
+    $@ = "There were $error errors.";
+
     return $errors == 0;
 }
 
 ##
 # If not already non-operational, make UBOS Live non-operational
+# $liveStatus: the new status value as obtained from the cloud
 sub _makeNonOperationalIfNeeded() {
+    my $liveStatus = shift;
 
-    trace( 'UbosLive::_makeNonOperationalIfNeeded' );
+    trace( 'UbosLive::_makeNonOperationalIfNeeded', $liveStatus );
 
     my $errors = 0;
     my $out;
@@ -220,6 +257,12 @@ sub _makeNonOperationalIfNeeded() {
         error( 'systemctl disable --now', $OPENVPN_SERVICE, ':', $out );
         ++$errors;
     }
+
+    my $confJson = _getConf();
+    $confJson->{status} = $liveStatus;
+    _setConf( $confJson );
+
+    $@ = "There were $error errors.";
 
     return $errors == 0;
 }
@@ -367,7 +410,8 @@ sub _ensureOpenvpnClientConfig {
 
     trace( 'UbosLive::_ensureOpenvpnClientConfig' );
 
-    my $errors = 0;
+    my $errors    = 0;
+    my $subdomain = _subdomain();
 
     # Always do that, so it's regenerated when the code has changed
     unless( UBOS::Utils::saveFile( $OPENVPN_CLIENT_CONFIG, <<CONTENT )) {
@@ -380,7 +424,7 @@ client
 dev tun90
 # tun-ipv6 -- supposedly not needed any more
 proto udp
-remote vpn.live.ubos.net 1194
+remote vpn.live$subdomain.ubos.net 1194
 resolv-retry infinite
 nobind
 user nobody
@@ -388,7 +432,7 @@ group nobody
 persist-key
 persist-tun
 ;mute-replay-warnings
-ca $SERVICE_CERT_DIR/s-cas.live.ubos.net.crt
+ca $SERVICE_CERT_DIR/s-cas.live$subdomain.ubos.net.crt
 cert $OPENVPN_CLIENT_CRT
 key $OPENVPN_CLIENT_KEY
 ;remote-cert-tls server
