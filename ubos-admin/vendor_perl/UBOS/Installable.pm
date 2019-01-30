@@ -564,11 +564,13 @@ sub checkManifestCustomizationPointsSection {
 # $filenameContext: if the filename is relative, this specifies the absolute path it is relative to
 # $filename: the absolute or relative filename
 # $name: the name
+# $isSymlink: if true, check for a symlink instead of a file
 # return: 1 if valid
 sub validFilename {
     my $filenameContext = shift;
     my $filename        = shift;
     my $name            = shift;
+    my $isSymlink       = shift;
 
     my $testFile;
     if( $filename =~ m!^/! ) {
@@ -586,8 +588,14 @@ sub validFilename {
         $testFile =~ s!\$2!$localName!g; # $2: just the name without directories
     }
 
-    unless( -e $testFile ) {
-        fatal( 'Manifest refers to file, but file cannot be found:', $testFile );
+    if( $isSymlink ) {
+        unless( -l $testFile ) {
+            fatal( 'Manifest refers to symbolic link, but link cannot be found:', $testFile );
+        }
+    } else {
+        unless( -e $testFile ) {
+            fatal( 'Manifest refers to file, but file cannot be found:', $testFile );
+        }
     }
 
     return 1; # FIXME

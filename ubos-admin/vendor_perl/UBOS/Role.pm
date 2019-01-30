@@ -737,7 +737,7 @@ sub checkManifestForRoleGenericAppConfigItems {
                         # Symlinks get to have variables in their sources
                         unless( $skipFilesystemChecks ) {
                             foreach my $name ( @names ) {
-                                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name )) {
+                                if( !$skipFilesystemChecks && !UBOS::Installable::validFilename( $codeDir, $vars->replaceVariables( $appConfigItem->{source} ), $name, 1 )) {
                                     $installable->myFatal( "roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
                                 }
                             }
