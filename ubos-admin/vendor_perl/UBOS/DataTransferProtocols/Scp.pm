@@ -35,8 +35,10 @@ sub parseLocation {
     if( !$uri->scheme() || $uri->scheme() ne protocol() ) {
         return undef;
     }
-    if( !$uri->userinfo()) {
-        fatal( 'Need to provide user info in the URL, e.g. scp://joe@example.com/destination' );
+
+    # does not have userinfo() on uri as the scheme is not known
+    unless( $uri->authority() =~ m!\S+\@\S+! ) {
+        fatal( 'Need to provide user info in the URL, e.g. rsync+ssh://joe@example.com/destination' );
     }
 
     my $idfile = undef;
