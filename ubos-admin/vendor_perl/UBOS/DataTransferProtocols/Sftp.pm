@@ -128,7 +128,7 @@ sub send {
     }
 
     my $destPath = $uri->path();
-    $destPath =~ s!^/~!~!; # remove leading slash if it is home directory
+    $destPath =~ s!^/!!; # absolute paths need double slashes
 
     my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( $destPath );
     if( $remoteDir ) {
