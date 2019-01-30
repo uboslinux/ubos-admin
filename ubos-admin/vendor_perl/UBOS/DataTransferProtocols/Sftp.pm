@@ -104,8 +104,8 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $idfile = $dataTransferConfig->getValue( 'scp', 'idfile' );
-    my $limit  = $dataTransferConfig->getValue( 'scp', 'limit' );
+    my $idfile = $dataTransferConfig->getValue( 'sftp', 'idfile' );
+    my $limit  = $dataTransferConfig->getValue( 'sftp', 'limit' );
 
     my $cmd = 'sftp';
     if( $idfile ) {
@@ -115,19 +115,31 @@ sub send {
         $cmd .= " -l '$limit'"; # $data transfer limit
     }
 
-    my $uri      = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
-    my $dest     = $uri->authority();
-    my $destPath = $uri->path();
-    $destPath =~ s!^/!!; # remove leading slash
-    $dest .= ":$destPath";
+    my $uri  = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
+    my $dest = $uri->authority();
+    $cmd    .= ' ' . $dest;
 
-    $cmd .= " '$toFile'";
+    my $script;
+    my( $localFilename, $localDir, $localSuffix ) = fileparse( File::Spec->rel2abs( $localFile ) );
+    if( $localDir ) {
+        $script .= "lcd $localDir\n";
+    }
+    my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( $uri->path() );
+    if( $remoteDir ) {
+        $script .= "cd $remoteDir\n";
+    }
+
+    $script .= "put $localFilename $remoteFilename\n";
+    $script .= "quit\n";
 
     info( 'Uploading to', $toFile );
 
-    my $err;
-    if( UBOS::Utils::myexec( $cmd, undef, undef, \$err )) {
-        $@ = "Upload failed to: $toFile : $err";
+    my $out;
+    if( UBOS::Utils::myexec( $cmd, $script, \$out, \$out )) {
+        $@ = "Upload failed to: $toFile : $out";
+        return 0;
+    } elsif( $out =~ m!Permission denied! || $out =~ m!No such! ) {
+        $@ = "Upload failed to: $toFile : $out";
         return 0;
     }
     return 1;

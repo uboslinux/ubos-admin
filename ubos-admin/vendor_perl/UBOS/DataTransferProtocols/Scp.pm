@@ -120,7 +120,7 @@ sub send {
         $cmd .= " -l '$limit'"; # $data transfer limit
     }
 
-    $cmd .=  "'$localFile'";
+    $cmd .=  " '$localFile'";
 
     my $uri      = URI->new( $toFile ); # scp://user@host/path -> user@host:path
     my $dest     = $uri->authority();
