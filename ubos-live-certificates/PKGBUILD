@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.3
+pkgver=0.4
 pkgrel=1
 pkgdesc="Certificates for UBOS Live"
 arch=('any')
@@ -11,16 +11,25 @@ options=('!strip')
 
 # Be explicit so we don't miss one
 _crts=(
-    's1-ca.live.ubos.net.crt'
-    's2-ca.live.ubos.net.crt'
+    's1-ca.live.CHANNEL.ubos.net.crt'
+    's2-ca.live.CHANNEL.ubos.net.crt'
 )
+_channels=(
+    'green'
+)
+#    'yellow'
+#    'red'
+#)
 package() {
     mkdir -p -m755 ${pkgdir}/etc/${pkgname}
 
-    touch ${pkgdir}/etc/${pkgname}/s-cas.live.ubos.net.crt
-    for c in ${_crts[*]}; do
-        install -m0644 ${startdir}/crts/$c -t ${pkgdir}/etc/${pkgname}/
-        cat ${startdir}/crts/$c >> ${pkgdir}/etc/${pkgname}/s-cas.live.ubos.net.crt
+    for chan in ${_channels[*]}; do
+        touch ${pkgdir}/etc/${pkgname}/s-cas.live.$chan.ubos.net.crt
+        for crt in ${_crts[*]}; do
+            c=$(echo $crt | sed -e "s/CHANNEL/$chan/")
+            install -m0644 ${startdir}/crts/$c -t ${pkgdir}/etc/${pkgname}/
+            cat ${startdir}/crts/$c >> ${pkgdir}/etc/${pkgname}/s-cas.live.$chan.ubos.net.crt
+        done
+        chmod 0644 ${pkgdir}/etc/${pkgname}/s-cas.live.$chan.ubos.net.crt
     done
-    chmod 0644 ${pkgdir}/etc/${pkgname}/s-cas.live.ubos.net.crt
 }
