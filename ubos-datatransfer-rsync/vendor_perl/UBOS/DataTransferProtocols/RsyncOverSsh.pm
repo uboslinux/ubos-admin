@@ -126,7 +126,8 @@ sub send {
     my $uri      = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
     my $dest     = $uri->authority();
     my $destPath = $uri->path();
-    $destPath =~ s!^/!!; # remove leading slash
+    $destPath =~ s!^/!!; # absolute paths need double slashes
+
     $dest .= ":$destPath";
 
     info( 'Uploading to', $dest );
