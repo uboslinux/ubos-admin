@@ -13,6 +13,8 @@ package UBOS::DataTransferProtocols::Sftp;
 use base qw( UBOS::AbstractDataTransferProtocol );
 use fields;
 
+use File::Basename;
+use File::Spec;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
 use UBOS::Utils;
@@ -55,13 +57,13 @@ sub parseLocation {
         unless( -r $idfile ) {
             fatal( 'File cannot be read:', $idfile );
         }
-        $dataTransferConfig->setValue( 'scp', 'idfile', $idfile );
+        $dataTransferConfig->setValue( 'sftp', 'idfile', $idfile );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
             fatal( 'Limit must be a positive integer:', $limit );
         }
-        $dataTransferConfig->setValue( 'scp', 'limit', $limit );
+        $dataTransferConfig->setValue( 'sftp', 'limit', $limit );
     }
 
     unless( ref( $self )) {
@@ -124,7 +126,11 @@ sub send {
     if( $localDir ) {
         $script .= "lcd $localDir\n";
     }
-    my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( $uri->path() );
+
+    my $destPath = $uri->path();
+    $destPath =~ s!^/~!~!; # remove leading slash if it is home directory
+
+    my( $remoteFilename, $remoteDir, $remoteSuffix ) = fileparse( $destPath );
     if( $remoteDir ) {
         $script .= "cd $remoteDir\n";
     }

@@ -125,7 +125,7 @@ sub send {
     my $uri      = URI->new( $toFile ); # scp://user@host/path -> user@host:path
     my $dest     = $uri->authority();
     my $destPath = $uri->path();
-    $destPath =~ s!^/!!; # remove leading slash
+    $destPath =~ s!^/~!~!; # remove leading slash if it is home directory
     $dest .= ":$destPath";
 
     info( 'Uploading to', $dest );
