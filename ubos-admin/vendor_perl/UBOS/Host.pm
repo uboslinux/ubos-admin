@@ -638,7 +638,7 @@ sub updateCode {
                 # now we are at: 4.20.0.arch1-1-ARCH
             $kernelVersion =~ s!-ARCH$!!;     # somehow there's a -ARCH at the end
                 # now we are at: 4.20.0.arch1-1
-            $kernelVersion =~ s!\.0\.0!.!;    # take .0 out as package version does not use it (special case: 0)
+            $kernelVersion =~ s!\.0\.arch!.arch!; # take .0 out as package version does not use it (special case: 0)
                 # now we are at: 4.20.arch1-1
 
             if( $kernelPackageVersion ne $kernelVersion && "$kernelPackageVersion-ec2" ne $kernelVersion ) {
