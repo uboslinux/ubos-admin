@@ -499,6 +499,9 @@ sub postUpgrade {
 
     _ensureOpenvpnClientConfig();
 
+    _ensureUser();
+    _ensureAuthorizedKeys();
+
     _restartUbosLiveIfNeeded();
 
     return 0;
