@@ -387,7 +387,9 @@ CONTENT
     UBOS::Utils::mkdirDashP( "$dir/wifi" );
     foreach my $ssid ( keys %$wifis ) {
         my $values  = $wifis->{$ssid};
-        my $content = join( '', map { $_ . '="' . _escape( $values-{$_} ) . '"' . "\n" } %$values );
+        my $content = join( '', map { $_ . '="' . $values->{$_} . '"' . "\n" } %$values );
+        # There is no documentation on whether to escape this, but wpa_passphrase does not
+        # escape things in its commented-out output, so we do the same
         UBOS::Utils::saveFile( "$dir/wifi/$ssid.conf", $content );
     }
     UBOS::Utils::saveFile( "$dir/wifi/README", <<CONTENT );
