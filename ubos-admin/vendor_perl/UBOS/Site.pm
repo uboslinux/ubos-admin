@@ -541,7 +541,7 @@ sub print {
     if( $detail > 2 ) {
         colPrint( ' (' . $self->siteId . ')' );
     }
-    colPrint( ':' );
+    colPrint( ' :' );
     if( $detail <= 1 ) {
         my $nAppConfigs = @{$self->appConfigs};
         if( $nAppConfigs == 1 ) {
