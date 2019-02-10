@@ -135,7 +135,6 @@ sub description {
     return <<TXT;
 Local file copy. Options:
     --force : overwrite an already-existing file.
-    --force : overwrite an already-existing file.
 TXT
 }
 
