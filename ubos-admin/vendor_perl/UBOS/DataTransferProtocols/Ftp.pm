@@ -11,7 +11,7 @@ use warnings;
 package UBOS::DataTransferProtocols::Ftp;
 
 use base qw( UBOS::AbstractDataTransferProtocol );
-use fields qw( passiveMode );
+use fields;
 
 use File::Basename;
 use File::Spec;
@@ -39,13 +39,17 @@ sub parseLocation {
     }
     if( !$uri->userinfo()) {
         fatal( 'Need to provide user info in the URL, e.g. ftp://joe@example.com/destination' );
+    } elsif( $uri->userinfo() =~ m!:! ) {
+        fatal( 'Do not specify password in the URL' );
     }
 
-    my $passiveMode = undef;
-    my $parseOk     = GetOptionsFromArray(
+    my $passiveMode   = undef;
+    my $noPassiveMode = undef;
+    my $parseOk = GetOptionsFromArray(
             $argsP,
-            'passive' => \$passiveMode );
-    if( !$parseOk || @$argsP ) {
+            'passive'   => \$passiveMode,
+            'nopassive' => \$noPassiveMode );
+    if( !$parseOk || ( $passiveMode && $noPassiveMode ) || @$argsP ) {
         return undef;
     }
 
@@ -53,7 +57,19 @@ sub parseLocation {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $location, protocol() );
-    $self->{passiveMode} = $passiveMode ? 1 : 0;
+
+    my $authority = $uri->authority();
+
+    if( $passiveMode ) {
+        $dataTransferConfig->setValue( 'ftp', "passive-$authority", $awsRegion );
+    } elsif( $noPassiveMode ) {
+        $dataTransferConfig->removeValue( 'ftp', "passive-$authority" );
+    }
+
+    unless( $dataTransferConfig->getValue( 'ftp', "password-$authority" )) {
+        my $password = askAnswer( 'Ftp password: ', '^.+$', undef, 1 );
+        $dataTransferConfig->setValue( 'ftp', "password-$authority", $password );
+    }
 
     return $self;
 }
@@ -90,16 +106,20 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $uri  = URI->new( $toFile ); # ftp://user@host/path
+    my $uri       = URI->new( $toFile ); # ftp://user@host/path
+    my $authority = $uri->authority();
+
+    my $passive  = $dataTransferConfig->getValue( 'ftp', "passive-$authority" );
+    my $password = $dataTransferConfig->getValue( 'ftp', "password-$authority" );
 
     my $cmd  = 'ftp -n';
     $cmd    .= ' ' . $uri->host();
 
     my $script  = 'quote user ' . $uri->userinfo() . "\n";
-    $script    .= 'quote pass ' . $uri->userinfo() . "\n";
+    $script    .= 'quote pass ' . $password        . "\n";
     $script    .= "binary\n";
 
-    if( $self->{passiveMode} ) {
+    if( $passive ) {
         $script .= "passive\n";
     }
 
@@ -116,14 +136,18 @@ sub send {
     $script .= "quit\n";
 
     info( 'Uploading to', $toFile );
+    trace( 'ftp script:', $script );
 
+    # ftp does not provide exit codes; transcript only
     my $out;
-    if( UBOS::Utils::myexec( $cmd, $script, \$out, \$out )) {
+    UBOS::Utils::myexec( $cmd, $script, \$out, \$out );
+
+    if( $out =~ m!Permission denied! || $out =~ m!No such! ) {
         $@ = "Upload failed to: $toFile : $out";
         return 0;
-    } elsif( $out =~ m!Permission denied! || $out =~ m!No such! ) {
-        $@ = "Upload failed to: $toFile : $out";
-        return 0;
+
+    } else {
+        trace( 'ftp says:', $out );
     }
     return 1;
 }
@@ -141,7 +165,8 @@ sub protocol {
 sub description {
     return <<TXT;
 The FTP protocol. Options:
-    --passive : use passive mode
+    --passive   : use passive mode
+    --nopassive : do not use passive mode
 TXT
 }
 
