@@ -37,8 +37,10 @@ sub parseLocation {
     }
 
     # does not have userinfo() on uri as the scheme is not known
-    unless( $uri->authority() =~ m!\S+\@\S+! ) {
+    if( $uri->authority() !~ m!\S+\@\S+! ) {
         fatal( 'Need to provide user info in the URL, e.g. rsync+ssh://joe@example.com/destination' );
+    } elsif( $uri->authority() =~ m!:.+\@! ) {
+        fatal( 'Do not specify password in the URL' );
     }
 
     my $idfile = undef;
@@ -108,7 +110,8 @@ sub send {
     my $limit  = $dataTransferConfig->getValue( 'scp', 'limit' );
 
     my $cmd = 'scp';
-    $cmd .= ' -B'; # batch mode
+    # Run in interactive, not batch mode, so the first connection attempt to
+    # a new host (not in ~/.ss/known_hosts) won't fail
     $cmd .= ' -C'; # compression
     $cmd .= ' -p'; # preserve timestamps etc
     $cmd .= ' -q'; # quiet mode
