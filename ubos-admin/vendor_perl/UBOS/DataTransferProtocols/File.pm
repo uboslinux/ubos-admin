@@ -96,13 +96,13 @@ sub isValidToFile {
 # Send a local file to location via this protocol.
 # $localFile: the local file
 # $toFile: the ultimate destination as a file URL
-# $config: configuration options
+# $dataTransferConfig: data transfer configuration options
 # return: success or fail
 sub send {
-    my $self      = shift;
-    my $localFile = shift;
-    my $toFile    = shift;
-    my $config    = shift;
+    my $self               = shift;
+    my $localFile          = shift;
+    my $toFile             = shift;
+    my $dataTransferConfig = shift;
 
     my $uri = URI->new( $toFile );
     $toFile = $uri->path();

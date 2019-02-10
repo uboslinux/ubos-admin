@@ -55,13 +55,13 @@ sub parseLocation {
         unless( -r $idfile ) {
             fatal( 'File cannot be read:', $idfile );
         }
-        $dataTransferConfig->setValue( 'rsync+ssh', 'idfile', $idfile );
+        $dataTransferConfig->setValue( 'rsync+ssh', $uri->authority(), 'idfile', $idfile );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
             fatal( 'Limit must be a positive integer:', $limit );
         }
-        $dataTransferConfig->setValue( 'rsync+ssh', 'limit', $limit );
+        $dataTransferConfig->setValue( 'rsync+ssh', $uri->authority(), 'limit', $limit );
     }
 
     unless( ref( $self )) {
@@ -104,8 +104,10 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $idfile = $dataTransferConfig->getValue( 'rsync+ssh', 'idfile' );
-    my $limit  = $dataTransferConfig->getValue( 'rsync+ssh', 'limit' );
+    my $uri = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
+
+    my $idfile = $dataTransferConfig->getValue( 'rsync+ssh', $uri->authority(), 'idfile' );
+    my $limit  = $dataTransferConfig->getValue( 'rsync+ssh', $uri->authority(), 'limit' );
 
     my $cmd = 'rsync';
     $cmd .= ' --quiet';
@@ -123,7 +125,6 @@ sub send {
 
     $cmd .=  " '$localFile'";
 
-    my $uri      = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
     my $dest     = $uri->authority();
     my $destPath = $uri->path();
     $destPath =~ s!^/!!; # absolute paths need double slashes

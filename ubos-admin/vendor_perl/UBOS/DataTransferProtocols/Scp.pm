@@ -57,13 +57,13 @@ sub parseLocation {
         unless( -r $idfile ) {
             fatal( 'File cannot be read:', $idfile );
         }
-        $dataTransferConfig->setValue( 'scp', 'idfile', $idfile );
+        $dataTransferConfig->setValue( 'scp', $uri->authority(), 'idfile', $idfile );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
             fatal( 'Limit must be a positive integer:', $limit );
         }
-        $dataTransferConfig->setValue( 'scp', 'limit', $limit );
+        $dataTransferConfig->setValue( 'scp', $uri->authority(), 'limit', $limit );
     }
 
     unless( ref( $self )) {
@@ -106,8 +106,10 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $idfile = $dataTransferConfig->getValue( 'scp', 'idfile' );
-    my $limit  = $dataTransferConfig->getValue( 'scp', 'limit' );
+    my $uri      = URI->new( $toFile ); # scp://user@host/path -> user@host:path
+
+    my $idfile = $dataTransferConfig->getValue( 'scp', $uri->authority(), 'idfile' );
+    my $limit  = $dataTransferConfig->getValue( 'scp', $uri->authority(), 'limit' );
 
     my $cmd = 'scp';
     # Run in interactive, not batch mode, so the first connection attempt to
@@ -122,10 +124,8 @@ sub send {
     if( $limit ) {
         $cmd .= " -l '$limit'"; # $data transfer limit
     }
-
     $cmd .=  " '$localFile'";
 
-    my $uri      = URI->new( $toFile ); # scp://user@host/path -> user@host:path
     my $dest     = $uri->authority();
     my $destPath = $uri->path();
     $destPath =~ s!^/!!; # absolute paths need double slashes

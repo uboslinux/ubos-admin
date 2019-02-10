@@ -59,13 +59,13 @@ sub parseLocation {
         unless( -r $idfile ) {
             fatal( 'File cannot be read:', $idfile );
         }
-        $dataTransferConfig->setValue( 'sftp', 'idfile', $idfile );
+        $dataTransferConfig->setValue( 'sftp', $uri->authority(), 'idfile', $idfile );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
             fatal( 'Limit must be a positive integer:', $limit );
         }
-        $dataTransferConfig->setValue( 'sftp', 'limit', $limit );
+        $dataTransferConfig->setValue( 'sftp', $uri->authority(), 'limit', $limit );
     }
 
     unless( ref( $self )) {
@@ -108,8 +108,10 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $idfile = $dataTransferConfig->getValue( 'sftp', 'idfile' );
-    my $limit  = $dataTransferConfig->getValue( 'sftp', 'limit' );
+    my $uri = URI->new( $toFile );
+
+    my $idfile = $dataTransferConfig->getValue( 'sftp', $uri->authority(), 'idfile' );
+    my $limit  = $dataTransferConfig->getValue( 'sftp', $uri->authority(), 'limit' );
 
     my $cmd = 'sftp';
     if( $idfile ) {

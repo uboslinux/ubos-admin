@@ -58,17 +58,15 @@ sub parseLocation {
     }
     $self->SUPER::new( $location, protocol() );
 
-    my $authority = $uri->authority();
-
     if( $passiveMode ) {
-        $dataTransferConfig->setValue( 'ftp', "passive-$authority", $awsRegion );
+        $dataTransferConfig->setValue( 'ftp', $uri->authority(), 'passive', $awsRegion );
     } elsif( $noPassiveMode ) {
-        $dataTransferConfig->removeValue( 'ftp', "passive-$authority" );
+        $dataTransferConfig->removeValue( 'ftp', $uri->authority(), 'passive' );
     }
 
-    unless( $dataTransferConfig->getValue( 'ftp', "password-$authority" )) {
+    unless( $dataTransferConfig->getValue( 'ftp', $uri->authority(), 'password' )) {
         my $password = askAnswer( 'Ftp password: ', '^.+$', undef, 1 );
-        $dataTransferConfig->setValue( 'ftp', "password-$authority", $password );
+        $dataTransferConfig->setValue( 'ftp', $uri->authority(), 'password', $password );
     }
 
     return $self;
@@ -106,11 +104,10 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $uri       = URI->new( $toFile ); # ftp://user@host/path
-    my $authority = $uri->authority();
+    my $uri = URI->new( $toFile ); # ftp://user@host/path
 
-    my $passive  = $dataTransferConfig->getValue( 'ftp', "passive-$authority" );
-    my $password = $dataTransferConfig->getValue( 'ftp', "password-$authority" );
+    my $passive  = $dataTransferConfig->getValue( 'ftp', $uri->authority(), 'passive' );
+    my $password = $dataTransferConfig->getValue( 'ftp', $uri->authority(), 'password' );
 
     my $cmd  = 'ftp -n';
     $cmd    .= ' ' . $uri->host();

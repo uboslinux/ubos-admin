@@ -39,7 +39,7 @@ sub parseLocation {
     my $method = undef;
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'method=s', => \$method );
+            'method=s' => \$method );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -49,7 +49,7 @@ sub parseLocation {
         if( $method ne 'PUT' && $method ne 'POST' ) {
             fatal( 'HTTP methods may only be PUT or POST, not:', $method );
         }
-        $dataTransferConfig->setValue( 'http', 'method', $method );
+        $dataTransferConfig->setValue( 'http', $uri->authority(), 'method', $method );
     }
 
     unless( ref( $self )) {
@@ -92,8 +92,10 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
+    my $uri = URI->new( $toFile );
+
     my $cmd = "curl --silent --upload-file '$localFile'";
-    my $method = $dataTransferConfig->getValue( 'http', 'method' );
+    my $method = $dataTransferConfig->getValue( 'http', $uri->authority(), 'method' );
     if( $method ) {
         $cmd .= " -X $method";
     }

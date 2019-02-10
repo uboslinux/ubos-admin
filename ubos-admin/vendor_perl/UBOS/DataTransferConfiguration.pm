@@ -67,46 +67,52 @@ sub new {
 ##
 # Obtain a configuration value
 # $protocol: name of the protocol, for finding the right section
-# $key: name of the setting within the protocol
+# $authority: username '@' hostname, or just hostname, where this applies
+# $key: name of the setting within the authority section
 # return the value
 sub getValue {
-    my $self     = shift;
-    my $protocol = shift;
-    my $key      = shift;
+    my $self      = shift;
+    my $protocol  = shift;
+    my $authority = shift;
+    my $key       = shift;
 
     my $config = $self->{config};
     my $value  = undef;
 
     if(    exists( $config->{$protocol} )
-        && exists( $config->{$protocol}->{$key} ))
+        && exists( $config->{$protocol}->{$authority} )
+        && exists( $config->{$protocol}->{$authority}->{$key} ))
     {
-        $value = $config->{$protocol}->{$key};
+        $value = $config->{$protocol}->{$authority}->{$key};
     }
     return $value;
 }
 
 ##
-# Set a new value
+# Set a new configuration value
 # $protocol: name of the protocol, for finding the right section
-# $key: name of the setting within the protocol
+# $authority: username '@' hostname, or just hostname, where this applies
+# $key: name of the setting within the authority section
 # $value: the new value
 # return true if the setting was changed
 sub setValue {
-    my $self     = shift;
-    my $protocol = shift;
-    my $key      = shift;
-    my $value    = shift;
+    my $self      = shift;
+    my $protocol  = shift;
+    my $authority = shift;
+    my $key       = shift;
+    my $value     = shift;
 
     my $config = $self->{config};
 
     if(    exists( $config->{$protocol} )
-        && exists( $config->{$protocol}->{$key} ))
+        && exists( $config->{$protocol}->{$authority} )
+        && exists( $config->{$protocol}->{$authority}->{$key} ))
     {
-        my $existingValue = $config->{$protocol}->{$key};
+        my $existingValue = $config->{$protocol}->{$authority}->{$key};
 
         if( defined( $value )) {
             if( defined( $existingValue )) {
-                if( $config->{$protocol}->{$key} eq $value ) {
+                if( $config->{$protocol}->{$authority}->{$key} eq $value ) {
                     return 0;
                 } # else continue
             } # else continue
@@ -117,7 +123,7 @@ sub setValue {
         }
     }
     if( defined( $value )) {
-        $config->{$protocol}->{$key} = $value;
+        $config->{$protocol}->{$authority}->{$key} = $value;
         $self->{configChanged} = 1;
     }
     return 1;
@@ -126,17 +132,21 @@ sub setValue {
 ##
 # Unset a value
 # $protocol: name of the protocol, for finding the right section
-# $key: name of the setting within the protocol
+# $authority: username '@' hostname, or just hostname, where this applies
+# $key: name of the setting within the authority section
 sub removeValue {
-    my $self     = shift;
-    my $protocol = shift;
-    my $key      = shift;
+    my $self      = shift;
+    my $protocol  = shift;
+    my $authority = shift;
+    my $key       = shift;
 
     my $config = $self->{config};
     my $value  = undef;
 
-    if( exists( $config->{$protocol} )) {
-        delete $config->{$protocol}->{$key};
+    if(    exists( $config->{$protocol} )
+        && exists( $config->{$protocol}->{$authority} ))
+    {
+        delete $config->{$protocol}->{$authority}->{$key};
     }
 }
 
