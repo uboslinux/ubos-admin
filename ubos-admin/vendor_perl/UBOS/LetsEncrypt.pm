@@ -181,7 +181,8 @@ sub makeCertificateNoRenew {
             return 0;
         }
     } else {
-        error( 'File does not exist:', $from );
+        # Letsencrypt setup may have failed initially
+        warning( 'File does not exist:', $from );
         return 0;
     }
 }
