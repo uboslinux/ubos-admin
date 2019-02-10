@@ -574,7 +574,7 @@ sub print {
                         colPrint( ' default' );
                     }
                     if( $detail > 2 ) {
-                        colPrint( ' ' . $appConfig->appConfigId );
+                        colPrint( ' (' . $appConfig->appConfigId . ')' );
                     }
                     if( $detail < 3 ) {
                         colPrint( ' : ' . $appConfig->app->packageName );
