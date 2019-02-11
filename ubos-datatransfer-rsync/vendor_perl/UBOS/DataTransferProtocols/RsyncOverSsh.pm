@@ -41,12 +41,14 @@ sub parseLocation {
         fatal( 'Need to provide user info in the URL, e.g. rsync+ssh://joe@example.com/destination' );
     }
 
-    my $idfile = undef;
-    my $limit  = undef;
+    my $idfile     = undef;
+    my $sshOptions = undef;
+    my $limit      = undef;
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'idfile|i=s' => \$idfile,
-            'limit=s'    => \$limit );
+            'idfile|i=s'   => \$idfile,
+            'sshoptions=s' => \$sshOptions,
+            'limit=s'      => \$limit );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -56,6 +58,10 @@ sub parseLocation {
             fatal( 'File cannot be read:', $idfile );
         }
         $dataTransferConfig->setValue( 'rsync+ssh', $uri->authority(), 'idfile', $idfile );
+    }
+    if( $sshOptions ) {
+        UBOS::AbstractDataTransferProtocol::validiateSshOptions( $sshOptions );
+        $dataTransferConfig->setValue( 'rsync+ssh', $uri->authority(), 'sshoptions', $sshOptions );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
@@ -113,8 +119,16 @@ sub send {
     $cmd .= ' --quiet';
     $cmd .= ' --archive';
 
+    my $sshOptions = $dataTransferConfig->getValue( 'rsync+ssh', $uri->authority(), 'sshoptions' );
     if( $idfile ) {
-        $cmd .= " --rsh=\"ssh -i '$idfile'\""; # private key
+        if( $sshOptions ) {
+            $sshOptions .= ' ';
+        }
+        $sshOptions .= "-i '$idfile'\""; # private key
+    }
+
+    if( $sshOptions ) {
+        $cmd .= " --rsh=\"ssh $sshOptions";
     } else {
         $cmd .= ' --rsh=ssh';
     }
@@ -156,9 +170,11 @@ sub protocol {
 sub description {
     return <<TXT;
 The rsync protocol over ssh. Options:
-    --limit <limit>   : limits the used bandwidth, specified in Kbit/s.
-    --idfile <idfile> : selects the file from which the identity (private key)
-                        for public key authentication is read.
+    --limit <limit>        : limits the used bandwidth, specified in Kbit/s.
+    --idfile <idfile>      : selects the file from which the identity (private key)
+                             for public key authentication is read.
+    --sshoptions <options> : any addition SSH options; will be appended to the SSH
+                             command-line
 TXT
 }
 

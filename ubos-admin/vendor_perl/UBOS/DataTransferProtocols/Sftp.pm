@@ -45,12 +45,14 @@ sub parseLocation {
         fatal( 'Do not specify password in the URL' );
     }
 
-    my $idfile = undef;
-    my $limit  = undef;
+    my $idfile     = undef;
+    my $sshOptions = undef;
+    my $limit      = undef;
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'idfile|i=s' => \$idfile,
-            'limit=s'    => \$limit );
+            'idfile|i=s'   => \$idfile,
+            'sshoptions=s' => \$sshOptions,
+            'limit=s'      => \$limit );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -60,6 +62,9 @@ sub parseLocation {
             fatal( 'File cannot be read:', $idfile );
         }
         $dataTransferConfig->setValue( 'sftp', $uri->authority(), 'idfile', $idfile );
+    }
+    if( $sshOptions ) {
+        $dataTransferConfig->setValue( 'sftp', $uri->authority(), 'sshoptions', $sshOptions );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
@@ -121,6 +126,12 @@ sub send {
         $cmd .= " -l '$limit'"; # $data transfer limit
     }
 
+    my $sshOptions = $dataTransferConfig->getValue( 'sftp', $uri->authority(), 'sshoptions' );
+    if( $sshOptions ) {
+        UBOS::AbstractDataTransferProtocol::validiateSshOptions( $sshOptions );
+        $cmd .= " $sshOptions";
+    }
+
     my $uri  = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
     my $dest = $uri->authority();
     $cmd    .= ' ' . $dest;
@@ -168,8 +179,11 @@ sub protocol {
 sub description {
     return <<TXT;
 The SFTP (secure ftp) protocol. Options:
-    --idfile <idfile> : selects the file from which the identity (private key)
-                        for public key authentication is read.
+    --limit <limit>        : limits the used bandwidth, specified in Kbit/s.
+    --idfile <idfile>      : selects the file from which the identity (private key)
+                             for public key authentication is read.
+    --sshoptions <options> : any addition SSH options; will be appended to the SSH
+                             command-line
 TXT
 }
 
