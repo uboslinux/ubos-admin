@@ -309,10 +309,14 @@ sub doUpload {
         trace( 'Encrypting:', $stageToEncryptFile, $stageToUploadFile );
 
         my $err;
-        if( UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$stageToEncryptFile' > '$stageToUploadFile'", undef, undef, \$err )) {
+        my $status = UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$stageToEncryptFile' > '$stageToUploadFile'", undef, undef, \$err );
+
+        UBOS::Utils::deleteFile( $stageToEncryptFile ); # free up space asap
+
+        if( $status ) {
+            UBOS::Utils::deleteFile( $stageToUploadFile );
             fatal( 'Encryption failed:', $err );
         }
-        UBOS::Utils::deleteFile( $stageToEncryptFile ); # free up space asap
     }
 
     debugAndSuspend( 'Sending backup data' );
