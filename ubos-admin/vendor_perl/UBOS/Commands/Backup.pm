@@ -200,17 +200,18 @@ HHH
             '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
 HHH
-            '--nobackuptls' => <<HHH,
-    If a site uses TLS, do not put the TLS key and certificate into the
-    backup.
+            '--[no]backuptls' => <<HHH,
+    If a site uses TLS, specify whether to put the TLS key and certificate
+    into the backup. Defaults to previous settings, or --nobackuptls.
 HHH
-            '--nobackuptorkey' => <<HHH,
-    If a site is on the Tor network, do not put the Tor key into the
-    backup.
+            '--[no]backuptorkey' => <<HHH,
+    If a site is on the Tor network, specify whether to put the Tor key into
+    the backup. Defaults to previous settings, or --nobackuptorkey.
 HHH
             '--backupencryptid <id>' => <<HHH,
-    If given, the backup file will be gpg-encrypted,
-    using GPG key id <id> in the current user's GPG keychain.
+    If given, the backup file will be gpg-encrypted, using GPG key id <id>
+    in the current user's GPG keychain. Defaults to previous setting.
+    Specify blank string to unset previous setting.
 HHH
             '--backupdatatransferconfigfile <configfile>' => <<HHH,
     Use an alternate data transfer configuration file than the default.

@@ -69,15 +69,17 @@ sub new {
 # $protocol: name of the protocol, for finding the right section
 # $authority: username '@' hostname, or just hostname, where this applies
 # $key: name of the setting within the authority section
+# $default: if no such value is known, return this value
 # return the value
 sub getValue {
     my $self      = shift;
     my $protocol  = shift;
     my $authority = shift;
     my $key       = shift;
+    my $default   = shift;
 
     my $config = $self->{config};
-    my $value  = undef;
+    my $value  = $default;
 
     if(    exists( $config->{$protocol} )
         && exists( $config->{$protocol}->{$authority} )

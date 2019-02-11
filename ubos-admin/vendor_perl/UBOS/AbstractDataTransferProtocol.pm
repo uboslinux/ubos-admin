@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::AbstractDataTransferProtocol;
 
-use fields qw( protocol location );
+use fields qw( protocol location authority );
 
 use UBOS::Logging;
 use UBOS::Utils;
@@ -52,18 +52,21 @@ sub parseLocation {
 ##
 # Constructor for subclasses.
 # $location: the location
+# $authority: the authority of the location
 # $protocol: the protocol, for convenience
 sub new {
-    my $self     = shift;
-    my $location = shift;
-    my $protocol = shift;
+    my $self      = shift;
+    my $location  = shift;
+    my $authority = shift;
+    my $protocol  = shift;
 
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
 
-    $self->{location} = $location;
-    $self->{protocol} = $protocol;
+    $self->{location}  = $location;
+    $self->{authority} = $authority;
+    $self->{protocol}  = $protocol;
 
     return $self;
 }
@@ -75,6 +78,15 @@ sub location {
     my $self = shift;
 
     return $self->{location};
+}
+
+##
+# Determine the authority section of the destination
+# return 'example.com', or 'joe@example.com' or such
+sub authority {
+    my $self = shift;
+
+    return $self->{authority};
 }
 
 ##

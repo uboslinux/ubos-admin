@@ -54,8 +54,8 @@ sub parseArgumentsPartial {
 
     my $backupToFile             = undef;
     my $backupToDirectory        = undef;
-    my $noTls                    = undef;
-    my $noTorKey                 = undef;
+    my $backupTls                = undef;
+    my $backupTorKey             = undef;
     my $encryptId                = undef;
     my $dataTransferConfigFile   = undef;
     my $ignoreDataTransferConfig = undef;
@@ -64,10 +64,10 @@ sub parseArgumentsPartial {
             $argP,
             'backuptofile|tofile=s',          => \$backupToFile,
             'backuptodirectory|todirectory=s' => \$backupToDirectory,
-            'nobackuptls'                     => \$noTls,
-            'nobackuptorkey'                  => \$noTorKey,
+            'backuptls!'                      => \$backupTls,
+            'backuptorkey!'                   => \$backupTorKey,
             'backupencryptid|encryptid=s'     => \$encryptId,
-            'backupdatatransferconfigfile=s', => \$dataTransferConfigFile,
+            'backupdatatransferconfigfile=s'  => \$dataTransferConfigFile,
             'nobackupdatatransferconfigfile'  => \$ignoreDataTransferConfig );
 
     if(     !$parseOk
@@ -78,54 +78,59 @@ sub parseArgumentsPartial {
         return undef;
     }
 
+    my $ret;
     if( $backupToFile ) {
-        return UBOS::BackupOperations::ToFile->new(
+        $ret = UBOS::BackupOperations::ToFile->new(
                 $backupToFile,
-                $noTls,
-                $noTorKey,
-                $encryptId,
                 $dataTransferConfigFile,
                 $ignoreDataTransferConfig,
                 $argP );
 
     } elsif( $backupToDirectory ) {
-        return UBOS::BackupOperations::ToDirectory->new(
+        $ret = UBOS::BackupOperations::ToDirectory->new(
                 $backupToDirectory,
-                $noTls,
-                $noTorKey,
-                $encryptId,
                 $dataTransferConfigFile,
                 $ignoreDataTransferConfig,
                 $argP );
 
-    } elsif( $dataTransferConfigFile || $noTls || $noTorKey || $encryptId || $ignoreDataTransferConfig ) {
-        $@ = undef;
-        return undef;
+    } elsif( !$dataTransferConfigFile && !$ignoreDataTransferConfig ) {
+        $ret = UBOS::BackupOperations::NoOp->new();
 
     } else {
-        return UBOS::BackupOperations::NoOp->new();
+        $@ = undef;
+        return undef;
     }
+
+    my $authority = $ret->authority();
+    if( defined( $backupTls )) {
+        $self->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptls', $backupTls );
+    }
+    if( defined( $backupTorKey )) {
+        $self->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptorkey', $backupTorKey );
+    }
+    if( defined( $encryptId )) {
+        if( $encryptId ) {
+            $self->{dataTransferConfiguration}->setValue( 'backup', $authority, 'encryptid', $encryptId );
+        } else {
+            $self->{dataTransferConfiguration}->removeValue( 'backup', $authority, 'encryptid' );
+        }
+    }
+    return $ret;
 }
 
 ##
 # Constructor for subclasses only.
-# $noTls: don't back up TLS information
-# $noTorKey: don't back up Tor keys
-# $encryptId: key identifier for encryption
 # $dataTransferConfigFile: name of the data transfer config file provided by the user
 # $ignoreDataTransferConfig: ignore data transfer config files for read and write
 # @$argP: the remaining command-line arguments
 # return: instance, or undef with $@ set
 sub new {
     my $self                     = shift;
-    my $noTls                    = shift;
-    my $noTorKey                 = shift;
-    my $encryptId                = shift;
     my $dataTransferConfigFile   = shift;
     my $ignoreDataTransferConfig = shift;
     my $argP                     = shift;
 
-    trace( 'BackupOperation::new', $noTls, $noTorKey, $encryptId, $dataTransferConfigFile, $ignoreDataTransferConfig, @$argP );
+    trace( 'BackupOperation::new', $dataTransferConfigFile, $ignoreDataTransferConfig, @$argP );
 
     unless( ref( $self )) {
         $self = fields::new( $self );
@@ -137,10 +142,6 @@ sub new {
     unless( $self ) {
         return undef;
     }
-
-    $self->{dataTransferConfiguration}->setValue( 'backup', 'notls',     $noTls );
-    $self->{dataTransferConfiguration}->setValue( 'backup', 'notorkey',  $noTorKey );
-    $self->{dataTransferConfiguration}->setValue( 'backup', 'encryptid', $encryptId );
 
     return $self;
 }
@@ -262,7 +263,7 @@ sub constructCheckPipeline {
         $self->{stageToUploadFile} = $self->mkTempFile();
     }
 
-    if( $self->{dataTransferConfiguration}->getValue( 'backup', 'encryptid' )) {
+    if( $self->{dataTransferConfiguration}->getValue( 'backup', $self->{dataTransferProtocol}->authority(), 'encryptid' )) {
         $self->{stageToEncryptFile} = $self->mkTempFile();
     } else {
         $self->{stageToEncryptFile} = $self->{stageToUploadFile};
@@ -284,8 +285,8 @@ sub doBackup {
     my $ret    = $backup->create(
             [ values %{$self->{sitesToBackup}} ],
             [ values %{$self->{appConfigsToBackup}} ],
-            $self->{dataTransferConfiguration}->getValue( 'backup', 'notls' ),
-            $self->{dataTransferConfiguration}->getValue( 'backup', 'noTorKey' ),
+            $self->{dataTransferConfiguration}->getValue( 'backup', $self->{dataTransferProtocol}->authority(), 'backuptls',    0 ),
+            $self->{dataTransferConfiguration}->getValue( 'backup', $self->{dataTransferProtocol}->authority(), 'backuptorkey', 0 ),
             $self->{stageToEncryptFile} );
 
     return $ret;
@@ -300,7 +301,7 @@ sub doUpload {
 
     trace( 'BackupOperation::doUpload' );
 
-    my $encryptId = $self->{dataTransferConfiguration}->getValue( 'backup', 'encryptid' );
+    my $encryptId = $self->{dataTransferConfiguration}->getValue( 'backup', $self->{dataTransferProtocol}->authority(), 'encryptid' );
     if( $encryptId ) {
         my $stageToEncryptFile = $self->{stageToEncryptFile};
         my $stageToUploadFile  = $self->{stageToUploadFile};

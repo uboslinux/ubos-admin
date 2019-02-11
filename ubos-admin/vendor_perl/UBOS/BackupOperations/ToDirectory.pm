@@ -13,6 +13,7 @@ package UBOS::BackupOperations::ToDirectory;
 use base   qw( UBOS::BackupOperation );
 use fields qw( toDirectory );
 
+use Getopt::Long qw( GetOptionsFromArray :config pass_through );
 use UBOS::AbstractDataTransferProtocol;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -20,9 +21,6 @@ use UBOS::Utils;
 ##
 # Constructor
 # $toDirectory: name of the destination directory
-# $noTls: don't back up TLS information
-# $noTorKey: don't back up Tor keys
-# $encryptId: key identifier for encryption
 # $dataTransferConfigFile: name of the data transfer config file provided by the user
 # $ignoreDataTransferConfig: ignore data transfer config files for read and write
 # @$argP: the remaining command-line arguments
@@ -30,9 +28,6 @@ use UBOS::Utils;
 sub new {
     my $self                     = shift;
     my $toDirectory              = shift;
-    my $noTls                    = shift;
-    my $noTorKey                 = shift;
-    my $encryptId                = shift;
     my $dataTransferConfigFile   = shift;
     my $ignoreDataTransferConfig = shift;
     my $argP                     = shift;
@@ -40,7 +35,7 @@ sub new {
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self = $self->SUPER::new( $noTls, $noTorKey, $encryptId, $dataTransferConfigFile, $ignoreDataTransferConfig );
+    $self = $self->SUPER::new( $dataTransferConfigFile, $ignoreDataTransferConfig );
     unless( $self ) {
         return undef;
     }
@@ -66,7 +61,7 @@ sub new {
 sub constructCheckPipeline {
     my $self = shift;
 
-    my $encryptId = $self->{dataTransferConfiguration}->getValue( 'backup', 'encryptid' );
+    my $encryptId = $self->{dataTransferConfiguration}->getValue( 'backup', $self->{dataTransferProtocol}->authority(), 'encryptid' );
     my $uploadFile = constructFileName(
             $self->{toDirectory},
             $self->{sitesToBackup},

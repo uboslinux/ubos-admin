@@ -35,17 +35,19 @@ sub parseLocation {
     if( !$uri->scheme() || $uri->scheme() ne protocol() ) {
         return undef;
     }
+    my $authority = $uri->authority();
 
     # does not have userinfo() on uri as the scheme is not known
-    if( $uri->authority() !~ m!\S+\@\S+! ) {
+    if( $authority !~ m!\S+\@\S+! ) {
         fatal( 'Need to provide user info in the URL, e.g. rsync+ssh://joe@example.com/destination' );
-    } elsif( $uri->authority() =~ m!:.+\@! ) {
+    } elsif( $authority =~ m!:.+\@! ) {
         fatal( 'Do not specify password in the URL' );
     }
 
     my $idfile     = undef;
     my $sshOptions = undef;
     my $limit      = undef;
+
     my $parseOk = GetOptionsFromArray(
             $argsP,
             'idfile|i=s'   => \$idfile,
@@ -59,23 +61,23 @@ sub parseLocation {
         unless( -r $idfile ) {
             fatal( 'File cannot be read:', $idfile );
         }
-        $dataTransferConfig->setValue( 'scp', $uri->authority(), 'idfile', $idfile );
+        $dataTransferConfig->setValue( 'scp', $authority, 'idfile', $idfile );
     }
     if( $sshOptions ) {
         UBOS::AbstractDataTransferProtocol::validiateSshOptions( $sshOptions );
-        $dataTransferConfig->setValue( 'scp', $uri->authority(), 'sshoptions', $sshOptions );
+        $dataTransferConfig->setValue( 'scp', $authority, 'sshoptions', $sshOptions );
     }
     if( $limit ) {
         unless( $limit =~ m!^\d+$! ) {
             fatal( 'Limit must be a positive integer:', $limit );
         }
-        $dataTransferConfig->setValue( 'scp', $uri->authority(), 'limit', $limit );
+        $dataTransferConfig->setValue( 'scp', $authority, 'limit', $limit );
     }
 
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $location, protocol() );
+    $self->SUPER::new( $location, $authority, protocol() );
 
     return $self;
 }
@@ -112,10 +114,10 @@ sub send {
     my $toFile             = shift;
     my $dataTransferConfig = shift;
 
-    my $uri      = URI->new( $toFile ); # scp://user@host/path -> user@host:path
+    my $uri = URI->new( $toFile ); # scp://user@host/path -> user@host:path
 
-    my $idfile = $dataTransferConfig->getValue( 'scp', $uri->authority(), 'idfile' );
-    my $limit  = $dataTransferConfig->getValue( 'scp', $uri->authority(), 'limit' );
+    my $idfile = $dataTransferConfig->getValue( 'scp', $self->{authority}, 'idfile' );
+    my $limit  = $dataTransferConfig->getValue( 'scp', $self->{authority}, 'limit' );
 
     my $cmd = 'scp';
     # Run in interactive, not batch mode, so the first connection attempt to
@@ -131,7 +133,7 @@ sub send {
         $cmd .= " -l '$limit'"; # $data transfer limit
     }
 
-    my $sshOptions = $dataTransferConfig->getValue( 'scp', $uri->authority(), 'sshoptions' );
+    my $sshOptions = $dataTransferConfig->getValue( 'scp', $self->{authority}, 'sshoptions' );
     if( $sshOptions ) {
         $cmd .= " $sshOptions";
     }
