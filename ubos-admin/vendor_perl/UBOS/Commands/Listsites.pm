@@ -121,7 +121,7 @@ SSS
 DDD
         'cmds' => {
             '[ --brief | --detail | --ids-only | --hostnames-only ]' => <<HHH,
-    Show all currently deployed sites. Depending on the provide flag
+    Show all currently deployed sites. Depending on the provided flag
     (if any), more or less information is shown.
 HHH
             '--json' => <<HHH,

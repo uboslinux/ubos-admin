@@ -59,7 +59,7 @@ sub parseLocation {
     $self->SUPER::new( $location, protocol() );
 
     if( $passiveMode ) {
-        $dataTransferConfig->setValue( 'ftp', $uri->authority(), 'passive', $awsRegion );
+        $dataTransferConfig->setValue( 'ftp', $uri->authority(), 'passive', $passiveMode );
     } elsif( $noPassiveMode ) {
         $dataTransferConfig->removeValue( 'ftp', $uri->authority(), 'passive' );
     }

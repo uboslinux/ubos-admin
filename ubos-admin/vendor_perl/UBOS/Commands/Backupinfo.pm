@@ -34,29 +34,43 @@ sub run {
     my $detail        = 0;
     my $brief         = 0;
     my $idsOnly       = 0;
+    my $hostnamesOnly = 0;
     my $in            = undef;
     my $url           = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'         => \$verbose,
-            'logConfig=s'      => \$logConfigFile,
-            'debug'            => \$debug,
-            'json'             => \$json,
-            'detail'           => \$detail,
-            'brief'            => \$brief,
-            'ids-only|idsonly' => \$idsOnly,
-            'in=s'             => \$in,
-            'url=s'            => \$url );
+            'verbose+'                     => \$verbose,
+            'logConfig=s'                  => \$logConfigFile,
+            'debug'                        => \$debug,
+            'json'                         => \$json,
+            'detail'                       => \$detail,
+            'brief'                        => \$brief,
+            'ids-only|idsonly'             => \$idsOnly,
+            'hostnames-only|hostnamesonly' => \$hostnamesOnly,
+            'in=s'                         => \$in,
+            'url=s'                        => \$url );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
+    my $nDetail = 0;
+    if( $detail ) {
+        ++$nDetail;
+    }
+    if( $brief ) {
+        ++$nDetail;
+    }
+    if( $idsOnly ) {
+        ++$nDetail;
+    }
+    if( $hostnamesOnly ) {
+        ++$nDetail;
+    }
+
     if(    !$parseOk
-        || ( $json && ( $detail || $brief || $idsOnly ))
-        || ( $detail && $brief )
-        || ( $brief && $idsOnly )
-        || ( $idsOnly && $detail )
+        || ( $json && $nDetail )
+        || ( $nDetail > 1 )
         || @args
         || ( !$in && !$url )
         || ( $in && $url )
@@ -104,7 +118,7 @@ sub run {
         $jsonOutput->{'sites'}      = {};
         $jsonOutput->{'appconfigs'} = {};
 
-    } elsif( !$brief ) {
+    } elsif( !$brief && !$idsOnly && !$hostnamesOnly ) {
         colPrint( "Type:    " . $backup->backupType      . "\n" );
         colPrint( "Created: " . $backup->startTimeString . "\n" );
     }
@@ -114,31 +128,40 @@ sub run {
     my $seenAppConfigIds = {};
 
     foreach my $siteId ( sort keys %$sites ) {
-        if( $json ) {
-            $jsonOutput->{'sites'}->{$siteId} = $sites->{$siteId}->siteJson();
-
-        } elsif( $idsOnly ) {
-            foreach my $siteId ( sort keys %$sites ) {
-                $sites->{$siteId}->printSiteId();
-            }
-        } elsif( $brief ) {
-            foreach my $siteId ( sort keys %$sites ) {
-                $sites->{$siteId}->printBrief();
-            }
-        } elsif( $detail ) {
-            foreach my $siteId ( sort keys %$sites ) {
-                $sites->{$siteId}->printDetail();
-            }
-        } else {
-            foreach my $siteId ( sort keys %$sites ) {
-                $sites->{$siteId}->print();
-            }
-        }
-
         map { $seenAppConfigIds->{ $_->appConfigId } = 1; } @{ $sites->{$siteId}->appConfigs };
     }
 
+    if( $json ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $jsonOutput->{'sites'}->{$siteId} = $sites->{$siteId}->siteJson();
+        }
+    } elsif( $detail ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->printDetail();
+        }
+    } elsif( $brief ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->printBrief();
+        }
+    } elsif( $idsOnly ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->printSiteId();
+            foreach my $appConfig ( sort @{$sites->{$siteId}->appConfigs()} ) {
+                print( '    ' );
+                $appConfig->printAppConfigId();
+            }
+        }
+    } elsif( $hostnamesOnly ) {
+        print join( '', map { "$_\n" } sort map { $_->hostname() } values %$sites );
+
+    } else {
+        foreach my $siteId ( sort keys %$sites ) {
+            $sites->{$siteId}->print();
+        }
+    }
+
     my @unattachedAppConfigIds = sort grep { !$seenAppConfigIds->{$_} } keys %$appConfigs;
+
     if( @unattachedAppConfigIds ) {
         if( $json ) {
             foreach my $appConfigId ( @unattachedAppConfigIds ) {
@@ -176,35 +199,37 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    --in <backupfile>
+    --in <backupfile> --json
 SSS
-    Display information about the local backupfile <backupfile>.
+    Display information about the local backupfile <backupfile> in
+    JSON format.
 HHH
             <<SSS => <<HHH,
-   --url <backupurl>
+   --url <backupurl> --json
 SSS
-    Retrieve the backup file from URL <backupurl>, and display
-    information about the backup contained in the retrieved file.
+    Retrieve the backup file from URL <backupurl>, and display information
+    about the backup contained in the retrieved file in JSON format.
+HHH
+            <<SSS => <<HHH,
+    --in <backupfile> [ --brief | --detail | --ids-only | --hostnames-only ]
+SSS
+    Display information about the local backupfile <backupfile>. Depending
+    on the provided flag (if any), more or less information is shown.
+HHH
+            <<SSS => <<HHH,
+   --url <backupurl> [ --brief | --detail | --ids-only | --hostnames-only ]
+SSS
+    Retrieve the backup file from URL <backupurl>, and display information
+    about the backup contained in the retrieved file. Depending on the
+    provided flag (if any), more or less information is shown.
 HHH
         },
         'args' => {
             '--verbose' => <<HHH,
     Display extra output. May be repeated for even more output.
 HHH
-            '--logConfig <file>' => <<HHH,
+            '--logConfig <file>' => <<HHH
     Use an alternate log configuration file for this command.
-HHH
-            '--json' => <<HHH,
-    Use JSON as the output format, instead of human-readable text.
-HHH
-            '--detail' => <<HHH,
-    Show more detail.
-HHH
-            '--brief' => <<HHH,
-    Show less detail.
-HHH
-            '--ids-only' => <<HHH
-    Show Site and AppConfiguration ids only.
 HHH
         }
     };

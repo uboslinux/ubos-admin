@@ -132,7 +132,6 @@ sub send {
         $cmd .= " $sshOptions";
     }
 
-    my $uri  = URI->new( $toFile ); # rsync+ssh://user@host/path -> user@host:path
     my $dest = $uri->authority();
     $cmd    .= ' ' . $dest;
 

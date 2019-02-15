@@ -57,6 +57,7 @@ sub parseArgumentsPartial {
     my $backupTls                = undef;
     my $backupTorKey             = undef;
     my $encryptId                = undef;
+    my $gpgHomeDir               = undef;
     my $dataTransferConfigFile   = undef;
     my $ignoreDataTransferConfig = undef;
 
@@ -67,12 +68,14 @@ sub parseArgumentsPartial {
             'backuptls!'                      => \$backupTls,
             'backuptorkey!'                   => \$backupTorKey,
             'backupencryptid|encryptid=s'     => \$encryptId,
+            'gpghomedir=s'                    => \$gpgHomeDir,
             'backupdatatransferconfigfile=s'  => \$dataTransferConfigFile,
             'nobackupdatatransferconfigfile'  => \$ignoreDataTransferConfig );
 
     if(     !$parseOk
         || ( $backupToFile && $backupToDirectory )
-        || ( $dataTransferConfigFile && $ignoreDataTransferConfig ))
+        || ( $dataTransferConfigFile && $ignoreDataTransferConfig )
+        || ( $gpgHomeDir && !$encryptId ))
     {
         $@ = undef;
         return undef;
@@ -101,18 +104,38 @@ sub parseArgumentsPartial {
         return undef;
     }
 
-    my $authority = $ret->authority();
+    my $authority = $ret->{dataTransferProtocol}->authority();
     if( defined( $backupTls )) {
-        $self->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptls', $backupTls );
+        $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptls', $backupTls );
     }
     if( defined( $backupTorKey )) {
-        $self->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptorkey', $backupTorKey );
+        $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptorkey', $backupTorKey );
     }
+
+    if( $gpgHomeDir ) {
+        $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'gpghomedir', $gpgHomeDir );
+
+    } else {
+        $gpgHomeDir = $ret->{dataTransferConfiguration}->getValue( 'backup', $authority, 'gpghomedir' );
+        unless( $gpgHomeDir ) {
+             $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'gpghomedir', '/var/shepherd/.gnupg' ); # default
+        }
+    }
+
     if( defined( $encryptId )) {
         if( $encryptId ) {
-            $self->{dataTransferConfiguration}->setValue( 'backup', $authority, 'encryptid', $encryptId );
+            # check the key exists
+            my $out;
+            my $status = $ret->invokeGpg( "--list-public-keys '$encryptId'", \$out, \$out );
+            unless( $status == 0 ) {
+                # all we need is the exit code
+                trace( 'gpg --list-public-keys sayd:', $out );
+                fatal( 'Unknown key:', $encryptId );
+            }
+            $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'encryptid', $encryptId );
+
         } else {
-            $self->{dataTransferConfiguration}->removeValue( 'backup', $authority, 'encryptid' );
+            $ret->{dataTransferConfiguration}->removeValue( 'backup', $authority, 'encryptid' );
         }
     }
     return $ret;
@@ -309,7 +332,7 @@ sub doUpload {
         trace( 'Encrypting:', $stageToEncryptFile, $stageToUploadFile );
 
         my $err;
-        my $status = UBOS::Utils::myexec( "gpg --encrypt -r '$encryptId' < '$stageToEncryptFile' > '$stageToUploadFile'", undef, undef, \$err );
+        my $status = $self->invokeGpg( "--encrypt -r '$encryptId' < '$stageToEncryptFile' > '$stageToUploadFile'", undef, \$err );
 
         UBOS::Utils::deleteFile( $stageToEncryptFile ); # free up space asap
 
@@ -356,6 +379,24 @@ sub mkTempFile {
     push @{$self->{deleteFiles}}, $tmp;
 
     return $tmp->filename;
+}
+
+##
+# Invoke gpg
+# $args: Arguments as string
+# $outP: where to write stdout to
+# $errP: where to write stderr to
+# return: exit code
+sub invokeGpg {
+    my $self = shift;
+    my $args = shift;
+    my $outP = shift;
+    my $errP = shift;
+
+    my $gpgHomeDir = $self->{dataTransferConfiguration}->getValue( 'backup', $self->{dataTransferProtocol}->authority(), 'gpghomedir' );
+
+    my $status = UBOS::Utils::myexec( "gpg --homedir '$gpgHomeDir' $args", undef, $outP, $errP );
+    return $status;
 }
 
 1;
