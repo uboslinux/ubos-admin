@@ -104,38 +104,41 @@ sub parseArgumentsPartial {
         return undef;
     }
 
-    my $authority = $ret->{dataTransferProtocol}->authority();
-    if( defined( $backupTls )) {
-        $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptls', $backupTls );
-    }
-    if( defined( $backupTorKey )) {
-        $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptorkey', $backupTorKey );
-    }
-
-    if( $gpgHomeDir ) {
-        $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'gpghomedir', $gpgHomeDir );
-
-    } else {
-        $gpgHomeDir = $ret->{dataTransferConfiguration}->getValue( 'backup', $authority, 'gpghomedir' );
-        unless( $gpgHomeDir ) {
-             $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'gpghomedir', '/var/shepherd/.gnupg' ); # default
+    if( exists( $ret->{dataTransferProtocol} ) && $ret->{dataTransferProtocol} ) {
+        # Support NoOp
+        my $authority = $ret->{dataTransferProtocol}->authority();
+        if( defined( $backupTls )) {
+            $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptls', $backupTls );
         }
-    }
+        if( defined( $backupTorKey )) {
+            $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'backuptorkey', $backupTorKey );
+        }
 
-    if( defined( $encryptId )) {
-        if( $encryptId ) {
-            # check the key exists
-            my $out;
-            my $status = $ret->invokeGpg( "--list-public-keys '$encryptId'", \$out, \$out );
-            unless( $status == 0 ) {
-                # all we need is the exit code
-                trace( 'gpg --list-public-keys sayd:', $out );
-                fatal( 'Unknown key:', $encryptId );
-            }
-            $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'encryptid', $encryptId );
+        if( $gpgHomeDir ) {
+            $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'gpghomedir', $gpgHomeDir );
 
         } else {
-            $ret->{dataTransferConfiguration}->removeValue( 'backup', $authority, 'encryptid' );
+            $gpgHomeDir = $ret->{dataTransferConfiguration}->getValue( 'backup', $authority, 'gpghomedir' );
+            unless( $gpgHomeDir ) {
+                 $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'gpghomedir', '/var/shepherd/.gnupg' ); # default
+            }
+        }
+
+        if( defined( $encryptId )) {
+            if( $encryptId ) {
+                # check the key exists
+                my $out;
+                my $status = $ret->invokeGpg( "--list-public-keys '$encryptId'", \$out, \$out );
+                unless( $status == 0 ) {
+                    # all we need is the exit code
+                    trace( 'gpg --list-public-keys sayd:', $out );
+                    fatal( 'Unknown key:', $encryptId );
+                }
+                $ret->{dataTransferConfiguration}->setValue( 'backup', $authority, 'encryptid', $encryptId );
+
+            } else {
+                $ret->{dataTransferConfiguration}->removeValue( 'backup', $authority, 'encryptid' );
+            }
         }
     }
     return $ret;
