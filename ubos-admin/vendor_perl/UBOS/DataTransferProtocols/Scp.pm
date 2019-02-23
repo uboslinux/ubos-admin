@@ -39,7 +39,7 @@ sub parseLocation {
 
     # does not have userinfo() on uri as the scheme is not known
     if( $authority !~ m!\S+\@\S+! ) {
-        fatal( 'Need to provide user info in the URL, e.g. rsync+ssh://joe@example.com/destination' );
+        fatal( 'Need to provide user info in the URL, e.g. scp://joe@example.com/destination' );
     } elsif( $authority =~ m!:.+\@! ) {
         fatal( 'Do not specify password in the URL' );
     }
