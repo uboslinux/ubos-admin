@@ -328,6 +328,8 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/su *, \
     /bin/bash *
 CONTENT
+            # If you change this, also change ubos-cloud.cfg in cloud-init
+
             return 0;
         }
         return 1;
