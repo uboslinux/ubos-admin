@@ -866,7 +866,7 @@ sub preSnapshot {
             $configName = 'root';
         }
 
-        if( -e "$target/etc/snapper/configs/$configName" ) {
+        if( -e "/etc/snapper/configs/$configName" ) {
             my $cmd  = "snapper --config '$configName'";
             $cmd    .= " create --type pre --print-number";
             $cmd    .= " --cleanup-algorithm '$cleanupAlgorithm'";
@@ -909,7 +909,7 @@ sub postSnapshot {
                 $configName = 'root';
             }
 
-            if( -e "$target/etc/snapper/configs/$configName" ) {
+            if( -e "/etc/snapper/configs/$configName" ) {
                 my $cmd  = "snapper --config '$configName'";
                 $cmd    .= " create --type post --pre-number '$snapNumber'";
                 $cmd    .= " --cleanup-algorithm '$cleanupAlgorithm'";
