@@ -17,6 +17,7 @@ use File::Basename;
 use File::Spec;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 use URI;
 
