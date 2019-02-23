@@ -116,7 +116,7 @@ sub validiateSshOptions {
     $options =~ s!\s+$!!;
     my @options = split( /\s+/, $options );
     foreach my $option ( @options ) {
-        unless( $option =~ m!^-o[0-9a-zA-Z]+=[-0-9a-zA-Z/,@.]+$! ) {
+        unless( $option =~ m!^-o\s*[0-9a-zA-Z]+=[-+0-9a-zA-Z/,@.]+$! ) {
             fatal( 'Invalid SSH option value, provide options as -oXXX=YYY:', $option );
         }
     }
