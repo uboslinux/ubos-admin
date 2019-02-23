@@ -612,6 +612,7 @@ sub obtainLetsEncryptCertificate {
         UBOS::LetsEncrypt::renewCertificate( $hostname );
     } else {
         UBOS::LetsEncrypt::obtainCertificate( $hostname, $siteWellKnownDir, $adminHash->{email} );
+        # Don't need to check return status; next call will tell
     }
 
     my $letsEncryptStatus = UBOS::LetsEncrypt::determineCertificateStatus( $hostname, 1 );
@@ -619,8 +620,10 @@ sub obtainLetsEncryptCertificate {
         $site->setTlsKeyAndCert(
                 UBOS::Utils::slurpFile( $letsEncryptStatus->{keypath} ),
                 UBOS::Utils::slurpFile( $letsEncryptStatus->{certpath} ));
+        return 1;
+    } else {
+        return 0;
     }
-    return 1;
 }
 
 ##
