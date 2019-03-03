@@ -58,15 +58,7 @@ sub addFile {
         return 0;
     }
 
-    my $dest;
-    if( $fileToAdd =~ m!\.([^\./]+)$! ) {
-        # Keep the extension
-        $dest = "$bucket.$1";
-    } else {
-        $dest = $bucket;
-    }
-
-    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $dest )) {
+    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket )) {
         return 1;
     }
     return 0;

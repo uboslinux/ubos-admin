@@ -55,16 +55,8 @@ sub addFile {
         return 0;
     }
 
-    my $dest;
-    if( $fileToAdd =~ m!\.([^\./]+)$! ) {
-        # Keep the extension
-        $dest = "$bucket.$1";
-    } else {
-        $dest = $bucket;
-    }
-
     # keep attributes, and don't follow symlinks
-    if( UBOS::Utils::myexec( "cp -pP --reflink=auto '$fileToAdd' '" . $self->{contextPathInBackup} . "/$dest'" )) {
+    if( UBOS::Utils::myexec( "cp -pP --reflink=auto '$fileToAdd' '" . $self->{contextPathInBackup} . "/$bucket'" )) {
         return 0;
     }
 
