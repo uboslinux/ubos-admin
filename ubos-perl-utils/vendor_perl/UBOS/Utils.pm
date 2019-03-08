@@ -843,7 +843,7 @@ sub getGid {
     } else {
         my @ginfo = getgrnam( $gname );
         unless( @ginfo ) {
-            error( 'Cannot find group. Using \'nogroup\' instead.',  $gname );
+            error( 'Cannot find group. Using \'nogroup\' instead:',  $gname );
             @ginfo = getgrnam( 'nogroup' );
         }
         $gid = $ginfo[2];
