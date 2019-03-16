@@ -799,6 +799,10 @@ sub configureNetworkd {
     $nsswitch =~ s/\[!UNAVAIL=return\] *//;
     UBOS::Utils::saveFile( $target . '/etc/nsswitch.conf', $nsswitch );
 
+    # Set DNSSec=no
+    my $conf = UBOS::Utils::slurpFile( $target . '/etc/systemd/resolved.conf' );
+    $conf =~ s!^#*DNSSEC.*$!DNSSEC=No!m;
+    UBOS::Utils::saveFile( $target . '/etc/systemd/resolved.conf' );
     return 0;
 }
 
