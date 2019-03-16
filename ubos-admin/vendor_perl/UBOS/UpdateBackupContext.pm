@@ -158,6 +158,11 @@ sub move {
         error( 'move to contains dangerous character, will likely fail', $to );
     }
 
+    if( -e $to ) {
+        # don't move into the directory -- replace
+        UBOS::Utils::deleteRecursively( $to );
+    }
+
     my $exit = UBOS::Utils::myexec( "mv '$from' '$to'" );
     if( $exit ) {
         error( 'move failed:', $from, $to );
