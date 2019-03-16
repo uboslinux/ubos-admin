@@ -413,10 +413,11 @@ $serverDeclaration
         AllowOverride All
 
         <IfModule php7_module>
-            php_admin_value open_basedir $siteDocumentRoot/:$tmpDir/:/ubos/share/:/srv/http/
+            php_admin_value open_basedir $siteDocumentRoot/:/tmp/:$tmpDir/:/ubos/share/:/srv/http/
         </IfModule>
     </Directory>
 CONTENT
+    # Specify both /tmp and $tmpDir, because some apps internally use /tmp
 
     if( $site->hasTls ) {
         $siteFileContent .= <<CONTENT;
