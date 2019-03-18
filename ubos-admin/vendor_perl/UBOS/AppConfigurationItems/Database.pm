@@ -153,7 +153,11 @@ sub backup {
             $compress );
 
     if( $exportedFile ) {
-        my $ret = $backupContext->addFile( $exportedFile, $bucket );
+        my $bucketWithExtension = $bucket;
+        if( $compress ) {
+            $bucketWithExtension .= ".$compress";
+        }
+        my $ret = $backupContext->addFile( $exportedFile, $bucketWithExtension );
 
         push @$filesToDelete, $exportedFile;
 
