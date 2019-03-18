@@ -86,6 +86,10 @@ sub run {
     if( $restIsPackages ) {
         @packageFiles = @args;
         @args         = ();
+
+    } else {
+        # some are left over
+        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
     # Need to keep a copy of the logConfigFile, new package may not have it any more
