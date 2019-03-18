@@ -802,7 +802,7 @@ sub configureNetworkd {
     # Set DNSSec=no
     my $conf = UBOS::Utils::slurpFile( $target . '/etc/systemd/resolved.conf' );
     $conf =~ s!^#*DNSSEC.*$!DNSSEC=No!m;
-    UBOS::Utils::saveFile( $target . '/etc/systemd/resolved.conf' );
+    UBOS::Utils::saveFile( $target . '/etc/systemd/resolved.conf', $conf );
     return 0;
 }
 
