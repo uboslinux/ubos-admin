@@ -87,7 +87,7 @@ sub run {
         @packageFiles = @args;
         @args         = ();
 
-    } else {
+    } elsif( @args ) {
         # some are left over
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
