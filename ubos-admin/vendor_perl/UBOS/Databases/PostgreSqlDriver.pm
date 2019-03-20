@@ -11,6 +11,7 @@ use warnings;
 package UBOS::Databases::PostgreSqlDriver;
 
 use File::Basename;
+use File::Temp;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -107,7 +108,6 @@ sub executeCmdAsAdmin {
     trace( 'PostgreSqlDriver::executeCmdAsAdmin', $cmd, $stdin, $outputFile );
 
     my $out;
-    my $err;
     my $escapedCmd = $cmd;
     $escapedCmd =~ s!'!'"'"'!g;
 
@@ -117,9 +117,9 @@ sub executeCmdAsAdmin {
     }
 
     my $ret = 1;
-    if( UBOS::Utils::myexec( $fullCmd, $stdin, \$out, \$err )) {
+    if( UBOS::Utils::myexec( $fullCmd, $stdin, \$out, \$out )) {
         $ret = 0;
-        $@   = $err;
+        $@   = $out;
     }
     return $ret;
 }
@@ -156,13 +156,17 @@ SQL
     my $sql2; # commands
     my $errors = 0;
 
-    if( executeCmdAsAdmin( "psql -qAt \"$dbName\"", $sql, \$sql2 )) {
-        if( $sql2 ) {
-            unless( executeCmdAsAdmin( "psql -qAt \"$dbName\"", $sql2 )) {
-                error( 'Changing ownership of postgresql database objects failed' );
-                ++$errors;
-            }
-        } # else there is nothing to do
+    my $tmpDir   = UBOS::Host::tmpdir();
+    my $sql2File = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
+
+    if( executeCmdAsAdmin( "psql -qAt \"$dbName\"", $sql, $sql2File )) {
+        my $sql2 = UBOS::Utils::slurpFile( $sql2File );
+        # Need to do this as root, as the next command is invoked as psq;
+
+        unless( executeCmdAsAdmin( "psql -qAt \"$dbName\"", $sql2 )) {
+            error( 'Changing ownership of postgresql database objects failed:', $@ );
+            ++$errors;
+        }
 
     } else {
         error( 'Determining SQL commands to change ownership of postgresql database objects failed' );
