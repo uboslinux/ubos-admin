@@ -84,6 +84,9 @@ sub run {
     }
 
     if( $restIsPackages ) {
+        if( grep /^--/, @args ) {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
         @packageFiles = @args;
         @args         = ();
 
