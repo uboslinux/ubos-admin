@@ -82,30 +82,31 @@ sub addDirectoryHierarchy {
 ##
 # Callback by which an AppConfigurationItem can restore a file from a Backup
 # $bucket: the name of the bucket from which the file is to be restored
-# return: name of the file, or undef if not found
+# $fileName: name of the file in the filesystem to be written
+# return: success or fail
 sub restore {
     my $self     = shift;
     my $bucket   = shift;
+    my $fileName = shift;
 
-    trace( 'ZipFileBackupContext::restore', $bucket );
+    trace( 'ZipFileBackupContext::restore', $bucket, $fileName, $self->{contextPathInBackup} );
 
     my $member = $self->{backup}->{zip}->memberNamed( $self->{contextPathInBackup} . $bucket );
     unless( $member ) {
         return undef;
     }
 
-    my $tmpDir  = UBOS::Host::tmpdir();
-    my $tmpFile = File::Temp->new( UNLINK => 1, TMPDIR => $tmpDir );
-    if( $self->{backup}->{zip}->extractMember( $member, $tmpFile->filename )) {
-        return undef;
+    if( $self->{backup}->{zip}->extractMember( $member, $fileName ) == AZ_OK ) {
+        return 1;
+    } else {
+        return 0;
     }
-    return $tmpFile; # must return object, so no garbage collection yet
 }
 
 ##
 # Helper method to restore a directory hierarchy from a Backup
 # $bucket: the name of the bucket from which the directory hierarchy is to be restored
-# $dirName: name of the director in the filesystem to be written
+# $dirName: name of the directory in the filesystem to be written
 # return: success or fail
 sub restoreRecursive {
     my $self    = shift;

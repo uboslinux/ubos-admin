@@ -95,28 +95,35 @@ sub addDirectoryHierarchy {
 ##
 # Callback by which an AppConfigurationItem can restore a file from a Backup
 # $bucket: the name of the bucket from which the file is to be restored
-# return: name of the file, or undef if not found
+# $fileName: name of the file in the filesystem to be written
+# return: success or fail
 sub restore {
     my $self     = shift;
     my $bucket   = shift;
+    my $fileName = shift;
 
-    my $ret = $self->{contextPathInBackup} . "/$bucket";
-    if( -r $ret ) {
-        return $ret;
+    trace( 'UpdateBackupContext::restore', $bucket, $fileName );
+
+    my $found = $self->{contextPathInBackup} . "/$bucket";
+    if( -r $found ) {
+        return UBOS::Utils::copyRecursively( $found, $fileName );
+
     } else {
-        return undef;
+        return 0;
     }
 }
 
 ##
 # Helper method to restore a directory hierarchy from a Backup
 # $bucket: the name of the bucket from which the directory hierarchy is to be restored
-# $dirName: name of the director in the filesystem to be written
+# $dirName: name of the directory in the filesystem to be written
 # return: success or fail
 sub restoreRecursive {
     my $self    = shift;
     my $bucket  = shift;
     my $dirName = shift;
+
+    trace( 'UpdateBackupContext::restoreRecursive', $bucket, $dirName );
 
     unless( -d ( $self->{contextPathInBackup} . "/$bucket" )) {
         # The bucket is new
