@@ -187,17 +187,20 @@ sub restore {
 
     my $ret = 1;
 
-    my $compress    = undef;
-    my $restoreFrom = $backupContext->restore( $bucket );
-    unless( $restoreFrom ) {
+    my $tmpDir   = UBOS::Host::tmpdir();
+    my $restored = File::Temp::tempnam( $tmpDir, 'restore-' );
+
+    my $compress = undef;
+    my $success  = $backupContext->restore( $bucket, $restored );
+    unless( $success ) {
         # try compressed
-        $restoreFrom = $backupContext->restore( "$bucket.gz" );
-        if( $restoreFrom ) {
+        $success = $backupContext->restore( "$bucket.gz", $restored );
+        if( $success ) {
             $compress = 'gz';
         }
     }
-    unless( $restoreFrom ) {
-        error( 'Cannot restore database: bucket:', $bucket, 'context:', $backupContext->asString() );
+    unless( $success ) {
+        error( 'Cannot restore database: bucket:', $bucket, 'context:', $backupContext->asString(), 'to:', $restored );
         $ret = 0;
         return $ret;
     }
@@ -207,7 +210,7 @@ sub restore {
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
                     $name,
-                    $restoreFrom,
+                    $restored,
                     $compress );
     if( $dbName ) {
         my $dbType = $self->{role}->name();
