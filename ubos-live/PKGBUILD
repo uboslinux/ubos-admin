@@ -2,11 +2,11 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.26
+pkgver=0.27
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
-license=("proprietary")
+license=("PPL3")
 options=('!strip')
 depends=(
     'coreutils'

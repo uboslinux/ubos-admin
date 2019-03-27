@@ -2,11 +2,11 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.4
+pkgver=0.5
 pkgrel=1
 pkgdesc="Certificates for UBOS Live"
 arch=('any')
-license=("proprietary")
+license=("PPL3")
 options=('!strip')
 
 # Be explicit so we don't miss one
