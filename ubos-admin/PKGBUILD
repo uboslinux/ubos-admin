@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.350
+pkgver=0.351
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -107,7 +107,4 @@ package() {
 
 # A directory to mount a UBOS staff to in a container
     mkdir -p -m755 ${pkgdir}/UBOS-STAFF
-
-# License
-    install -D -m444 ${startdir}/LICENSE ${pkgdir}/usr/share/licenses/PPL3
 }
