@@ -48,11 +48,9 @@ sub new {
     }
     unless( $self->{additionalkernelparameters} ) {
         $self->{additionalkernelparameters} = [
-                'ro',
-                'rootwait',
                 'nomodeset',
-                'console=hvc0',
-                'earlyprintk=xen,verbose',
+                'console=ttyS0,9600n8',
+                'earlyprintk=serial,ttyS0,9600,verbose',
                 'loglevel=7' ];
     }
 

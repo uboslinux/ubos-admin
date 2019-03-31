@@ -339,8 +339,9 @@ set -e
 
 # In a container, there may be no /lib/modules
 if [ -d /lib/modules ]; then
-    # old version: for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
-    depmod -a
+    for v in $(ls -1 /lib/modules | grep -v extramodules); do depmod -a $v; done
+    # Force the version; required so it works to install a newer kernel
+    # version compared to that of the currently running system
 fi
 
 systemctl set-default multi-user.target
