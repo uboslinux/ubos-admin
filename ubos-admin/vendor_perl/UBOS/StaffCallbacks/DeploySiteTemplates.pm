@@ -97,7 +97,7 @@ sub deploySiteTemplates {
             my $newSite = UBOS::Site->new( $json, 1 );
 
             if( !$newSite ) {
-                error( 'Failed to create site from:', $templateFile );
+                error( 'Failed to create site from:', $templateFile, ':', $@ );
                 ++$errors;
 
             } elsif( !exists( $existingHosts->{$newSite->hostname()} )) {
