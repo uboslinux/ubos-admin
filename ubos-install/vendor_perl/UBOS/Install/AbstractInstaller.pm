@@ -1066,4 +1066,25 @@ sub getSigLevelString {
     return $ret;
 }
 
+##
+# We may have been handed symlinks to devices, not the actual devices,
+# so we centrally resolve them here.
+# @$devices: device file names (modified in place)
+# return: success or failure
+sub replaceDevSymLinks {
+    my $self  = shift;
+    my $argvp = shift;
+
+    for( my $i=0 ; $i<@$argvp ; ++$i ) {
+        my $resolved = UBOS::Utils::absReadlink( $argvp[$i] );
+        if( -b $resolved ) {
+            $argvp[$i] = $resolved;
+        } else {
+            $@ = 'Cannot resolve: ' . $argvp[$i];
+            return 0;
+        }
+    }
+    return 1;
+}
+
 1;

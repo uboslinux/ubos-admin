@@ -12,8 +12,6 @@ package UBOS::Install::AbstractDiskBlockDevices;
 use base qw( UBOS::Install::AbstractDiskLayout );
 use fields qw( disks );
 
-use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
-use UBOS::Install::DiskLayouts::GptDiskBlockDevices;
 use UBOS::Utils;
 
 ##

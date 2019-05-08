@@ -86,6 +86,10 @@ sub createDiskLayout {
             @$argvp = ( $config->{device} );
         }
     }
+    unless( $self->replaceDevSymlinks( $argvp )) {
+        error( $@ );
+        return undef;
+    }
 
     if( $noswap ) {
         error( 'Invalid invocation: --noswap cannot be used when installing for a container' );

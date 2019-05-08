@@ -83,6 +83,10 @@ sub createDiskLayout {
             @$argvp = ( $config->{device} );
         }
     }
+    unless( $self->replaceDevSymlinks( $argvp )) {
+        error( $@ );
+        return undef;
+    }
 
     my $ret = 1; # set to something, so undef can mean error
     if( @$argvp ) {
