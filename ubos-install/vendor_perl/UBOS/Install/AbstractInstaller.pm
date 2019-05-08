@@ -1071,16 +1071,16 @@ sub getSigLevelString {
 # so we centrally resolve them here.
 # @$devices: device file names (modified in place)
 # return: success or failure
-sub replaceDevSymLinks {
+sub replaceDevSymlinks {
     my $self  = shift;
     my $argvp = shift;
 
     for( my $i=0 ; $i<@$argvp ; ++$i ) {
-        my $resolved = UBOS::Utils::absReadlink( $argvp[$i] );
+        my $resolved = UBOS::Utils::absReadlink( $argvp->[$i] );
         if( -b $resolved ) {
-            $argvp[$i] = $resolved;
+            $argvp->[$i] = $resolved;
         } else {
-            $@ = 'Cannot resolve: ' . $argvp[$i];
+            $@ = 'Cannot resolve: ' . $argvp->[$i];
             return 0;
         }
     }
