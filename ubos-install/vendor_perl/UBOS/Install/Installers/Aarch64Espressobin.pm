@@ -16,7 +16,6 @@ use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Install::AbstractDiskBlockDevices;
 use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
@@ -141,7 +140,7 @@ sub createDiskLayout {
                                     'size'      => 200 * 1024, # 100M at 512/sector
                                     'mkfsflags' => '-O ^metadata_csum,^64bit',
                                     'mbrboot'   => 1
-                                    # default partition type                                
+                                    # default partition type
                                 },
                                 '/' => {
                                     'index' => 2,

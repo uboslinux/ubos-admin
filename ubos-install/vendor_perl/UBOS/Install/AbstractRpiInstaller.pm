@@ -19,7 +19,6 @@ use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Install::AbstractDiskBlockDevices;
 use UBOS::Install::AbstractDiskImage;
 use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::DiskLayouts::Directory;
