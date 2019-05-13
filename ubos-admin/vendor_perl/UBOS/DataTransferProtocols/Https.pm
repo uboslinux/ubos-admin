@@ -37,12 +37,14 @@ sub parseLocation {
         return undef;
     }
 
-    my $method  = undef;
-    my @resolve = ();
+    my $method   = undef;
+    my @resolve  = ();
+    my $insecure = 0;
     my $parseOk = GetOptionsFromArray(
             $argsP,
             'method'    => \$method,
-            'resolve=s' => \@resolve );
+            'resolve=s' => \@resolve,
+            'insecure'  => \$insecure );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -61,6 +63,9 @@ sub parseLocation {
             }
         }
         $dataTransferConfig->setValue( 'https', $uri->authority(), 'resolve', \@resolve );
+    }
+    if( $insecure ) {
+        $dataTransferConfig->setValue( 'https', $uri->authority(), 'insecure', 1 );
     }
 
     unless( ref( $self )) {
@@ -108,12 +113,17 @@ sub send {
     my $cmd = "curl -T '$localFile'";
     my $method   = $dataTransferConfig->getValue( 'https', $uri->authority(), 'method' );
     my $resolveP = $dataTransferConfig->getValue( 'https', $uri->authority(), 'resolve' );
+    my $insecure = $dataTransferConfig->getValue( 'https', $uri->authority(), 'insecure' );
     if( $method ) {
         $cmd .= " -X $method";
     }
     if( $resolveP && @$resolveP ) {
         $cmd .= join( '', map { " --resolve '$_'" } @$resolveP );
     }
+    if( $insecure ) {
+        $cmd .= ' --insecure';
+    }
+
     $cmd .= " '$toFile'";
 
     info( 'Uploading to', $toFile );
@@ -141,6 +151,7 @@ sub description {
 The HTTPS protocol (HTTP over SSL/TLS). Options:
     --method <method> : use the HTTP method <method>.
     --resolve <spec>  : add one or more --resolve arguments to the CURL invocation.
+    --insecure        : do not check TLS certificates.
 TXT
 }
 
