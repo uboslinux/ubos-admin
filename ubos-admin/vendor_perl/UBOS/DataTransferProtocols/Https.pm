@@ -14,6 +14,7 @@ use base qw( UBOS::AbstractDataTransferProtocol );
 use fields;
 
 use Getopt::Long qw( GetOptionsFromArray );
+use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 use URI;
@@ -36,10 +37,12 @@ sub parseLocation {
         return undef;
     }
 
-    my $method = undef;
+    my $method  = undef;
+    my @resolve = ();
     my $parseOk = GetOptionsFromArray(
             $argsP,
-            'method', => \$method );
+            'method'    => \$method,
+            'resolve=s' => \@resolve );
     if( !$parseOk || @$argsP ) {
         return undef;
     }
@@ -50,6 +53,14 @@ sub parseLocation {
             fatal( 'HTTPS methods may only be PUT or POST, not:', $method );
         }
         $dataTransferConfig->setValue( 'https', $uri->authority(), 'method', $method );
+    }
+    if( @resolve ) {
+        foreach my $resolve ( @resolve ) {
+            if( $resolve !~ m!^(.+):(\d+):(.+)$! || !UBOS::Host::isValidHostname( $1 ) || !UBOS::Host::isValidHostname( $3 )) {
+                fatal( 'Invalid --resolve specification:', $resolve );
+            }
+        }
+        $dataTransferConfig->setValue( 'https', $uri->authority(), 'resolve', \@resolve );
     }
 
     unless( ref( $self )) {
@@ -95,9 +106,13 @@ sub send {
     my $uri = URI->new( $toFile );
 
     my $cmd = "curl -T '$localFile'";
-    my $method = $dataTransferConfig->getValue( 'https', $uri->authority(), 'method' );
+    my $method   = $dataTransferConfig->getValue( 'https', $uri->authority(), 'method' );
+    my $resolveP = $dataTransferConfig->getValue( 'https', $uri->authority(), 'resolve' );
     if( $method ) {
         $cmd .= " -X $method";
+    }
+    if( $resolveP && @$resolveP ) {
+        $cmd .= join( '', map { " --resolve '$_'" } @$resolveP );
     }
     $cmd .= " '$toFile'";
 
@@ -125,6 +140,7 @@ sub description {
     return <<TXT;
 The HTTPS protocol (HTTP over SSL/TLS). Options:
     --method <method> : use the HTTP method <method>.
+    --resolve <spec>  : add one or more --resolve arguments to the CURL invocation.
 TXT
 }
 
