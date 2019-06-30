@@ -86,12 +86,43 @@ sub run {
 
     my $jsonTemplate = undef;
     if( $fromTemplate ) {
-        unless( -r $fromTemplate ) {
-            fatal( 'Template file does not exist or cannot be read:', $fromTemplate );
+        my $localTemplate;
+        my $localTemplateFile;
+        if( $fromTemplate =~ m!^\S+://! ) {
+            my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
+
+            $localTemplateFile = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
+            close $localTemplateFile;
+            $localTemplate = $localTemplateFile->filename();
+
+            info( 'Downloading template...' );
+
+            my $stdout;
+            my $stderr;
+            if( UBOS::Utils::myexec( "curl -L -v -o '$localTemplate' '$fromTemplate'", undef, \$stdout, \$stderr )) {
+                fatal( 'Failed to download', $fromTemplate );
+            }
+            if( $stderr =~ m!HTTP/1\.[01] (\d+)! ) {
+                my $status = $1;
+                unless( $status eq '200' ) {
+                    fatal( 'Failed to access', $fromTemplate, 'with status', $status );
+                }
+            }
+
+        } else {
+            $localTemplate = $fromTemplate;
+            unless( -r $localTemplate ) {
+                fatal( 'Template file does not exist or cannot be read:', $localTemplate );
+            }
         }
-        $jsonTemplate = UBOS::Utils::readJsonFromFile( $fromTemplate );
+
+        $jsonTemplate = UBOS::Utils::readJsonFromFile( $localTemplate );
         unless( $jsonTemplate ) {
             fatal();
+        }
+
+        if( exists( $jsonTemplate->{instructiontext} )) {
+            colPrintInfo( $jsonTemplate->{instructiontext} . "\n" );
         }
     }
 
@@ -251,6 +282,16 @@ sub run {
     my $tlsCrtChain;
     my $tlsCaCrt;
 
+    if(    $jsonTemplate
+        && exists( $jsonTemplate->{tls} )
+        && exists( $jsonTemplate->{tls}->{letsencrypt} )
+        && $jsonTemplate->{tls}->{letsencrypt}
+        && !$letsEncrypt ) {
+
+        $tls         = 1;
+        $letsEncrypt = 1;
+    }
+
     if( $tls ) {
         if( $letsEncrypt ) {
             # nothing here
@@ -406,9 +447,14 @@ sub run {
 
     if( $jsonTemplate ) {
         foreach my $appConfig ( @{$jsonTemplate->{appconfigs}} ) {
-            my $appConfigId = $appConfig->{appconfigid};
-            if( UBOS::Host::findAppConfigurationById( $appConfigId )) {
-                fatal( 'An AppConfiguration with this appconfigid is deployed already. Cannot create a new site from this template:', $hostname );
+            my $appConfigId;
+            if( exists( $appConfig->{appconfigid} )) {
+                $appConfigId = $appConfig->{appconfigid};
+                if( UBOS::Host::findAppConfigurationById( $appConfigId )) {
+                    fatal( 'An AppConfiguration with this appconfigid is deployed already. Cannot create a new site from this template:', $hostname );
+                }
+            } else {
+                $appConfigId = UBOS::Host::createNewAppConfigId();
             }
 
             my $appId  = $appConfig->{appid};
@@ -466,8 +512,8 @@ sub run {
             $appConfigJson->{appconfigid} = $appConfigId;
             $appConfigJson->{appid}       = $appId;
 
-            if( defined( $jsonTemplate->{context} )) {
-                $appConfigJson->{context} = $jsonTemplate->{context};
+            if( exists( $appConfig->{context} )) {
+                $appConfigJson->{context} = $appConfig->{context};
             }
 
             if( %accs ) {
