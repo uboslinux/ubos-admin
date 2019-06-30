@@ -49,6 +49,8 @@ sub run {
     my @urls            = ();
     my $in              = undef;
     my $url             = undef;
+    my @resolve         = (); # passed into curl
+    my $insecure        = 0;  # passed into curl
     my @siteIds         = ();
     my @hostnames       = ();
     my $createNew       = 0;
@@ -74,6 +76,8 @@ sub run {
             'notorhostname=s'  => \@noTorHostname,
             'in=s'             => \@ins,
             'url=s'            => \@urls,
+            'resolve=s',       => \@resolve,
+            'insecure'         => \$insecure,
             'siteid=s'         => \@siteIds,
             'hostname=s'       => \@hostnames,
             'createnew'        => \$createNew,
@@ -98,6 +102,7 @@ sub run {
         || @args
         || ( $verbose && $logConfigFile )
         || ( @ins + @urls != 1 )
+        || ( @resolve && !@urls )
         || ( $noTor && @noTorHostname == 0 )
         || ( !@appConfigIds && !$createNew && (
                    ( @siteIds && @hostnames )
@@ -145,11 +150,26 @@ sub run {
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
+    if( @resolve ) {
+        foreach my $resolve ( @resolve ) {
+            if( $resolve !~ m!^(.+):(\d+):(.+)$! || !UBOS::Host::isValidHostname( $1 ) || !UBOS::Host::isValidHostname( $3 )) {
+                fatal( 'Invalid --resolve specification:', $resolve );
+            }
+        }
+    }
+
     if( @ins ) {
+        if( $insecure ) {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
         $in = $ins[0];
     } else {
+        if( $insecure && $urls[0] !~ m!^https://! ) {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
         $url = $urls[0];
     }
+
 
     my $file;
     my $tmpFile;
@@ -167,9 +187,19 @@ sub run {
 
         info( 'Downloading backup...' );
 
+        my $cmd  = 'curl -L -v';
+        if( @resolve ) {
+            $cmd .= join( '', map{ " --resolve '$_'" } @resolve );
+        }
+        if( $insecure ) {
+            $cmd .= ' --insecure';
+        }
+        $cmd .= " -o '$file'";
+        $cmd .= " '$url'";
+
         my $stdout;
         my $stderr;
-        if( UBOS::Utils::myexec( "curl -L -v -o '$file' '$url'", undef, \$stdout, \$stderr )) {
+        if( UBOS::Utils::myexec( $cmd, undef, \$stdout, \$stderr )) {
             fatal( 'Failed to download', $url );
         }
         if( $stderr =~ m!HTTP/1\.[01] (\d+)! ) {
@@ -785,11 +815,13 @@ SSS
     This includes all applications at that site and their data.
 HHH
         <<SSS => <<HHH,
-    --url <backupurl>
+    --url <backupurl> [ --resolve <resolvespec> ]... [ --insecure ]
 SSS
     Download a UBOS backup file from URL <backupurl>, and restore all
     sites contained in that backup file. This includes all applications
-    at that site and their data.
+    at that site and their data. If <resolvespec> is given, pass the
+    argument(s) to curl as --resolve <resolvespec>. If the URL protocol
+    is HTTPS, and --insecure is given, do not check TLS certificates.
 HHH
         <<SSS => <<HHH,
     --siteid <siteid> [--newhostname <newhostname>] ( --in <backupfile> | --url <backupurl> )

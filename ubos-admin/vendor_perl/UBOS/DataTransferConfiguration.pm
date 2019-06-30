@@ -112,16 +112,8 @@ sub setValue {
     {
         my $existingValue = $config->{$protocol}->{$authority}->{$key};
 
-        if( defined( $value )) {
-            if( defined( $existingValue )) {
-                if( $config->{$protocol}->{$authority}->{$key} eq $value ) {
-                    return 0;
-                } # else continue
-            } # else continue
-        } else {
-            if( !defined( $existingValue )) {
-                return 0;
-            } # else continue
+        unless( _diff( $value, $existingValue )) {
+            return 0;
         }
     }
     if( defined( $value )) {
@@ -175,6 +167,63 @@ sub saveIfNeeded {
         return 1;
     }
     return 0;
+}
+
+##
+# Helper to diff two (potentially type-differing) values.
+# $a: first value
+# $b: second value
+# return: 0 if no difference, 1 if there is
+sub _diff {
+    my $a = shift;
+    my $b = shift;
+
+    if( !defined( $a )) {
+        return defined( $b );
+    }
+
+    if( ref( $a ) eq 'ARRAY' ) {
+        if( ref( $b ) eq 'ARRAY' ) {
+            if( @$a != @$b ) {
+                return 1;
+            }
+            for( my $i=0 ; $i<@$a ; ++$i ) {
+                if( _diff( $a->[$i], $b->[$i] )) {
+                    return 1;
+                }
+            }
+            return 0;
+
+        } else {
+            return 1;
+        }
+    }
+
+    if( ref( $a ) eq 'HASH' ) {
+        if( ref( $b ) eq 'HASH' ) {
+            if( keys %$a != keys %$b ) {
+                return 1;
+            }
+            foreach my $k ( sort keys %$a ) {
+                if( exists( $b->{$k} )) {
+                    if( _diff( $a->{$k}, $b->{$k} )) {
+                        return 1;
+                    }
+                } else {
+                    return 1;
+                }
+            }
+            return 0;
+
+        } else {
+            return 1;
+        }
+    }
+
+    if( defined( $b )) {
+        return $a ne $b;
+    }
+    return 1;
 }
 
 1;
