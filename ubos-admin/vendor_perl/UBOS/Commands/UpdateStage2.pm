@@ -79,6 +79,16 @@ sub finishUpdate {
     my $oldSites = $backup->sites();
 
     if( keys %$oldSites ) {
+
+        info( 'Installing prerequisites' );
+        my $prerequisites = {};
+        foreach my $site ( values %$oldSites ) {
+            $site->addDependenciesToPrerequisites( $prerequisites );
+        }
+        if( UBOS::Host::ensurePackages( $prerequisites ) < 0 ) {
+            warning( $@ );
+        }
+
         info( 'Redeploying sites and restoring data' );
 
         my $deployTriggers = {};
