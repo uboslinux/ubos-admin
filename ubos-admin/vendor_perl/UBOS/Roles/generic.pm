@@ -54,10 +54,6 @@ sub checkInstallableManifestForRole {
     my $skipFilesystemChecks = shift;
     my $vars                 = shift;
 
-    if( $jsonFragment->{depends} ) {
-        $installable->myFatal( "roles section: role $roleName: depends not allowed here" );
-    }
-
     my $noDatabase = {
         'directory'       => 1,
         'directorytree'   => 1,
