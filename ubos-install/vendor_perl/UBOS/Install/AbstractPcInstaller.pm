@@ -128,7 +128,7 @@ END
             $addParString =~ s!(["'])!\\$1!g; # escape quotes
 
             $chrootScript .= <<END;
-perl -pi -e 's|GRUB_CMDLINE_LINUX_DEFAULT="(.*)"|GRUB_CMDLINE_LINUX_DEFAULT="\$1$addParString"|' /etc/default/grub
+perl -pi -e 's|GRUB_CMDLINE_LINUX_DEFAULT="(.*)"|GRUB_CMDLINE_LINUX_DEFAULT="$addParString"|' /etc/default/grub
 END
             # watch out for the s|||, the command-line contains / and maybe ,
         }

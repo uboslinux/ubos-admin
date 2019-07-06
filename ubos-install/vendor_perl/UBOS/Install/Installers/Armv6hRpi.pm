@@ -142,8 +142,8 @@ CONTENT
 gpu_mem_512=64
 gpu_mem_256=64
 
-# For Desktop Pi hardware clock
-dtoverlay=i2c-rtc,pcf8563
+# hardware clock of the Desktop Pi
+# device_tree_overlay=i2c-rtc,pcf8563
 
 CONTENT
 
