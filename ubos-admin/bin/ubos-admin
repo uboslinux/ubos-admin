@@ -65,7 +65,7 @@ if( $commandPackage ) {
 sub checkOnlyOne {
     # See __DATA__ at end of file
     unless( flock( DATA, LOCK_EX|LOCK_NB )) {
-        colPrintError( 'Another copy of ubos-admin is running already. Please try again later.' );
+        colPrintError( "Another copy of ubos-admin is running already. Please try again later.\n" );
         exit -2;
     }
 }
@@ -86,7 +86,7 @@ sub synopsisHelpQuit {
     if( $helpFor ) {
         my $package = $commands->{$helpFor};
         unless( $package ) {
-            colPrintError( "Command does not exist: ubos-admin $helpFor" );
+            colPrintError( "Command does not exist: ubos-admin $helpFor\n" );
             exit -1;
         }
 
