@@ -102,6 +102,9 @@ package() {
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
 
+# Give cronie no reason to complain
+    install -D -m644 /dev/null ${pkgdir}/etc/crontab
+
 # Keep old directory, so after-boot file can be written prior to upgrade
     mkdir -p ${pkgdir}/var/lib/ubos
 
