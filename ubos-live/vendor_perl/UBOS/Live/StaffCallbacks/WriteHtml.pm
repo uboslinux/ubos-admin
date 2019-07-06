@@ -118,7 +118,7 @@ sub writeHtml {
 
     my $errors = 0;
 
-    my @deviceJsonList = sort { $a->{hostname} cmp $b->{hostname} }
+    my @deviceJsonList = sort { $b->{lastupdated} cmp $a->{lastupdated} } # Show most recently updated first
                          grep { exists( $_->{hostname} ) } # Skip incomplete info on old Staffs
                          map { $_->{device} } values %$devicesInfo;
 
