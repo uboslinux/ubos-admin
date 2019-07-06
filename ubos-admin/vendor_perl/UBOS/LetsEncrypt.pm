@@ -28,6 +28,8 @@ sub obtainCertificate {
     my $webrootPath = shift;
     my $adminEmail  = shift;
 
+    info( 'Obtaining Letsencrypt certificate' );
+
     my $out;
     my $err;
     my $ret = UBOS::Utils::myexec(
