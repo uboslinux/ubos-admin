@@ -119,7 +119,7 @@ HTML
     print <<HTML;
    </div>
    <div class="footer">
-    <p>&copy; 2018 Indie Computing Corp.<br/>
+    <p>&copy; Indie Computing Corp.<br/>
     UBOS, and the UBOS logo are trademarks or registered trademarks of <a href="http://indiecomputing.com/">Indie Computing Corp.</a></p>
    </div>
   </div>
@@ -143,7 +143,7 @@ HTML
     <p>A site with siteid $siteId could not be found. Perhaps you want to try again later.</p>
    </div>
    <div class="footer">
-    <p>&copy; 2016 Indie Computing Corp.<br/>
+    <p>&copy; Indie Computing Corp.<br/>
     UBOS, and the UBOS logo are trademarks or registered trademarks of <a href="http://indiecomputing.com/">Indie Computing Corp.</a></p>
    </div>
   </div>
