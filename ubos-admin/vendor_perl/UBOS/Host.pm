@@ -874,7 +874,11 @@ sub preSnapshot {
             my $snapNumber;
             my $err;
             if( myexec( $cmd, undef, \$snapNumber, \$err )) {
-                error( 'snapper (pre) failed of config', $configName, $snapNumber, $err );
+                if( $err =~ m!Unknown config! ) {
+                    warning( 'snapper (pre) failed of config', $configName, ':', $err );
+                } else {
+                    error( 'snapper (pre) failed of config', $configName, ':', $err );
+                }
             } else {
                 $snapNumber =~ s!^\s+!!;
                 $snapNumber =~ s!\s+$!!;
