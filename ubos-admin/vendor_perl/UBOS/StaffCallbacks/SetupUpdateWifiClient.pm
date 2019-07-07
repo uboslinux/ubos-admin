@@ -76,7 +76,7 @@ ap_scan=1
 fast_reauth=1
 
 CONTENT
-                $content .= join( "\n", map { "network={\n" . $_ . "}\n" } values %$confs );
+                $content .= join( "\n", map { "network={\n" . $_ . "\n}\n" } values %$confs );
                 foreach my $nic ( keys %$wlanNics ) {
                     unless( UBOS::Utils::saveFile( "/etc/wpa_supplicant/wpa_supplicant-$nic.conf", $content )) {
                         ++$errors;
