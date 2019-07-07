@@ -254,37 +254,42 @@ sub createDiskLayout {
                 }
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
-                my $deviceTable = {
-                    '/boot' => {
-                        'index'       => 1,
-                        'fs'          => 'vfat',
-                        'size'        => 200 * 1024, # 100M at 512/sector
-                        'mkfsflags'   => '-F32',
-                        'mbrparttype' => 'c',
-                        'label'       => 'UBOS_boot'
-                        # default partition type for gpt
-                    },
-                    '/' => {
-                        'index' => 2,
-                        'fs'    => 'btrfs',
-                        'label' => 'UBOS_root'
-                        # default partition type
-                    },
-                };
-                unless( $noswap ) {
-                    $deviceTable->{swap} = {
-                        'index'       => 3,
-                        'fs'          => 'swap',
-                        'size'        => 2048 * 1024, # 1G at 512/sector
-                        'mbrparttype' => '82',
-                        'gptparttype' => '8200',
-                        'label'       => 'swap'
+                if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $rootDiskOrImage )) {
+                    error( 'Cannot install to mounted disk:', $rootDiskOrImage );
+                    $ret = undef;
+                } else {
+                    my $deviceTable = {
+                        '/boot' => {
+                            'index'       => 1,
+                            'fs'          => 'vfat',
+                            'size'        => 200 * 1024, # 100M at 512/sector
+                            'mkfsflags'   => '-F32',
+                            'mbrparttype' => 'c',
+                            'label'       => 'UBOS_boot'
+                            # default partition type for gpt
+                        },
+                        '/' => {
+                            'index' => 2,
+                            'fs'    => 'btrfs',
+                            'label' => 'UBOS_root'
+                            # default partition type
+                        },
                     };
-                }
+                    unless( $noswap ) {
+                        $deviceTable->{swap} = {
+                            'index'       => 3,
+                            'fs'          => 'swap',
+                            'size'        => 2048 * 1024, # 1G at 512/sector
+                            'mbrparttype' => '82',
+                            'gptparttype' => '8200',
+                            'label'       => 'swap'
+                        };
+                    }
 
-                $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
-                        $rootDiskOrImage,
-                        $deviceTable );
+                    $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
+                            $rootDiskOrImage,
+                            $deviceTable );
+                }
             } elsif( $ret ) {
                 error( 'Must be file or disk:', $rootDiskOrImage );
                 $ret = undef;

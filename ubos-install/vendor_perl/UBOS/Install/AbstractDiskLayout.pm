@@ -52,6 +52,7 @@ sub formatDisks {
     my $errors = 0;
 
     trace( 'Checking that none of the devices are currently mounted' );
+
     my $lsblk;
     my %mounted;
     UBOS::Utils::myexec( 'lsblk -P', undef, \$lsblk );

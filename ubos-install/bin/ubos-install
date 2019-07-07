@@ -271,15 +271,13 @@ if( !defined( $noswap ) && exists( $config->{noswap} )) {
 trace( 'Using installer', ref( $installer ));
 
 my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV, $config );
-unless( $diskLayout ) {
-    synopsisHelpQuit( 0 );
+if( $diskLayout ) {
+    my $errors = $installer->install( $diskLayout );
+    if( $errors ) {
+        info( 'There were', $errors, 'errors.' );
+        $ret = 1;
+    }
 }
-my $errors = $installer->install( $diskLayout );
-if( $errors ) {
-    info( 'There were', $errors, 'errors.' );
-    $ret = 1;
-}
-
 exit( $ret );
 
 
