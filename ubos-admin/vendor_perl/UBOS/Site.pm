@@ -604,6 +604,8 @@ sub print {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
                                         my $value = $custPointValueStruct->{value};
 
+                                        $value =~ s!\n!\\n!g; # don't do multi-line
+
                                         colPrint( '            customizationpoint: ' . $custPointName . ': ' );
                                         colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
                                         colPrint( "\n" );
