@@ -528,6 +528,27 @@ sub printSiteId {
 }
 
 ##
+# Print information about this Site's administrator
+sub printAdminUser {
+    my $self = shift;
+
+    my $admin = $self->obtainSiteAdminHash(); # Returns something different for root/non-root
+
+    if( exists( $admin->{userid} )) {
+        colPrint( 'Site admin user id:       "' . $admin->{userid}     . "\"\n" );
+    }
+    if( exists( $admin->{username} )) {
+        colPrint( 'Site admin user name:     "' . $admin->{username}   . "\"\n" );
+    }
+    if( exists( $admin->{credential} )) {
+        colPrint( 'Site admin user password: "' . $admin->{credential} . "\"\n" );
+    }
+    if( exists( $admin->{email} )) {
+        colPrint( 'Site admin user e-mail:   "' . $admin->{email}      . "\"\n" );
+    }
+}
+
+##
 # Print this Site in varying levels of detail
 # $detail: the level of detail
 sub print {

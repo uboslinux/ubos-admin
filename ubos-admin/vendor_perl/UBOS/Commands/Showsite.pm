@@ -30,6 +30,7 @@ sub run {
     my $detail        = 0;
     my $brief         = 0;
     my $idsOnly       = 0;
+    my $adminUser     = 0;
     my $siteId;
     my $host;
 
@@ -42,6 +43,7 @@ sub run {
             'detail'           => \$detail,
             'brief'            => \$brief,
             'ids-only|idsonly' => \$idsOnly,
+            'adminuser'        => \$adminUser,
             'siteid=s'         => \$siteId,
             'hostname=s'       => \$host );
 
@@ -50,6 +52,7 @@ sub run {
 
     if(    !$parseOk
         || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $adminUser && ( $json || $detail || $brief || $idsOnly ))
         || ( $detail && $brief )
         || ( $brief && $idsOnly )
         || ( $idsOnly && $detail )
@@ -85,6 +88,9 @@ sub run {
 
     } elsif( $detail ) {
         $site->printDetail();
+
+    } elsif( $adminUser ) {
+        $site->printAdminUser();
 
     } else {
         $site->print();
@@ -135,8 +141,11 @@ HHH
             '--brief' => <<HHH,
     Show less detail.
 HHH
-            '--ids-only' => <<HHH
+            '--ids-only' => <<HHH,
     Show Site and AppConfiguration ids only.
+HHH
+            '--credentials' => <<HHH
+    Show Site credentials.
 HHH
         }
     };
