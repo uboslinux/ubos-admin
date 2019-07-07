@@ -1080,7 +1080,7 @@ sub replaceDevSymlinks {
         if( -b $resolved ) {
             $argvp->[$i] = $resolved;
         } else {
-            $@ = 'Cannot resolve: ' . $argvp->[$i];
+            $@ = 'Cannot find device: ' . $argvp->[$i];
             return 0;
         }
     }

@@ -51,6 +51,24 @@ sub formatDisks {
 
     my $errors = 0;
 
+    trace( 'Checking that none of the devices are currently mounted' );
+    my $lsblk;
+    my %mounted;
+    UBOS::Utils::myexec( 'lsblk -P', undef, \$lsblk );
+    foreach my $line ( split /\n/, $lsblk ) {
+        if( $line =~ m!NAME="([^"]+)".*MOUNTPOINT="([^"]+)"! ) {
+            $mounted{"/dev/$1"} = $2;
+        }
+    }
+    foreach my $mountPath ( keys %{$self->{devicetable}} ) {
+        my $data = $self->{devicetable}->{$mountPath};
+        foreach my $dev ( @{$data->{devices}} ) {
+            if( $mounted{$dev} ) {
+                fatal( 'Cannot install to mounted device:', $dev );
+            }
+        }
+    }
+
     trace( 'Formatting file systems' );
 
     foreach my $mountPath ( keys %{$self->{devicetable}} ) {
