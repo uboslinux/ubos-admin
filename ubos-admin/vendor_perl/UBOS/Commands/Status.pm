@@ -52,6 +52,7 @@ sub run {
     my $showChannel     = 0;
     my $showCpu         = 0;
     my $showDisks       = 0;
+    my $showFailed      = 0;
     my $showLastUpdated = 0;
     my $showMemory      = 0;
     my $showPacnew      = 0;
@@ -68,6 +69,7 @@ sub run {
             'channel'      => \$showChannel,
             'cpu'          => \$showCpu,
             'disks'        => \$showDisks,
+            'failed'       => \$showFailed,
             'lastupdated'  => \$showLastUpdated,
             'memory'       => \$showMemory,
             'pacnew'       => \$showPacnew,
@@ -77,7 +79,7 @@ sub run {
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( $showAll && ( $showChannel || $showCpu || $showDisks || $showLastUpdated || $showMemory || $showPacnew || $showUptime ))
+        || ( $showAll && ( $showChannel || $showCpu || $showDisks || $showFailed || $showLastUpdated || $showMemory || $showPacnew || $showUptime ))
         || ( $showJson && $showDetail )
         || @args
         || ( $verbose && $logConfigFile ))
@@ -89,6 +91,7 @@ sub run {
         $showChannel     = 1;
         $showCpu         = 1;
         $showDisks       = 1;
+        $showFailed      = 1;
         $showLastUpdated = 1;
         $showMemory      = 1;
         $showPacnew      = 1;
@@ -97,6 +100,7 @@ sub run {
     } elsif(    !$showChannel
              && !$showCpu
              && !$showDisks
+             && !$showFailed
              && !$showLastUpdated
              && !$showMemory
              && !$showPacnew
@@ -104,6 +108,7 @@ sub run {
     {
         # default
         $showDisks       = 1;
+        $showFailed      = 1;
         $showLastUpdated = 1;
         $showMemory      = 1;
         $showUptime      = 1;
@@ -188,6 +193,20 @@ sub run {
                 }
 
                 push @{$json->{blockdevices}}, $blockdevice;
+            }
+        }
+    }
+
+    if( $showFailed ) {
+        trace( 'Determinig failed system services' );
+
+        $json->{failedservices} = [];
+
+        my $out;
+        UBOS::Utils::myexec( 'systemctl --quiet --failed --full --plain --no-legend', undef, \$out );
+        foreach my $line ( split( /\n/, $out )) {
+            if( $line =~ m!^(.+)\.service! ) {
+                push @{$json->{failedservices}}, $1;
             }
         }
     }
@@ -410,6 +429,12 @@ sub run {
             }
         }
 
+        if( exists( $json->{failedservices} ) && @{$json->{failedservices}} ) {
+            $out .= "Failed system services:\n";
+            foreach my $service ( @{$json->{failedservices}} ) {
+                $out .= "    $service\n";
+            }
+        }
         if( exists( $json->{pacnew} )) {
             $out .= "Pacnew:\n";
 
@@ -543,13 +568,14 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--channel] [--cpu] [--disks] [--lastupdated] [--memory] [--pacnew] [--uptime]
+    [--channel] [--cpu] [--disks] [--failed] [--lastupdated] [--memory] [--pacnew] [--uptime]
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
     * channel:     report on the UBOS release channel used by this device.
     * cpu:         report on the CPUs available.
     * disks:       report on attached disks and their usage.
+    * failed:      report on daemons that have failed.
     * lastupdated: report when the device was last updated.
     * memory:      report how much RAM and swap memory is being used.
     * pacnew:      report on manually modified configuration files.
