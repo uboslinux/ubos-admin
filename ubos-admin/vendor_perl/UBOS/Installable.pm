@@ -137,6 +137,17 @@ our $knownCustomizationPointTypes = {
         'valuecheckerror' => 'value must be a positive, whole number or 0',
         'isFile' => 0
     },
+    'float' => {
+        'valuecheck' => sub {
+            my $v             = shift;
+            my $custPointJson = shift; # ignored
+
+            my $ok = !ref( $v ) && $v =~ /^-?[0-9]+(\.[0-9]+)?(e[-+]?[0-9]+)?$/;
+            return ( $ok, $v );
+        },
+        'valuecheckerror' => 'value must be a whole number',
+        'isFile' => 0
+    },
     'image' => {
         'valuecheck' => sub {
             my $v             = shift;
