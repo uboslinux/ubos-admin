@@ -135,16 +135,12 @@ sub run {
             );
             foreach my $entry ( @{$newJson->{lscpu}} ) {
                 foreach my $relevant ( keys %relevants ) {
-                    if( $entry->{field} =~ m!$relevant! ) {
+                    if( $entry->{field} =~ m!^$relevant:$! ) {
                         $addJson->{$relevants{$relevant}} = $entry->{data};
                     }
                 }
             }
-            if( $addJson->{ncpu} =~ m!^(\d+)-(\d+)$! ) {
-                $nCpu = $2 - $1;
-            } else {
-                warning( 'Failed to parse nCPU field:', $addJson->{ncpu} );
-            }
+            $nCpu = $addJson->{ncpu};
             if( $showCpu ) {
                 $json->{cpu} = $addJson;
             }
