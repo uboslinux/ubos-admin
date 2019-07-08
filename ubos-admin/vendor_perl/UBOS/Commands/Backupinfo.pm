@@ -168,11 +168,18 @@ sub run {
                 $jsonOutput->{'appconfigs'}->{$appConfigId} = $appConfigs->{$appConfigId}->appConfigurationJson();
             }
         } else {
-            if( $brief ) {
+            if( $detail ) {
+                foreach my $appConfigId ( @unattachedAppConfigIds ) {
+                    $appConfigs->{$appConfigId}->printDetail();
+                }
+            } elsif( $brief ) {
+                foreach my $appConfigId ( @unattachedAppConfigIds ) {
+                    $appConfigs->{$appConfigId}->printBrief();
+                }
+            } elsif( $idsOnly ) {
                 foreach my $appConfigId ( @unattachedAppConfigIds ) {
                     $appConfigs->{$appConfigId}->printAppConfigId();
                 }
-
             } else {
                 colPrint( "=== Unattached AppConfigurations ===\n" );
 
