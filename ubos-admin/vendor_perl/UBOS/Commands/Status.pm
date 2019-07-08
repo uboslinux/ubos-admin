@@ -487,7 +487,8 @@ sub _usageAsJson {
     my $mountpoint = shift;
 
     my $ret = {};
-    if( 'btrfs' eq $fstype ) {
+    if( 'btrfs' eq $fstype && $mountpoint ) {
+        # even if it is btrfs, if it's not mounted, we need to fall back to df
         my $out;
         UBOS::Utils::myexec( "btrfs filesystem df -h '$mountpoint'", undef, \$out );
         foreach my $line ( split "\n", $out ) {
