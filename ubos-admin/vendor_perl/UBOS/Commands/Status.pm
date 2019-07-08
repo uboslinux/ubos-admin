@@ -322,7 +322,9 @@ sub run {
         if( exists( $json->{cpu} )) {
             $out .= "CPU:\n";
             $out .= '    number:         ' . $json->{cpu}->{ncpu} . "\n";
-            $out .= '    virtualization: ' . $json->{cpu}->{virttype} . "\n";
+            if( exists( $json->{cpu}->{virttype} )) {
+                $out .= '    virtualization: ' . $json->{cpu}->{virttype} . "\n";
+            }
         }
 
         if( exists( $json->{uptime} )) {
