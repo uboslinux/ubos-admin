@@ -658,6 +658,133 @@ sub printDetail {
 }
 
 ##
+# Print this Site in HTML format
+# $detail: the level of detail
+sub printHtml {
+    my $self   = shift;
+    my $detail = shift || 2;
+
+    my $protoPlusHost = $self->protocol() . "://" . $self->hostname;
+    colPrint( "<div class='site'>\n" );
+    colPrint( " <div class='summary'>\n" );
+    colPrint( "  <a href='" . $protoPlusHost . "/'>" . $self->hostname . "</a>");
+    if( $self->hasTls ) {
+        colPrint( ' (TLS)' );
+    }
+    if( $detail > 2 ) {
+        colPrint( ' (' . $self->siteId . ')' );
+    }
+    colPrint( ' :' );
+    if( $detail <= 1 ) {
+        my $nAppConfigs = @{$self->appConfigs};
+        if( $nAppConfigs == 1 ) {
+            colPrint( ' 1 app' );
+        } elsif( $nAppConfigs ) {
+            colPrint( " $nAppConfigs apps" );
+        } else {
+            colPrint( ' no apps' );
+        }
+    }
+    colPrint( "\n" );
+    colPrint( " </div>\n" );
+
+    if( $detail > 1 ) {
+        colPrint( " <ul class='appconfigs'>\n" );
+        foreach my $isDefault ( 1, 0 ) {
+            my $hasDefault = grep { $_->isDefault } @{$self->appConfigs};
+
+            foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
+                if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
+                    colPrint( "  <li class='appconfig'>\n" );
+                    colPrint( "   <div class='summary'>\n" );
+
+                    my $context = $appConfig->context;
+                    if( $context ) {
+                        colPrint( "    <a href='" . $protoPlusHost . $context . "/'>" . $context . "</a>");
+                    } elsif( defined( $context )) {
+                        colPrint( "    <a href='" . $protoPlusHost . "/'>" . '&lt;root&gt;' . "</a>");
+                    } else {
+                        colPrint( '&lt;none&gt;' );
+                    }
+                    if( $isDefault && $appConfig->isDefault ) {
+                        colPrint( ' default' );
+                    }
+                    if( $detail > 2 ) {
+                        colPrint( ' (' . $appConfig->appConfigId . ')' );
+                    }
+                    if( $detail < 3 ) {
+                        colPrint( ' : ' . $appConfig->app->packageName );
+                        my $nAcc = $appConfig->accessories();
+                        if( $nAcc == 1 ) {
+                            colPrint( " (1 accessory)\n" );
+                        } elsif( $nAcc ) {
+                            colPrint( " ($nAcc accessories)\n" );
+                        }
+                        colPrint( "\n" );
+                        colPrint( "   </div>\n" );
+                    } else {
+                        colPrint( "\n" );
+                        colPrint( "   </div>\n" );
+                        colPrint( "   <dl class='custpoints'>\n" );
+
+                        my $custPoints = $appConfig->customizationPoints;
+                        foreach my $installable ( $appConfig->installables ) {
+                            colPrint( "    <dt>" );
+                            if( $installable == $appConfig->app ) {
+                                colPrint( 'app: ' );
+                            } else {
+                                colPrint( 'accessory: ' );
+                            }
+                            colPrint( $installable->packageName . "</dt>\n" );
+                            if( $custPoints ) {
+                                my $installableCustPoints = $custPoints->{$installable->packageName};
+                                if( defined( $installableCustPoints )) {
+                                    colPrint( "    <dd>\n" );
+                                    colPrint( "     <dl>\n" );
+                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                                        my $custPointValueStruct = $installableCustPoints->{$custPointName};
+                                        my $value = $custPointValueStruct->{value};
+
+                                        $value =~ s!\n!\\n!g; # don't do multi-line
+
+                                        colPrint( '      <dt>customizationpoint: ' . $custPointName . ":</dt>\n" );
+                                        colPrint( "      <dd>" );
+                                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+                                        colPrint( "</dd>\n" );
+                                    }
+                                    colPrint( "     </dl>\n" );
+                                    colPrint( "    </dd>\n" );
+                                }
+                            }
+                        }
+                        colPrint( "   </dl>\n" );
+                    }
+                    colPrint( "  </li>\n" );
+                }
+            }
+        }
+        colPrint( " </ul>\n" );
+    }
+    colPrint( "</div>\n" );
+}
+
+##
+# Print this Site in the brief format in HTML
+sub printHtmlBrief {
+    my $self = shift;
+
+    return $self->printHtml( 1 );
+}
+
+##
+# Print this Site in the detailed format in HTML
+sub printHtmlDetail {
+    my $self = shift;
+
+    return $self->printHtml( 3 );
+}
+
+##
 # Add names of application packages that are required to run this site.
 # $packages: hash of packages
 sub addInstallablesToPrerequisites {

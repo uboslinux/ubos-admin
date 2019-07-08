@@ -32,6 +32,7 @@ sub run {
     my $brief         = 0;
     my $idsOnly       = 0;
     my $hostnamesOnly = 0;
+    my $html          = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -42,7 +43,8 @@ sub run {
             'detail'                       => \$detail,
             'brief'                        => \$brief,
             'ids-only|idsonly'             => \$idsOnly,
-            'hostnames-only|hostnamesonly' => \$hostnamesOnly );
+            'hostnames-only|hostnamesonly' => \$hostnamesOnly,
+            'html'                         => \$html );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -62,6 +64,8 @@ sub run {
     }
     if(    !$parseOk
         || ( $json && $nDetail )
+        || ( $json && $html )
+        || ( $html && ( $idsOnly || $hostnamesOnly ))
         || ( $nDetail > 1 )
         || @args
         || ( $verbose && $logConfigFile ))
@@ -77,6 +81,48 @@ sub run {
             $sitesJson->{$siteId} = $sites->{$siteId}->siteJson;
         }
         UBOS::Utils::writeJsonToStdout( $sitesJson );
+
+    } elsif( $html ) {
+        print( <<HTML );
+<html>
+ <head>
+  <title>Sites</title>
+ </head>
+ <body>
+  <h1>Sites</h1>
+HTML
+        if( keys %$sites ) {
+            print( <<HTML );
+  <ul>
+HTML
+            foreach my $siteId ( sort keys %$sites ) {
+                print( <<HTML );
+   <li>
+HTML
+                if( $detail ) {
+                    $sites->{$siteId}->printHtmlDetail();
+                } elsif( $brief ) {
+                    $sites->{$siteId}->printHtmlBrief();
+                } else {
+                    $sites->{$siteId}->printHtml();
+                }
+                print( <<HTML );
+   </li>
+HTML
+            }
+            print( <<HTML );
+  </ul>
+HTML
+        } else {
+            print( <<HTML );
+  <p>No sites</p>
+HTML
+        }
+        print( <<HTML );
+ </body>
+</html>
+HTML
+
 
     } elsif( $detail ) {
         foreach my $siteId ( sort keys %$sites ) {
@@ -126,6 +172,10 @@ DDD
 HHH
             '--json' => <<HHH,
     Show all currently deployed sites in JSON format
+HHH
+            '--html [ --brief | --detail ]' => <<HHH,
+    Show all currently deployed sites in HTML format. Depending on the provided flag
+    (if any), more or less information is shown.
 HHH
         },
         'args' => {
