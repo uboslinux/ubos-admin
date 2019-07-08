@@ -702,6 +702,8 @@ sub print {
     my $self   = shift;
     my $detail = shift || 2;
 
+    my $site = $self->site();
+
     if( $detail > 1 ) {
         colPrint( 'AppConfiguration: ' );
     }
@@ -727,9 +729,17 @@ sub print {
             }
         }
         colPrint( "\n" );
+        if( $site ) {
+            colPrint( "Part of site: " );
+            $site->printBrief();
+        }
 
     } else {
         colPrint( "\n" );
+        if( $site ) {
+            colPrint( "Part of site: " );
+            $site->printBrief();
+        }
 
         my $custPoints = $self->customizationPoints;
         foreach my $installable ( $self->installables ) {
