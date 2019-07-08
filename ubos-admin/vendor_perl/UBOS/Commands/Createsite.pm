@@ -807,7 +807,10 @@ sub _askForCustomizationPoints {
                     next;
                 }
 
-                if( !$askAll && !$custPointDef->{required} ) {
+                if( !$askAll && ( !exists( $custPointDef->{required} ) && !$custPointDef->{required} )) {
+                    next;
+                }
+                if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
                     next;
                 }
                 my $isFile = $UBOS::Installable::knownCustomizationPointTypes->{$custPointDef->{type}}->{isFile};

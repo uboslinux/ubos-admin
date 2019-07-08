@@ -142,7 +142,9 @@ sub _siteJsonWithout {
                 if( defined( $custPointInstallableJson )) {
                     foreach my $custPointName ( keys %{$custPointInstallableJson} ) {
                         my $custPointDefJson = $appConfig->customizationPointDefinition( $custPointInstallableName, $custPointName );
-                        unless( exists( $custPointDefJson->{private} ) && $custPointDefJson->{private} ) {
+                        if(    ( !exists( $custPointDefJson->{private} )  || !$custPointDefJson->{private} )
+                            && ( !exists( $custPointDefJson->{internal} ) || !$custPointDefJson->{internal} ))
+                        {
                             $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
                                     = $custPointInstallableJson->{$custPointName};
                         }
@@ -625,11 +627,16 @@ sub print {
                                 if( defined( $installableCustPoints )) {
                                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
+                                        my $custPointDef         = $installable->customizationPoints();
+
+                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                                            next;
+                                        }
 
                                         my $value;
                                         if(    !$showPrivateCustomizationPoints
-                                            && exists( $installable->customizationPoints()->{$custPointName}->{private} )
-                                            && $installable->customizationPoints()->{$custPointName}->{private} )
+                                            && exists( $custPointDef->{$custPointName}->{private} )
+                                            && $custPointDef->{$custPointName}->{private} )
                                         {
                                             $value = "<not shown>";
                                         } else {
@@ -758,10 +765,16 @@ sub printHtml {
                                     colPrint( "     <dl>\n" );
                                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
+                                        my $custPointDef         = $installable->customizationPoints();
+
+                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                                            next;
+                                        }
+
                                         my $value;
                                         if(    !$showPrivateCustomizationPoints
-                                            && exists( $installable->customizationPoints()->{$custPointName}->{private} )
-                                            && $installable->customizationPoints()->{$custPointName}->{private} )
+                                            && exists( $custPointDef->{$custPointName}->{private} )
+                                            && $custPointDef->{$custPointName}->{private} )
                                         {
                                             $value = "&lt;not shown&gt;";
                                         } else {

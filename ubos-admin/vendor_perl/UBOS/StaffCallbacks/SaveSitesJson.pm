@@ -87,6 +87,9 @@ sub saveSitesJson {
                         if( exists( $custPointDef->{private} ) && $custPointDef->{private} ) {
                             $appConfigJson->{customizationpoints}->{$installableName}->{$custPointName}->{private} = JSON::true;
                         }
+                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                            $appConfigJson->{customizationpoints}->{$installableName}->{$custPointName}->{internal} = JSON::true;
+                        }
                     }
                 }
             }

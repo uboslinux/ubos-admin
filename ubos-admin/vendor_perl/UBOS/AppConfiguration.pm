@@ -757,10 +757,16 @@ sub print {
                 if( defined( $installableCustPoints )) {
                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                         my $custPointValue = $installableCustPoints->{$custPointName};
+                        my $custPointDef         = $installable->customizationPoints();
+
+                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                            next;
+                        }
+
                         my $value;
                         if(    !$showPrivateCustomizationPoints
-                            && exists( $installable->customizationPoints()->{$custPointName}->{private} )
-                            && $installable->customizationPoints()->{$custPointName}->{private} )
+                            && exists( $custPointDef->{$custPointName}->{private} )
+                            && $custPointDef->{$custPointName}->{private} )
                         {
                             $value = "<not shown>";
                         } else {
