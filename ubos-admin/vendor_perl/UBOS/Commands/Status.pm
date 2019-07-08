@@ -49,6 +49,7 @@ sub run {
     my $showJson        = 0;
     my $showAll         = 0;
     my $showDetail      = 0;
+    my $showChannel     = 0;
     my $showCpu         = 0;
     my $showDisks       = 0;
     my $showLastUpdated = 0;
@@ -64,6 +65,7 @@ sub run {
             'json'         => \$showJson,
             'all'          => \$showAll,
             'detail'       => \$showDetail,
+            'channel'      => \$showChannel,
             'cpu'          => \$showCpu,
             'disks'        => \$showDisks,
             'lastupdated'  => \$showLastUpdated,
@@ -75,7 +77,7 @@ sub run {
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( $showAll && ( $showPacnew || $showDisks || $showMemory || $showUptime ))
+        || ( $showAll && ( $showChannel || $showCpu || $showDisks || $showLastUpdated || $showMemory || $showPacnew || $showUptime ))
         || ( $showJson && $showDetail )
         || @args
         || ( $verbose && $logConfigFile ))
@@ -84,25 +86,27 @@ sub run {
     }
 
     if( $showAll ) {
+        $showChannel     = 1;
         $showCpu         = 1;
         $showDisks       = 1;
+        $showLastUpdated = 1;
         $showMemory      = 1;
         $showPacnew      = 1;
         $showUptime      = 1;
-        $showLastUpdated = 1;
 
-    } elsif(    !$showCpu
+    } elsif(    !$showChannel
+             && !$showCpu
              && !$showDisks
+             && !$showLastUpdated
              && !$showMemory
              && !$showPacnew
-             && !$showUptime
-             && !$showLastUpdated )
+             && !$showUptime )
     {
         # default
         $showDisks       = 1;
+        $showLastUpdated = 1;
         $showMemory      = 1;
         $showUptime      = 1;
-        $showLastUpdated = 1;
     }
 
     my $json = {
@@ -145,6 +149,14 @@ sub run {
                 $json->{cpu} = $addJson;
             }
         }
+    }
+
+    if( $showChannel ) {
+        trace( 'Obtaining channel' );
+        my $channel = UBOS::Utils::slurpFile( '/etc/ubos/channel' );
+        $channel =~ s!^\s+!!;
+        $channel =~ s!\s+$!!;
+        $json->{channel} = $channel;
     }
 
     if( $showDisks ) {
@@ -317,6 +329,10 @@ sub run {
 
         if( exists( $json->{lastupdated} )) {
             $out .= '    last updated: ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+        }
+
+        if( exists( $json->{channel} )) {
+            $out .= '    channel: ' . $json->{channel} . "\n";
         }
 
         if( exists( $json->{cpu} )) {
@@ -527,12 +543,14 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--disks] [--lastupdated] [--memory] [--pacnew] [--uptime]
+    [--channel] [--cpu] [--disks] [--lastupdated] [--memory] [--pacnew] [--uptime]
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
+    * channel:     report on the UBOS release channel used by this device.
+    * cpu:         report on the CPUs available.
     * disks:       report on attached disks and their usage.
-    * lastupdated: report when the device was last updated
+    * lastupdated: report when the device was last updated.
     * memory:      report how much RAM and swap memory is being used.
     * pacnew:      report on manually modified configuration files.
     * uptime:      report how long the device has been up since last boot.
