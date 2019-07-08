@@ -24,15 +24,16 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my $json          = 0;
-    my $detail        = 0;
-    my $brief         = 0;
-    my $idsOnly       = 0;
-    my $hostnamesOnly = 0;
-    my $html          = 0;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $json              = 0;
+    my $detail            = 0;
+    my $brief             = 0;
+    my $idsOnly           = 0;
+    my $hostnamesOnly     = 0;
+    my $html              = 0;
+    my $privateCustPoints = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -44,7 +45,8 @@ sub run {
             'brief'                        => \$brief,
             'ids-only|idsonly'             => \$idsOnly,
             'hostnames-only|hostnamesonly' => \$hostnamesOnly,
-            'html'                         => \$html );
+            'html'                         => \$html,
+            'privatecustomizationpoints'   => \$privateCustPoints );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -65,12 +67,17 @@ sub run {
     if(    !$parseOk
         || ( $json && $nDetail )
         || ( $json && $html )
+        || ( $json && $privateCustPoints )
         || ( $html && ( $idsOnly || $hostnamesOnly ))
         || ( $nDetail > 1 )
         || @args
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $privateCustPoints && $< != 0 ) {
+        fatal( 'Must be root to see values of private customizationpoints.' );
     }
 
     my $sites = UBOS::Host::sites();
@@ -100,11 +107,11 @@ HTML
    <li>
 HTML
                 if( $detail ) {
-                    $sites->{$siteId}->printHtmlDetail();
+                    $sites->{$siteId}->printHtmlDetail( $privateCustPoints );
                 } elsif( $brief ) {
                     $sites->{$siteId}->printHtmlBrief();
                 } else {
-                    $sites->{$siteId}->printHtml();
+                    $sites->{$siteId}->printHtml( $privateCustPoints );
                 }
                 print( <<HTML );
    </li>
@@ -126,7 +133,7 @@ HTML
 
     } elsif( $detail ) {
         foreach my $siteId ( sort keys %$sites ) {
-            $sites->{$siteId}->printDetail();
+            $sites->{$siteId}->printDetail( $privateCustPoints );
         }
     } elsif( $brief ) {
         foreach my $siteId ( sort keys %$sites ) {
@@ -145,7 +152,7 @@ HTML
 
     } else {
         foreach my $siteId ( sort keys %$sites ) {
-            $sites->{$siteId}->print();
+            $sites->{$siteId}->print( $privateCustPoints );
         }
     }
 
@@ -166,14 +173,14 @@ SSS
     customization points marked as "private").
 DDD
         'cmds' => {
-            '[ --brief | --detail | --ids-only | --hostnames-only ]' => <<HHH,
+            '[ --brief | --detail | --ids-only | --hostnames-only ] [ --privatecustomizationpoints ]' => <<HHH,
     Show all currently deployed sites. Depending on the provided flag
     (if any), more or less information is shown.
 HHH
             '--json' => <<HHH,
     Show all currently deployed sites in JSON format
 HHH
-            '--html [ --brief | --detail ]' => <<HHH,
+            '--html [ --brief | --detail ] [ --privatecustomizationpoints ]' => <<HHH,
     Show all currently deployed sites in HTML format. Depending on the provided flag
     (if any), more or less information is shown.
 HHH

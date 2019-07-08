@@ -23,13 +23,14 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my $json          = 0;
-    my $detail        = 0;
-    my $brief         = 0;
-    my $idsOnly       = 0;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $json              = 0;
+    my $detail            = 0;
+    my $brief             = 0;
+    my $idsOnly           = 0;
+    my $privateCustPoints = 0;
 
     my $siteId;
     my $host;
@@ -39,24 +40,25 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'         => \$verbose,
-            'logConfig=s'      => \$logConfigFile,
-            'debug'            => \$debug,
-            'json'             => \$json,
-            'detail'           => \$detail,
-            'brief'            => \$brief,
-            'ids-only|idsonly' => \$idsOnly,
-            'siteid=s'         => \$siteId,
-            'hostname=s'       => \$host,
-            'appconfigid=s'    => \$appConfigId,
-            'context=s'        => \$context,
-            'url=s'            => \$url );
+            'verbose+'                   => \$verbose,
+            'logConfig=s'                => \$logConfigFile,
+            'debug'                      => \$debug,
+            'json'                       => \$json,
+            'detail'                     => \$detail,
+            'brief'                      => \$brief,
+            'ids-only|idsonly'           => \$idsOnly,
+            'privatecustomizationpoints' => \$privateCustPoints,
+            'siteid=s'                   => \$siteId,
+            'hostname=s'                 => \$host,
+            'appconfigid=s'              => \$appConfigId,
+            'context=s'                  => \$context,
+            'url=s'                      => \$url );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $json && ( $detail || $brief || $idsOnly || $privateCustPoints ))
         || ( $detail && $brief )
         || ( $brief && $idsOnly )
         || ( $idsOnly && $detail )
@@ -71,6 +73,10 @@ sub run {
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $privateCustPoints && $< != 0 ) {
+        fatal( 'Must be root to see values of private customizationpoints.' );
     }
 
     my $appConfig;
@@ -120,10 +126,10 @@ sub run {
         $appConfig->printBrief();
 
     } elsif( $detail ) {
-        $appConfig->printDetail();
+        $appConfig->printDetail( $privateCustPoints );
 
     } else {
-        $appConfig->print();
+        $appConfig->print( $privateCustPoints );
     }
 
     return 1;
@@ -185,9 +191,11 @@ HHH
             '--brief' => <<HHH,
     Show less detail.
 HHH
-            '--ids-only' => <<HHH
+            '--ids-only' => <<HHH,
     Show Site and AppConfiguration ids only.
 HHH
+            '--privatecustomizationpoints' => <<HHH
+    Do not mask the values for private customizationpoints.
         }
     };
 }

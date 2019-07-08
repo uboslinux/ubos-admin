@@ -698,9 +698,11 @@ sub printAppConfigId {
 ##
 # Print this AppConfiguration in human-readable form.
 # $detail: the level of detail
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
 sub print {
-    my $self   = shift;
-    my $detail = shift || 2;
+    my $self                           = shift;
+    my $detail                         = shift || 2;
+    my $showPrivateCustomizationPoints = shift;
 
     my $site = $self->site();
 
@@ -750,13 +752,26 @@ sub print {
                 colPrint( 'accessory: ' );
             }
             colPrint( $installable->packageName . "\n" );
-            if( $custPoints ) {
+            if( $custPoints && exists( $custPoints->{$installable->packageName} )) {
                 my $installableCustPoints = $custPoints->{$installable->packageName};
                 if( defined( $installableCustPoints )) {
                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                         my $custPointValue = $installableCustPoints->{$custPointName};
+                        my $value;
+                        if(    !$showPrivateCustomizationPoints
+                            && exists( $installable->customizationPoints()->{$custPointName}->{private} )
+                            && $installable->customizationPoints()->{$custPointName}->{private} )
+                        {
+                            $value = "<not shown>";
+                        } else {
+                            $value = $custPointValue->{value};
+                        }
 
-                        colPrint( '         customizationpoint ' . $custPointName . ': ' . $custPointValue->{value} . "\n" );
+                        $value =~ s!\n!\\n!g; # don't do multi-line
+
+                        colPrint( '          customizationpoint: ' . $custPointName . ': ' );
+                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+                        colPrint( "\n" );
                     }
                 }
             }
@@ -769,15 +784,17 @@ sub print {
 sub printBrief {
     my $self = shift;
 
-    return $self->print( 1 );
+    return $self->print( 1, 0 );
 }
 
 ##
 # Print this AppConfiguration in the detailed format
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
 sub printDetail {
-    my $self = shift;
+    my $self                           = shift;
+    my $showPrivateCustomizationPoints = shift;
 
-    return $self->print( 3 );
+    return $self->print( 3, $showPrivateCustomizationPoints );
 }
 
 

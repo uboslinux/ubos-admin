@@ -551,9 +551,11 @@ sub printAdminUser {
 ##
 # Print this Site in varying levels of detail
 # $detail: the level of detail
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
 sub print {
-    my $self   = shift;
-    my $detail = shift || 2;
+    my $self                           = shift;
+    my $detail                         = shift || 2;
+    my $showPrivateCustomizationPoints = shift;
 
     colPrint( $self->hostname );
     if( $self->hasTls ) {
@@ -623,7 +625,16 @@ sub print {
                                 if( defined( $installableCustPoints )) {
                                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
-                                        my $value = $custPointValueStruct->{value};
+
+                                        my $value;
+                                        if(    !$showPrivateCustomizationPoints
+                                            && exists( $installable->customizationPoints()->{$custPointName}->{private} )
+                                            && $installable->customizationPoints()->{$custPointName}->{private} )
+                                        {
+                                            $value = "<not shown>";
+                                        } else {
+                                            $value = $custPointValueStruct->{value};
+                                        }
 
                                         $value =~ s!\n!\\n!g; # don't do multi-line
 
@@ -646,23 +657,27 @@ sub print {
 sub printBrief {
     my $self = shift;
 
-    return $self->print( 1 );
+    return $self->print( 1, 0 );
 }
 
 ##
 # Print this Site in the detailed format
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
 sub printDetail {
-    my $self = shift;
+    my $self                           = shift;
+    my $showPrivateCustomizationPoints = shift;
 
-    return $self->print( 3 );
+    return $self->print( 3, $showPrivateCustomizationPoints );
 }
 
 ##
 # Print this Site in HTML format
 # $detail: the level of detail
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
 sub printHtml {
-    my $self   = shift;
-    my $detail = shift || 2;
+    my $self                           = shift;
+    my $detail                         = shift || 2;
+    my $showPrivateCustomizationPoints = shift;
 
     my $protoPlusHost = $self->protocol() . "://" . $self->hostname;
     colPrint( "<div class='site'>\n" );
@@ -743,7 +758,15 @@ sub printHtml {
                                     colPrint( "     <dl>\n" );
                                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
-                                        my $value = $custPointValueStruct->{value};
+                                        my $value;
+                                        if(    !$showPrivateCustomizationPoints
+                                            && exists( $installable->customizationPoints()->{$custPointName}->{private} )
+                                            && $installable->customizationPoints()->{$custPointName}->{private} )
+                                        {
+                                            $value = "&lt;not shown&gt;";
+                                        } else {
+                                            $value = $custPointValueStruct->{value};
+                                        }
 
                                         $value =~ s!\n!\\n!g; # don't do multi-line
 
@@ -773,15 +796,17 @@ sub printHtml {
 sub printHtmlBrief {
     my $self = shift;
 
-    return $self->printHtml( 1 );
+    return $self->printHtml( 1, 0 );
 }
 
 ##
 # Print this Site in the detailed format in HTML
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
 sub printHtmlDetail {
-    my $self = shift;
+    my $self                           = shift;
+    my $showPrivateCustomizationPoints = shift;
 
-    return $self->printHtml( 3 );
+    return $self->printHtml( 3, $showPrivateCustomizationPoints );
 }
 
 ##

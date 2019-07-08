@@ -23,35 +23,37 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my $json          = 0;
-    my $detail        = 0;
-    my $brief         = 0;
-    my $idsOnly       = 0;
-    my $adminUser     = 0;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $json              = 0;
+    my $detail            = 0;
+    my $brief             = 0;
+    my $idsOnly           = 0;
+    my $privateCustPoints = 0;
+    my $adminUser         = 0;
     my $siteId;
     my $host;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'         => \$verbose,
-            'logConfig=s'      => \$logConfigFile,
-            'debug'            => \$debug,
-            'json'             => \$json,
-            'detail'           => \$detail,
-            'brief'            => \$brief,
-            'ids-only|idsonly' => \$idsOnly,
-            'adminuser'        => \$adminUser,
-            'siteid=s'         => \$siteId,
-            'hostname=s'       => \$host );
+            'verbose+'                   => \$verbose,
+            'logConfig=s'                => \$logConfigFile,
+            'debug'                      => \$debug,
+            'json'                       => \$json,
+            'detail'                     => \$detail,
+            'brief'                      => \$brief,
+            'ids-only|idsonly'           => \$idsOnly,
+            'privatecustomizationpoints' => \$privateCustPoints,
+            'adminuser'                  => \$adminUser,
+            'siteid=s'                   => \$siteId,
+            'hostname=s'                 => \$host );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( $json && ( $detail || $brief || $idsOnly ))
+        || ( $json && ( $detail || $brief || $idsOnly || $privateCustPoints ))
         || ( $adminUser && ( $json || $detail || $brief || $idsOnly ))
         || ( $detail && $brief )
         || ( $brief && $idsOnly )
@@ -62,6 +64,10 @@ sub run {
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $privateCustPoints && $< != 0 ) {
+        fatal( 'Must be root to see values of private customizationpoints.' );
     }
 
     my $site;
@@ -87,13 +93,13 @@ sub run {
         $site->printBrief();
 
     } elsif( $detail ) {
-        $site->printDetail();
+        $site->printDetail( $privateCustPoints );
 
     } elsif( $adminUser ) {
         $site->printAdminUser();
 
     } else {
-        $site->print();
+        $site->print( $privateCustPoints );
     }
 
     return 1;
@@ -144,8 +150,11 @@ HHH
             '--ids-only' => <<HHH,
     Show Site and AppConfiguration ids only.
 HHH
-            '--credentials' => <<HHH
-    Show Site credentials.
+            '--adminuser' => <<HHH,
+    Show information about the Site administrator.
+HHH
+            '--privatecustomizationpoints' => <<HHH
+    Do not mask the values for private customizationpoints.
 HHH
         }
     };

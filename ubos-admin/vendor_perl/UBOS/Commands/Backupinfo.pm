@@ -27,16 +27,17 @@ sub run {
     my $cmd  = shift;
     my @args = @_;
 
-    my $verbose       = 0;
-    my $logConfigFile = undef;
-    my $debug         = undef;
-    my $json          = 0;
-    my $detail        = 0;
-    my $brief         = 0;
-    my $idsOnly       = 0;
-    my $hostnamesOnly = 0;
-    my $in            = undef;
-    my $url           = undef;
+    my $verbose           = 0;
+    my $logConfigFile     = undef;
+    my $debug             = undef;
+    my $json              = 0;
+    my $detail            = 0;
+    my $brief             = 0;
+    my $idsOnly           = 0;
+    my $hostnamesOnly     = 0;
+    my $privateCustPoints = 0;
+    my $in                = undef;
+    my $url               = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -47,6 +48,7 @@ sub run {
             'detail'                       => \$detail,
             'brief'                        => \$brief,
             'ids-only|idsonly'             => \$idsOnly,
+            'privatecustomizationpoints'   => \$privateCustPoints,
             'hostnames-only|hostnamesonly' => \$hostnamesOnly,
             'in=s'                         => \$in,
             'url=s'                        => \$url );
@@ -70,6 +72,7 @@ sub run {
 
     if(    !$parseOk
         || ( $json && $nDetail )
+        || ( $json && $privateCustPoints )
         || ( $nDetail > 1 )
         || @args
         || ( !$in && !$url )
@@ -77,6 +80,10 @@ sub run {
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $privateCustPoints && $< != 0 ) {
+        fatal( 'Must be root to see values of private customizationpoints.' );
     }
 
     my $file;
@@ -137,7 +144,7 @@ sub run {
         }
     } elsif( $detail ) {
         foreach my $siteId ( sort keys %$sites ) {
-            $sites->{$siteId}->printDetail();
+            $sites->{$siteId}->printDetail( $privateCustPoints );
         }
     } elsif( $brief ) {
         foreach my $siteId ( sort keys %$sites ) {
@@ -156,7 +163,7 @@ sub run {
 
     } else {
         foreach my $siteId ( sort keys %$sites ) {
-            $sites->{$siteId}->print();
+            $sites->{$siteId}->print( $privateCustPoints );
         }
     }
 
@@ -170,7 +177,7 @@ sub run {
         } else {
             if( $detail ) {
                 foreach my $appConfigId ( @unattachedAppConfigIds ) {
-                    $appConfigs->{$appConfigId}->printDetail();
+                    $appConfigs->{$appConfigId}->printDetail( $privateCustPoints );
                 }
             } elsif( $brief ) {
                 foreach my $appConfigId ( @unattachedAppConfigIds ) {
@@ -184,7 +191,7 @@ sub run {
                 colPrint( "=== Unattached AppConfigurations ===\n" );
 
                 foreach my $appConfigId ( @unattachedAppConfigIds ) {
-                    $appConfigs->{$appConfigId}->print();
+                    $appConfigs->{$appConfigId}->print( $privateCustPoints );
                 }
             }
         }
@@ -218,13 +225,13 @@ SSS
     about the backup contained in the retrieved file in JSON format.
 HHH
             <<SSS => <<HHH,
-    --in <backupfile> [ --brief | --detail | --ids-only | --hostnames-only ]
+    --in <backupfile> [ --brief | --detail | --ids-only | --hostnames-only ] [ --privatecustomizationpoints ]
 SSS
     Display information about the local backupfile <backupfile>. Depending
     on the provided flag (if any), more or less information is shown.
 HHH
             <<SSS => <<HHH,
-   --url <backupurl> [ --brief | --detail | --ids-only | --hostnames-only ]
+   --url <backupurl> [ --brief | --detail | --ids-only | --hostnames-only ] [ --privatecustomizationpoints ]
 SSS
     Retrieve the backup file from URL <backupurl>, and display information
     about the backup contained in the retrieved file. Depending on the
