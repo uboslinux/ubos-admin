@@ -196,6 +196,7 @@ HHH
 HHH
             '--privatecustomizationpoints' => <<HHH
     Do not mask the values for private customizationpoints.
+HHH
         }
     };
 }
