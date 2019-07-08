@@ -756,7 +756,7 @@ sub print {
                     foreach my $custPointName ( sort keys %$installableCustPoints ) {
                         my $custPointValue = $installableCustPoints->{$custPointName};
 
-                        colPrint( '         customizationpoint ' . $custPointName . ': ' . $custPointValue . "\n" );
+                        colPrint( '         customizationpoint ' . $custPointName . ': ' . $custPointValue->{value} . "\n" );
                     }
                 }
             }
