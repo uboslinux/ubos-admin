@@ -344,17 +344,17 @@ sub run {
 
         $out = "Ready:\n";
         if( exists( $json->{'ubos-admin-ready'} ) && exists( $json->{'ubos-admin-ready'} )) {
-            $out .= '    since: ' . _formatTimeStamp( $json->{'ubos-admin-ready'} ) . "\n";
+            $out .= '    since:          ' . _formatTimeStamp( $json->{'ubos-admin-ready'} ) . "\n";
         } else {
             $out .= "    NOT READY\n";
         }
 
         if( exists( $json->{lastupdated} )) {
-            $out .= '    last updated: ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+            $out .= '    last updated:   ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
         }
 
         if( exists( $json->{channel} )) {
-            $out .= '    channel: ' . $json->{channel} . "\n";
+            $out .= '    channel:        ' . $json->{channel} . "\n";
         }
 
         if( exists( $json->{cpu} )) {
@@ -368,8 +368,8 @@ sub run {
         if( exists( $json->{uptime} )) {
             my $uptime = $json->{uptime};
             $out .= "Uptime:\n";
-            $out .= '    for:      ' . $uptime->{uptime} . "\n";
-            $out .= '    load avg: ' . $uptime->{loadavg1}  . ' (1 min) '
+            $out .= '    for:            ' . $uptime->{uptime} . "\n";
+            $out .= '    load avg:       ' . $uptime->{loadavg1}  . ' (1 min) '
                                      . $uptime->{loadavg5}  . ' (5 min) '
                                      . $uptime->{loadavg15} . " (15 min)\n";
 
