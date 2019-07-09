@@ -174,6 +174,9 @@ sub run {
             my $newJson = UBOS::Utils::readJsonFromString( $out );
             $json->{blockdevices} = [];
             foreach my $blockdevice ( @{$newJson->{blockdevices}} ) {
+                if( $blockdevice->{type} eq 'rom' ) {
+                    next;
+                }
                 my $name       = $blockdevice->{name};
                 my $fstype     = $blockdevice->{fstype};
                 my $mountpoint = $blockdevice->{mountpoint};
