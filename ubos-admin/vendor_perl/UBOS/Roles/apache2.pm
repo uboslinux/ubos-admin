@@ -221,9 +221,6 @@ sub setupPlaceholderSite {
 CONTENT
 
     my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
-    my $sslKey;
-    my $sslCert;
-    my $sslCaCert;
 
     # While this might become a TLS site, we may not have letsencrypt
     # certs yet at this point; if so, we set it up as http
@@ -245,17 +242,7 @@ $serverDeclaration
 </VirtualHost>
 CONTENT
 
-        $sslKey    = $site->tlsKey;
-        $sslCert   = $site->tlsCert;
-        $sslCaCert = $site->tlsCaCert;
-
-        my $group = $site->vars()->getResolve( 'apache2.gname' );
-        UBOS::Utils::saveFile( "$sslDir/$siteId.key",   $sslKey,    0440, 'root', $group ); # avoid overwrite by apache
-        UBOS::Utils::saveFile( "$sslDir/$siteId.crt",   $sslCert,   0440, 'root', $group );
-
-        if( $sslCaCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0440, 'root', $group );
-        }
+        UBOS::Apache2::updateSiteTls( $site );
 
     } # else No SSL
 
@@ -283,7 +270,7 @@ CONTENT
     SSLCertificateKeyFile $sslDir/$siteId.key
     SSLCertificateFile $sslDir/$siteId.crt
 CONTENT
-        if( $sslCaCert ) {
+        if( $site->tlsCaCert ) {
             $siteFileContent .= <<CONTENT;
 
     # the CA certs explaining where our clients got their certs from
@@ -363,10 +350,7 @@ sub resumeSite {
 #
 CONTENT
 
-    my $sslDir;
-    my $sslKey;
-    my $sslCert;
-    my $sslCaCert;
+    my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
 
     if( $site->hasTls ) {
         $siteFileContent .= <<CONTENT;
@@ -380,22 +364,7 @@ $serverDeclaration
 </VirtualHost>
 CONTENT
 
-        $sslDir       = $site->vars()->getResolve( 'apache2.ssldir' );
-        $sslKey       = $site->tlsKey;
-        $sslCert      = $site->tlsCert;
-        $sslCaCert    = $site->tlsCaCert;
-
-        my $group = $site->vars()->getResolve( 'apache2.gname' );
-
-        if( $sslKey ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.key",   $sslKey,    0440, 'root', $group ); # avoid overwrite by apache
-        }
-        if( $sslCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.crt",   $sslCert,   0440, 'root', $group );
-        }
-        if( $sslCaCert ) {
-            UBOS::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
-        }
+        UBOS::Apache2::updateSiteTls( $site );
 
     } # else No SSL
 
@@ -427,7 +396,7 @@ CONTENT
     SSLCertificateKeyFile $sslDir/$siteId.key
     SSLCertificateFile $sslDir/$siteId.crt
 CONTENT
-        if( $sslCaCert ) {
+        if( $site->tlsCaCert ) {
             $siteFileContent .= <<CONTENT;
 
     # the CA certs explaining where our clients got their certs from

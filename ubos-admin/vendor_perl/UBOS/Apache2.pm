@@ -199,4 +199,37 @@ END
     return $ret;
 }
 
+##
+# Save the TLS-related info contained in this Site to the right place, or
+# remove it if none.
+# $site: the Site
+sub updateSiteTls {
+    my $site = shift;
+
+    my $group  = $site->vars()->getResolve( 'apache2.gname' );
+    my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
+    my $siteId = $site->siteId();
+
+    _saveOrDeleteTlsData( "$sslDir/$siteId.key",   $site->tlsKey(),    $group );
+    _saveOrDeleteTlsData( "$sslDir/$siteId.crt",   $site->tlsCert(),   $group );
+    _saveOrDeleteTlsData( "$sslDir/$siteId.cacrt", $site->tlsCaCert(), $group );
+}
+
+##
+# Helper to save or delete a TLS-related file.
+# $file: the file name
+# $data: the data to save if it exists
+# $group user group that owns the file
+sub _saveOrDeleteTlsData {
+    my $file  = shift;
+    my $data  = shift;
+    my $group = shift;
+
+    if( $data ) {
+        UBOS::Utils::saveFile( $file, $data, 0440, 'root', $group ); # avoid overwrite by apache
+    } elsif( -f $file ) {
+        UBOS::Utils::deleteFile( $file );
+    }
+}
+
 1;
