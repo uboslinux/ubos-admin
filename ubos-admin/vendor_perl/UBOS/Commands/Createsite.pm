@@ -828,7 +828,7 @@ sub _askForCustomizationPoints {
                     next;
                 }
 
-                if( !$askAll && ( !exists( $custPointDef->{required} ) && !$custPointDef->{required} )) {
+                if( !$askAll && ( !exists( $custPointDef->{required} ) || !$custPointDef->{required} )) {
                     next;
                 }
                 if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
