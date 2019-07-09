@@ -44,7 +44,7 @@ sub run {
             'verbose+'                        => \$verbose,
             'logConfig=s'                     => \$logConfigFile,
             'debug'                           => \$debug,
-            'all=s'                           => \$all,
+            'all'                             => \$all,
             'siteid=s'                        => \@siteIds,
             'hostname=s'                      => \@hosts,
             'appconfigid=s'                   => \@appConfigIds,
