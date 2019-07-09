@@ -16,6 +16,40 @@ use UBOS::Logging;
 use base qw( UBOS::AbstractBackupContext );
 use fields qw( backup contextPathInBackup );
 
+my %dontCompressExtensions = (
+    # already compressed images
+    'png'   => 1,
+    'gif'   => 1,
+    'jpg'   => 1,
+
+    # already compressed audio and video
+    'mp3'   => 1,
+    'mpeg'  => 1,
+    'ogg'   => 1,
+    'm4a'   => 1,
+    'm4p'   => 1,
+    'm4v'   => 1,
+    # not wav
+
+    # other compressed files
+    'pdf'   => 1,
+    'ipa'   => 1, # iOS app
+
+    # archive files
+    'bz'    => 1,
+    'bz2'   => 1,
+    'bzip'  => 1,
+    'bzip2' => 1,
+    'gz'    => 1,
+    'gzip'  => 1,
+    'rar'   => 1,
+    'tgj'   => 1,
+    'tgz'   => 1,
+    'xz'    => 1,
+    'z'     => 1,
+    'zip'   => 1,
+);
+
 ##
 # Constructor
 sub new {
@@ -57,8 +91,10 @@ sub addFile {
         error( 'Invalid data type for addFile', ref( $fileToAdd ) || $fileToAdd, ref( $bucket ) || $bucket );
         return 0;
     }
+    my $zipName = $self->{contextPathInBackup} . $bucket;
 
-    if( $self->{backup}->{zip}->addFile( $fileToAdd, $self->{contextPathInBackup} . $bucket )) {
+    # Use the extension of the actual file here, not the bucket name (which probably has no extension)
+    if( $self->{backup}->{zip}->addFile( $fileToAdd, $zipName, _compressionLevel( $fileToAdd ))) {
         return 1;
     }
     return 0;
@@ -140,7 +176,7 @@ sub _addRecursive {
         # This comes from the source code of Archive::Zip; there doesn't seem to be an API
 
     } elsif( -f $fileName ) {
-        $ret &= ( $self->{backup}->{zip}->addFile( $fileName, $zipName ) ? 1 : 0 );
+        $ret &= ( $self->{backup}->{zip}->addFile( $fileName, $zipName, _compressionLevel( $zipName )) ? 1 : 0 );
 
     } elsif( -d $fileName ) {
         $ret &= ( $self->{backup}->{zip}->addDirectory( "$fileName/", "$zipName/" ) ? 1 : 0 );
@@ -172,6 +208,23 @@ sub _addRecursive {
     }
 
     return $ret;
+}
+
+##
+# Determine the correct compression level for a file with this name
+# $name: name of the file
+# return: compression level
+sub _compressionLevel {
+    my $name = shift;
+
+    my $lastPeriod = rindex( $name, '.' );
+    if( $lastPeriod ) {
+        my $ext = substr( $name, $lastPeriod+1 );
+        if( $dontCompressExtensions{$ext} ) {
+            return COMPRESSION_LEVEL_NONE;
+        }
+    }
+    return COMPRESSION_LEVEL_DEFAULT;
 }
 
 1;
