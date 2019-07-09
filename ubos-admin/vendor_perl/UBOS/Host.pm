@@ -1322,7 +1322,12 @@ sub defaultManifestFileReader {
 
     my $file = vars()->getResolve( 'package.manifestdir' ) . "/$packageIdentifier.json";
 
-    return readJsonFromFile( $file );
+    my $ret = readJsonFromFile( $file );
+    if( $ret ) {
+        return $ret;
+    } else {
+        fatal( 'Failed to read or parse manifest file:', $file );
+    }
 }
 
 #####

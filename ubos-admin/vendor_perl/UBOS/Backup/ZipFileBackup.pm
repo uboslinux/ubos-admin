@@ -358,11 +358,17 @@ sub readManifestFromZip {
     my $zip               = shift;
     my $packageIdentifier = shift;
 
-    my $foundManifest = $zip->contents( "installables/$packageIdentifier.json" );
+    my $file          = "installables/$packageIdentifier.json";
+    my $foundManifest = $zip->contents( $file );
     unless( $foundManifest ) {
         fatal( 'Manifest for package', $packageIdentifier, 'not found in backup file.' );
     }
-    return UBOS::Utils::readJsonFromString( $foundManifest );
+    my $ret = UBOS::Utils::readJsonFromString( $foundManifest );
+    if( $ret ) {
+        return $ret;
+    } else {
+        fatal( 'Failed to parse manifest file in backup file:', $file );
+    }
 }
 
 1;
