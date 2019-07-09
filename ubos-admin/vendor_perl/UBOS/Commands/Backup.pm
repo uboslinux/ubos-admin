@@ -33,6 +33,7 @@ sub run {
     my $logConfigFile     = undef;
     my $debug             = undef;
     my $force             = 0;
+    my $all               = 0;
     my @siteIds           = ();
     my @hosts             = ();
     my @appConfigIds      = ();
@@ -43,6 +44,7 @@ sub run {
             'verbose+'                        => \$verbose,
             'logConfig=s'                     => \$logConfigFile,
             'debug'                           => \$debug,
+            'all=s'                           => \$all,
             'siteid=s'                        => \@siteIds,
             'hostname=s'                      => \@hosts,
             'appconfigid=s'                   => \@appConfigIds,
@@ -53,6 +55,8 @@ sub run {
 
     if(    !$parseOk
         || ( @appConfigIds && ( @siteIds + @hosts ))
+        || ( $all && ( @appConfigIds + @siteIds + @hosts ))
+        || ( !$all && !( @appConfigIds + @siteIds + @hosts ))
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
@@ -104,7 +108,7 @@ sub run {
         }
     }
 
-    unless( $backupOperation->analyze( \@siteIds, \@appConfigIds )) {
+    unless( $backupOperation->analyze( \@siteIds, \@appConfigIds )) { # none provided implies --all
         error( $@ );
         return 0;
     }
@@ -199,6 +203,11 @@ HHH
 HHH
             '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
+HHH
+            '--all' => <<HHH,
+    Back up all sites on this device. If this option is not given,
+    the sites or appconfigurations to be backed up must be specified
+    individually.
 HHH
             '--[no]backuptls' => <<HHH,
     If a site uses TLS, specify whether to put the TLS key and certificate
