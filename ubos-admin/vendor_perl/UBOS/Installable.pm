@@ -347,6 +347,20 @@ sub requires {
 }
 
 ##
+# Determine whether this Installable requires a site to be TLS.
+# return: true or false
+sub requiresTls {
+    my $self = shift;
+
+    if( exists( $self->{json}->{requiresTls} ) && $self->{json}->{requiresTls} ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+##
 # Helper method to find a localized attribute in the info section
 # $att: name of the attribute in the info section
 # $locale: the locale
@@ -420,6 +434,10 @@ sub checkManifest {
     my $json = $self->{json};
     unless( $json->{type} eq $type ) {
         $self->myFatal( 'type must be', $type, 'is:', $json->{type} );
+    }
+
+    if( exists( $json->{requiresTls} ) && !JSON::is_bool( $json->{requiresTls} )) {
+        fatal( 'requiresTls must be boolean' );
     }
 
     $self->checkManifestRolesSection( $vars, $skipFilesystemChecks );

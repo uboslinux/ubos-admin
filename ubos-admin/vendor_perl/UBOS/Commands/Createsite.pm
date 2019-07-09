@@ -468,6 +468,10 @@ sub run {
                 fatal( 'Package exists but is not an app:', $appId );
             }
 
+            if( !$tls && $app->requiresTls() ) {
+                fatal( 'App requires TLS:', $appId );
+            }
+
             my $custPointValues = {};
             my %accs            = (); # map name->Accessory
 
@@ -498,6 +502,9 @@ sub run {
                 }
             }
             foreach my $acc ( values %accs ) {
+                if( !$tls && $acc->requiresTls() ) {
+                    fatal( 'Accessory requires TLS:', $acc->packageName() );
+                }
                 if( !$acc->canBeUsedWithApp( $appId ) ) {
                     fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
                 }
@@ -560,6 +567,11 @@ sub run {
                 error( 'Package exists but is not an app:', $appId );
             }
 
+            if( !$tls && $app->requiresTls() ) {
+                error( 'App requires TLS:', $appId );
+                next();
+            }
+
             my $context         = undef;
             my $custPointValues = {};
 
@@ -610,6 +622,15 @@ sub run {
                             my $acc = UBOS::Accessory->new( $currentAccId );
                             unless( $acc ) {
                                 error( 'Package exists but it not an accessory. Please re-enter:', $currentAccId );
+                                last ACCS;
+                            }
+                            if( !$acc->canBeUsedWithApp( $appId ) ) {
+                                error( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+                                last ACCS;
+                            }
+
+                            if( !$tls && $acc->requiresTls() ) {
+                                error( 'Accessory requires TLS. Please re-enter:', $currentAccId );
                                 last ACCS;
                             }
 

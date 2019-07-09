@@ -322,6 +322,12 @@ sub deployOrCheck {
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
+        # if TLS is required, make sure we have it
+        if( $installable->requiresTls && !$self->site()->hasTls()) {
+            error( 'Cannot deploy', $installable->packageName, 'to non-TLS site' );
+            $ret = 0;
+        }
+
         foreach my $required ( $installable->requires()) {
             unless( grep { $required eq $_->packageName } @installables ) {
                 error( 'Installable', $packageName, 'requires installable', $required, 'to be deployed to the same AppConfiguration' );
