@@ -42,12 +42,13 @@ sub run {
     my $restIsPackages    = 0;
     my @packageFiles      = ();
     my $reboot            = 0;
-    my $noreboot          = 0;
-    my $nosync            = 0;
+    my $noReboot          = 0;
+    my $noSync            = 0;
     my $noPackageUpgrade  = 0;
     my $noSnap            = 0;
     my $showPackages      = 0;
     my $stage1Only        = 0;
+    my $pacmanConfOnly    = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -56,22 +57,32 @@ sub run {
             'debug'                           => \$debug,
             'pkgFiles'                        => \$restIsPackages,
             'reboot'                          => \$reboot,
-            'noreboot'                        => \$noreboot,
-            'nosynchronize'                   => \$nosync,
+            'noreboot'                        => \$noReboot,
+            'nosynchronize'                   => \$noSync,
             'nosnapshot'                      => \$noSnap,
             'showpackages'                    => \$showPackages,
             'nopackageupgrade'                => \$noPackageUpgrade, # This option is not public, but helpful for development
-            'stage1Only'                      => \$stage1Only ); # This option is not public
+            'stage1Only'                      => \$stage1Only,       # This option is not public
+            'pacmanConfOnly'                  => \$pacmanConfOnly ); # This option is not public
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
         || ( @packageFiles && $noPackageUpgrade )
-        || ( $reboot && $noreboot )
-        || ( $verbose && $logConfigFile ))
+        || ( $reboot && $noReboot )
+        || ( $verbose && $logConfigFile )
+        || ( $pacmanConfOnly && ( $restIsPackages || $noReboot || $noSync || $noSnap || $showPackages || $noPackageUpgrade || $stage1Only )))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $pacmanConfOnly ) {
+        # shortcut
+        debugAndSuspend( 'Regenerate pacman.conf' );
+        UBOS::Utils::regeneratePacmanConf();
+        UBOS::Utils::regenerateEtcIssue();
+        return 1;
     }
 
     my $backupOperation = UBOS::BackupOperation::parseArgumentsPartial( \@args );
@@ -219,7 +230,7 @@ sub run {
         } elsif( @packageFiles ) {
             UBOS::Host::installPackageFiles( \@packageFiles, $showPackages );
         } else {
-            if( UBOS::Host::updateCode( $nosync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive() ) == -1 ) {
+            if( UBOS::Host::updateCode( $noSync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive() ) == -1 ) {
                 $rebootHeuristics = 1;
             }
         }
@@ -230,7 +241,7 @@ sub run {
             $doReboot = 1;
 
         } elsif( $rebootHeuristics ) {
-            if( $noreboot ) {
+            if( $noReboot ) {
                 info( 'Reboot recommended, but --noreboot was specified. Not rebooting.' );
                 trace( 'Handing over to update-stage2:', $stage2Cmd );
                 $doReboot = 0;
