@@ -13,7 +13,7 @@
         "snappercleanupalgorithm"   : "timeline",
         "snappersnapshotson"        : "none,xen",
         "snapperquotaon"            : "none,xen",
-        "tmpdir"                    : "/tmp",
+        "tmpdir"                    : "/ubos/tmp",
         "homeshepherd"              : "/var/shepherd"
     },
 
