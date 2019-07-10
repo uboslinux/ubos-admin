@@ -31,7 +31,7 @@ map { $defaultDiskFields{$_} = 1; } qw (
 # above these we report problems
 my $PROBLEM_DISK_PERCENT         = 70;
 my $PROBLEM_LOAD_PER_CPU_PERCENT = 70;
-my $SKU_FILE                     = '/etc/ubos/sku.json';
+my $PRODUCT_FILE                 = '/etc/ubos/product.json';
 
 ##
 # Execute this command.
@@ -58,8 +58,8 @@ sub run {
     my $showMemory      = 0;
     my $showPacnew      = 0;
     my $showProblems    = 0;
+    my $showProduct     = 0;
     my $showReady       = 0;
-    my $showSku         = 0;
     my $showUptime      = 0;
 
     my $parseOk = GetOptionsFromArray(
@@ -78,8 +78,8 @@ sub run {
             'memory'       => \$showMemory,
             'pacnew'       => \$showPacnew,
             'problems'     => \$showProblems,
+            'product'      => \$showProduct,
             'ready'        => \$showReady,
-            'sku'          => \$showSku,
             'uptime'       => \$showUptime );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
@@ -87,8 +87,8 @@ sub run {
 
     my $showAspect =    $showChannel || $showCpu         || $showDisks
                      || $showFailed  || $showLastUpdated || $showMemory
-                     || $showPacnew  || $showProblems    || $showReady
-                     || $showSku     || $showUptime;
+                     || $showPacnew  || $showProblems    || $showProduct
+                     || $showReady   || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -108,8 +108,8 @@ sub run {
         $showMemory      = 1;
         $showPacnew      = 1;
         $showProblems    = 1;
+        $showProduct     = 1;
         $showReady       = 1;
-        $showSku         = 1;
         $showUptime      = 1;
 
     } elsif( !$showAspect ) {
@@ -119,8 +119,8 @@ sub run {
         $showLastUpdated = 1;
         $showMemory      = 1;
         $showProblems    = 1;
+        $showProduct     = 1;
         $showReady       = 1;
-        $showSku         = 1;
         $showUptime      = 1;
     }
 
@@ -333,11 +333,11 @@ sub run {
         }
     }
 
-    trace( 'Determine SKU' );
-    if( -e $SKU_FILE ) {
-        $json->{sku} = UBOS::Utils::readJsonFromFile( $SKU_FILE );
+    trace( 'Determine product' );
+    if( -e $PRODUCT_FILE ) {
+        $json->{product} = UBOS::Utils::readJsonFromFile( $PRODUCT_FILE );
     } else {
-        $json->{sku} = {
+        $json->{product} = {
             'name' => 'UBOS'
         };
     }
@@ -360,9 +360,19 @@ sub run {
 
         $out = ''; # reset $out
 
-        if( $showSku ) {
-            $out .= "SKU:\n";
-            $out .= '    ' . $json->{sku}->{name} . "\n";
+        if( $showProduct ) {
+            $out .= "Product:\n";
+            if( exists( $json->{product}->{name} )) {
+                $out .= '    Name:   ' . $json->{product}->{name} . "\n";
+            } else {
+                $out .= '    Name:   ' . '?' . "\n";
+            }
+            if( exists( $json->{product}->{vendor} )) {
+                $out .= '    Vendor: ' . $json->{product}->{vendor} . "\n";
+            }
+            if( exists( $json->{product}->{sku} )) {
+                $out .= '    SKU:    ' . $json->{product}->{sku} . "\n";
+            }
         }
 
         if( $showReady ) {
@@ -375,11 +385,11 @@ sub run {
         }
 
         if( $showLastUpdated ) {
-            $out .= '    last updated:   ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+            $out .= 'Last updated: ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
         }
 
         if( $showChannel ) {
-            $out .= '    channel:        ' . $json->{channel} . "\n";
+            $out .= 'Channel: ' . $json->{channel} . "\n";
         }
 
         if( $showCpu ) {
@@ -613,8 +623,8 @@ SSS
     * memory:      report how much RAM and swap memory is being used.
     * pacnew:      report on manually modified configuration files.
     * problems:    report on any detected problems.
+    * product:     report on the product
     * ready:       report whether the device is ready or not.
-    * sku:         report on the product
     * uptime:      report how long the device has been up since last boot.
 HHH
             <<SSS => <<HHH
