@@ -31,6 +31,7 @@ map { $defaultDiskFields{$_} = 1; } qw (
 # above these we report problems
 my $PROBLEM_DISK_PERCENT         = 70;
 my $PROBLEM_LOAD_PER_CPU_PERCENT = 70;
+my $SKU_FILE                     = '/etc/ubos/sku.json';
 
 ##
 # Execute this command.
@@ -58,6 +59,7 @@ sub run {
     my $showPacnew      = 0;
     my $showProblems    = 0;
     my $showReady       = 0;
+    my $showSku         = 0;
     my $showUptime      = 0;
 
     my $parseOk = GetOptionsFromArray(
@@ -77,14 +79,20 @@ sub run {
             'pacnew'       => \$showPacnew,
             'problems'     => \$showProblems,
             'ready'        => \$showReady,
+            'sku'          => \$showSku,
             'uptime'       => \$showUptime );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
+    my $showAspect =    $showChannel || $showCpu         || $showDisks
+                     || $showFailed  || $showLastUpdated || $showMemory
+                     || $showPacnew  || $showProblems    || $showReady
+                     || $showSku     || $showUptime;
+
     if(    !$parseOk
-        || ( $showAll  && (             $showChannel || $showCpu || $showDisks || $showFailed || $showLastUpdated || $showMemory || $showPacnew || $showProblems || $showReady || $showUptime ))
-        || ( $showJson && ( $showAll || $showChannel || $showCpu || $showDisks || $showFailed || $showLastUpdated || $showMemory || $showPacnew || $showProblems || $showReady || $showUptime ))
+        || ( $showAll  && $showAspect )
+        || ( $showJson && ( $showAll || $showAspect ))
         || @args
         || ( $verbose && $logConfigFile ))
     {
@@ -101,25 +109,18 @@ sub run {
         $showPacnew      = 1;
         $showProblems    = 1;
         $showReady       = 1;
+        $showSku         = 1;
         $showUptime      = 1;
 
-    } elsif(    !$showChannel
-             && !$showCpu
-             && !$showDisks
-             && !$showFailed
-             && !$showLastUpdated
-             && !$showMemory
-             && !$showPacnew
-             && !$showProblems
-             && !$showReady
-             && !$showUptime )
-    {
+    } elsif( !$showAspect ) {
         # default
+        $showChannel     = 1;
         $showDisks       = 1;
         $showLastUpdated = 1;
         $showMemory      = 1;
         $showProblems    = 1;
         $showReady       = 1;
+        $showSku         = 1;
         $showUptime      = 1;
     }
 
@@ -332,6 +333,15 @@ sub run {
         }
     }
 
+    trace( 'Determine SKU' );
+    if( -e $SKU_FILE ) {
+        $json->{sku} = UBOS::Utils::readJsonFromFile( $SKU_FILE );
+    } else {
+        $json->{sku} = {
+            'name' => 'UBOS'
+        };
+    }
+
     # now display (or not)
 
     unless( @{$json->{problems}} ) {
@@ -349,6 +359,11 @@ sub run {
         colPrint( $out );
 
         $out = ''; # reset $out
+
+        if( $showSku ) {
+            $out .= "SKU:\n";
+            $out .= '    ' . $json->{sku}->{name} . "\n";
+        }
 
         if( $showReady ) {
             $out .= "Ready:\n";
@@ -599,6 +614,7 @@ SSS
     * pacnew:      report on manually modified configuration files.
     * problems:    report on any detected problems.
     * ready:       report whether the device is ready or not.
+    * sku:         report on the product
     * uptime:      report how long the device has been up since last boot.
 HHH
             <<SSS => <<HHH
