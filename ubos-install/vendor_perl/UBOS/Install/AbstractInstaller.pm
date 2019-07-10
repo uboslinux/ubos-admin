@@ -23,7 +23,7 @@ use fields qw( hostname
                checksignatures
                partitioningscheme
                packagedbs disablepackagedbs addpackagedbs removepackagedbs
-               shepherdKey );
+               shepherdKey productInfo );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
@@ -262,6 +262,16 @@ sub setShepherdKey {
     my $shepherdKey = shift;
 
     $self->{shepherdKey} = $shepherdKey;
+}
+
+##
+# Set product info, as a hash.
+# $productInfo: hash containing product info
+sub setProductInfo {
+    my $self        = shift;
+    my $productInfo = shift;
+
+    $self->{productInfo} = $productInfo;
 }
 
 ##
@@ -754,6 +764,7 @@ sub configureOs {
     my $buildId       = UBOS::Utils::time2string( time() );
     my $deviceClass   = $self->deviceClass();
     my $kernelPackage = $self->{kernelpackage};
+    my $productInfo   = $self->{productInfo};
     my $errors        = 0;
 
     # Limit size of system journal
@@ -781,6 +792,9 @@ OSRELEASE
     }
     UBOS::Utils::saveFile( $target . '/etc/os-release', $osRelease, 0644, 'root', 'root' );
 
+    if( $productInfo ) {
+        UBOS::Utils::writeJsonToFile( $target . '/etc/ubos/product.json', $productInfo, 0644, 'root', 'root' );
+    }
     return 0;
 }
 
@@ -985,6 +999,7 @@ sub addSetupShepherdAndKeyToScript {
     return $ret;
 }
 
+
 ##
 # Clean up after install is done
 # return: number of errors
@@ -1077,7 +1092,7 @@ sub replaceDevSymlinks {
 
     for( my $i=0 ; $i<@$argvp ; ++$i ) {
         my $resolved = UBOS::Utils::absReadlink( $argvp->[$i] );
-        if( -b $resolved ) {
+        if( -b $resolved || -f $resolved ) {
             $argvp->[$i] = $resolved;
         } else {
             $@ = 'Cannot find device: ' . $argvp->[$i];

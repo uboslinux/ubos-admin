@@ -46,7 +46,8 @@ my %removePackageDbs    = ();
 my %disablePackageDbs   = ();
 my $checkSignatures     = 'required';
 my $noswap              = 0;
-my $shepherdKeyFile     = 0;
+my $shepherdKeyFile     = undef;
+my $productFile         = undef;
 my $help                = 0;
 
 my $parseOk = GetOptions(
@@ -72,6 +73,7 @@ my $parseOk = GetOptions(
         'checksignatures=s'    => \$checkSignatures,
         'noswap'               => \$noswap,
         'shepherdkeyfile=s'    => \$shepherdKeyFile,
+        'productfile=s'        => \$productFile,
         'h|help'               => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
@@ -266,6 +268,17 @@ $installer->setCheckSignatures( $checkSignatures );
 
 if( !defined( $noswap ) && exists( $config->{noswap} )) {
     $noswap = $config->{noswap}
+}
+
+if( !$productFile && exists( $config->{productfile} )) {
+    $productFile = $config->{productfile};
+}
+if( $productFile ) {
+    my $productInfo = UBOS::Utils::readJsonFromFile( $productFile );
+    unless( $productInfo ) {
+        fatal( $@ );
+    }
+    $installer->setProductInfo( $productInfo );
 }
 
 trace( 'Using installer', ref( $installer ));
@@ -504,6 +517,8 @@ Optional arguments:
     --shepherdkeyfile <file>
           Create a shepherd account, and add the SSH public key from the provided file
           as a user that is allowed to log in via SSH.
+    --productfile <file>
+          Use <file> as the JSON file from where to read production information.
 END
     } else {
         print <<END;
@@ -514,7 +529,7 @@ Optional arguments:
     [--bootpartition <part>][--bootloaderdevice <dev>][--ubospartition <part>][--swappartition <part>]
     [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
     [--addpackagedb <name=server>][--removepackagedb <name>][--disablepackagedb <name>][--noswap]
-    [--shepherdkeyfile <file>]
+    [--shepherdkeyfile <file>][--productfile <file>]
 END
     }
     exit 1;
