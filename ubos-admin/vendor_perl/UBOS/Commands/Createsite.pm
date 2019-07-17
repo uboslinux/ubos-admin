@@ -2,7 +2,6 @@
 #
 # Command that asks the user about the site they want to create, and
 # then deploys the site.
-# then deploys the site.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -229,9 +228,6 @@ sub run {
             }
         }
     }
-    unless( $siteId ) {
-        $siteId = UBOS::Host::createNewSiteId();
-    }
     unless( $adminUserId ) {
         $adminUserId = askAnswer( 'Site admin user id (e.g. admin): ', '^[a-z0-9]+$' );
     }
@@ -296,36 +292,8 @@ sub run {
         if( $letsEncrypt ) {
             # nothing here
 
-        } elsif( $selfSigned ) {
-
-            unless( $quiet ) {
-                colPrintInfo( "Generating TLS keys...\n" );
-            }
-
-            my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
-            my $dir    = File::Temp->newdir( DIR => $tmpDir );
-            chmod 0700, $dir;
-
-            my $err;
-            if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
-                fatal( 'openssl genrsa failed', $err );
-            }
-            debugAndSuspend( 'Keys generated, CSR is next' );
-            if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch -subj '/CN=$hostname'", undef, undef, \$err )) {
-                fatal( 'openssl req failed', $err );
-            }
-            debugAndSuspend( 'CRT generated, CRT is next' );
-            if( UBOS::Utils::myexec( "openssl x509 -req -days 3650 -in '$dir/csr' -signkey '$dir/key' -out '$dir/crt'", undef, undef, \$err )) {
-                fatal( 'openssl x509 failed', $err );
-            }
-            $tlsKey = UBOS::Utils::slurpFile( "$dir/key" );
-            $tlsCrt = UBOS::Utils::slurpFile( "$dir/crt" );
-
-            debugAndSuspend( 'CRT generated, cleaning up' );
-            UBOS::Utils::deleteFile( "$dir/key", "$dir/csr", "$dir/crt" );
-
-        } else {
-            # not self-signed
+        } elsif( !$selfSigned ) {
+            # not self-signed -- self-signed case is now handled in Deploy
             while( 1 ) {
                 $tlsKey = askAnswer( 'SSL/TLS private key file: ' );
                 unless( $tlsKey ) {
@@ -414,6 +382,8 @@ sub run {
     $newSiteJson->{admin}->{email}      = $adminEmail;
 
     if( $tls ) {
+        $newSiteJson->{tls} = {};
+
         if( $letsEncrypt ) {
             $newSiteJson->{tls}->{letsencrypt} = JSON::true;
         }
@@ -453,8 +423,6 @@ sub run {
                 if( UBOS::Host::findAppConfigurationById( $appConfigId )) {
                     fatal( 'An AppConfiguration with this appconfigid is deployed already. Cannot create a new site from this template:', $hostname );
                 }
-            } else {
-                $appConfigId = UBOS::Host::createNewAppConfigId();
             }
 
             my $appId  = $appConfig->{appid};
@@ -675,8 +643,7 @@ sub run {
                     $askAll );
 
             my $appConfigJson = {};
-            $appConfigJson->{appconfigid} = UBOS::Host::createNewAppConfigId();
-            $appConfigJson->{appid}       = $appId;
+            $appConfigJson->{appid} = $appId;
 
             if( defined( $context )) {
                 $appConfigJson->{context} = $context;
@@ -715,7 +682,7 @@ sub run {
 # Deploy
 
     unless( $dryRun ) {
-        my $newSite = UBOS::Site->new( $newSiteJson );
+        my $newSite = UBOS::Site->new( $newSiteJson, 1 ); # have template fill in missing values
         unless( $newSite ) {
             fatal( $@ );
         }
@@ -779,9 +746,9 @@ sub run {
         if( $ret ) {
             $hostname = $newSite->hostname(); # tor site might have generated the hostname
             if( $tls ) {
-                colPrint( "Installed site $siteId at https://$hostname/\n" );
+                colPrint( "Installed site " . $newSite->siteId() . " at https://$hostname/\n" );
             } else {
-                colPrint( "Installed site $siteId at http://$hostname/\n" );
+                colPrint( "Installed site " . $newSite->siteId() . " at http://$hostname/\n" );
             }
         } else {
             error( "Createsite failed." );
