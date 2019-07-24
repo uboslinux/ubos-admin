@@ -295,7 +295,11 @@ sub run {
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Backing up, undeploying and redeploying' );
+    if( keys %$oldSites ) {
+        info( 'Backing up, undeploying and redeploying' );
+    } else {
+        info( 'Deploying' );
+    }
 
     $backupOperation->setSitesToBackUp( $newSitesHash );
     my $backupSucceeded  = $backupOperation->constructCheckPipeline();
