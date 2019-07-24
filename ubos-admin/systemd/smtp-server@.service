@@ -1,0 +1,14 @@
+[Unit]
+Description=Dependency on a local smtp service
+Wants=postfix.service
+
+[Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart smtp-server@%i
+ExecStopPost=/usr/share/ubos-admin/bin/ubos-service-poststop smtp-server@%i
+
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+
+[Install]
+WantedBy=multi-user.target
