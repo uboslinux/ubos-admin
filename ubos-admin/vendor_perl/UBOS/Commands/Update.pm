@@ -71,6 +71,7 @@ sub run {
     if(    !$parseOk
         || ( @packageFiles && $noPackageUpgrade )
         || ( $reboot && $noReboot )
+        || ( $stage1Only && $noReboot )
         || ( $verbose && $logConfigFile )
         || ( $pacmanConfOnly && ( $restIsPackages || $noReboot || $noSync || $noSnap || $showPackages || $noPackageUpgrade || $stage1Only )))
     {
