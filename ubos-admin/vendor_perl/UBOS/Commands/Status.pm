@@ -25,6 +25,7 @@ map { $defaultDiskFields{$_} = 1; } qw (
     fsuse%
     fssize
     type
+    smart_status_passed
 ); # name is shown separately
 
 
@@ -60,35 +61,59 @@ sub run {
     my $showProblems    = 0;
     my $showProduct     = 0;
     my $showReady       = 0;
+    my $showSmart       = 0;
+    my $showVirt        = 0;
     my $showUptime      = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'     => \$verbose,
-            'logConfig=s'  => \$logConfigFile,
-            'debug'        => \$debug,
-            'json'         => \$showJson,
-            'all'          => \$showAll,
-            'detail'       => \$showDetail,
-            'channel'      => \$showChannel,
-            'cpu'          => \$showCpu,
-            'disks'        => \$showDisks,
-            'failed'       => \$showFailed,
-            'lastupdated'  => \$showLastUpdated,
-            'memory'       => \$showMemory,
-            'pacnew'       => \$showPacnew,
-            'problems'     => \$showProblems,
-            'product'      => \$showProduct,
-            'ready'        => \$showReady,
-            'uptime'       => \$showUptime );
+            'verbose+'       => \$verbose,
+            'logConfig=s'    => \$logConfigFile,
+            'debug'          => \$debug,
+            'json'           => \$showJson,
+            'all'            => \$showAll,
+            'detail'         => \$showDetail,
+            'channel'        => \$showChannel,
+            'cpu'            => \$showCpu,
+            'disks'          => \$showDisks,
+            'failed'         => \$showFailed,
+            'lastupdated'    => \$showLastUpdated,
+            'memory'         => \$showMemory,
+            'pacnew'         => \$showPacnew,
+            'problems'       => \$showProblems,
+            'product'        => \$showProduct,
+            'ready'          => \$showReady,
+            'smart'          => \$showSmart,
+            'virtualization' => \$showVirt,
+            'uptime'         => \$showUptime );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
+    my $isVirt = 0;
+    my $out;
+
+    my $json = {
+        'hostid'           => UBOS::Host::hostId(),
+        'ubos-admin-ready' => UBOS::Host::checkReady(),
+        'problems'         => []
+    }; # We create a JSON file, and either emit that, or format it to text
+
+    trace( 'Detect virtualization first' );
+
+    UBOS::Utils::myexec( 'systemd-detect-virt', undef, \$out );
+    $out =~ s!^\s+!!;
+    $out =~ s!\s+$!!;
+    $json->{systemd_detect_virt} = $out;
+    if( $json->{systemd_detect_virt} ne 'none' ) {
+        $isVirt = 1;
+    }
+
     my $showAspect =    $showChannel || $showCpu         || $showDisks
                      || $showFailed  || $showLastUpdated || $showMemory
                      || $showPacnew  || $showProblems    || $showProduct
-                     || $showReady   || $showUptime;
+                     || $showReady   || $showSmart       || $showVirt
+                     || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -97,6 +122,9 @@ sub run {
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+    if( $showSmart && $isVirt ) {
+        fatal( 'Cannot show S.M.A.R.T. disk health in a virtualized system' );
     }
 
     if( $showAll ) {
@@ -110,6 +138,8 @@ sub run {
         $showProblems    = 1;
         $showProduct     = 1;
         $showReady       = 1;
+        $showSmart       = !$isVirt;
+        $showVirt        = 1;
         $showUptime      = 1;
 
     } elsif( !$showAspect ) {
@@ -121,18 +151,12 @@ sub run {
         $showProblems    = 1;
         $showProduct     = 1;
         $showReady       = 1;
+        $showSmart       = !$isVirt;
         $showUptime      = 1;
     }
 
-    my $json = {
-        'hostid'           => UBOS::Host::hostId(),
-        'ubos-admin-ready' => UBOS::Host::checkReady(),
-        'problems'         => []
-    }; # We create a JSON file, and either emit that, or format it to text
-
     my $nCpu;
     my %loads;
-    my $out;
 
     trace( 'Checking CPU' );
 
@@ -171,6 +195,9 @@ sub run {
     UBOS::Utils::myexec( "lsblk --json --output-all --paths", undef, \$out );
     if( $out ) {
         my $newJson = UBOS::Utils::readJsonFromString( $out );
+
+        my $smartCmd = ( -x '/usr/bin/smartctl' && !$isVirt ) ? '/usr/bin/smartctl -H -j' : undef;
+
         $json->{blockdevices} = [];
         foreach my $blockdevice ( @{$newJson->{blockdevices}} ) {
             if( $blockdevice->{type} eq 'rom' ) {
@@ -182,6 +209,38 @@ sub run {
 
             if( $fstype ) {
                 $blockdevice->{usage} = _usageAsJson( $name, $fstype, $mountpoint );
+            }
+
+            if( $smartCmd ) {
+                UBOS::Utils::myexec( "$smartCmd $name", undef, \$out );
+                my $smartJson = UBOS::Utils::readJsonFromString( $out );
+                if( $smartJson && exists( $smartJson->{smart_status} )) {
+                    $blockdevice->{smart} = $smartJson;
+
+                    if(    exists( $smartJson->{smart_status} )
+                        && (    !exists( $smartJson->{smart_status}->{passed} )
+                             || !$smartJson->{smart_status}->{passed} ))
+                    {
+                        # Not sure exactly what the output will be
+                        push @{$json->{problems}}, 'Disk ' . $name . ' status is not "passed".';
+                    }
+
+                    if(    exists( $smartJson->{ata_smart_attributes} )
+                        && exists( $smartJson->{ata_smart_attributes}->{table} ))
+                    {
+                        foreach my $item ( @{$smartJson->{ata_smart_attributes}->{table}} ) {
+                            if(    exists( $item->{when_failed} )
+                                && $item->{when_failed}
+                                && $item->{when_failed} ne 'past' )
+                            {
+                               push @{$json->{problems}}, 'Disk ' . $name . ', attribute "' . $item->{name} . '" is failing: "' . $item->{value} . '"';
+                            }
+                        }
+                    }
+
+                } else {
+                    warning( 'Failed to parse smartctl json:', $@ );
+                }
             }
 
             my $fusePercent = $blockdevice->{'fuse%'};
@@ -342,6 +401,7 @@ sub run {
         };
     }
 
+
     # now display (or not)
 
     unless( @{$json->{problems}} ) {
@@ -363,15 +423,22 @@ sub run {
         if( $showProduct ) {
             $out .= "Product:\n";
             if( exists( $json->{product}->{name} )) {
-                $out .= '    Name:   ' . $json->{product}->{name} . "\n";
+                $out .= '    Name:           ' . $json->{product}->{name} . "\n";
             } else {
-                $out .= '    Name:   ' . '?' . "\n";
+                $out .= '    Name:           ' . '?' . "\n";
             }
             if( exists( $json->{product}->{vendor} )) {
-                $out .= '    Vendor: ' . $json->{product}->{vendor} . "\n";
+                $out .= '    Vendor:         ' . $json->{product}->{vendor} . "\n";
             }
             if( exists( $json->{product}->{sku} )) {
-                $out .= '    SKU:    ' . $json->{product}->{sku} . "\n";
+                $out .= '    SKU:            ' . $json->{product}->{sku} . "\n";
+            }
+        }
+        if( $showVirt ) {
+            if( exists( $json->{systemd_detect_virt} )) {
+                $out .= 'Virtualization:     ' . $json->{systemd_detect_virt} . "\n";
+            } else {
+                $out .= 'Virtualization:     ' . '?' . "\n";
             }
         }
 
@@ -385,11 +452,11 @@ sub run {
         }
 
         if( $showLastUpdated ) {
-            $out .= 'Last updated: ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+            $out .= 'Last updated:       ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
         }
 
         if( $showChannel ) {
-            $out .= 'Channel: ' . $json->{channel} . "\n";
+            $out .= 'Channel:            ' . $json->{channel} . "\n";
         }
 
         if( $showCpu ) {
@@ -413,23 +480,42 @@ sub run {
             }
         }
 
-        if( $showDisks ) {
+        if( $showDisks || $showSmart ) {
             $out .= "Disks:\n";
             foreach my $blockDevice ( @{$json->{blockdevices}} ) {
                 $out .= "    " . $blockDevice->{name} . "\n";
-                foreach my $att ( sort keys %$blockDevice ) {
-                    my $val = $blockDevice->{$att};
-                    if( _printDiskAtt( $att, $val, $showDetail )) {
-                        $out .= "        $att: $val\n";
+                if( $showDisks ) {
+                    foreach my $att ( sort keys %$blockDevice ) {
+                        my $val = $blockDevice->{$att};
+                        if( _printDiskAtt( $att, $val, $showDetail )) {
+                            $out .= "        $att: $val\n";
+                        }
                     }
                 }
-                if( exists( $blockDevice->{children} )) {
-                    foreach my $childBlockDevice ( @{$blockDevice->{children}} ) {
-                        $out .= "        " . $childBlockDevice->{name} . "\n";
-                        foreach my $att ( sort keys %$childBlockDevice ) {
-                            my $val = $childBlockDevice->{$att};
-                            if( _printDiskAtt( $att, $val, $showDetail )) {
-                                $out .= "            $att: $val\n";
+                if( $showSmart ) {
+                    # Maybe we need to show more here?
+                    if(    exists( $blockDevice->{smart} )
+                        && exists( $blockDevice->{smart}->{smart_status} )
+                        && exists( $blockDevice->{smart}->{smart_status}->{passed} ))
+                    {
+                        if( $blockDevice->{smart}->{smart_status}->{passed} ) {
+                            $out .= "        S.M.A.R.T. status: passed\n";
+                        } else {
+                            $out .= "        S.M.A.R.T. status: NOT passed\n";
+                        }
+                    } else {
+                        $out .= "        S.M.A.R.T. status: ?\n";
+                    }
+                }
+                if( $showDisks ) {
+                    if( exists( $blockDevice->{children} )) {
+                        foreach my $childBlockDevice ( @{$blockDevice->{children}} ) {
+                            $out .= "        " . $childBlockDevice->{name} . "\n";
+                            foreach my $att ( sort keys %$childBlockDevice ) {
+                                my $val = $childBlockDevice->{$att};
+                                if( _printDiskAtt( $att, $val, $showDetail )) {
+                                    $out .= "            $att: $val\n";
+                                }
                             }
                         }
                     }
@@ -615,17 +701,19 @@ SSS
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
-    * channel:     report on the UBOS release channel used by this device.
-    * cpu:         report on the CPUs available.
-    * disks:       report on attached disks and their usage.
-    * failed:      report on daemons that have failed.
-    * lastupdated: report when the device was last updated.
-    * memory:      report how much RAM and swap memory is being used.
-    * pacnew:      report on manually modified configuration files.
-    * problems:    report on any detected problems.
-    * product:     report on the product
-    * ready:       report whether the device is ready or not.
-    * uptime:      report how long the device has been up since last boot.
+    * channel:        report on the UBOS release channel used by this device.
+    * cpu:            report on the CPUs available.
+    * disks:          report on attached disks and their usage.
+    * failed:         report on daemons that have failed.
+    * lastupdated:    report when the device was last updated.
+    * memory:         report how much RAM and swap memory is being used.
+    * pacnew:         report on manually modified configuration files.
+    * problems:       report on any detected problems.
+    * product:        report on the product.
+    * ready:          report whether the device is ready or not.
+    * smart:          report on disk health via S.M.A.R.T.
+    * virtualization: report on the use of virtualization.
+    * uptime:         report how long the device has been up since last boot.
 HHH
             <<SSS => <<HHH
     --all
