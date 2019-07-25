@@ -403,7 +403,24 @@ sub restoreAppConfigs {
             my $newAppConfig = UBOS::AppConfiguration->new( $appConfigJsonNew, $site );
 
             debugAndSuspend( 'Adding and deploying appconfig', $newAppConfig->appConfigId );
-            $site->addDeployAppConfiguration( $newAppConfig, $deployUndeployTriggers );
+
+            $site->addAppConfigurationForRestore( $newAppConfig );
+
+            $prerequisites = {};
+            $site->addInstallablesToPrerequisites( $prerequisites );
+
+            if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
+                fatal( $@ );
+            }
+
+            $prerequisites = {};
+            $site->addDependenciesToPrerequisites( $prerequisites );
+
+            if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
+                fatal( $@ );
+            }
+
+            $site->deployAppConfigurationForRestore( $newAppConfig, $deployUndeployTriggers );
 
             $newAppConfigs{$newAppConfigId} = $newAppConfig;
         }

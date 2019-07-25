@@ -1140,21 +1140,36 @@ sub disable {
 }
 
 ##
-# Incrementally deploy a single AppConfiguration to this Site.
+# Add a single AppConfiguration to this Site for the purposes of restoring
+# from backup.
+# $appConfig: the AppConfiguration to add
+# return: success or fail
+sub addAppConfigurationForRestore {
+    my $self      = shift;
+    my $appConfig = shift;
+
+    trace( 'Site::addAppConfigurationForRestore', $appConfig->appConfigId, $self->siteId );
+
+    push @{$self->appConfigs},           $appConfig;
+    push @{$self->{json}->{appconfigs}}, $appConfig->appConfigurationJson;
+
+    return 1;
+}
+
+##
+# Deploy a single AppConfiguration to this Site for the purposes of restoring
+# from backup.
 # $appConfig: the AppConfiguration to add
 # $triggers: triggers to be executed may be added to this hash
 # return: success or fail
-sub addDeployAppConfiguration {
+sub deployAppConfigurationForRestore {
     my $self      = shift;
     my $appConfig = shift;
     my $triggers  = shift;
 
-    trace( 'Site::addDeployAppConfiguration', $appConfig->appConfigId, $self->siteId );
+    trace( 'Site::deployAppConfigurationForRestore', $appConfig->appConfigId, $self->siteId );
 
     UBOS::Host::siteDeploying( $self );
-
-    push @{$self->appConfigs},           $appConfig;
-    push @{$self->{json}->{appconfigs}}, $appConfig->appConfigurationJson;
 
     my $ret = $appConfig->deployOrCheck( 1, $triggers );
 
