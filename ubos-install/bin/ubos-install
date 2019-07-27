@@ -47,7 +47,6 @@ my %disablePackageDbs   = ();
 my $checkSignatures     = 'required';
 my $noswap              = 0;
 my $shepherdKeyFile     = undef;
-my $productFile         = undef;
 my $help                = 0;
 
 my $parseOk = GetOptions(
@@ -73,7 +72,6 @@ my $parseOk = GetOptions(
         'checksignatures=s'    => \$checkSignatures,
         'noswap'               => \$noswap,
         'shepherdkeyfile=s'    => \$shepherdKeyFile,
-        'productfile=s'        => \$productFile,
         'h|help'               => \$help );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
@@ -270,15 +268,8 @@ if( !defined( $noswap ) && exists( $config->{noswap} )) {
     $noswap = $config->{noswap}
 }
 
-if( !$productFile && exists( $config->{productfile} )) {
-    $productFile = $config->{productfile};
-}
-if( $productFile ) {
-    my $productInfo = UBOS::Utils::readJsonFromFile( $productFile );
-    unless( $productInfo ) {
-        fatal( $@ );
-    }
-    $installer->setProductInfo( $productInfo );
+if( exists( $config->{product} )) {
+    $installer->setProductInfo( $config->{product} );
 }
 
 trace( 'Using installer', ref( $installer ));
