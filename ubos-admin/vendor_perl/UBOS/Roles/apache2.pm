@@ -257,9 +257,9 @@ $serverDeclaration
     AliasMatch ^/_common/css/([-a-z0-9]*\.css)\$ /srv/http/_common/css/\$1
     AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
 
-    Alias /\.well-known/ $siteWellKnownDir/.well-known/
-
     AliasMatch ^.*\$ "$siteDocumentRoot/index.html"
+
+    Alias /\.well-known/ $siteWellKnownDir/
 CONTENT
 
     if( $tlsNow ) {
@@ -318,9 +318,7 @@ sub resumeSite {
     my $siteWellKnownDir       = "$sitesWellknownDir/$siteId";
     my $serverDeclaration      = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
 
-    my $robotsTxt  = $site->robotsTxt();
-    my $sitemapXml = $site->sitemapXml();
-    my $faviconIco = $site->faviconIco();
+    my $wellknowns = $site->wellknowns();
 
     unless( -d $siteDocumentRoot ) {
         UBOS::Utils::mkdirDashP( $siteDocumentRoot );
@@ -332,14 +330,11 @@ sub resumeSite {
         UBOS::Utils::mkdirDashP( $siteFragmentDir );
     }
 
-    if( $robotsTxt ) {
-        UBOS::Utils::saveFile( "$siteWellKnownDir/robots.txt", $robotsTxt );
-    }
-    if( $sitemapXml ) {
-        UBOS::Utils::saveFile( "$siteWellKnownDir/sitemap.xml", $sitemapXml );
-    }
-    if( $faviconIco ) {
-        UBOS::Utils::saveFile( "$siteWellKnownDir/favicon.ico", $faviconIco );
+    foreach my $wellknownKey ( keys %$wellknowns ) {
+        my $wellknownValue = $wellknowns->{$wellknownKey};
+        if( exists( $wellknownValue->{value} ) && defined( $wellknownValue->{value} )) {
+            UBOS::Utils::saveFile( "$siteWellKnownDir/$wellknownKey", $wellknownValue->{value} );
+        }
     }
 
     my $siteFileContent = <<CONTENT;
@@ -434,27 +429,34 @@ CONTENT
     }
     $siteFileContent .= "\n";
 
-    $siteFileContent .= <<CONTENT;
-    Alias /\.well-known/ $siteWellKnownDir/.well-known/
-CONTENT
+    foreach my $wellknownKey ( keys %$wellknowns ) {
+        my $wellknownValue = $wellknowns->{$wellknownKey};
+        if( exists( $wellknownValue->{location} ) && defined( $wellknownValue->{location} )) {
+            my $escapedKey = quotemeta( $wellknownKey );
+            my $location   = $wellknownValue->{location};
+            my $httpStatus = $wellknownValue->{status};
 
-    if( $robotsTxt ) {
-        $siteFileContent .= <<CONTENT;
-    AliasMatch ^/robots\.txt\$ $siteWellKnownDir/robots.txt
+            $siteFileContent .= <<CONTENT;
+    RedirectMatch $httpStatus ^/\.well-known/$escapedKey\$ $location
 CONTENT
-    }
-    if( $sitemapXml ) {
-        $siteFileContent .= <<CONTENT;
-    AliasMatch ^/sitemap\.xml\$ $siteWellKnownDir/sitemap.xml
-CONTENT
-    }
-    if( $faviconIco ) {
-        $siteFileContent .= <<CONTENT;
-    AliasMatch ^/favicon\.ico\$ $siteWellKnownDir/favicon.ico
-CONTENT
+        }
     }
 
+    foreach my $toplevel ( qw( robots.txt sitemap.xml favicon.ico )) {
+        if( exists( $wellknowns->{$toplevel} )) {
+            my $wellknownValue = $wellknowns->{$toplevel};
+            if( exists( $wellknownValue->{value} ) && defined( $wellknownValue->{value} )) {
+                my $escapedToplevel = $toplevel;
+                $escapedToplevel =~ s!\.!\\.!g;
+                $siteFileContent .= <<CONTENT;
+    AliasMatch ^/$escapedToplevel\$ $siteWellKnownDir/$toplevel
+CONTENT
+            }
+        }
+    }
+
     $siteFileContent .= <<CONTENT;
+    Alias /\.well-known/ $siteWellKnownDir/
 
     Include $appConfigFilesDir/
 </VirtualHost>
@@ -502,6 +504,9 @@ sub removeSite {
 
         if( -d $appConfigFilesDir ) {
             UBOS::Utils::rmdir( $appConfigFilesDir );
+        }
+        if( -d $siteWellKnownDir ) {
+            UBOS::Utils::deleteRecursively( $siteWellKnownDir );
         }
         if( -d $siteTorDir ) { # does not exist if not tor
             UBOS::Utils::deleteRecursively( $siteTorDir );
@@ -650,6 +655,89 @@ sub checkAppManifestForRole {
             }
         } else {
             $installable->myFatal( "roles section: role $roleName: either defaultcontext or fixedcontext must be given" );
+        }
+
+        if( defined( $jsonFragment->{wellknown} )) {
+            # Compare with Site JSON checking in Site.pm -- partially similar
+            unless( ref( $jsonFragment->{wellknown} ) eq 'HASH' ) {
+                $installable->myFatal( "roles section: role $roleName: field 'wellknown' is not a JSON object" );
+            }
+
+            foreach my $wellknownKey ( keys %{$jsonFragment->{wellknown}} ) {
+                unless( $wellknownKey =~ m!^[-_.a-zA-Z0-9]+$! ) {
+                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' contains invalid key: " . $wellknownKey );
+                }
+                my $wellknownValue = $jsonFragment->{wellknown}->{$wellknownKey};
+
+                if( 'robots.txt' eq $wellknownKey ) {
+                    if( exists( $wellknownValue->{value} )) {
+                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry 'robots.txt' may not specify value" );
+                    }
+                    if( exists( $wellknownValue->{location} )) {
+                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify location" );
+                    }
+                    if( exists( $wellknownValue->{status} )) {
+                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify status" );
+                    }
+
+                    foreach my $field ( qw( allow disallow )) {
+                        if( exists( $wellknownValue->{$field} )) {
+                            unless( ref( $wellknownValue->{$field} ) eq 'ARRAY' ) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' is not an array" );
+                            }
+                            if( @{$wellknownValue->{$field}} == 0) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' must have at least one entry" );
+                            }
+                            foreach my $allowDisallow ( @{$wellknownValue->{$field}} ) {
+                                if( ref( $allowDisallow )) {
+                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' must be an array of strings" );
+                                }
+                                unless( $allowDisallow =~ m!^/\S*$! ) {
+                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' contains invalid value: " . $allowDisallow );
+                                }
+                            }
+                        }
+                    }
+
+                } else { # not robots.txt
+                    foreach my $field ( qw( allow disallow )) {
+                        if( exists( $wellknownValue->{$field} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not contain: " . $field );
+                        }
+                    }
+
+                    if( exists( $wellknownValue->{value} )) {
+                        if( ref( $wellknownValue->{value} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', value is not a string" );
+                        }
+                        if( exists( $wellknownValue->{location} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not define both value and location" );
+                        }
+                        if( exists( $wellknownValue->{encoding} ) && $wellknownValue->{encoding} ne 'base64' ) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies invalid encoding: " . $wellknownValue->{encoding} );
+                        }
+                        if( exists( $wellknownValue->{status} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify status" );
+                        }
+
+                    } elsif( exists( $wellknownValue->{location} )) {
+                        if( ref( $wellknownValue->{value} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', location is not a string" );
+                        }
+                        if( exists( $wellknownValue->{encoding} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not specify both location and encoding" );
+                        }
+                        if( exists( $wellknownValue->{status} )) {
+                            unless( $wellknownValue->{status} =~ m!^3\d\d$! ) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' has invalid status: " . $wellknownValue->{status} );
+                            }
+                        }
+
+                    } else {
+                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies neither value nor location" );
+                    }
+                }
+            }
         }
     } elsif( defined( $jsonFragment->{defaultcontext} )) {
         $installable->myFatal( "roles section: role $roleName: only provide field 'defaultcontext' for apps" );

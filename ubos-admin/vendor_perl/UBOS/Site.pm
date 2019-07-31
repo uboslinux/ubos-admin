@@ -395,38 +395,91 @@ sub torPrivateKey {
 }
 
 ##
-# Obtain the site's robots.txt file content, if any has been provided.
+# Obtain the computed well-knowns of this site.
+# return: hash of name of the well-known (e.g. 'robots.txt') to either
+#   * a hash that contains entry 'value' with the file content, or
+#   * a hash that contains entry 'location' with the redirect location,
+#     and entry 'status' with the HTTP redirect status to use
+#   Also has entry 'specifier' for a human-readable label of who added the entry
+sub wellknowns {
+    my $self = shift;
+
+    my $ret = {};
+
+    # robots.txt is different.
+    $ret->{'robots.txt'} = {
+        'value' => $self->_constructRobotsTxt()
+    };
+
+    # We start with what's provided in the Site JSON.
+    # Then we walk through the AppConfigs in sequence. We add those
+    # values if we don't have one already for the same key, but we do
+    # all-or-nothing on a per-AppConfig basis.
+
+    my @wellknownJsons = ();
+
+    if( exists( $self->{json}->{wellknown} )) {
+        $self->_addWellKnownIfNotPresent(
+                $ret,
+                $self->{json}->{wellknown},
+                $self->vars(),
+                undef );
+    }
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        my $app              = $appConfig->app();
+        my $appWellknownJson = $app->wellknownJson();
+
+        if( $appWellknownJson ) {
+            $self->_addWellKnownIfNotPresent(
+                    $ret,
+                    $appWellknownJson,
+                    $appConfig->vars(),
+                    'App ' . $app->packageName() . ' at ' . $self->hostname() . $appConfig->context() );
+        }
+    }
+
+    return $ret;
+}
+
+##
+# Construct the site's robots.txt file content, if any has been provided.
 # return: robots.txt content
-sub robotsTxt {
+sub _constructRobotsTxt {
     my $self = shift;
 
     my $json = $self->{json};
     my $robotsTxt;
 
-    if( exists( $json->{wellknown} )) {
-        if( exists( $json->{wellknown}->{robotstxt} )) {
-            trace( 'Have robots.txt in site json for', $self->siteId );
-            return $json->{wellknown}->{robotstxt};
+    if( exists( $json->{wellknown} ) && exists( $json->{wellknown}->{'robots.txt'} )) {
+        if( exists( $json->{wellknown}->{'robots.txt'}->{value} )) {
+            return $json->{wellknown}->{'robots.txt'}->{value}; # Site JSON overrides
         }
-        if( exists( $json->{wellknown}->{robotstxtprefix} )) {
-            $robotsTxt = $json->{wellknown}->{robotstxtprefix} . "\n";
+        if( exists( $json->{wellknown}->{'robots.txt'}->{prefix} )) {
+            $robotsTxt = $json->{wellknown}->{'robots.txt'}->{prefix} . "\n";
         }
     }
     my $thisFirst = "User-Agent: *\n";
+    my $allowContent    = "";
+    my $disallowContent = "";
+
     foreach my $appConfig ( @{$self->appConfigs} ) {
         my $app     = $appConfig->app();
         my $context = $appConfig->context();
 
         foreach my $allow ( $app->robotstxtAllow() ) {
-            $robotsTxt .= $thisFirst . "Allow: $context$allow\n";
-            $thisFirst  = '';
+            $allowContent .= "Allow: $context$allow\n";
         }
         foreach my $disallow ( $app->robotstxtDisallow() ) {
-            $robotsTxt .= $thisFirst . "Disallow: $context$disallow\n";
-            $thisFirst  = '';
+            $disallowContent .= "Disallow: $context$disallow\n";
         }
     }
-    if( $robotsTxt ) {
+    if( $robotsTxt || $allowContent || $disallowContent ) {
+        if( $allowContent || $disallowContent ) {
+            $robotsTxt .= "User-Agent: *\n";
+            $robotsTxt .= $allowContent;
+            $robotsTxt .= $disallowContent;
+        }
         trace( 'Constructed robots.txt for site', $self->siteId );
         return $robotsTxt;
     } else {
@@ -435,30 +488,71 @@ sub robotsTxt {
 }
 
 ##
-# Obtain the site's sitemap.xml file content, if any has been provided.
-# return: robots.txt content
-sub sitemapXml {
-    my $self = shift;
+# Helper to add entries from a Site or App's well-known definitions
+# if they don't exist already
+# $aggregate: the in-process return value for wellknowns() above
+# $json: the well-known JSON of a Site or App
+# $vars: the Variables to use to replace content
+# $specifier: name of the current item, for override warning message.
+#    May be undef, in which case overriding this item will remain silent.
+#    Used for overrides by the site, which are presumably intentional.
+sub _addWellKnownIfNotPresent {
+    my $self      = shift;
+    my $aggregate = shift;
+    my $json      = shift;
+    my $vars      = shift;
+    my $specifier = shift;
 
-    my $json = $self->{json};
-    if( exists( $json->{wellknown} ) && exists( $json->{wellknown}->{sitemapxml} )) {
-        return $self->{json}->{wellknown}->{sitemapxml};
-    } else {
-        return undef;
+    my $tmp = {};
+
+    foreach my $wellknownKey ( keys %$json ) {
+        if( 'robots.txt' eq $wellknownKey ) {
+            next;
+        }
+        my $wellknownValue = $json->{$wellknownKey};
+        if( exists( $wellknownValue->{value} )) {
+            my $value = $wellknownValue->{value};
+            if( exists( $wellknownValue->{encoding} )) {
+                $value = decode_base64( $value );
+            }
+
+            $tmp->{$wellknownKey} = {
+                'value' => $value
+            };
+        } elsif( exists( $wellknownValue->{location} )) {
+            my $status = '307';
+            if( exists( $wellknownValue->{status} )) {
+                $status = $wellknownValue->{status};
+            }
+            $tmp->{$wellknownKey} = {
+                'location' => $vars->replaceVariables( $wellknownValue->{location} ),
+                'status'   => $status
+            };
+        }
     }
-}
 
-##
-# Obtain the site's favicon.ico file content, if any has been provided.
-# return: binary content of favicon.ico
-sub faviconIco {
-    my $self = shift;
+    my $foundOverlap = 0;
+    foreach my $key ( keys %$tmp ) {
+        if( exists( $aggregate->{$key} )) {
+            $foundOverlap = 1;
 
-    my $json = $self->{json};
-    if( exists( $json->{wellknown} ) && exists( $json->{wellknown}->{faviconicobase64} ) && $json->{wellknown}->{faviconicobase64} ) {
-        return decode_base64( $self->{json}->{wellknown}->{faviconicobase64} );
+            if( exists( $aggregate->{$key}->{specifier} )) {
+                my $previousSpecifier = $aggregate->{$key}->{specifier};
+                warning( 'Not adding .well-known entries for ' . $specifier . ' as they would conflict with those given by ' . $previousSpecifier );
+            }
+
+            last;
+        }
     }
-    return undef;
+    unless( $foundOverlap ) {
+        foreach my $key ( keys %$tmp ) {
+            $aggregate->{$key} = $tmp->{$key};
+            if( $specifier ) {
+                $aggregate->{$key}->{specifier} = $specifier;
+            }
+        }
+    }
+    return $tmp; # not really needed
 }
 
 ##
@@ -1417,36 +1511,73 @@ sub _checkJson {
     }
 
     if( exists( $json->{wellknown} )) {
+        # Compare with manifest checking in apache2.pm -- partially similar
         unless( ref( $json->{wellknown} ) eq 'HASH' ) {
             $@ = 'Site JSON: wellknown section: not a JSON object';
             return 0;
         }
-        if( exists( $json->{wellknown}->{robotstxt} )) {
-            if( ref( $json->{wellknown}->{robotstxt} )) {
-                $@ = 'Site JSON: wellknown section: invalid robotstxt';
+
+        foreach my $wellknownKey ( keys %{$json->{wellknown}} ) {
+            unless( $wellknownKey =~ m!^[-_.a-zA-Z0-9]+$! ) {
+                $@ = 'Site JSON: wellknown section: invalid key: ' . $wellknownKey;
                 return 0;
             }
-            if( exists( $json->{wellknown}->{robotstxtprefix} )) {
-                $@ = 'Site JSON: wellknown section: specifiy robotstxt or robotstxtprefix, not both';
+            my $wellknownValue = $json->{wellknown}->{$wellknownKey};
+
+            if( exists( $wellknownValue->{value} )) {
+                if( ref( $wellknownValue->{value} )) {
+                    $@ = 'Site JSON: wellknown section: value for ' . $wellknownKey . ' is not a string';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{location} )) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' must not define both value and location';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{status} )) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' must not define both value and status';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{prefix} )) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' must not define both value and prefix';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{encoding} ) && $wellknownValue->{encoding} ne 'base64' ) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' specifies invalid encoding: ' . $wellknownValue->{encoding};
+                    return 0;
+                }
+
+            } elsif( exists( $wellknownValue->{location} )) {
+                if( ref( $wellknownValue->{value} )) {
+                    $@ = 'Site JSON: wellknown section: location for ' . $wellknownKey . ' is not a string';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{encoding} )) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' must not define both location and encoding';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{status} )) {
+                    unless( $wellknownValue->{status} =~ m!^3\d\d$! ) {
+                        $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' has invalid status: ' . $wellknownValue->{status};
+                        return 0;
+                    }
+                }
+            } elsif( 'robots.txt' eq $wellknownKey ) {
+                unless( exists( $wellknownValue->{prefix} )) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' must specify either value, location or prefix';
+                    return 0;
+                }
+                if( ref( $wellknownValue->{prefix} )) {
+                    $@ = 'Site JSON: wellknown section: prefix for ' . $wellknownKey . ' is not a string';
+                    return 0;
+                }
+                if( exists( $wellknownValue->{status} )) {
+                    $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' must not define both prefix and status';
+                    return 0;
+                }
+            } else {
+                $@ = 'Site JSON: wellknown section: ' . $wellknownKey . ' specifies neither value nor location';
                 return 0;
             }
-        }
-        if( exists( $json->{wellknown}->{robotstxtprefix} )) {
-            if( ref( $json->{wellknown}->{robotstxtprefix} )) {
-                $@ = 'Site JSON: wellknown section: invalid robotstxtprefix';
-                return 0;
-            }
-        }
-        if(    exists( $json->{wellknown}->{sitemapxml} )
-            && (    ref( $json->{wellknown}->{sitemapxml} )
-                 || $json->{wellknown}->{sitemapxml} !~ m!^<\?xml! ))
-        {
-            $@ = 'Site JSON: wellknown section: invalid sitemapxml';
-            return 0;
-        }
-        if( exists( $json->{wellknown}->{faviconicobase64} ) && ref( $json->{wellknown}->{faviconicobase64} )) {
-            $@ = 'Site JSON: wellknown section: invalid faviconicobase64';
-            return 0;
         }
     }
 
@@ -1575,7 +1706,7 @@ sub _checkJsonValidKeys {
     my $context = shift;
 
     if( ref( $json ) eq 'HASH' ) {
-        if( @$context >= 2 && $context->[-1] eq 'customizationpoints' ) {
+        if( @$context >= 1 && $context->[-1] eq 'customizationpoints' ) {
             # This is a package name, which has laxer rules
             foreach my $key ( keys %$json ) {
                 my $value = $json->{$key};
@@ -1601,12 +1732,21 @@ sub _checkJsonValidKeys {
                     return 0;
                 }
             }
+        } elsif( @$context >= 1 && $context->[-1] eq 'wellknown' ) {
+            # This is a well-known file name, which has laxer rules and we check separately
+            foreach my $key ( keys %$json ) {
+                my $value = $json->{$key};
+
+                unless( $self->_checkJsonValidKeys( $value, [ @$context, $key ] )) {
+                    return 0;
+                }
+            }
         } else {
             foreach my $key ( keys %$json ) {
                 my $value = $json->{$key};
 
                 unless( $key =~ m!^[a-z][a-z0-9]*$! ) {
-                    $@ = 'Site JSON: invalid key (3) in JSON: ' . "'$key'" . ' context: ' . ( join( ' / ', @$context ) || '(top)' );
+                    $@ = 'Site JSON: invalid key (0) in JSON: ' . "'$key'" . ' context: ' . ( join( ' / ', @$context ) || '(top)' );
                     return 0;
                 }
                 unless( $self->_checkJsonValidKeys( $value, [ @$context, $key ] )) {

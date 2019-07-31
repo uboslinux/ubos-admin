@@ -66,6 +66,21 @@ sub defaultContext {
 }
 
 ##
+# Return the well-known JSON defined by this App, if any
+# return: JSON hash, or undef
+sub wellknownJson {
+    my $self = shift;
+
+    if( exists( $self->{json}->{roles}->{apache2} )) {
+        my $apache2Json = $self->{json}->{roles}->{apache2};
+        if( exists( $apache2Json->{wellknown} )) {
+            return $apache2Json->{wellknown};
+        }
+    }
+    return undef;
+}
+
+##
 # Return an array of paths relative to the AppConfiguration's context
 # that shall be included in the "allow" section of the site's robots.txt file.
 # return: array of paths
@@ -73,14 +88,13 @@ sub robotstxtAllow {
     my $self = shift;
 
     my @ret = ();
-    if( exists( $self->{json}->{roles}->{apache2} )) {
-        my $apache2Json = $self->{json}->{roles}->{apache2};
-        if(    exists( $apache2Json->{wellknown} )
-            && exists( $apache2Json->{wellknown}->{robotstxt} )
-            && exists( $apache2Json->{wellknown}->{robotstxt}->{allow} ))
-        {
-            @ret = @{$apache2Json->{wellknown}->{robotstxt}->{allow}};
-        }
+    my $json = $self->wellknownJson();
+
+    if(    $json
+        && exists( $json->{'robots.txt'} )
+        && exists( $json->{'robots.txt'}->{allow} ))
+    {
+        @ret = @{$json->{'robots.txt'}->{allow}};
     }
     return @ret;
 }
@@ -93,16 +107,15 @@ sub robotstxtDisallow {
     my $self = shift;
 
     my @ret = ();
-    if( exists( $self->{json}->{roles}->{apache2} )) {
-        my $apache2Json = $self->{json}->{roles}->{apache2};
-        if(    exists( $apache2Json->{wellknown} )
-            && exists( $apache2Json->{wellknown}->{robotstxt} )
-            && exists( $apache2Json->{wellknown}->{robotstxt}->{disallow} ))
-        {
-            @ret = @{$apache2Json->{wellknown}->{robotstxt}->{disallow}};
-        }
+    my $json = $self->wellknownJson();
+
+    if(    $json
+        && exists( $json->{'robots.txt'} )
+        && exists( $json->{'robots.txt'}->{disallow} ))
+    {
+        @ret = @{$json->{'robots.txt'}->{disallow}};
     }
     return @ret;
 }
-            
+
 1;
