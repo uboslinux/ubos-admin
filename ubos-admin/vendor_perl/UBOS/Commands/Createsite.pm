@@ -15,6 +15,7 @@ use Cwd;
 use File::Basename;
 use File::Temp;
 use Getopt::Long qw( GetOptionsFromArray );
+use Storable qw(dclone);
 use Term::ANSIColor;
 use UBOS::Host;
 use UBOS::Installable;
@@ -44,6 +45,7 @@ sub run {
     my $fromTemplate  = undef;
     my $quiet         = 0;
     my $dryRun;
+    my $template      = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -59,7 +61,8 @@ sub run {
             'force'                        => \$force,
             'from-template=s'              => \$fromTemplate,
             'quiet'                        => \$quiet,
-            'dry-run|n'                    => \$dryRun );
+            'dry-run|n'                    => \$dryRun,
+            'template'                     => \$template );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -70,7 +73,8 @@ sub run {
         || ( $selfSigned && !$tls )
         || ( $letsEncrypt && !$tls )
         || ( $tor && $letsEncrypt )
-        || ( $selfSigned && $letsEncrypt ))
+        || ( $selfSigned && $letsEncrypt )
+        || ( $template && !$out && !$dryRun ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
@@ -668,27 +672,40 @@ sub run {
             }
             $counter = 'Next';
         }
+
     }
+
+# Construct site and fill in template values
+    my $newSiteTemplateJson = dclone( $newSiteJson );
+
+    my $newSite = UBOS::Site->new( $newSiteJson, 1 ); # have template fill in missing values
+    unless( $newSite ) {
+        fatal( $@ );
+    }
+
+    my $ret = 1;
 
 # Output JSON
 
-    my $ret = 1;
-    if( $out ) {
-        UBOS::Utils::writeJsonToFile( $out, $newSiteJson );
+    if( $template ) {
+        if( $out ) {
+            UBOS::Utils::writeJsonToFile( $out, $newSiteTemplateJson );
 
-    } elsif( $dryRun ) {
-        print UBOS::Utils::writeJsonToString( $newSiteJson );
+        } elsif( $dryRun ) {
+            print UBOS::Utils::writeJsonToString( $newSiteTemplateJson );
+        }
+    } else {
+        if( $out ) {
+            UBOS::Utils::writeJsonToFile( $out, $newSite->siteJson() );
 
+        } elsif( $dryRun ) {
+            print UBOS::Utils::writeJsonToString( $newSite->siteJson() );
+        }
     }
 
 # Deploy
 
     unless( $dryRun ) {
-        my $newSite = UBOS::Site->new( $newSiteJson, 1 ); # have template fill in missing values
-        unless( $newSite ) {
-            fatal( $@ );
-        }
-
         my $prerequisites = {};
         if( $tor ) {
             $prerequisites->{'tor'} = 'tor';
@@ -955,8 +972,12 @@ HHH
     useful to only generate a Site JSON file without deploying it on the
     current device.
 HHH
-            '-n' => <<HHH
+            '-n' => <<HHH,
     Synonyn for --dry-run.
+HHH
+            '--template' => <<HHH,
+    Create a template Site JSON file without identifiers. This must only
+    be used together with the --out <file> flag or the --dry-run flag.
 HHH
         }
     };
