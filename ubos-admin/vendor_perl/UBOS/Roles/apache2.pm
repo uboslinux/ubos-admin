@@ -303,20 +303,23 @@ sub resumeSite {
 
     trace( 'apache2::resumeSite', $self->name(), $site->siteId );
 
-    my $siteFragmentDir        = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
-    my $defaultSiteFragmentDir = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
-    my $sitesDocumentRootDir   = UBOS::Host::vars()->getResolve( 'apache2.sitesdir' );
-    my $sitesWellknownDir      = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
-    my $appConfigFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
-    my $tmpDir                 = UBOS::Host::tmpdir();
-    my $siteId                 = $site->siteId;
-    my $hostname               = $site->hostname;
-    my $port                   = $site->port;
-    my $appConfigFilesDir      = "$appConfigFragmentDir/$siteId";
-    my $siteFile               = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
-    my $siteDocumentRoot       = "$sitesDocumentRootDir/$siteId";
-    my $siteWellKnownDir       = "$sitesWellknownDir/$siteId";
-    my $serverDeclaration      = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
+    my $siteFragmentDir          = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
+    my $defaultSiteFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
+    my $sitesDocumentRootDir     = UBOS::Host::vars()->getResolve( 'apache2.sitesdir' );
+    my $sitesWellknownDir        = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $appConfigFragmentDir     = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
+    my $tmpDir                   = UBOS::Host::tmpdir();
+    my $siteId                   = $site->siteId;
+    my $hostname                 = $site->hostname;
+    my $port                     = $site->port;
+    my $appConfigFilesDir        = "$appConfigFragmentDir/$siteId";
+    my $siteFile                 = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
+    my $siteDocumentRoot         = "$sitesDocumentRootDir/$siteId";
+    my $siteWellKnownDir         = "$sitesWellknownDir/$siteId";
+    my $serverDeclaration        = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
+    my $webfingerProxiesDir      = $site->vars()->getResolve( 'apache2.webfingerproxiesdir',           "/ubos/http/webfinger-proxies" );
+    my $siteWebfingerProxiesFile = $site->vars()->getResolve( 'site.apache2.sitewebfingerproxiesfile', "/ubos/http/webfinger-proxies/$siteId" );
+    my $sslDir                   = $site->vars()->getResolve( 'apache2.ssldir' );
 
     my $wellknowns = $site->wellknowns();
 
@@ -344,8 +347,6 @@ sub resumeSite {
 # Generated automatically, do not modify.
 #
 CONTENT
-
-    my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
 
     if( $site->hasTls ) {
         $siteFileContent .= <<CONTENT;
@@ -442,6 +443,7 @@ CONTENT
         }
     }
 
+    # repeat those
     foreach my $toplevel ( qw( robots.txt sitemap.xml favicon.ico )) {
         if( exists( $wellknowns->{$toplevel} )) {
             my $wellknownValue = $wellknowns->{$toplevel};
@@ -453,6 +455,20 @@ CONTENT
 CONTENT
             }
         }
+    }
+
+    if(    exists( $wellknowns->{webfinger} )
+        && exists( $wellknowns->{webfinger}->{proxies} )
+        && @{$wellknowns->{webfinger}->{proxies}} )
+    {
+        $siteFileContent .= <<CONTENT;
+    ScriptAliasMatch ^/\.well-known/webfinger /usr/share/ubos/cgi-bin/merge-webfingers.pl
+CONTENT
+
+        unless( -d $webfingerProxiesDir ) {
+            UBOS::Utils::mkdirDashP( $webfingerProxiesDir );
+        }
+        UBOS::Utils::saveFile( $siteWebfingerProxiesFile, join( "\n", @{$wellknowns->{webfinger}->{proxies}} ));
     }
 
     $siteFileContent .= <<CONTENT;
@@ -482,20 +498,20 @@ sub removeSite {
 
     trace( 'apache2::removeSite', $self->name(), $doIt, $site->siteId );
 
-    my $siteFragmentDir        = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
-    my $defaultSiteFragmentDir = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
-    my $appConfigFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
-    my $sitesWellknownDir      = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
-    my $siteDocumentDir        = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
-    my $siteTorDir             = $site->vars()->getResolve( 'site.apache2.sitetordir' );
-    my $siteTorFragmentFile    = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
-
-    my $siteId            = $site->siteId;
-    my $hostname          = $site->hostname;
-    my $siteFile          = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
-    my $appConfigFilesDir = "$appConfigFragmentDir/$siteId";
-    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
-    my $sslDir            = $site->vars()->getResolve( 'apache2.ssldir' );
+    my $siteDocumentDir          = $site->vars()->getResolve( 'site.apache2.sitedocumentdir' );
+    my $siteTorDir               = $site->vars()->getResolve( 'site.apache2.sitetordir' );
+    my $siteTorFragmentFile      = $site->vars()->getResolve( 'site.apache2.sitetorfragmentfile' );
+    my $siteFragmentDir          = UBOS::Host::vars()->getResolve( 'apache2.sitefragmentdir' );
+    my $defaultSiteFragmentDir   = UBOS::Host::vars()->getResolve( 'apache2.defaultsitefragmentdir' );
+    my $sitesWellknownDir        = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $appConfigFragmentDir     = UBOS::Host::vars()->getResolve( 'apache2.appconfigfragmentdir' );
+    my $siteId                   = $site->siteId;
+    my $hostname                 = $site->hostname;
+    my $appConfigFilesDir        = "$appConfigFragmentDir/$siteId";
+    my $siteFile                 = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
+    my $siteWellKnownDir         = "$sitesWellknownDir/$siteId";
+    my $siteWebfingerProxiesFile = $site->vars()->getResolve( 'site.apache2.sitewebfingerproxiesfile', "/ubos/http/webfinger-proxies/$siteId" );
+    my $sslDir                   = $site->vars()->getResolve( 'apache2.ssldir' );
 
     trace( 'apache2::removeSite', $siteId, $doIt );
 
@@ -516,6 +532,9 @@ sub removeSite {
         }
         foreach my $forError( @forErrors ) {
             UBOS::Utils::deleteFile( "$siteDocumentDir/$forError" );
+        }
+        if( -e $siteWebfingerProxiesFile ) {
+            UBOS::Utils::deleteFile( $siteWebfingerProxiesFile );
         }
 
         UBOS::Utils::rmdir( $siteDocumentDir );
@@ -669,9 +688,9 @@ sub checkAppManifestForRole {
                 }
                 my $wellknownValue = $jsonFragment->{wellknown}->{$wellknownKey};
 
-                if( 'robots.txt' eq $wellknownKey ) {
+                if( 'robots.txt' eq $wellknownKey || 'webfinger' eq $wellknownKey ) {
                     if( exists( $wellknownValue->{value} )) {
-                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry 'robots.txt' may not specify value" );
+                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify value" );
                     }
                     if( exists( $wellknownValue->{location} )) {
                         $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify location" );
@@ -680,27 +699,46 @@ sub checkAppManifestForRole {
                         $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify status" );
                     }
 
-                    foreach my $field ( qw( allow disallow )) {
-                        if( exists( $wellknownValue->{$field} )) {
-                            unless( ref( $wellknownValue->{$field} ) eq 'ARRAY' ) {
-                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' is not an array" );
-                            }
-                            if( @{$wellknownValue->{$field}} == 0) {
-                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' must have at least one entry" );
-                            }
-                            foreach my $allowDisallow ( @{$wellknownValue->{$field}} ) {
-                                if( ref( $allowDisallow )) {
-                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' must be an array of strings" );
+                    if( 'robots.txt' eq $wellknownKey ) {
+                        if( exists( $wellknownValue->{proxy} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify proxy" );
+                        }
+
+                        foreach my $field ( qw( allow disallow )) {
+                            if( exists( $wellknownValue->{$field} )) {
+                                unless( ref( $wellknownValue->{$field} ) eq 'ARRAY' ) {
+                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' is not an array" );
                                 }
-                                unless( $allowDisallow =~ m!^/\S*$! ) {
-                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' contains invalid value: " . $allowDisallow );
+                                if( @{$wellknownValue->{$field}} == 0) {
+                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' must have at least one entry" );
+                                }
+                                foreach my $allowDisallow ( @{$wellknownValue->{$field}} ) {
+                                    if( ref( $allowDisallow )) {
+                                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' must be an array of strings" );
+                                    }
+                                    unless( $allowDisallow =~ m!^/\S*$! ) {
+                                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry '$field' contains invalid value: " . $allowDisallow );
+                                    }
                                 }
                             }
                         }
                     }
+                    if( 'webfinger' eq $wellknownKey ) {
+                        foreach my $field ( qw( allow disallow )) {
+                            if( exists( $wellknownValue->{$field} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not contain: " . $field );
+                            }
+                        }
+                        unless( exists( $wellknownValue->{proxy} )) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must contain proxy" );
+                        }
+                        if( ref( exists( $wellknownValue->{proxy} )) || $wellknownValue->{proxy} !~ m!https?://! ) {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry 'proxy' must be an HTTP or HTTPS URL" );
+                        }
+                    }
 
-                } else { # not robots.txt
-                    foreach my $field ( qw( allow disallow )) {
+                } else { # not robots.txt or webfinger
+                    foreach my $field ( qw( allow disallow proxy )) {
                         if( exists( $wellknownValue->{$field} )) {
                             $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not contain: " . $field );
                         }

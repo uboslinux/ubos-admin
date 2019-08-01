@@ -19,6 +19,7 @@ depends=(
     'perl-archive-zip'
     'perl-cgi'
     'perl-dbi'
+    'perl-libwww'
     'perl-net-ip'
     'perl-uri'
     'php-apache'
@@ -77,7 +78,7 @@ package() {
     done
 
 # CGI files
-    install -D -m755 ${startdir}/cgi-bin/{show-apps,render-appicon}.pl -t ${pkgdir}/usr/share/ubos/cgi-bin/
+    install -D -m755 ${startdir}/cgi-bin/*.pl -t ${pkgdir}/usr/share/ubos/cgi-bin/
 
 # Systemd -- note that the ipXtables go into /etc not /usr/lib so they don't conflict with iptables' version
     install -D -m644 ${startdir}/systemd/{certbot,smtp-server@,ubos-admin,ubos-ready,ubos-reboot,ubos-shutdown}.service -t ${pkgdir}/usr/lib/systemd/system/

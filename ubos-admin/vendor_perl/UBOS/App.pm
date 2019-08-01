@@ -80,42 +80,4 @@ sub wellknownJson {
     return undef;
 }
 
-##
-# Return an array of paths relative to the AppConfiguration's context
-# that shall be included in the "allow" section of the site's robots.txt file.
-# return: array of paths
-sub robotstxtAllow {
-    my $self = shift;
-
-    my @ret = ();
-    my $json = $self->wellknownJson();
-
-    if(    $json
-        && exists( $json->{'robots.txt'} )
-        && exists( $json->{'robots.txt'}->{allow} ))
-    {
-        @ret = @{$json->{'robots.txt'}->{allow}};
-    }
-    return @ret;
-}
-
-##
-# Return an array of paths relative to the AppConfiguration's context
-# that shall be included in the "disallow" section of the site's robots.txt file.
-# return: array of paths
-sub robotstxtDisallow {
-    my $self = shift;
-
-    my @ret = ();
-    my $json = $self->wellknownJson();
-
-    if(    $json
-        && exists( $json->{'robots.txt'} )
-        && exists( $json->{'robots.txt'}->{disallow} ))
-    {
-        @ret = @{$json->{'robots.txt'}->{disallow}};
-    }
-    return @ret;
-}
-
 1;

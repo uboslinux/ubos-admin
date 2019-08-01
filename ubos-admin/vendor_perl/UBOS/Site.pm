@@ -406,10 +406,16 @@ sub wellknowns {
 
     my $ret = {};
 
-    # robots.txt is different.
+    # robots.txt and webfinger are different.
     $ret->{'robots.txt'} = {
         'value' => $self->_constructRobotsTxt()
     };
+    my $webfingerProxyUrls = $self->_determineWebfingerProxyUrls();
+    if( $webfingerProxyUrls ) {
+        $ret->{webfinger} = {
+            'proxies' => $webfingerProxyUrls
+        };
+    }
 
     # We start with what's provided in the Site JSON.
     # Then we walk through the AppConfigs in sequence. We add those
@@ -443,7 +449,7 @@ sub wellknowns {
 }
 
 ##
-# Construct the site's robots.txt file content, if any has been provided.
+# Helper to construct the site's robots.txt file content, if any has been provided.
 # return: robots.txt content
 sub _constructRobotsTxt {
     my $self = shift;
@@ -464,14 +470,21 @@ sub _constructRobotsTxt {
     my $disallowContent = "";
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        my $app     = $appConfig->app();
-        my $context = $appConfig->context();
+        my $app           = $appConfig->app();
+        my $context       = $appConfig->context();
+        my $wellknownJson = $app->wellknownJson();
 
-        foreach my $allow ( $app->robotstxtAllow() ) {
-            $allowContent .= "Allow: $context$allow\n";
-        }
-        foreach my $disallow ( $app->robotstxtDisallow() ) {
-            $disallowContent .= "Disallow: $context$disallow\n";
+        if( $wellknownJson && exists( $wellknownJson->{'robots.txt'} )) {
+            if( exists( $wellknownJson->{'robots.txt'}->{allow} )) {
+                foreach my $allow ( @{$wellknownJson->{'robots.txt'}->{allow}} ) {
+                    $allowContent .= "Allow: $context$allow\n";
+                }
+            }
+            if( exists( $wellknownJson->{'robots.txt'}->{disallow} )) {
+                foreach my $disallow ( $wellknownJson->{'robots.txt'}->{disallow} ) {
+                    $disallowContent .= "Disallow: $context$disallow\n";
+                }
+            }
         }
     }
     if( $robotsTxt || $allowContent || $disallowContent ) {
@@ -485,6 +498,30 @@ sub _constructRobotsTxt {
     } else {
         return undef;
     }
+}
+
+##
+# Helper to determine the URLs to access to determine the site's webfinder
+# content, if any
+# return: pointer to array of URL
+sub _determineWebfingerProxyUrls {
+    my $self = shift;
+
+    my $json = $self->{json};
+    my @ret  = ();
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        my $app           = $appConfig->app();
+        my $context       = $appConfig->context();
+        my $wellknownJson = $app->wellknownJson();
+
+        if( defined( $wellknownJson ) && exists( $wellknownJson->{webfinger} )) {
+            my $url = $appConfig->vars()->replaceVariables( $wellknownJson->{webfinger}->{proxy} );
+            push @ret, $url;
+        }
+    }
+
+    return \@ret;
 }
 
 ##

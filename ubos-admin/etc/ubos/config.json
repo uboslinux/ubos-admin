@@ -33,7 +33,8 @@
         "sitesdir"               : "/ubos/http/sites",
         "ssldir"                 : "/etc/httpd/ssl",
         "siteswellknowndir"      : "/ubos/http/wellknown",
-        "placeholdersitesdir"    : "/srv/http/placeholders"
+        "placeholdersitesdir"    : "/srv/http/placeholders",
+        "webfingerproxiesdir"    : "/ubos/http/webfinger-proxies"
     },
 
     "tomcat8" : {
@@ -67,7 +68,9 @@
             "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups",
 
             "sitetordir"           : "${tor.sitesdir}/${site.siteid}",
-            "sitetorfragmentfile"  : "${tor.sitefragmentdir}/${site.siteid}"
+            "sitetorfragmentfile"  : "${tor.sitefragmentdir}/${site.siteid}",
+
+            "sitewebfingerproxiesfile" : "${apache2.webfingerproxiesdir}/${site.siteid}"
         },
         "tomcat8" : {
             "sitedocumentdir"      : "${tomcat8.sitesdir}/${site.siteid}",
