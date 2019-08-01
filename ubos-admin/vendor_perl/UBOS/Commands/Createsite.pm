@@ -370,7 +370,9 @@ sub run {
 # not AppConfigurations yet
 
     my $newSiteJson = {};
-    $newSiteJson->{siteid} = $siteId;
+    if( defined( $siteId )) {
+        $newSiteJson->{siteid} = $siteId;
+    }
 
     if( defined( $hostname )) {
         $newSiteJson->{hostname} = $hostname;
