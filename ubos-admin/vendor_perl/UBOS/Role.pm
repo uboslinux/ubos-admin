@@ -417,9 +417,9 @@ sub obtainLetsEncryptCertificate {
 }
 
 ##
-# If this role needs (needed) a letsencrypt certificate, deactivate it.
+# If this role needs (needed) a letsencrypt certificate, stash it.
 # $site: the site that needs (needed) the certificate
-sub deactivateLetsEncryptCertificate {
+sub stashLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 

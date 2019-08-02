@@ -23,7 +23,7 @@ my $_letsEncryptCertificatesStatus = undef; # allocated as needed
 # $webrootPath path to the web server's root directory
 # $adminEmail: e-mail address of the administrator
 # return: 1 if success
-sub obtainCertificate {
+sub provisionCertificate {
     my $hostname    = shift;
     my $webrootPath = shift;
     my $adminEmail  = shift;
@@ -164,10 +164,11 @@ sub determineCertificateStatus {
 
 ##
 # Move a Letsencrypt certificate from "renew" to "norenew" status (e.g.
-# when a site is undeployed)
+# when a site is undeployed). We stash by moving conf file, and the
+# domain's live directory into $LETSENCRYPT_NORENEWAL_DIR
 # $hostname: name of the host
 # return: success or failure
-sub makeCertificateNoRenew {
+sub stashCertificate {
     my $hostname = shift;
 
     my $from = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
@@ -194,7 +195,7 @@ sub makeCertificateNoRenew {
 # when a previously undeployed TLS site is redeployed)
 # $hostname: name of the host
 # return: success or failure
-sub makeCertificateRenew {
+sub unstashCertificate {
     my $hostname = shift;
 
     my $from = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";

@@ -602,10 +602,10 @@ sub obtainLetsEncryptCertificate {
         UBOS::Utils::mkdirDashP( $siteWellKnownDir );
     }
 
-    if( UBOS::LetsEncrypt::makeCertificateRenew( $hostname )) {
+    if( UBOS::LetsEncrypt::unstashCertificate( $hostname )) {
         UBOS::LetsEncrypt::renewCertificate( $hostname );
     } else {
-        UBOS::LetsEncrypt::obtainCertificate( $hostname, $siteWellKnownDir, $adminHash->{email} );
+        UBOS::LetsEncrypt::provisionCertificate( $hostname, $siteWellKnownDir, $adminHash->{email} );
         # Don't need to check return status; next call will tell
     }
 
@@ -621,15 +621,15 @@ sub obtainLetsEncryptCertificate {
 }
 
 ##
-# If this role needs (needed) a letsencrypt certificate, deactivate it.
+# If this role needs (needed) a letsencrypt certificate, stash it.
 # $site: the site that needs (needed) the certificate
-sub deactivateLetsEncryptCertificate {
+sub stashLetsEncryptCertificate {
     my $self = shift;
     my $site = shift;
 
     my $hostname = $site->hostname;
 
-    my $ret = UBOS::LetsEncrypt::makeCertificateNoRenew( $hostname );
+    my $ret = UBOS::LetsEncrypt::stashCertificate( $hostname );
     return $ret;
 }
 

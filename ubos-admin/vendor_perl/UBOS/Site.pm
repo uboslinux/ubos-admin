@@ -1373,15 +1373,15 @@ sub mayContextBeAdded {
 }
 
 ##
-# Deactivate the LetsEncrypt certificate for this site
+# Deactivate and stash the LetsEncrypt certificate for this site
 # return: 1 for success
-sub deactivateLetsEncryptCertificate {
+sub stashLetsEncryptCertificate {
     my $self = shift;
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
     foreach my $role ( reverse @rolesOnHost ) {
-        $ret &= $role->deactivateLetsEncryptCertificate( $self );
+        $ret &= $role->stashLetsEncryptCertificate( $self );
     }
 
     return $ret;

@@ -173,7 +173,7 @@ sub run {
             $ret &= $oldSite->undeploy( $undeployTriggers );
 
             if( $oldSite->hasLetsEncryptTls()) {
-                $ret &= $oldSite->deactivateLetsEncryptCertificate();
+                $ret &= $oldSite->stashLetsEncryptCertificate();
             }
         }
 
