@@ -394,37 +394,15 @@ sub instantiateAppConfigurationItem {
 }
 
 ##
-# Determine whether we already have a letsencrypt certificate for this role for the given site
+# Save the TLS key and certificate in this Site to the default SSL directory
+# for this Role. On this level, does nothing.
 # $site: the Site
-# return: 0 or 1
-sub hasLetsEncryptCert {
-    my $self = shift;
-    my $site = shift;
+# return: success or fail
+sub saveTlsKeyAndCertificate {
+    my $self     = shift;
+    my $site     = shift;
 
-    return 0;
-}
-
-##
-# If this role needs a letsencrypt certificate, obtain it.
-# $site: the site that needs the certificate
-sub obtainLetsEncryptCertificate {
-    my $self = shift;
-    my $site = shift;
-
-    # on this level: nothing
-
-    return 1;
-}
-
-##
-# If this role needs (needed) a letsencrypt certificate, stash it.
-# $site: the site that needs (needed) the certificate
-sub stashLetsEncryptCertificate {
-    my $self = shift;
-    my $site = shift;
-
-    # on this level: nothing
-
+    # no op on this level
     return 1;
 }
 

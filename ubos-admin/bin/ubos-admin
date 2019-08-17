@@ -8,8 +8,8 @@
 use strict;
 use warnings;
 
-use Fcntl ':flock';
 use UBOS::Host;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
@@ -51,23 +51,16 @@ if( $commandPackage ) {
             exit -1;
         }
     }
-    checkOnlyOne();
+    unless( UBOS::Lock::acquire() ) {
+        colPrintError( "Another copy of ubos-admin is running already. Please try again later.\n" );
+        exit -2;
+    }
 
     my $result = UBOS::Utils::invokeMethod( $commandPackage . '::run', @remainingArgs );
 
     exit !$result;
 } else {
     synopsisHelpQuit( 0, undef, 1 );
-}
-
-#####
-# Check that only one copy of the script is running at any time.
-sub checkOnlyOne {
-    # See __DATA__ at end of file
-    unless( flock( DATA, LOCK_EX|LOCK_NB )) {
-        colPrintError( "Another copy of ubos-admin is running already. Please try again later.\n" );
-        exit -2;
-    }
 }
 
 #####
@@ -195,6 +188,3 @@ END
 }
 
 1;
-
-# mandatory line, flocking depends on DATA file handle
-__DATA__

@@ -10,12 +10,99 @@ use warnings;
 
 package UBOS::LetsEncrypt;
 
+use Time::Local;
 use UBOS::Logging;
+use UBOS::Host;
 
-my $LETSENCRYPT_RENEWAL_DIR   = '/etc/letsencrypt/renewal';
-my $LETSENCRYPT_NORENEWAL_DIR = '/etc/letsencrypt/norenewal';
+my $LETSENCRYPT_ARCHIVE_DIR   = '/etc/letsencrypt/archive';   # created by certbot
+my $LETSENCRYPT_LIVE_DIR      = '/etc/letsencrypt/live';      # created by certbot
+my $LETSENCRYPT_RENEWAL_DIR   = '/etc/letsencrypt/renewal';   # created by certbot
+my $LETSENCRYPT_NORENEWAL_DIR = '/etc/letsencrypt/norenewal'; # created by UBOS -- for the stash
 
 my $_letsEncryptCertificatesStatus = undef; # allocated as needed
+
+##
+# Get the filenames of the LetsEncrypt key and certificate for a given
+# hostname that is currently live (from a LetsEncrypt perspective) on this
+# device.
+# $hostname: name of the host
+# return: ( file containing key, file containing crt ), or undef; error is in $@
+sub getLiveKeyAndCertificateFiles {
+    my $hostname = shift;
+
+    return _getKeyAndCertificateFiles( $LETSENCRYPT_LIVE_DIR, $hostname );
+}
+
+##
+# Get the filenames of the LetsEncrypt key and certificate for a given
+# hostname that is current stashed on this device.
+# $hostname: name of the host
+# return: ( file containing key, file containing crt ), or undef; error is in $@
+sub getStashedKeyAndCertificateFiles {
+    my $hostname = shift;
+
+    return _getKeyAndCertificateFiles( $LETSENCRYPT_NORENEWAL_DIR, $hostname );
+}
+
+##
+# Helper to get the filenames of the LetsEncrypt key and certificate for
+# a given hostname in a given directory.
+# $dir: the directory to look in
+# $hostname: name of the host
+# return: ( key, crt ), or undef; error is in $@
+sub _getKeyAndCertificateFiles {
+    my $dir      = shift;
+    my $hostname = shift;
+
+    my $keyFile = "$dir/$hostname/privkey.pem";
+    my $crtFile = "$dir/$hostname/fullchain.pem";
+
+    if( -r $keyFile ) {
+        if( -r $crtFile ) {
+            return ( $keyFile, $crtFile );
+        } else {
+            $@ = 'Cannot read file: ' . $crtFile;
+        }
+    } else {
+        $@ = 'Cannot read file: ' . $keyFile;
+    }
+    return undef;
+}
+
+##
+# Register a LetsEncrypt account if needed. This happens automatically
+# when the first certificate is getting provisioned, but we need this
+# if the first certificate is imported rather than provisioned.
+# $adminEmail: e-mail address of the administrator
+# return: 1 if success or nothing was done
+sub register {
+    my $adminEmail  = shift;
+
+    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', undef );
+    if( $flags ) {
+        $flags = " $flags";
+    }
+
+    trace( 'Registering with LetsEncrypt', $ACME_URL );
+
+    my $cmd = 'TERM=dumb'
+            . ' certbot register'
+            . " --email '" . $adminEmail . "'"
+            . ' --agree-tos'
+            . ' --non-interactive'
+            . $flags;
+
+    my $out;
+    my $err;
+    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$err );
+
+    if( $ret ) {
+        warning( "Registering with LetsEncrypt$flags failed:\n" . $err );
+        return 0;
+    }
+    return 1;
+}
+
 
 ##
 # Obtain a new certificate from LetsEncrypt
@@ -28,12 +115,14 @@ sub provisionCertificate {
     my $webrootPath = shift;
     my $adminEmail  = shift;
 
-    info( 'Obtaining Letsencrypt certificate' );
+    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', undef );
+    if( $flags ) {
+        $flags = " $flags";
+    }
 
-    my $out;
-    my $err;
-    my $ret = UBOS::Utils::myexec(
-            'TERM=dumb'
+    info( "Obtaining LetsEncrypt certificate$flags" );
+
+    my $cmd = 'TERM=dumb'
             . ' certbot certonly'
             . ' --webroot'
             . " --email '" . $adminEmail . "'"
@@ -41,45 +130,17 @@ sub provisionCertificate {
             . ' --no-self-upgrade'
             . ' --non-interactive'
             . " --webroot-path '" . $webrootPath . "'"
-            . " -d '" . $hostname . "'",
-            undef,
-            \$out,
-            \$err );
-
-    if( $ret ) {
-        warning( "Obtaining certificate from letsencrypt failed. proceeding without certificate or TLS/SSL.\n"
-                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
-                 . "Letsencrypt message:\n"
-                 . $err );
-        return 0;
-    }
-    return 1;
-}
-
-##
-# Renew a certificate from LetsEncrypt
-# $hostname: name of the host
-# return: 1 if success
-sub renewCertificate {
-    my $hostname = shift;
-
-    # We cannot actually renew just one, so it will be all of them
+            . " -d '" . $hostname . "'"
+            . $flags;
 
     my $out;
     my $err;
-    my $ret = UBOS::Utils::myexec(
-            'TERM=dumb'
-            . ' certbot renew'
-            . ' --quiet'
-            . ' --agree-tos',
-            undef,
-            \$out,
-            \$err );
+    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$err );
 
     if( $ret ) {
-        warning( "Renewing certificates from letsencrypt failed. proceeding without certificate or TLS/SSL.\n"
+        warning( "Obtaining certificate from LetsEncrypt$flags failed. proceeding without certificate or TLS/SSL.\n"
                  . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
-                 . "Letsencrypt message:\n"
+                 . "LetsEncrypt message:\n"
                  . $err );
         return 0;
     }
@@ -87,83 +148,38 @@ sub renewCertificate {
 }
 
 ##
-# Smart factory method to obtain information about all Letsencrypt certificates on this host
-# $force: if true, do not use any cached values
-# return: hash, keyed by hostname
-sub determineCertificatesStatus {
-    my $force = shift || 0;
+# Renew the certificates from LetsEncrypt. Certbot will decide which ones
+# actually needed renwal.
+# return: 1 if success
+sub renewCertificates {
 
-    if( !$_letsEncryptCertificatesStatus || $force ) {
-        my $out;
-        if( UBOS::Utils::myexec(
-                'TERM=dumb'
-                . ' certbot certificates',
-                undef,
-                \$out,
-                \$out )) {
-            warning( "certbot certificates invocation failed" );
-            return {};
-        }
-
-        $_letsEncryptCertificatesStatus = {};
-
-        my @chunks = split( /Certificate Name:/, $out );
-        shift @chunks; # discard first one
-        foreach my $chunk ( @chunks ) {
-            my $domain = undef;
-            my $valid;
-            my $certPath;
-            my $keyPath;
-
-            my @lines = split( /\n/, $chunk );
-            foreach my $line ( @lines ) {
-                if( $line =~ m!Domains:\s*(\S+)! ) {
-                    $domain = $1;
-                } elsif( $line =~ m!Expiry Date:.*\(([^)]+)\)! ) {
-                    my $validInvalid = $1;
-                    if( $validInvalid =~ m!INVALID! ) {
-                        $valid = 0;
-                    } else {
-                        $valid = 1;
-                    }
-                } elsif( $line =~ m!Certificate Path:\s* (\S+)! ) {
-                    $certPath = $1;
-
-                } elsif( $line =~ m!Private Key Path:\s* (\S+)! ) {
-                    $keyPath = $1;
-                }
-            }
-            if( $domain ) {
-                $_letsEncryptCertificatesStatus->{$domain} = {
-                    'isvalid'  => $valid,
-                    'certpath' => $certPath,
-                    'keypath'  => $keyPath
-                };
-            }
-        }
+    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', undef );
+    if( $flags ) {
+        $flags = " $flags";
     }
-    return $_letsEncryptCertificatesStatus;
+
+    my $cmd = 'TERM=dumb'
+            . ' certbot renew'
+            . ' --quiet'
+            . ' --agree-tos'
+            . $flags;
+
+    my $out;
+    my $err;
+    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$err );
+
+    if( $ret ) {
+        warning( "Renewing certificates from LetsEncrypt failed. proceeding without certificate or TLS/SSL.\n"
+                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
+                 . "LetsEncrypt message:\n"
+                 . $err );
+        return 0;
+    }
+    return 1;
 }
 
 ##
-# Determine the status of one certificate, for a certain host.
-# $hostname: name of the host
-# $force: if true, do not use any cached values
-# return: undef if not known, JSON hash otherwise
-sub determineCertificateStatus {
-    my $hostname = shift;
-    my $force    = shift || 0;
-
-    my $status = determineCertificatesStatus( $force );
-    if( exists( $status->{$hostname} )) {
-        return $status->{$hostname};
-    } else {
-        return undef;
-    }
-}
-
-##
-# Move a Letsencrypt certificate from "renew" to "norenew" status (e.g.
+# Move a LetsEncrypt certificate from "renew" to "norenew" status (e.g.
 # when a site is undeployed). We stash by moving conf file, and the
 # domain's live directory into $LETSENCRYPT_NORENEWAL_DIR
 # $hostname: name of the host
@@ -171,46 +187,234 @@ sub determineCertificateStatus {
 sub stashCertificate {
     my $hostname = shift;
 
-    my $from = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
-    if( -e $from ) {
-        unless( -d $LETSENCRYPT_NORENEWAL_DIR ) {
-            UBOS::Utils::mkdirDashP( $LETSENCRYPT_NORENEWAL_DIR );
-        }
-        my $to = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
-        if( UBOS::Utils::move( $from, $to )) {
-            return 1;
-        } else {
-            error( 'Failed to move file:', $from, $to );
-            return 0;
+    my $fromConf = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
+    my $fromDir  = "$LETSENCRYPT_LIVE_DIR/$hostname";
+    my $to       = "$LETSENCRYPT_NORENEWAL_DIR/";
+
+    my $ret = 1;
+    unless( -d $LETSENCRYPT_NORENEWAL_DIR ) {
+        UBOS::Utils::mkdirDashP( $LETSENCRYPT_NORENEWAL_DIR );
+    }
+
+    if( -e $fromConf ) {
+        if( !UBOS::Utils::move( $fromConf, $to )) {
+            error( 'Failed to move:', $fromConf, $to );
+            $ret = 0;
         }
     } else {
-        # Letsencrypt setup may have failed initially
-        warning( 'File does not exist:', $from );
-        return 0;
+        # LetsEncrypt setup may have failed initially
+        warning( 'File does not exist:', $fromConf );
     }
+    if( -e $fromDir ) {
+        if( !UBOS::Utils::move( $fromDir, $to )) {
+            error( 'Failed to move:', $fromDir, $to );
+            $ret = 0;
+        }
+    } else {
+        # LetsEncrypt setup may have failed initially
+        warning( 'Directory does not exist:', $fromDir );
+    }
+
+    return $ret;
 }
 
 ##
-# Move a Letsencrypt certificate from "norenew" to "renew" status (e.g.
-# when a previously undeployed TLS site is redeployed)
+# Move a LetsEncrypt certificate from "norenew" to "renew" status (e.g.
+# when a previously undeployed TLS site is redeployed). Only invoke
+# this if the certificate is known to be still valid.
 # $hostname: name of the host
 # return: success or failure
 sub unstashCertificate {
     my $hostname = shift;
 
-    my $from = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
-    if( -e $from ) {
-        my $to = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
-        if( UBOS::Utils::move( $from, $to )) {
-            return 1;
-        } else {
-            error( 'Failed to move file:', $from, $to );
-            return 0;
+    my $fromConf = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
+    my $fromDir  = "$LETSENCRYPT_NORENEWAL_DIR/$hostname";
+    my $toConf   = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
+    my $toDir    = "$LETSENCRYPT_LIVE_DIR/$hostname";
+
+    my $ret = 1;
+    if( -e $fromConf ) {
+        if( !UBOS::Utils::move( $fromConf, $toConf )) {
+            error( 'Failed to move file:', $fromConf, $toConf );
+            $ret = 0;
         }
     } else {
-        # No error here; it may never have been a TLS site
+        warning( 'File does not exist:', $fromConf );
+        $ret = 0;
+    }
+    if( -e $fromDir ) {
+        if( !UBOS::Utils::move( $fromDir, $toDir )) {
+            error( 'Failed to move file:', $fromDir, $toDir );
+            $ret = 0;
+        }
+    } else {
+        warning( 'Directory does not exist:', $fromDir );
+        $ret = 0;
+    }
+
+    return $ret;
+}
+
+##
+# Delete a stashed certificate
+# $hostname: name of the host
+# return: true or false
+sub deleteStashedCertificate {
+    my $hostname = shift;
+
+    my $conf = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
+    my $dir  = "$LETSENCRYPT_NORENEWAL_DIR/$hostname";
+
+    my $ret = 1;
+    if( -e $conf ) {
+        if( !UBOS::Utils::deleteFile( $conf )) {
+            error( 'Failed to delete file:', $conf );
+            $ret = 0;
+        }
+    }
+    if( -e $dir ) {
+        if( !UBOS::Utils::deleteRecursively( $dir )) {
+            error( 'Failed to delete directory hierarchy:', $dir );
+            $ret = 0;
+        }
+    }
+    return $ret;
+}
+
+##
+# Determine whether a certificate is currently live
+# $hostname: name of the host
+# return: true or false
+sub isCertificateLive {
+    my $hostname = shift;
+
+    my $conf = "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf";
+    if( -e $conf ) {
+        return 1;
+    } else {
         return 0;
     }
+}
+
+##
+# Determine whether a certificate is currently stashed
+# $hostname: name of the host
+# return: true or false
+sub isCertificateStashed {
+    my $hostname = shift;
+
+    my $conf = "$LETSENCRYPT_NORENEWAL_DIR/$hostname.conf";
+    if( -e $conf ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+##
+# Determine whether the certificate contained in this file has a sufficiently
+# far-ahead expiration time, or already has or will shortly expire.
+# $crtFile: name of the file containing the certificate
+# return: true or false
+sub certFileNeedsRenewal {
+    my $crtFile = shift;
+
+    my $out;
+    if( UBOS::Utils::myexec( "openssl x509 -in '$crtFile' -dates -noout", undef, \$out )) {
+        error( 'Failed to run opeenssl x509 against:', $crtFile );
+        return undef; # better return value?
+    }
+    foreach my $line ( split( "\n", $out )) {
+        # notAfter=Sep 22 17:52:55 2019 GMT
+        # assuming no locale stuff
+        if( $line =~ m!^notAfter=(\S+)\s+(\d+)\s+(\d+):(\d+):(\d+)\s+(\d+)\s+(\S+)$! ) {
+            my( $month, $day, $hour, $minute, $second, $year, $tz ) = ( $1, $2, $3, $4, $5, $6, $7 );
+            if( $tz ne 'GMT' ) {
+                error( 'Wrong time zone reported by openssl' );
+                # but we continue, we are not too far off
+            }
+            my $certTs = timegm( $second, $minute, $hour, $day, $month-1, $year-1900 );
+            my $now    = gmtime( time() );
+            my $delta  = $certTs - $now;
+            my $cutoff = UBOS::Host::vars()->get( 'host.letsencryptreissuecutoff', 172800 );
+
+            return $delta < $cutoff;
+        }
+    }
+    error( 'Failed to parse time stamp:', $out );
+
+    return undef; # better return value
+}
+
+##
+# Given a previously created key and cert, import them into the LetsEncrypt
+# installation. This is used for device migration or restoring a still-valid
+# LetsEncrypt certificate to a new device. Only invoke this if there is
+# a valid LetsEncrypt account on the device.
+# $hostname: name of the host
+# $webroot: directory used by LetsEncrypt for renewals
+# $key: the key
+# $crt: the certificate
+sub importCertificate {
+    my $hostname = shift;
+    my $webroot  = shift;
+    my $key      = shift;
+    my $crt      = shift;
+
+    if( -e "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf" ) {
+        error( 'Letsencrypt config already exists for this hostname, cannot import:', $hostname );
+        return 0;
+    }
+
+    my @accountIds = accountIdentifiers();
+    unless( @accountIds ) {
+        # create account -- FIXME
+        error( 'No LetsEncrypt account found' );
+        return 0;
+    }
+
+    foreach my $dir ( $LETSENCRYPT_RENEWAL_DIR, "$LETSENCRYPT_ARCHIVE_DIR/$hostname", "$LETSENCRYPT_LIVE_DIR/$hostname" ) {
+        unless( -d $dir ) {
+            UBOS::Utils::mkdirDashP( $dir, 0700 );
+        }
+    }
+    my $accountId = $accountIds[0];
+
+    UBOS::Utils::saveFile( "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf", <<CONTENT, 0644 );
+[renewalparams]
+account = $accountId
+authenticator = webroot
+server = https://acme-v02.api.letsencrypt.org/directory
+post_hook = /usr/bin/systemctl restart httpd.service
+[[webroot_map]]
+$hostname = $webroot
+CONTENT
+
+    my $i = 1; # In case there are some leftovers from some previous deployment of the same site
+    while( -e "$LETSENCRYPT_ARCHIVE_DIR/$hostname/privkey$i.pem" ) {
+        ++$i;
+    }
+
+    # save the same full cert in all three places
+    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/privkey$i.pem",   $key, 0644 );
+    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/fullchain$i.pem", $crt, 0644 );
+    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/chain$i.pem",     $crt, 0644 );
+    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/cert$i.pem",      $crt, 0644 );
+
+    UBOS::Utils::symlink( "../../archive/$hostname/privkey$i.pem",   "$LETSENCRYPT_LIVE_DIR/$hostname/privkey.pem" );
+    UBOS::Utils::symlink( "../../archive/$hostname/fullchain$i.pem", "$LETSENCRYPT_LIVE_DIR/$hostname/fullchain.pem" );
+    UBOS::Utils::symlink( "../../archive/$hostname/chain$i.pem",     "$LETSENCRYPT_LIVE_DIR/$hostname/chain.pem" );
+    UBOS::Utils::symlink( "../../archive/$hostname/cert$i.pem",      "$LETSENCRYPT_LIVE_DIR/$hostname/cert.pem" );
+}
+
+##
+# Determine the ACME account identifiers present on this device
+# return: array of account identifiers, may be empty
+sub accountIdentifiers {
+
+    my @privateKeyFiles = </etc/letsencrypt/accounts/*/*/*/private_key.json>;
+    my @ret = map { m!/etc/letsencrypt/.*directory/([a-f0-9]+)/private_key.json!; $1; } @privateKeyFiles;
+    return @ret;
 }
 
 1;

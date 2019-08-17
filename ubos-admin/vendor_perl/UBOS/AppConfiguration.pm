@@ -323,7 +323,7 @@ sub deployOrCheck {
         my $packageName = $installable->packageName;
 
         # if TLS is required, make sure we have it
-        if( $installable->requiresTls && !$self->site()->hasTls()) {
+        if( $installable->requiresTls() && !$self->site()->isTls()) {
             error( 'Cannot deploy', $installable->packageName, 'to non-TLS site' );
             $ret = 0;
         }

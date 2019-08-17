@@ -109,7 +109,7 @@ sub setupSiteOrCheck {
     my $sitesWellknownDir    = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
 
     if( $doIt ) {
-        if( $site->hasTls ) {
+        if( $site->isTls ) {
             my $numberActivated += UBOS::Apache2::activateApacheModules( 'ssl' );
             if( $numberActivated ) {
                 UBOS::Apache2::restart(); # reload seems to be insufficient
@@ -200,12 +200,13 @@ sub setupPlaceholderSite {
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
     my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+    my $sslDir            = $site->vars()->getResolve( 'apache2.ssldir' );
 
     unless( -d $siteDocumentRoot ) {
         error( 'Placeholder site', $placeholderName, 'does not exist at', $siteDocumentRoot );
     }
 
-    if( $site->hasTls ) {
+    if( $site->isTls ) {
         my $numberActivated += UBOS::Apache2::activateApacheModules( 'ssl' );
         if( $numberActivated ) {
             UBOS::Apache2::restart(); # reload seems to be insufficient
@@ -220,14 +221,25 @@ sub setupPlaceholderSite {
 #
 CONTENT
 
-    my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
 
-    # While this might become a TLS site, we may not have letsencrypt
-    # certs yet at this point; if so, we set it up as http
+    # Determine where TLS key and cert are
+    my( $keyFile, $crtFile );
 
-    my $tlsNow = $site->hasTls && -e "$sslDir/$siteId.key" && -e "$sslDir/$siteId.crt";
-    unless( $tlsNow ) {
-        $port = 80;
+    my $tlsNow = $site->isTls();
+    if( $tlsNow ) {
+        if( $site->isLetsEncryptTls() ) {
+            # Site.pm has unstashed the cert if it needed to be unstashed
+            if( UBOS::LetsEncrypt::isCertificateLive( $hostname )) {
+                ( $keyFile, $crtFile ) = UBOS::LetsEncrypt::getLiveKeyAndCertificateFiles( $hostname );
+
+            } else {
+                $tlsNow = 0; # we don't have LetsEncrypt certs yet, so we set it up as http
+            }
+
+        } else {
+            $keyFile = "$sslDir/$siteId.key";
+            $crtFile = "$sslDir/$siteId.crt";
+        }
     }
 
     if( $tlsNow ) {
@@ -242,9 +254,9 @@ $serverDeclaration
 </VirtualHost>
 CONTENT
 
-        UBOS::Apache2::updateSiteTls( $site );
-
-    } # else No SSL
+    } else {
+        $port = 80;
+    }
 
     $siteFileContent .= <<CONTENT;
 
@@ -267,8 +279,8 @@ CONTENT
 
     SSLEngine on
 
-    SSLCertificateKeyFile $sslDir/$siteId.key
-    SSLCertificateFile $sslDir/$siteId.crt
+    SSLCertificateKeyFile $keyFile
+    SSLCertificateFile $crtFile
 CONTENT
         if( $site->tlsCaCert ) {
             $siteFileContent .= <<CONTENT;
@@ -340,6 +352,19 @@ sub resumeSite {
         }
     }
 
+    # Determine where TLS key and cert are
+    my( $keyFile, $crtFile );
+
+    if( $site->isTls() ) {
+        if( $site->isLetsEncryptTls() ) {
+            ( $keyFile, $crtFile ) = UBOS::LetsEncrypt::getLiveKeyAndCertificateFiles( $hostname );
+
+        } else {
+            $keyFile = "$sslDir/$siteId.key";
+            $crtFile = "$sslDir/$siteId.crt";
+        }
+    }
+
     my $siteFileContent = <<CONTENT;
 #
 # Apache config fragment for site $siteId at host $hostname
@@ -348,7 +373,7 @@ sub resumeSite {
 #
 CONTENT
 
-    if( $site->hasTls ) {
+    if( $site->isTls ) {
         $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
@@ -384,13 +409,13 @@ $serverDeclaration
 CONTENT
     # Specify both /tmp and $tmpDir, because some apps internally use /tmp
 
-    if( $site->hasTls ) {
+    if( $site->isTls ) {
         $siteFileContent .= <<CONTENT;
 
     SSLEngine on
 
-    SSLCertificateKeyFile $sslDir/$siteId.key
-    SSLCertificateFile $sslDir/$siteId.crt
+    SSLCertificateKeyFile $keyFile
+    SSLCertificateFile $crtFile
 CONTENT
         if( $site->tlsCaCert ) {
             $siteFileContent .= <<CONTENT;
@@ -560,77 +585,22 @@ sub removeSite {
 }
 
 ##
-# Determine whether we already have a letsencrypt certificate for this role for the given site
+# Save the TLS key and certificate in this Site to the default SSL directory
+# for this Role. On this level, does nothing.
 # $site: the Site
-# return: 0 or 1
-sub hasLetsEncryptCert {
-    my $self = shift;
-    my $site = shift;
+# return: success or fail
+sub saveTlsKeyAndCertificate {
+    my $self     = shift;
+    my $site     = shift;
 
-    unless( $site->hasLetsEncryptTls()) {
-        return 0;
-    }
-    if( $site->tlsKey() && $site->tlsCert() ) {
-        return 1;
-    }
+    my $siteId = $site->siteId;
+    my $sslDir = $site->vars()->getResolve( 'apache2.ssldir' );
 
-    my $status = UBOS::LetsEncrypt::determineCertificateStatus( $site->hostname );
-    if( $status ) {
-        return $status->{isvalid};
-    } else {
-        return undef;
-    }
-}
+    my $uid = 0;  # avoid overwrite by http
+    my $gid = UBOS::Utils::getGid( 'http' );
 
-##
-# If this role needs a letsencrypt certificate, obtain it. If we already
-# have a non-active one, use that instead and attempt to renew.
-# $site: the site that needs the certificate
-# return: 1 if succeeded
-sub obtainLetsEncryptCertificate {
-    my $self = shift;
-    my $site = shift;
-
-    my $sitesWellknownDir = UBOS::Host::vars()->getResolve( 'apache2.siteswellknowndir' );
-
-    my $adminHash        = $site->obtainSiteAdminHash;
-    my $siteId           = $site->siteId;
-    my $siteWellKnownDir = "$sitesWellknownDir/$siteId";
-    my $hostname         = $site->hostname;
-
-    unless( -d $siteWellKnownDir ) {
-        UBOS::Utils::mkdirDashP( $siteWellKnownDir );
-    }
-
-    if( UBOS::LetsEncrypt::unstashCertificate( $hostname )) {
-        UBOS::LetsEncrypt::renewCertificate( $hostname );
-    } else {
-        UBOS::LetsEncrypt::provisionCertificate( $hostname, $siteWellKnownDir, $adminHash->{email} );
-        # Don't need to check return status; next call will tell
-    }
-
-    my $letsEncryptStatus = UBOS::LetsEncrypt::determineCertificateStatus( $hostname, 1 );
-    if( $letsEncryptStatus && $letsEncryptStatus->{isvalid} ) {
-        $site->setTlsKeyAndCert(
-                UBOS::Utils::slurpFile( $letsEncryptStatus->{keypath} ),
-                UBOS::Utils::slurpFile( $letsEncryptStatus->{certpath} ));
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-##
-# If this role needs (needed) a letsencrypt certificate, stash it.
-# $site: the site that needs (needed) the certificate
-sub stashLetsEncryptCertificate {
-    my $self = shift;
-    my $site = shift;
-
-    my $hostname = $site->hostname;
-
-    my $ret = UBOS::LetsEncrypt::stashCertificate( $hostname );
-    return $ret;
+    UBOS::Utils::saveFile( "$sslDir/$siteId.key", $site->tlsKey, 0040, $uid, $gid );
+    UBOS::Utils::saveFile( "$sslDir/$siteId.crt", $site->tlsCert, 0040, $uid, $gid );
 }
 
 # === Manifest checking routines from here ===

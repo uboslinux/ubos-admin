@@ -12,6 +12,7 @@ package UBOS::Site;
 
 use UBOS::AppConfiguration;
 use UBOS::Host;
+use UBOS::LetsEncrypt;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
@@ -44,6 +45,14 @@ sub new {
         $json->{tls} = $json->{ssl};
         delete $json->{ssl};
     }
+    if( exists( $json->{tls} ) && exists( $json->{tls}->{letsencrypt} ) && $json->{tls}->{letsencrypt} ) {
+        my( $keyFile, $crtFile ) = UBOS::LetsEncrypt::getLiveKeyAndCertificateFiles( $json->{hostname} );
+        if( $keyFile ) {
+            $json->{tls}->{letsencrypt}->{key} = UBOS::Utils::slurpFile( $keyFile );
+            $json->{tls}->{letsencrypt}->{crt} = UBOS::Utils::slurpFile( $crtFile );
+        } # Otherwise is fine: LetsEncrypt but not provisioned yet (new site) or stashed
+    }
+
     $self->{json}                 = $json;
     $self->{skipFilesystemChecks} = $skipFilesystemChecks;
     $self->{manifestFileReader}   = $manifestFileReader;
@@ -79,7 +88,7 @@ sub siteJson {
 sub publicSiteJson {
     my $self = shift;
 
-    return $self->_siteJsonWithout( 1, 1 );
+    return $self->_siteJsonWithout( 1, 1, 1, 1, 1 );
 }
 
 ##
@@ -88,18 +97,33 @@ sub publicSiteJson {
 sub siteJsonWithoutTls {
     my $self = shift;
 
-    return $self->_siteJsonWithout( 1, 0 );
+    return $self->_siteJsonWithout( 1, 0, 0, 0, 0 );
+}
+
+##
+# Obtain the Site JSON but without the LetsEncrypt cert and key
+# return: JSON without LetsEncrypt cert and key
+sub siteJsonWithoutLetsEncryptCert {
+    my $self = shift;
+
+    return $self->_siteJsonWithout( 0, 1, 0, 0, 0 );
 }
 
 ##
 # Helper method to return subsets of the Site JSON. Also, do not return
 # values for customization points marked as private.
-# $noTls: if 1, do not return TLS info
+# $noTls: if 1, do not return any TLS info; treat the site as if it did not have TLS
+# $noLetsEncryptCerts: if 1 and the Site uses LetsEncrypt, don't return key and cert
 # $noAdminCredential: if 1, do not return site admin credential
+# $noPrivateCustomizationPoints: if 1, do not return the value of private customizationpoints
+# $noInternalCustomizationPoints: if 1, do not return the value of internal customizationpoints
 sub _siteJsonWithout {
-    my $self              = shift;
-    my $noTls             = shift;
-    my $noAdminCredential = shift;
+    my $self                          = shift;
+    my $noTls                         = shift;
+    my $noLetsEncryptCerts            = shift;
+    my $noAdminCredential             = shift;
+    my $noPrivateCustomizationPoints  = shift;
+    my $noInternalCustomizationPoints = shift;
 
     my $json = $self->{json};
     my $ret  = {};
@@ -114,8 +138,16 @@ sub _siteJsonWithout {
     unless( $noAdminCredential ) {
         $ret->{admin}->{credential} = $json->{admin}->{credential};
     }
-    unless( $noTls ) {
-        $ret->{tls} = $json->{tls}; # by reference is fine
+    if( !$noTls ) {
+        if(    exists( $json->{tls} )
+            && exists( $json->{tls}->{letsencrypt} )
+            && $json->{tls}->{letsencrypt}
+            && $noLetsEncryptCerts )
+        {
+            $ret->{tls}->{letsencrypt} = $json->{tls}->{letsencrypt}; # don't copy rest of hash
+        } else {
+            $ret->{tls} = $json->{tls}; # by reference is fine
+        }
     }
 
     if( exists( $json->{wellknown} )) {
@@ -142,11 +174,17 @@ sub _siteJsonWithout {
                 if( defined( $custPointInstallableJson )) {
                     foreach my $custPointName ( keys %{$custPointInstallableJson} ) {
                         my $custPointDefJson = $appConfig->customizationPointDefinition( $custPointInstallableName, $custPointName );
-                        if(    ( !exists( $custPointDefJson->{private} )  || !$custPointDefJson->{private} )
-                            && ( !exists( $custPointDefJson->{internal} ) || !$custPointDefJson->{internal} ))
-                        {
-                            $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
-                                    = $custPointInstallableJson->{$custPointName};
+                        if( exists( $custPointDefJson->{private} ) && $custPointDefJson->{private} ) {
+                            if( !$noPrivateCustomizationPoints ) {
+                                $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
+                                        = $custPointInstallableJson->{$custPointName};
+                            }
+                        }
+                        if( exists( $custPointDefJson->{internal} ) && $custPointDefJson->{internal} ) {
+                            if( !$noInternalCustomizationPoints ) {
+                                $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
+                                        = $custPointInstallableJson->{$custPointName};
+                            }
                         }
                     }
                 }
@@ -200,7 +238,7 @@ sub hostnameorsystemhostname {
 sub port {
     my $self = shift;
 
-    if( $self->hasTls() ) {
+    if( $self->isTls() ) {
         return 443;
     } else {
         return 80;
@@ -213,7 +251,7 @@ sub port {
 sub protocol {
     my $self = shift;
 
-    if( $self->hasTls() ) {
+    if( $self->isTls() ) {
         return 'https';
     } else {
         return 'http';
@@ -255,9 +293,11 @@ sub vars {
 }
 
 ##
-# Determine whether this site is protected by SSL/TLS
+# Determine whether this site is supposed to be protected by SSL/TLS. This
+# does not indicate the type of TLS (LetsEncrypt, official or self-signed)
+# or whether we actually have the key and certs to do so.
 # return: 0 or 1
-sub hasTls {
+sub isTls {
     my $self = shift;
 
     my $json = $self->{json};
@@ -265,9 +305,10 @@ sub hasTls {
 }
 
 ##
-# Determine whether to use letsencrypt for this site
+# Determine whether this site is supposed to be protected by SSL/TLS issued
+# by LetsEncrypt.
 # return: 0 or 1
-sub hasLetsEncryptTls {
+sub isLetsEncryptTls {
     my $self = shift;
 
     my $json = $self->{json};
@@ -275,30 +316,6 @@ sub hasLetsEncryptTls {
         return 0;
     }
     return defined( $json->{tls}->{letsencrypt} ) ? 1 : 0;
-}
-
-##
-# Determine whether we already have a letsencrypt certificate for this site
-# return: 0 or 1
-sub hasLetsEncryptCert {
-    my $self = shift;
-
-    my $ret         = 0;
-    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
-    foreach my $role ( @rolesOnHost ) {
-        if( $role->hasLetsEncryptCert( $self )) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-##
-# Reset the letsencrypt flag, in case obtaining the certificate failed.
-sub unsetLetsEncryptTls {
-    my $self = shift;
-
-    delete $self->{json}->{tls}; # delete the whole tls subtree
 }
 
 ##
@@ -330,6 +347,30 @@ sub tlsCert {
 }
 
 ##
+# Reset the letsencrypt flag. This is used only in case obtaining the
+# certificate from LetsEncrypt failed.
+sub unsetLetsEncryptTls {
+    my $self = shift;
+
+    my $json = $self->{json};
+    if( defined( $json->{tls} )) {
+        delete $json->{tls}; # delete the whole subtree
+    }
+}
+
+##
+# Delete the TLS information from this site. This is used during restore
+# if the user wants to restore the site to non-TLS.
+sub deleteTlsInfo {
+    my $self = shift;
+
+    my $json = $self->{json};
+    if( defined( $json->{tls} )) {
+        delete $json->{tls}; # delete the whole subtree
+    }
+}
+
+##
 # Obtain the TLS certificate chain to be used with clients, if any has been provided.
 sub tlsCaCert {
     my $self = shift;
@@ -340,30 +381,6 @@ sub tlsCaCert {
     } else {
         return undef;
     }
-}
-
-##
-# Delete the TLS information from this site.
-sub deleteTlsInfo {
-    my $self = shift;
-
-    my $json = $self->{json};
-    if( defined( $json->{tls} )) {
-        delete $json->{tls};
-    }
-}
-
-##
-# Set a new key and certificate for this site
-# $key the new key
-# $crt the new cert
-sub setTlsKeyAndCert {
-    my $self = shift;
-    my $key  = shift;
-    my $crt  = shift;
-
-    $self->{json}->{tls}->{key} = $key;
-    $self->{json}->{tls}->{crt} = $crt;
 }
 
 ##
@@ -653,307 +670,6 @@ sub appConfigAtContext {
 }
 
 ##
-# Print this Site's SiteId
-sub printSiteId {
-    my $self = shift;
-
-    colPrint( $self->siteId . "\n" );
-}
-
-##
-# Print information about this Site's administrator
-sub printAdminUser {
-    my $self = shift;
-
-    my $admin = $self->obtainSiteAdminHash(); # Returns something different for root/non-root
-
-    if( exists( $admin->{userid} )) {
-        colPrint( 'Site admin user id:       "' . $admin->{userid}     . "\"\n" );
-    }
-    if( exists( $admin->{username} )) {
-        colPrint( 'Site admin user name:     "' . $admin->{username}   . "\"\n" );
-    }
-    if( exists( $admin->{credential} )) {
-        colPrint( 'Site admin user password: "' . $admin->{credential} . "\"\n" );
-    }
-    if( exists( $admin->{email} )) {
-        colPrint( 'Site admin user e-mail:   "' . $admin->{email}      . "\"\n" );
-    }
-}
-
-##
-# Print this Site in varying levels of detail
-# $detail: the level of detail
-# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
-sub print {
-    my $self                           = shift;
-    my $detail                         = shift || 2;
-    my $showPrivateCustomizationPoints = shift;
-
-    colPrint( $self->hostname );
-    if( $self->hasTls ) {
-        colPrint( ' (TLS)' );
-    }
-    if( $detail > 2 ) {
-        colPrint( ' (' . $self->siteId . ')' );
-    }
-    colPrint( ' :' );
-    if( $detail <= 1 ) {
-        my $nAppConfigs = @{$self->appConfigs};
-        if( $nAppConfigs == 1 ) {
-            colPrint( ' 1 app' );
-        } elsif( $nAppConfigs ) {
-            colPrint( " $nAppConfigs apps" );
-        } else {
-            colPrint( ' no apps' );
-        }
-    }
-    colPrint( "\n" );
-
-    if( $detail > 1 ) {
-        foreach my $isDefault ( 1, 0 ) {
-            my $hasDefault = grep { $_->isDefault } @{$self->appConfigs};
-
-            foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
-                if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
-                    colPrint( '    ' );
-
-                    my $context = $appConfig->context;
-                    if( $context ) {
-                        colPrint( $context );
-                    } elsif( defined( $context )) {
-                        colPrint( '<root>' );
-                    } else {
-                        colPrint( '<none>' );
-                    }
-                    if( $isDefault && $appConfig->isDefault ) {
-                        colPrint( ' default' );
-                    }
-                    if( $detail > 2 ) {
-                        colPrint( ' (' . $appConfig->appConfigId . ')' );
-                    }
-                    if( $detail < 3 ) {
-                        colPrint( ' : ' . $appConfig->app->packageName );
-                        my $nAcc = $appConfig->accessories();
-                        if( $nAcc == 1 ) {
-                            colPrint( ' (1 accessory)' );
-                        } elsif( $nAcc ) {
-                            colPrint( " ($nAcc accessories)" );
-                        }
-                        colPrint( "\n" );
-                    } else {
-                        colPrint( "\n" );
-
-                        my $custPoints = $appConfig->customizationPoints;
-                        foreach my $installable ( $appConfig->installables ) {
-                            colPrint( '        ' );
-                            if( $installable == $appConfig->app ) {
-                                colPrint( 'app:       ' );
-                            } else {
-                                colPrint( 'accessory: ' );
-                            }
-                            colPrint( $installable->packageName . "\n" );
-                            if( $custPoints ) {
-                                my $installableCustPoints = $custPoints->{$installable->packageName};
-                                if( defined( $installableCustPoints )) {
-                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                                        my $custPointValueStruct = $installableCustPoints->{$custPointName};
-                                        my $custPointDef         = $installable->customizationPoints();
-
-                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
-                                            next;
-                                        }
-
-                                        my $value;
-                                        if(    !$showPrivateCustomizationPoints
-                                            && exists( $custPointDef->{$custPointName}->{private} )
-                                            && $custPointDef->{$custPointName}->{private} )
-                                        {
-                                            $value = "<not shown>";
-                                        } else {
-                                            $value = $custPointValueStruct->{value};
-                                        }
-
-                                        $value =~ s!\n!\\n!g; # don't do multi-line
-
-                                        colPrint( '            customizationpoint: ' . $custPointName . ': ' );
-                                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
-                                        colPrint( "\n" );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-##
-# Print this Site in the brief format
-sub printBrief {
-    my $self = shift;
-
-    return $self->print( 1, 0 );
-}
-
-##
-# Print this Site in the detailed format
-# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
-sub printDetail {
-    my $self                           = shift;
-    my $showPrivateCustomizationPoints = shift;
-
-    return $self->print( 3, $showPrivateCustomizationPoints );
-}
-
-##
-# Print this Site in HTML format
-# $detail: the level of detail
-# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
-sub printHtml {
-    my $self                           = shift;
-    my $detail                         = shift || 2;
-    my $showPrivateCustomizationPoints = shift;
-
-    my $protoPlusHost = $self->protocol() . "://" . $self->hostname;
-    colPrint( "<div class='site'>\n" );
-    colPrint( " <div class='summary'>\n" );
-    colPrint( "  <a href='" . $protoPlusHost . "/'>" . $self->hostname . "</a>");
-    if( $self->hasTls ) {
-        colPrint( ' (TLS)' );
-    }
-    if( $detail > 2 ) {
-        colPrint( ' (' . $self->siteId . ')' );
-    }
-    colPrint( ' :' );
-    if( $detail <= 1 ) {
-        my $nAppConfigs = @{$self->appConfigs};
-        if( $nAppConfigs == 1 ) {
-            colPrint( ' 1 app' );
-        } elsif( $nAppConfigs ) {
-            colPrint( " $nAppConfigs apps" );
-        } else {
-            colPrint( ' no apps' );
-        }
-    }
-    colPrint( "\n" );
-    colPrint( " </div>\n" );
-
-    if( $detail > 1 ) {
-        colPrint( " <ul class='appconfigs'>\n" );
-        foreach my $isDefault ( 1, 0 ) {
-            my $hasDefault = grep { $_->isDefault } @{$self->appConfigs};
-
-            foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
-                if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
-                    colPrint( "  <li class='appconfig'>\n" );
-                    colPrint( "   <div class='summary'>\n" );
-
-                    my $context = $appConfig->context;
-                    if( $context ) {
-                        colPrint( "    <a href='" . $protoPlusHost . $context . "/'>" . $context . "</a>");
-                    } elsif( defined( $context )) {
-                        colPrint( "    <a href='" . $protoPlusHost . "/'>" . '&lt;root&gt;' . "</a>");
-                    } else {
-                        colPrint( '&lt;none&gt;' );
-                    }
-                    if( $isDefault && $appConfig->isDefault ) {
-                        colPrint( ' default' );
-                    }
-                    if( $detail > 2 ) {
-                        colPrint( ' (' . $appConfig->appConfigId . ')' );
-                    }
-                    if( $detail < 3 ) {
-                        colPrint( ' : ' . $appConfig->app->packageName );
-                        my $nAcc = $appConfig->accessories();
-                        if( $nAcc == 1 ) {
-                            colPrint( " (1 accessory)\n" );
-                        } elsif( $nAcc ) {
-                            colPrint( " ($nAcc accessories)\n" );
-                        }
-                        colPrint( "\n" );
-                        colPrint( "   </div>\n" );
-                    } else {
-                        colPrint( "\n" );
-                        colPrint( "   </div>\n" );
-                        colPrint( "   <dl class='custpoints'>\n" );
-
-                        my $custPoints = $appConfig->customizationPoints;
-                        foreach my $installable ( $appConfig->installables ) {
-                            colPrint( "    <dt>" );
-                            if( $installable == $appConfig->app ) {
-                                colPrint( 'app: ' );
-                            } else {
-                                colPrint( 'accessory: ' );
-                            }
-                            colPrint( $installable->packageName . "</dt>\n" );
-                            if( $custPoints ) {
-                                my $installableCustPoints = $custPoints->{$installable->packageName};
-                                if( defined( $installableCustPoints )) {
-                                    colPrint( "    <dd>\n" );
-                                    colPrint( "     <dl>\n" );
-                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
-                                        my $custPointValueStruct = $installableCustPoints->{$custPointName};
-                                        my $custPointDef         = $installable->customizationPoints();
-
-                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
-                                            next;
-                                        }
-
-                                        my $value;
-                                        if(    !$showPrivateCustomizationPoints
-                                            && exists( $custPointDef->{$custPointName}->{private} )
-                                            && $custPointDef->{$custPointName}->{private} )
-                                        {
-                                            $value = "&lt;not shown&gt;";
-                                        } else {
-                                            $value = $custPointValueStruct->{value};
-                                        }
-
-                                        $value =~ s!\n!\\n!g; # don't do multi-line
-
-                                        colPrint( '      <dt>customizationpoint: ' . $custPointName . ":</dt>\n" );
-                                        colPrint( "      <dd>" );
-                                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
-                                        colPrint( "</dd>\n" );
-                                    }
-                                    colPrint( "     </dl>\n" );
-                                    colPrint( "    </dd>\n" );
-                                }
-                            }
-                        }
-                        colPrint( "   </dl>\n" );
-                    }
-                    colPrint( "  </li>\n" );
-                }
-            }
-        }
-        colPrint( " </ul>\n" );
-    }
-    colPrint( "</div>\n" );
-}
-
-##
-# Print this Site in the brief format in HTML
-sub printHtmlBrief {
-    my $self = shift;
-
-    return $self->printHtml( 1, 0 );
-}
-
-##
-# Print this Site in the detailed format in HTML
-# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
-sub printHtmlDetail {
-    my $self                           = shift;
-    my $showPrivateCustomizationPoints = shift;
-
-    return $self->printHtml( 3, $showPrivateCustomizationPoints );
-}
-
-##
 # Add names of application packages that are required to run this site.
 # $packages: hash of packages
 sub addInstallablesToPrerequisites {
@@ -976,7 +692,7 @@ sub addInstallablesToPrerequisites {
         }
     }
 
-    1;
+    return 1;
 }
 
 ##
@@ -1002,7 +718,7 @@ sub addDependenciesToPrerequisites {
             }
         }
     }
-    if( $self->hasLetsEncryptTls ) {
+    if( $self->isLetsEncryptTls ) {
         $packages->{'certbot-apache'} = 'certbot-apache';
     }
 
@@ -1083,17 +799,24 @@ sub _deployOrCheck {
             $ret &= $role->setupSiteOrCheck( $self, $doIt, $triggers );
         }
     }
-    if( $doIt && $self->hasLetsEncryptTls() && !$self->hasLetsEncryptCert() ) {
-        my $success = 1;
-        foreach my $role ( @rolesOnHost ) {
-            $success &= $role->obtainLetsEncryptCertificate( $self );
+    if( $doIt ) {
+        if( $self->isLetsEncryptTls()) {
+            my $success = $self->obtainLetsEncryptCertificate();
+            unless( $success ) {
+                warning( 'Failed to obtain LetsEncrypt certificate for site', $self->hostname, '(', $self->siteId, '). Deploying site without TLS.' );
+                $self->unsetLetsEncryptTls;
+            }
+            $ret &= $success;
+
+        } elsif( $self->isTls() ) {
+            foreach my $role ( @rolesOnHost ) {
+                if( $self->needsRole( $role )) {
+                    $ret &= $role->saveTlsKeyAndCertificate( $self );
+                }
+            }
         }
-        unless( $success ) {
-            warning( 'Failed to obtain letsencrypt certificate for site', $self->hostname, '(', $self->siteId, '). Deploying site without TLS.' );
-            $self->unsetLetsEncryptTls;
-        }
-        $ret &= $success;
     }
+
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $ret &= $appConfig->deployOrCheck( $doIt, $triggers );
     }
@@ -1173,6 +896,10 @@ sub _undeployOrCheck {
                 trace( '_undeployOrCheck', $self->siteId, $role->name );
             }
             $ret &= $role->removeSite( $self, $doIt, $triggers );
+
+            if( $self->hasLetsEncryptCertificate()) {
+                $ret &= $role->stashLetsEncryptCertificate( $self->hostname() );
+            }
         }
     }
 
@@ -1373,18 +1100,378 @@ sub mayContextBeAdded {
 }
 
 ##
-# Deactivate and stash the LetsEncrypt certificate for this site
-# return: 1 for success
-sub stashLetsEncryptCertificate {
+# Determine whether we already have a LetsEncrypt certificate.
+# return: 0 or 1
+sub hasLetsEncryptCertificate {
     my $self = shift;
 
-    my $ret = 1;
-    my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
-    foreach my $role ( reverse @rolesOnHost ) {
-        $ret &= $role->stashLetsEncryptCertificate( $self );
+    unless( $self->isLetsEncryptTls()) {
+        return 0;
+    }
+    if( $self->tlsKey() && $self->tlsCert() ) {
+        return 1;
     }
 
+    my $status = UBOS::LetsEncrypt::determineCertificateStatus( $self->hostname );
+    if( $status ) {
+        return $status->{isvalid};
+    } else {
+        return undef;
+    }
+}
+
+##
+# If this role needs a LetsEncrypt certificate, obtain it. If we already
+# have a non-active one, use that instead and attempt to renew.
+# return: 1 if succeeded
+sub obtainLetsEncryptCertificate {
+    my $self = shift;
+
+    my $sitesWellknownDir = $self->vars()->getResolve( 'apache2.siteswellknowndir' );
+
+    # First attempt: have live cert already
+    if( UBOS::LetsEncrypt::isCertificateLive( $self->hostname() )) {
+        return 1;
+    }
+
+    # Next attempt: use cert in the Site JSON
+    my $tlsKey  = $self->tlsKey();
+    my $tlsCert = $self->tlsCert();
+    if( $tlsCert ) {
+        my $tlsCertFile = File::Temp->new();
+        print $tlsCertFile $tlsCert;
+        close $tlsCertFile;
+
+        unless( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCertFile )) {
+            if( UBOS::LetsEncrypt::importCertificate( $self->hostname, $sitesWellknownDir, $tlsKey, $tlsCert )) {
+                return 1;
+            }
+            error( 'Importing LetsEncrypt certificate failed' );
+        }
+        delete $self->{json}->{tls}->{key};
+        delete $self->{json}->{tls}->{crt};
+    }
+
+    # Next attempt: use stashed cert
+    if( UBOS::LetsEncrypt::isCertificateStashed( $self->hostname() )) {
+        my( $tlsKeyFile, $tlsCrtFile ) = UBOS::LetsEncrypt::getStashedKeyAndCertificateFiles( $self->hostname() );
+
+        if( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCrtFile )) {
+            UBOS::LetsEncrypt::deleteStashedCertificate( $self->{hostname} );
+        } else {
+            UBOS::LetsEncrypt::unstashCertificate( $self->{hostname} );
+            return 1;
+        }
+    }
+
+    # Get a new cert
+
+    my $adminHash = $self->obtainSiteAdminHash;
+
+    my $ret = UBOS::LetsEncrypt::provisionCertificate( $self->hostname(), $sitesWellknownDir, $adminHash->{email} );
+
     return $ret;
+}
+
+##
+# Print this Site's SiteId
+sub printSiteId {
+    my $self = shift;
+
+    colPrint( $self->siteId . "\n" );
+}
+
+##
+# Print information about this Site's administrator
+sub printAdminUser {
+    my $self = shift;
+
+    my $admin = $self->obtainSiteAdminHash(); # Returns something different for root/non-root
+
+    if( exists( $admin->{userid} )) {
+        colPrint( 'Site admin user id:       "' . $admin->{userid}     . "\"\n" );
+    }
+    if( exists( $admin->{username} )) {
+        colPrint( 'Site admin user name:     "' . $admin->{username}   . "\"\n" );
+    }
+    if( exists( $admin->{credential} )) {
+        colPrint( 'Site admin user password: "' . $admin->{credential} . "\"\n" );
+    }
+    if( exists( $admin->{email} )) {
+        colPrint( 'Site admin user e-mail:   "' . $admin->{email}      . "\"\n" );
+    }
+}
+
+##
+# Print this Site in varying levels of detail
+# $detail: the level of detail
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
+sub print {
+    my $self                           = shift;
+    my $detail                         = shift || 2;
+    my $showPrivateCustomizationPoints = shift;
+
+    colPrint( $self->hostname );
+    if( $self->isTls ) {
+        colPrint( ' (TLS)' );
+    }
+    if( $detail > 2 ) {
+        colPrint( ' (' . $self->siteId . ')' );
+    }
+    colPrint( ' :' );
+    if( $detail <= 1 ) {
+        my $nAppConfigs = @{$self->appConfigs};
+        if( $nAppConfigs == 1 ) {
+            colPrint( ' 1 app' );
+        } elsif( $nAppConfigs ) {
+            colPrint( " $nAppConfigs apps" );
+        } else {
+            colPrint( ' no apps' );
+        }
+    }
+    colPrint( "\n" );
+
+    if( $detail > 1 ) {
+        foreach my $isDefault ( 1, 0 ) {
+            my $hasDefault = grep { $_->isDefault } @{$self->appConfigs};
+
+            foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
+                if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
+                    colPrint( '    ' );
+
+                    my $context = $appConfig->context;
+                    if( $context ) {
+                        colPrint( $context );
+                    } elsif( defined( $context )) {
+                        colPrint( '<root>' );
+                    } else {
+                        colPrint( '<none>' );
+                    }
+                    if( $isDefault && $appConfig->isDefault ) {
+                        colPrint( ' default' );
+                    }
+                    if( $detail > 2 ) {
+                        colPrint( ' (' . $appConfig->appConfigId . ')' );
+                    }
+                    if( $detail < 3 ) {
+                        colPrint( ' : ' . $appConfig->app->packageName );
+                        my $nAcc = $appConfig->accessories();
+                        if( $nAcc == 1 ) {
+                            colPrint( ' (1 accessory)' );
+                        } elsif( $nAcc ) {
+                            colPrint( " ($nAcc accessories)" );
+                        }
+                        colPrint( "\n" );
+                    } else {
+                        colPrint( "\n" );
+
+                        my $custPoints = $appConfig->customizationPoints;
+                        foreach my $installable ( $appConfig->installables ) {
+                            colPrint( '        ' );
+                            if( $installable == $appConfig->app ) {
+                                colPrint( 'app:       ' );
+                            } else {
+                                colPrint( 'accessory: ' );
+                            }
+                            colPrint( $installable->packageName . "\n" );
+                            if( $custPoints ) {
+                                my $installableCustPoints = $custPoints->{$installable->packageName};
+                                if( defined( $installableCustPoints )) {
+                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                                        my $custPointValueStruct = $installableCustPoints->{$custPointName};
+                                        my $custPointDef         = $installable->customizationPoints();
+
+                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                                            next;
+                                        }
+
+                                        my $value;
+                                        if(    !$showPrivateCustomizationPoints
+                                            && exists( $custPointDef->{$custPointName}->{private} )
+                                            && $custPointDef->{$custPointName}->{private} )
+                                        {
+                                            $value = "<not shown>";
+                                        } else {
+                                            $value = $custPointValueStruct->{value};
+                                        }
+
+                                        $value =~ s!\n!\\n!g; # don't do multi-line
+
+                                        colPrint( '            customizationpoint: ' . $custPointName . ': ' );
+                                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+                                        colPrint( "\n" );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+##
+# Print this Site in the brief format
+sub printBrief {
+    my $self = shift;
+
+    return $self->print( 1, 0 );
+}
+
+##
+# Print this Site in the detailed format
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
+sub printDetail {
+    my $self                           = shift;
+    my $showPrivateCustomizationPoints = shift;
+
+    return $self->print( 3, $showPrivateCustomizationPoints );
+}
+
+##
+# Print this Site in HTML format
+# $detail: the level of detail
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
+sub printHtml {
+    my $self                           = shift;
+    my $detail                         = shift || 2;
+    my $showPrivateCustomizationPoints = shift;
+
+    my $protoPlusHost = $self->protocol() . "://" . $self->hostname;
+    colPrint( "<div class='site'>\n" );
+    colPrint( " <div class='summary'>\n" );
+    colPrint( "  <a href='" . $protoPlusHost . "/'>" . $self->hostname . "</a>");
+    if( $self->isTls ) {
+        colPrint( ' (TLS)' );
+    }
+    if( $detail > 2 ) {
+        colPrint( ' (' . $self->siteId . ')' );
+    }
+    colPrint( ' :' );
+    if( $detail <= 1 ) {
+        my $nAppConfigs = @{$self->appConfigs};
+        if( $nAppConfigs == 1 ) {
+            colPrint( ' 1 app' );
+        } elsif( $nAppConfigs ) {
+            colPrint( " $nAppConfigs apps" );
+        } else {
+            colPrint( ' no apps' );
+        }
+    }
+    colPrint( "\n" );
+    colPrint( " </div>\n" );
+
+    if( $detail > 1 ) {
+        colPrint( " <ul class='appconfigs'>\n" );
+        foreach my $isDefault ( 1, 0 ) {
+            my $hasDefault = grep { $_->isDefault } @{$self->appConfigs};
+
+            foreach my $appConfig ( sort { $a->appConfigId cmp $b->appConfigId } @{$self->appConfigs} ) {
+                if( ( $isDefault && $appConfig->isDefault ) || ( !$isDefault && !$appConfig->isDefault )) {
+                    colPrint( "  <li class='appconfig'>\n" );
+                    colPrint( "   <div class='summary'>\n" );
+
+                    my $context = $appConfig->context;
+                    if( $context ) {
+                        colPrint( "    <a href='" . $protoPlusHost . $context . "/'>" . $context . "</a>");
+                    } elsif( defined( $context )) {
+                        colPrint( "    <a href='" . $protoPlusHost . "/'>" . '&lt;root&gt;' . "</a>");
+                    } else {
+                        colPrint( '&lt;none&gt;' );
+                    }
+                    if( $isDefault && $appConfig->isDefault ) {
+                        colPrint( ' default' );
+                    }
+                    if( $detail > 2 ) {
+                        colPrint( ' (' . $appConfig->appConfigId . ')' );
+                    }
+                    if( $detail < 3 ) {
+                        colPrint( ' : ' . $appConfig->app->packageName );
+                        my $nAcc = $appConfig->accessories();
+                        if( $nAcc == 1 ) {
+                            colPrint( " (1 accessory)\n" );
+                        } elsif( $nAcc ) {
+                            colPrint( " ($nAcc accessories)\n" );
+                        }
+                        colPrint( "\n" );
+                        colPrint( "   </div>\n" );
+                    } else {
+                        colPrint( "\n" );
+                        colPrint( "   </div>\n" );
+                        colPrint( "   <dl class='custpoints'>\n" );
+
+                        my $custPoints = $appConfig->customizationPoints;
+                        foreach my $installable ( $appConfig->installables ) {
+                            colPrint( "    <dt>" );
+                            if( $installable == $appConfig->app ) {
+                                colPrint( 'app: ' );
+                            } else {
+                                colPrint( 'accessory: ' );
+                            }
+                            colPrint( $installable->packageName . "</dt>\n" );
+                            if( $custPoints ) {
+                                my $installableCustPoints = $custPoints->{$installable->packageName};
+                                if( defined( $installableCustPoints )) {
+                                    colPrint( "    <dd>\n" );
+                                    colPrint( "     <dl>\n" );
+                                    foreach my $custPointName ( sort keys %$installableCustPoints ) {
+                                        my $custPointValueStruct = $installableCustPoints->{$custPointName};
+                                        my $custPointDef         = $installable->customizationPoints();
+
+                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                                            next;
+                                        }
+
+                                        my $value;
+                                        if(    !$showPrivateCustomizationPoints
+                                            && exists( $custPointDef->{$custPointName}->{private} )
+                                            && $custPointDef->{$custPointName}->{private} )
+                                        {
+                                            $value = "&lt;not shown&gt;";
+                                        } else {
+                                            $value = $custPointValueStruct->{value};
+                                        }
+
+                                        $value =~ s!\n!\\n!g; # don't do multi-line
+
+                                        colPrint( '      <dt>customizationpoint: ' . $custPointName . ":</dt>\n" );
+                                        colPrint( "      <dd>" );
+                                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+                                        colPrint( "</dd>\n" );
+                                    }
+                                    colPrint( "     </dl>\n" );
+                                    colPrint( "    </dd>\n" );
+                                }
+                            }
+                        }
+                        colPrint( "   </dl>\n" );
+                    }
+                    colPrint( "  </li>\n" );
+                }
+            }
+        }
+        colPrint( " </ul>\n" );
+    }
+    colPrint( "</div>\n" );
+}
+
+##
+# Print this Site in the brief format in HTML
+sub printHtmlBrief {
+    my $self = shift;
+
+    return $self->printHtml( 1, 0 );
+}
+
+##
+# Print this Site in the detailed format in HTML
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
+sub printHtmlDetail {
+    my $self                           = shift;
+    my $showPrivateCustomizationPoints = shift;
+
+    return $self->printHtml( 3, $showPrivateCustomizationPoints );
 }
 
 ##

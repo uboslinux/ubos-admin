@@ -91,17 +91,14 @@ sub sites {
         $_sites = {};
 
         if( -d $SITE_JSON_DIR ) {
+            my @siteJsons = ();
+
             if ( $< == 0 ) {
                 # If we are root, we read the full files, otherwise the public files
                 foreach my $f ( <"$SITE_JSON_DIR/*-full.json"> ) {
                     my $siteJson = readJsonFromFile( $f );
                     if( $siteJson ) {
-                        my $site = UBOS::Site->new( $siteJson );
-                        if( $site ) {
-                            $_sites->{$site->siteId()} = $site;
-                        } else {
-                            fatal( $@ );
-                        }
+                        push @siteJsons, $siteJson;
                     } else {
                         fatal();
                     }
@@ -110,15 +107,29 @@ sub sites {
                 foreach my $f ( <"$SITE_JSON_DIR/*-world.json"> ) {
                     my $siteJson = readJsonFromFile( $f );
                     if( $siteJson ) {
-                        my $site = UBOS::Site->new( $siteJson );
-                        if( $site ) {
-                            $_sites->{$site->siteId()} = $site;
-                        } else {
-                            fatal( $@ );
-                        }
+                        push @siteJsons, $siteJson;
                     } else {
                         fatal();
                     }
+                }
+            }
+
+            # Clean up TLS info in case we still have it
+            foreach my $siteJson ( @siteJsons ) {
+                if( exists( $siteJson->{tls} )) {
+                    delete $siteJson->{tls}->{key};
+                    delete $siteJson->{tls}->{crt};
+                    delete $siteJson->{tls}->{cacrt};
+                }
+            }
+
+            # Instantiate Site objects
+            foreach my $siteJson ( @siteJsons ) {
+                my $site = UBOS::Site->new( $siteJson );
+                if( $site ) {
+                    $_sites->{$site->siteId()} = $site;
+                } else {
+                    fatal( $@ );
                 }
             }
         }
@@ -314,7 +325,7 @@ sub siteDeployed {
     my $site = shift;
 
     my $siteId         = $site->siteId;
-    my $siteJson       = $site->siteJson;
+    my $siteJson       = $site->siteJsonWithoutLetsEncryptCert;
     my $publicSiteJson = $site->publicSiteJson;
 
     trace( 'Host::siteDeployed', $siteId );

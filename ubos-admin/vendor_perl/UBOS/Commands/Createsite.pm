@@ -177,11 +177,11 @@ sub run {
             } else {
                 if( $letsEncrypt ) {
                     if( $hostname =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
-                        error( "You cannot specify an IP address as a hostname when using Letsencrypt certificates.\n"
+                        error( "You cannot specify an IP address as a hostname when using LetsEncrypt certificates.\n"
                                . "Use an official hostname, publicly accessible, instead." );
                         next outer;
                     } elsif( $hostname =~ m!\.local$! ) {
-                        error( "You cannot specify an mDNS (.local) as a hostname when using Letsencrypt certificates.\n"
+                        error( "You cannot specify an mDNS (.local) as a hostname when using LetsEncrypt certificates.\n"
                                . "Use an official hostname, publicly accessible, instead." );
                         next outer;
                     }
@@ -930,7 +930,7 @@ HHH
     --tls --letsencrypt
 SSS
     Create the site with a https URL. UBOS will automatically contact
-    the letsencrypt.org certificate authority and obtain a letsencrypt
+    the letsencrypt.org certificate authority and obtain a LetsEncrypt
     certificate. This only works if 1) the device has a publicly
     reachable IP address, and 2) the public hostname of the site
     correctly resolves to the device.

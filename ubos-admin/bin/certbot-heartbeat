@@ -1,0 +1,35 @@
+#!/usr/bin/perl
+#
+# Invoked by certbot.timer to renew certs if needed.
+#
+# Copyright (C) 2019 and later, Indie Computing Corp. All rights reserved. License: see package.
+#
+
+use strict;
+use warnings;
+
+use UBOS::LetsEncrypt;
+use UBOS::Lock;
+use UBOS::Logging;
+
+UBOS::Logging::initialize( 'ubos-admin', 'certbot-heartbeat', 0, '/etc/ubos/log-system.conf' );
+
+my $countdown = 12; # try for 1 hour
+
+while( --$countdown >= 0 ) {
+    if( UBOS::Lock::acquired() ) {
+        if( UBOS::LetsEncrypt::renewCertificates()) {
+            exit( 0 );
+        } else {
+            exit( 1 );
+        }
+    }
+    trace( 'Failed to acquire lock: will try later:', $countdown );
+    sleep( 5 * 60 ); # 5 min
+}
+
+warning( 'Failed to acquire lock: giving up.' );
+
+exit( 2 ); # We failed
+
+1;

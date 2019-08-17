@@ -14,7 +14,9 @@
         "snappersnapshotson"        : "none,xen",
         "snapperquotaon"            : "none,xen",
         "tmpdir"                    : "/ubos/tmp",
-        "homeshepherd"              : "/var/shepherd"
+        "homeshepherd"              : "/var/shepherd",
+        "letsencryptreissuecutoff"  : 172800,
+        "certbotflags"              : null
     },
 
     "package" : {
