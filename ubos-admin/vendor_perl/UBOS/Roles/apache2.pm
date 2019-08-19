@@ -127,7 +127,7 @@ sub setupSiteOrCheck {
 
         my $siteId            = $site->siteId;
         my $appConfigFilesDir = "$appConfigFragmentDir/$siteId";
-        my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+        my $siteWellKnownDir  = "$sitesWellknownDir/$siteId/.well-known";
 
         trace( 'apache2::setupSite', $siteId );
 
@@ -199,7 +199,7 @@ sub setupPlaceholderSite {
     my $siteFile          = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
     my $serverDeclaration = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
-    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId/.well-known";
     my $sslDir            = $site->vars()->getResolve( 'apache2.ssldir' );
 
     unless( -d $siteDocumentRoot ) {
@@ -328,7 +328,7 @@ sub resumeSite {
     my $appConfigFilesDir        = "$appConfigFragmentDir/$siteId";
     my $siteFile                 = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
     my $siteDocumentRoot         = "$sitesDocumentRootDir/$siteId";
-    my $siteWellKnownDir         = "$sitesWellknownDir/$siteId";
+    my $siteWellKnownDir         = "$sitesWellknownDir/$siteId/.well-known";
     my $serverDeclaration        = ( '*' eq $hostname ) ? '# Hostname * (any)' : "    ServerName $hostname";
     my $webfingerProxiesDir      = $site->vars()->getResolve( 'apache2.webfingerproxiesdir',           "/ubos/http/webfinger-proxies" );
     my $siteWebfingerProxiesFile = $site->vars()->getResolve( 'site.apache2.sitewebfingerproxiesfile', "/ubos/http/webfinger-proxies/$siteId" );
@@ -533,7 +533,7 @@ sub removeSite {
     my $hostname                 = $site->hostname;
     my $appConfigFilesDir        = "$appConfigFragmentDir/$siteId";
     my $siteFile                 = ( '*' eq $hostname ) ? "$defaultSiteFragmentDir/any.conf" : "$siteFragmentDir/$siteId.conf";
-    my $siteWellKnownDir         = "$sitesWellknownDir/$siteId";
+    my $siteWellKnownParentDir   = "$sitesWellknownDir/$siteId"; # delete .well-known, its content, and parent dir
     my $siteWebfingerProxiesFile = $site->vars()->getResolve( 'site.apache2.sitewebfingerproxiesfile', "/ubos/http/webfinger-proxies/$siteId" );
     my $sslDir                   = $site->vars()->getResolve( 'apache2.ssldir' );
 
@@ -545,8 +545,8 @@ sub removeSite {
         if( -d $appConfigFilesDir ) {
             UBOS::Utils::rmdir( $appConfigFilesDir );
         }
-        if( -d $siteWellKnownDir ) {
-            UBOS::Utils::deleteRecursively( $siteWellKnownDir );
+        if( -d $siteWellKnownParentDir ) {
+            UBOS::Utils::deleteRecursively( $siteWellKnownParentDir );
         }
         if( -d $siteTorDir ) { # does not exist if not tor
             UBOS::Utils::deleteRecursively( $siteTorDir );

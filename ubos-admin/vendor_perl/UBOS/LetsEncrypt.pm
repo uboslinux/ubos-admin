@@ -98,6 +98,7 @@ sub register {
 
     if( $ret ) {
         warning( "Registering with LetsEncrypt$flags failed:\n" . $out );
+        debugAndSuspend( 'Certbot register failed' );
         return 0;
     }
     return 1;
@@ -140,6 +141,7 @@ sub provisionCertificate {
                  . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
                  . "LetsEncrypt message:\n"
                  . $out );
+        debugAndSuspend( 'Certbot certonly failed' );
         return 0;
     }
     return 1;
@@ -170,6 +172,7 @@ sub renewCertificates {
                  . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
                  . "LetsEncrypt message:\n"
                  . $out );
+        debugAndSuspend( 'Certbot renew failed' );
         return 0;
     }
     return 1;
@@ -342,6 +345,8 @@ sub certFileNeedsRenewal {
             my $now    = UBOS::Utils::now();
             my $delta  = $certTs - $now;
             my $cutoff = UBOS::Host::vars()->get( 'host.letsencryptreissuecutoff', 172800 );
+
+            trace( 'LetsEncrypt certFileNeedsRenewal for', $crtFile, 'returns', $delta, '<', $cutoff );
 
             return $delta < $cutoff;
         }

@@ -16,7 +16,6 @@ use UBOS::LetsEncrypt;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
-use File::Temp;
 use JSON;
 use MIME::Base64;
 
@@ -1130,7 +1129,9 @@ sub hasLetsEncryptCertificate {
 sub obtainLetsEncryptCertificate {
     my $self = shift;
 
-    my $sitesWellknownDir = $self->vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $siteId                 = $self->siteId();
+    my $sitesWellknownDir      = $self->vars()->getResolve( 'apache2.siteswellknowndir' );
+    my $siteWellknownParentDir = "$sitesWellknownDir/$siteId";
 
     # First attempt: have live cert already
     if( UBOS::LetsEncrypt::isCertificateLive( $self->hostname() )) {
@@ -1146,7 +1147,7 @@ sub obtainLetsEncryptCertificate {
         close $tlsCertFile;
 
         unless( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCertFile )) {
-            if( UBOS::LetsEncrypt::importCertificate( $self->hostname, $sitesWellknownDir, $tlsKey, $tlsCert )) {
+            if( UBOS::LetsEncrypt::importCertificate( $self->hostname, $siteWellknownParentDir, $tlsKey, $tlsCert )) {
                 return 1;
             }
             error( 'Importing LetsEncrypt certificate failed' );
@@ -1159,10 +1160,15 @@ sub obtainLetsEncryptCertificate {
     if( UBOS::LetsEncrypt::isCertificateStashed( $self->hostname() )) {
         my( $tlsKeyFile, $tlsCrtFile ) = UBOS::LetsEncrypt::getStashedKeyAndCertificateFiles( $self->hostname() );
 
+        # Certbot will not obtain a new cert if the archive directory for the domain exists,
+        # so we will renew in that case.
+
         if( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCrtFile )) {
-            UBOS::LetsEncrypt::deleteStashedCertificate( $self->{hostname} );
+            UBOS::LetsEncrypt::unstashCertificate( $self->hostname() );
+            UBOS::LetsEncrypt::renewCertificates();
+            return 1;
         } else {
-            UBOS::LetsEncrypt::unstashCertificate( $self->{hostname} );
+            UBOS::LetsEncrypt::unstashCertificate( $self->hostname() );
             return 1;
         }
     }
@@ -1170,13 +1176,9 @@ sub obtainLetsEncryptCertificate {
     # Get a new cert
     my $adminHash = $self->obtainSiteAdminHash;
 
-    # Create a fake documentDir for certbot that contains .well-known
-    my $tmpDir = File::Temp->newdir(); # will cleanup itself and all content
-    UBOS::Utils::symlink( $sitesWellknownDir . '/' . $self->siteId(), "$tmpDir/.well-known" );
-
     my $ret = UBOS::LetsEncrypt::provisionCertificate(
             $self->hostname(),
-            $tmpDir,
+            $siteWellknownParentDir, # use as fake documentroot
             $adminHash->{email} );
 
     return $ret;
