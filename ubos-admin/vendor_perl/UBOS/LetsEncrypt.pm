@@ -13,6 +13,7 @@ package UBOS::LetsEncrypt;
 use Time::Local;
 use UBOS::Logging;
 use UBOS::Host;
+use UBOS::Utils;
 
 my $LETSENCRYPT_ARCHIVE_DIR   = '/etc/letsencrypt/archive';   # created by certbot
 my $LETSENCRYPT_LIVE_DIR      = '/etc/letsencrypt/live';      # created by certbot
@@ -329,8 +330,16 @@ sub certFileNeedsRenewal {
                 error( 'Wrong time zone reported by openssl' );
                 # but we continue, we are not too far off
             }
-            my $certTs = timegm( $second, $minute, $hour, $day, $month-1, $year-1900 );
-            my $now    = gmtime( time() );
+            my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
+            for( my $i=0 ; $i<@months ; ++$i ) {
+                if( $month =~ m!^$months[$i]! ) {
+                    $month = $i;
+                    last;
+                }
+            }
+
+            my $certTs = timegm( $second, $minute, $hour, $day, $month, $year-1900 );
+            my $now    = UBOS::Utils::now();
             my $delta  = $certTs - $now;
             my $cutoff = UBOS::Host::vars()->get( 'host.letsencryptreissuecutoff', 172800 );
 

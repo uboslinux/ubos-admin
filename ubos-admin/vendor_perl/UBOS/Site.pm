@@ -49,8 +49,8 @@ sub new {
     if( exists( $json->{tls} ) && exists( $json->{tls}->{letsencrypt} ) && $json->{tls}->{letsencrypt} ) {
         my( $keyFile, $crtFile ) = UBOS::LetsEncrypt::getLiveKeyAndCertificateFiles( $json->{hostname} );
         if( $keyFile ) {
-            $json->{tls}->{letsencrypt}->{key} = UBOS::Utils::slurpFile( $keyFile );
-            $json->{tls}->{letsencrypt}->{crt} = UBOS::Utils::slurpFile( $crtFile );
+            $json->{tls}->{key} = UBOS::Utils::slurpFile( $keyFile );
+            $json->{tls}->{crt} = UBOS::Utils::slurpFile( $crtFile );
         } # Otherwise is fine: LetsEncrypt but not provisioned yet (new site) or stashed
     }
 
@@ -175,17 +175,19 @@ sub _siteJsonWithout {
                 if( defined( $custPointInstallableJson )) {
                     foreach my $custPointName ( keys %{$custPointInstallableJson} ) {
                         my $custPointDefJson = $appConfig->customizationPointDefinition( $custPointInstallableName, $custPointName );
+                        my $doCopy;
                         if( exists( $custPointDefJson->{private} ) && $custPointDefJson->{private} ) {
-                            if( !$noPrivateCustomizationPoints ) {
-                                $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
-                                        = $custPointInstallableJson->{$custPointName};
-                            }
+                            $doCopy = !$noPrivateCustomizationPoints;
+
+                        } elsif( exists( $custPointDefJson->{internal} ) && $custPointDefJson->{internal} ) {
+                            $doCopy = !$noInternalCustomizationPoints;
+
+                        } else {
+                            $doCopy = 1;
                         }
-                        if( exists( $custPointDefJson->{internal} ) && $custPointDefJson->{internal} ) {
-                            if( !$noInternalCustomizationPoints ) {
-                                $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
-                                        = $custPointInstallableJson->{$custPointName};
-                            }
+                        if( $doCopy ) {
+                            $appConfigRet->{customizationpoints}->{$custPointInstallableName}->{$custPointName}
+                                    = $custPointInstallableJson->{$custPointName};
                         }
                     }
                 }
@@ -897,14 +899,14 @@ sub _undeployOrCheck {
                 trace( '_undeployOrCheck', $self->siteId, $role->name );
             }
             $ret &= $role->removeSite( $self, $doIt, $triggers );
-
-            if( $self->hasLetsEncryptCertificate()) {
-                $ret &= $role->stashLetsEncryptCertificate( $self->hostname() );
-            }
         }
     }
 
     if( $doIt ) {
+        if( $self->hasLetsEncryptCertificate()) {
+            $ret &= UBOS::LetsEncrypt::stashCertificate( $self->hostname() );
+        }
+
         UBOS::Host::siteUndeployed( $self );
     }
 
