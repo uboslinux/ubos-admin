@@ -83,7 +83,7 @@ sub register {
         $flags = " $flags";
     }
 
-    trace( 'Registering with LetsEncrypt', $ACME_URL );
+    trace( 'Registering with LetsEncrypt' . $flags );
 
     my $cmd = 'TERM=dumb'
             . ' certbot register'
@@ -93,16 +93,14 @@ sub register {
             . $flags;
 
     my $out;
-    my $err;
-    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$err );
+    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$out );
 
     if( $ret ) {
-        warning( "Registering with LetsEncrypt$flags failed:\n" . $err );
+        warning( "Registering with LetsEncrypt$flags failed:\n" . $out );
         return 0;
     }
     return 1;
 }
-
 
 ##
 # Obtain a new certificate from LetsEncrypt
@@ -134,14 +132,13 @@ sub provisionCertificate {
             . $flags;
 
     my $out;
-    my $err;
-    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$err );
+    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$out );
 
     if( $ret ) {
         warning( "Obtaining certificate from LetsEncrypt$flags failed. proceeding without certificate or TLS/SSL.\n"
                  . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
                  . "LetsEncrypt message:\n"
-                 . $err );
+                 . $out );
         return 0;
     }
     return 1;
@@ -165,14 +162,13 @@ sub renewCertificates {
             . $flags;
 
     my $out;
-    my $err;
-    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$err );
+    my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$out );
 
     if( $ret ) {
         warning( "Renewing certificates from LetsEncrypt failed. proceeding without certificate or TLS/SSL.\n"
                  . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
                  . "LetsEncrypt message:\n"
-                 . $err );
+                 . $out );
         return 0;
     }
     return 1;

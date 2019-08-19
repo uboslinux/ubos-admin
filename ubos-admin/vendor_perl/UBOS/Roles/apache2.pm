@@ -266,12 +266,13 @@ $serverDeclaration
     DocumentRoot "$siteDocumentRoot"
     Options -Indexes
 
+    Alias /\.well-known/ $siteWellKnownDir/
+
     AliasMatch ^/_common/css/([-a-z0-9]*\.css)\$ /srv/http/_common/css/\$1
     AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
 
     AliasMatch ^.*\$ "$siteDocumentRoot/index.html"
 
-    Alias /\.well-known/ $siteWellKnownDir/
 CONTENT
 
     if( $tlsNow ) {
@@ -384,8 +385,6 @@ $serverDeclaration
     # This also works for wildcard hostnames
 </VirtualHost>
 CONTENT
-
-        UBOS::Apache2::updateSiteTls( $site );
 
     } # else No SSL
 

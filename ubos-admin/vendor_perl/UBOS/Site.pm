@@ -16,6 +16,7 @@ use UBOS::LetsEncrypt;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
+use File::Temp;
 use JSON;
 use MIME::Base64;
 
@@ -1165,10 +1166,16 @@ sub obtainLetsEncryptCertificate {
     }
 
     # Get a new cert
-
     my $adminHash = $self->obtainSiteAdminHash;
 
-    my $ret = UBOS::LetsEncrypt::provisionCertificate( $self->hostname(), $sitesWellknownDir, $adminHash->{email} );
+    # Create a fake documentDir for certbot that contains .well-known
+    my $tmpDir = File::Temp->newdir(); # will cleanup itself and all content
+    UBOS::Utils::symlink( $sitesWellknownDir . '/' . $self->siteId(), "$tmpDir/.well-known" );
+
+    my $ret = UBOS::LetsEncrypt::provisionCertificate(
+            $self->hostname(),
+            $tmpDir,
+            $adminHash->{email} );
 
     return $ret;
 }
