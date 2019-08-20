@@ -17,7 +17,7 @@ UBOS::Logging::initialize( 'ubos-admin', 'certbot-heartbeat', 0, '/etc/ubos/log-
 my $countdown = 12; # try for 1 hour
 
 while( --$countdown >= 0 ) {
-    if( UBOS::Lock::acquired() ) {
+    if( UBOS::Lock::acquire() ) {
         if( UBOS::LetsEncrypt::renewCertificates()) {
             exit( 0 );
         } else {
