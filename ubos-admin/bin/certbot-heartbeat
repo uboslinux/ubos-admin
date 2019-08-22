@@ -21,6 +21,12 @@ while( --$countdown >= 0 ) {
         if( UBOS::LetsEncrypt::renewCertificates()) {
             exit( 0 );
         } else {
+            if( UBOS::Logging::isTraceActive() ) {
+                warning( $@ );
+            } else {
+                warning( 'Failed to renew LetsEncrypt certificates' );
+            }
+
             exit( 1 );
         }
     }
