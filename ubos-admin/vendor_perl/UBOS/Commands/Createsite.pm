@@ -70,8 +70,6 @@ sub run {
     if(    !$parseOk
         || @args
         || ( $verbose && $logConfigFile )
-        || ( $selfSigned && !$tls )
-        || ( $letsEncrypt && !$tls )
         || ( $tor && $letsEncrypt )
         || ( $selfSigned && $letsEncrypt )
         || ( $template && !$out && !$dryRun ))
@@ -81,6 +79,10 @@ sub run {
 
     if( $out && -e $out && !$force ) {
         fatal( 'Output file exists already. Use --force to overwrite.' );
+    }
+
+    if( $selfSigned || $letsEncrypt ) {
+        $tls = 1;
     }
 
     if( !$dryRun && $< != 0 ) {
@@ -177,11 +179,11 @@ sub run {
             } else {
                 if( $letsEncrypt ) {
                     if( $hostname =~ m!^\d+\.\d+\.\d+\.\d+$! ) {
-                        error( "You cannot specify an IP address as a hostname when using Letsencrypt certificates.\n"
+                        error( "You cannot specify an IP address as a hostname when using LetsEncrypt certificates.\n"
                                . "Use an official hostname, publicly accessible, instead." );
                         next outer;
                     } elsif( $hostname =~ m!\.local$! ) {
-                        error( "You cannot specify an mDNS (.local) as a hostname when using Letsencrypt certificates.\n"
+                        error( "You cannot specify an mDNS (.local) as a hostname when using LetsEncrypt certificates.\n"
                                . "Use an official hostname, publicly accessible, instead." );
                         next outer;
                     }
@@ -764,7 +766,7 @@ sub run {
 
         if( $ret ) {
             $hostname = $newSite->hostname(); # tor site might have generated the hostname
-            if( $tls ) {
+            if( $newSite->isTls() ) {
                 colPrint( "Installed site " . $newSite->siteId() . " at https://$hostname/\n" );
             } else {
                 colPrint( "Installed site " . $newSite->siteId() . " at http://$hostname/\n" );
@@ -930,7 +932,7 @@ HHH
     --tls --letsencrypt
 SSS
     Create the site with a https URL. UBOS will automatically contact
-    the letsencrypt.org certificate authority and obtain a letsencrypt
+    the letsencrypt.org certificate authority and obtain a LetsEncrypt
     certificate. This only works if 1) the device has a publicly
     reachable IP address, and 2) the public hostname of the site
     correctly resolves to the device.

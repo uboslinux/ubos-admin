@@ -50,6 +50,7 @@ sub run {
     my $debug           = undef;
     my $showJson        = 0;
     my $showAll         = 0;
+    my $showArch        = 0;
     my $showDetail      = 0;
     my $showChannel     = 0;
     my $showCpu         = 0;
@@ -72,6 +73,7 @@ sub run {
             'debug'          => \$debug,
             'json'           => \$showJson,
             'all'            => \$showAll,
+            'arch'           => \$showArch,
             'detail'         => \$showDetail,
             'channel'        => \$showChannel,
             'cpu'            => \$showCpu,
@@ -94,6 +96,8 @@ sub run {
     my $out;
 
     my $json = {
+        'arch'             => UBOS::Utils::arch(),
+        'deviceclass'      => UBOS::Utils::deviceClass(),
         'hostid'           => UBOS::Host::hostId(),
         'ubos-admin-ready' => UBOS::Host::checkReady(),
         'problems'         => []
@@ -109,11 +113,11 @@ sub run {
         $isVirt = 1;
     }
 
-    my $showAspect =    $showChannel || $showCpu         || $showDisks
-                     || $showFailed  || $showLastUpdated || $showMemory
-                     || $showPacnew  || $showProblems    || $showProduct
-                     || $showReady   || $showSmart       || $showVirt
-                     || $showUptime;
+    my $showAspect =    $showArch    || $showChannel || $showCpu
+                     || $showDisks   || $showFailed  || $showLastUpdated
+                     || $showMemory  || $showPacnew  || $showProblems
+                     || $showProduct || $showReady   || $showSmart
+                     || $showVirt    || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -128,6 +132,7 @@ sub run {
     }
 
     if( $showAll ) {
+        $showArch        = 1;
         $showChannel     = 1;
         $showCpu         = 1;
         $showDisks       = 1;
@@ -434,6 +439,14 @@ sub run {
                 $out .= '    SKU:            ' . $json->{product}->{sku} . "\n";
             }
         }
+        if( $showArch ) {
+            if( exists( $json->{arch} )) {
+                $out .= 'Arch:               ' . $json->{arch} . "\n";
+            }
+            if( exists( $json->{deviceclass} )) {
+                $out .= 'Device class:       ' . $json->{deviceclass} . "\n";
+            }
+        }
         if( $showVirt ) {
             if( exists( $json->{systemd_detect_virt} )) {
                 $out .= 'Virtualization:     ' . $json->{systemd_detect_virt} . "\n";
@@ -703,6 +716,7 @@ SSS
     specified subjects:
     * channel:        report on the UBOS release channel used by this device.
     * cpu:            report on the CPUs available.
+    * arch:           report on the arch and device class.
     * disks:          report on attached disks and their usage.
     * failed:         report on daemons that have failed.
     * lastupdated:    report when the device was last updated.

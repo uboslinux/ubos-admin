@@ -171,10 +171,6 @@ sub run {
         foreach my $oldSite ( values %$oldSites ) {
             debugAndSuspend( 'Undeploy site', $oldSite->siteId );
             $ret &= $oldSite->undeploy( $undeployTriggers );
-
-            if( $oldSite->hasLetsEncryptTls()) {
-                $ret &= $oldSite->stashLetsEncryptCertificate();
-            }
         }
 
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
