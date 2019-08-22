@@ -231,6 +231,9 @@ CONTENT
             # Site.pm has unstashed the cert if it needed to be unstashed
             if( UBOS::LetsEncrypt::isCertificateLive( $hostname )) {
                 ( $keyFile, $crtFile ) = UBOS::LetsEncrypt::getLiveKeyAndCertificateFiles( $hostname );
+                if( !$keyFile || ! -r $keyFile || !$crtFile || ! -r $crtFile ) {
+                    error( 'Cannot read LetsEncrypt live (1) key and crt file:', $keyFile, $crtFile );
+                }
 
             } else {
                 $tlsNow = 0; # we don't have LetsEncrypt certs yet, so we set it up as http
@@ -359,6 +362,9 @@ sub resumeSite {
     if( $site->isTls() ) {
         if( $site->isLetsEncryptTls() ) {
             ( $keyFile, $crtFile ) = UBOS::LetsEncrypt::getLiveKeyAndCertificateFiles( $hostname );
+            if( !$keyFile || ! -r $keyFile || !$crtFile || ! -r $crtFile ) {
+                error( 'Cannot read LetsEncrypt live (2) key and crt file:', $keyFile, $crtFile );
+            }
 
         } else {
             $keyFile = "$sslDir/$siteId.key";
