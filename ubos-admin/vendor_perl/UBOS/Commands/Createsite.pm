@@ -70,8 +70,6 @@ sub run {
     if(    !$parseOk
         || @args
         || ( $verbose && $logConfigFile )
-        || ( $selfSigned && !$tls )
-        || ( $letsEncrypt && !$tls )
         || ( $tor && $letsEncrypt )
         || ( $selfSigned && $letsEncrypt )
         || ( $template && !$out && !$dryRun ))
@@ -81,6 +79,10 @@ sub run {
 
     if( $out && -e $out && !$force ) {
         fatal( 'Output file exists already. Use --force to overwrite.' );
+    }
+
+    if( $selfSigned || $letsEncrypt ) {
+        $tls = 1;
     }
 
     if( !$dryRun && $< != 0 ) {
@@ -764,7 +766,7 @@ sub run {
 
         if( $ret ) {
             $hostname = $newSite->hostname(); # tor site might have generated the hostname
-            if( $tls ) {
+            if( $newSite->isTls() ) {
                 colPrint( "Installed site " . $newSite->siteId() . " at https://$hostname/\n" );
             } else {
                 colPrint( "Installed site " . $newSite->siteId() . " at http://$hostname/\n" );
