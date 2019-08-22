@@ -9,7 +9,6 @@ use strict;
 use warnings;
 
 use UBOS::Host;
-use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
@@ -50,10 +49,6 @@ if( $commandPackage ) {
         unless( defined( UBOS::Host::checkReady())) {
             exit -1;
         }
-    }
-    unless( UBOS::Lock::acquire() ) {
-        colPrintError( "Another copy of ubos-admin is running already. Please try again later.\n" );
-        exit -2;
     }
 
     my $result = UBOS::Utils::invokeMethod( $commandPackage . '::run', @remainingArgs );
@@ -101,20 +96,23 @@ sub synopsisHelpQuit {
                 colPrint( "$detail\n\n" );
             }
 
-            colPrint( "It can be invoked as follows:\n\n" );
+            if( keys %{$synopsisHelp->{'cmds'}} ) {
+                colPrint( "It can be invoked as follows:\n\n" );
 
-            foreach my $invocation ( sort keys %{$synopsisHelp->{'cmds'}} ) {
-                my $help = $synopsisHelp->{'cmds'}->{$invocation};
+                foreach my $invocation ( sort keys %{$synopsisHelp->{'cmds'}} ) {
+                    my $help = $synopsisHelp->{'cmds'}->{$invocation};
 
-                $invocation =~ s!^\s+!!;
-                $invocation =~ s!\s+$!!;
-                $help =~ s!^\s+!!gm;
-                $help =~ s!\s+$!!gm;
-                $help =~ s!^!        !gm;
+                    $invocation =~ s!^\s+!!;
+                    $invocation =~ s!\s+$!!;
+                    $help =~ s!^\s+!!gm;
+                    $help =~ s!\s+$!!gm;
+                    $help =~ s!^!        !gm;
 
-                colPrint( "    $cmd $helpFor" . ( $invocation ? " $invocation" : '' ) . "\n" );
-                colPrint( "$help\n\n" );
+                    colPrint( "    $cmd $helpFor" . ( $invocation ? " $invocation" : '' ) . "\n" );
+                    colPrint( "$help\n\n" );
+                }
             }
+
             if( exists( $synopsisHelp->{'args'} )) {
                 colPrint( "Optional arguments:\n\n" );
                 foreach my $arg ( sort keys %{$synopsisHelp->{'args'}} ) {

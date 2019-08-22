@@ -34,7 +34,7 @@ while( --$countdown >= 0 ) {
     sleep( 5 * 60 ); # 5 min
 }
 
-warning( 'Failed to acquire lock: giving up.' );
+warning( 'Failed to acquire UBOS::Lock: giving up.' );
 
 exit( 2 ); # We failed
 

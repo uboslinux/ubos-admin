@@ -17,6 +17,20 @@ sub acquire {
     if( flock( DATA, LOCK_EX|LOCK_NB )) {
         return 1;
     } else {
+        $@ = "Another copy of ubos-admin is running already. Please try again later.";
+        return 0;
+    }
+}
+
+#####
+# Release the lock.
+# return: success or failure
+sub release {
+    # See __DATA__ at end of file
+    if( flock( DATA, LOCK_UN )) {
+        return 1;
+    } else {
+        $@ = "Failed to release UBOS::Lock.";
         return 0;
     }
 }

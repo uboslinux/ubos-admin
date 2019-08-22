@@ -14,8 +14,10 @@ package UBOS::Commands::ReadConfigurationFromStaff;
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::Host;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::StaffManager;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -27,6 +29,11 @@ sub run {
 
     if ( $< != 0 ) {
         fatal( "This command must be run as root" );
+    }
+
+    unless( UBOS::Lock::acquire() ) {
+        colPrintError( "$@\n" );
+        exit -2;
     }
 
     my $verbose       = 0;

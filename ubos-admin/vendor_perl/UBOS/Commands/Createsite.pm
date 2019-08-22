@@ -19,6 +19,7 @@ use Storable qw(dclone);
 use Term::ANSIColor;
 use UBOS::Host;
 use UBOS::Installable;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
 use UBOS::Terminal;
@@ -708,6 +709,11 @@ sub run {
 # Deploy
 
     unless( $dryRun ) {
+        unless( UBOS::Lock::acquire() ) {
+            colPrintError( "$@\n" );
+            exit -2;
+        }
+
         my $prerequisites = {};
         if( $tor ) {
             $prerequisites->{'tor'} = 'tor';

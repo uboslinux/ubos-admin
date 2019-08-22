@@ -18,7 +18,7 @@ use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
-# Execute this command.
+# Execute this command. Does not need UBOS::Lock.
 # return: 1 if ok, 0 if error
 sub run {
     my $cmd  = shift;

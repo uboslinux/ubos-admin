@@ -20,6 +20,7 @@ use Getopt::Long qw( GetOptionsFromArray :config pass_through ); # for parsing b
 use UBOS::BackupOperation;
 use UBOS::Backup::ZipFileBackup;
 use UBOS::Host;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::UpdateBackup;
@@ -34,6 +35,11 @@ sub run {
 
     if ( $< != 0 ) {
         fatal( "This command must be run as root" );
+    }
+
+    unless( UBOS::Lock::acquire() ) {
+        colPrintError( "$@\n" );
+        exit -2;
     }
 
     my $verbose           = 0;

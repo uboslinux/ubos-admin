@@ -14,7 +14,9 @@ use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use UBOS::AnyBackup;
 use UBOS::Host;
+use UBOS::Lock;
 use UBOS::Logging;
+use UBOS::Terminal;
 use UBOS::Utils;
 
 ##
@@ -23,6 +25,11 @@ use UBOS::Utils;
 sub run {
     my $cmd  = shift;
     my @args = @_;
+
+    unless( UBOS::Lock::acquire() ) {
+        colPrintError( "$@\n" );
+        exit -2;
+    }
 
     my $verbose           = 0;
     my $logConfigFile     = undef;

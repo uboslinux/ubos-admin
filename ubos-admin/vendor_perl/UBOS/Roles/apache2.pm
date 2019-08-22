@@ -713,41 +713,43 @@ sub checkAppManifestForRole {
                     }
 
                 } else { # not robots.txt or webfinger
-                    foreach my $field ( qw( allow disallow proxy )) {
-                        if( exists( $wellknownValue->{$field} )) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not contain: " . $field );
-                        }
-                    }
-
-                    if( exists( $wellknownValue->{value} )) {
-                        if( ref( $wellknownValue->{value} )) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', value is not a string" );
-                        }
-                        if( exists( $wellknownValue->{location} )) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not define both value and location" );
-                        }
-                        if( exists( $wellknownValue->{encoding} ) && $wellknownValue->{encoding} ne 'base64' ) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies invalid encoding: " . $wellknownValue->{encoding} );
-                        }
-                        if( exists( $wellknownValue->{status} )) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify status" );
-                        }
-
-                    } elsif( exists( $wellknownValue->{location} )) {
-                        if( ref( $wellknownValue->{value} )) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', location is not a string" );
-                        }
-                        if( exists( $wellknownValue->{encoding} )) {
-                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not specify both location and encoding" );
-                        }
-                        if( exists( $wellknownValue->{status} )) {
-                            unless( $wellknownValue->{status} =~ m!^3\d\d$! ) {
-                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' has invalid status: " . $wellknownValue->{status} );
+                    if( 'robotstxt' ne $wellknownKey ) { # Temporarily until apps have been upgraded
+                        foreach my $field ( qw( allow disallow proxy )) {
+                            if( exists( $wellknownValue->{$field} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not contain: " . $field );
                             }
                         }
 
-                    } else {
-                        $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies neither value nor location" );
+                        if( exists( $wellknownValue->{value} )) {
+                            if( ref( $wellknownValue->{value} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', value is not a string" );
+                            }
+                            if( exists( $wellknownValue->{location} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not define both value and location" );
+                            }
+                            if( exists( $wellknownValue->{encoding} ) && $wellknownValue->{encoding} ne 'base64' ) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies invalid encoding: " . $wellknownValue->{encoding} );
+                            }
+                            if( exists( $wellknownValue->{status} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify status" );
+                            }
+
+                        } elsif( exists( $wellknownValue->{location} )) {
+                            if( ref( $wellknownValue->{value} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', location is not a string" );
+                            }
+                            if( exists( $wellknownValue->{encoding} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not specify both location and encoding" );
+                            }
+                            if( exists( $wellknownValue->{status} )) {
+                                unless( $wellknownValue->{status} =~ m!^3\d\d$! ) {
+                                    $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' has invalid status: " . $wellknownValue->{status} );
+                                }
+                            }
+
+                        } else {
+                            $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies neither value nor location" );
+                        }
                     }
                 }
             }
