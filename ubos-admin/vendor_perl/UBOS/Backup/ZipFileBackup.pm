@@ -72,20 +72,20 @@ sub fileName {
 # will be saved.
 # $sites: array of Site objects
 # $appConfigs: array of AppConfiguration objects
-# $noTls: if 1, do not include TLS info
-# $noTorKey: if 1, do not include Tor private keys for Tor sites
+# $backupTls: if 1, include TLS info otherwise strip
+# $backupTorKey: if 1, include Tor private keys for Tor sites otherwise strip
 # $outFile: the file to save the backup to
 sub create {
-    my $self          = shift;
-    my $sites         = shift;
-    my $appConfigs    = shift;
-    my $noTls         = shift;
-    my $noTorKey      = shift;
-    my $outFile       = shift;
+    my $self         = shift;
+    my $sites        = shift;
+    my $appConfigs   = shift;
+    my $backupTls    = shift;
+    my $backupTorKey = shift;
+    my $outFile      = shift;
 
     my $ret = 1;
 
-    trace( 'ZipFileBackup::create', $sites, $appConfigs, $noTls, $noTorKey, $outFile );
+    trace( 'ZipFileBackup::create', $sites, $appConfigs, $backupTls, $backupTorKey, $outFile );
 
     $self->{startTime}  = UBOS::Utils::time2string( time() );
     $self->{zip}        = Archive::Zip->new();
@@ -108,12 +108,12 @@ sub create {
     foreach my $site ( @$sites ) {
         my $siteId = $site->siteId();
         my $siteJson;
-        if( $noTls ) {
-            $siteJson = $site->siteJsonWithoutTls();
-        } else {
+        if( $backupTls ) {
             $siteJson = $site->siteJson();
+        } else {
+            $siteJson = $site->siteJsonWithoutTls();
         }
-        if( $noTorKey && exists( $siteJson->{tor} ) && exists( $siteJson->{tor}->{privatekey} )) {
+        if( !$backupTorKey && exists( $siteJson->{tor} ) && exists( $siteJson->{tor}->{privatekey} )) {
             delete $siteJson->{tor}->{privatekey};
             delete $siteJson->{hostname}; # create new key and hostname upon restore
         }
