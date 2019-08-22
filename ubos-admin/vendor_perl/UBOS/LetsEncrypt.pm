@@ -75,7 +75,7 @@ sub _getKeyAndCertificateFiles {
 # when the first certificate is getting provisioned, but we need this
 # if the first certificate is imported rather than provisioned.
 # $adminEmail: e-mail address of the administrator
-# return: 1 if success or nothing was done
+# return: 1 if success or nothing was done; error message in $@
 sub register {
     my $adminEmail  = shift;
 
@@ -97,7 +97,8 @@ sub register {
     my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$out );
 
     if( $ret ) {
-        warning( "Registering with LetsEncrypt$flags failed:\n" . $out );
+        $@ = "Registering with LetsEncrypt$flags failed:\n$out";
+
         debugAndSuspend( 'Certbot register failed' );
         return 0;
     }
@@ -109,7 +110,7 @@ sub register {
 # $hostname: name of the host
 # $webrootPath path to the web server's root directory
 # $adminEmail: e-mail address of the administrator
-# return: 1 if success
+# return: 1 if success; error message in $@
 sub provisionCertificate {
     my $hostname    = shift;
     my $webrootPath = shift;
@@ -137,10 +138,7 @@ sub provisionCertificate {
     my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$out );
 
     if( $ret ) {
-        warning( "Obtaining certificate from LetsEncrypt$flags failed. proceeding without certificate or TLS/SSL.\n"
-                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
-                 . "LetsEncrypt message:\n"
-                 . $out );
+        $@ = "Obtaining certificate from LetsEncrypt$flags failed:\n$out";
         debugAndSuspend( 'Certbot certonly failed' );
         return 0;
     }
@@ -158,6 +156,8 @@ sub renewCertificates {
         $flags = " $flags";
     }
 
+    info( "Renewing LetsEncrypt certificate(s)$flags" );
+
     my $cmd = 'TERM=dumb'
             . ' certbot renew'
             . ' --quiet'
@@ -168,10 +168,7 @@ sub renewCertificates {
     my $ret = UBOS::Utils::myexec( $cmd, undef, \$out, \$out );
 
     if( $ret ) {
-        warning( "Renewing certificates from LetsEncrypt failed. proceeding without certificate or TLS/SSL.\n"
-                 . "Make sure you are not running this behind a firewall, and that DNS is set up properly.\n"
-                 . "LetsEncrypt message:\n"
-                 . $out );
+        $@ = "Renewing certificates from LetsEncrypt$flags failed:\n$out";
         debugAndSuspend( 'Certbot renew failed' );
         return 0;
     }
@@ -365,11 +362,13 @@ sub certFileNeedsRenewal {
 # $webroot: directory used by LetsEncrypt for renewals
 # $key: the key
 # $crt: the certificate
+# $adminEmail: administrator e-mail in case we need to register
 sub importCertificate {
     my $hostname = shift;
     my $webroot  = shift;
     my $key      = shift;
     my $crt      = shift;
+    my $adminEmail  = shift;
 
     if( -e "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf" ) {
         error( 'Letsencrypt config already exists for this hostname, cannot import:', $hostname );
@@ -378,9 +377,15 @@ sub importCertificate {
 
     my @accountIds = accountIdentifiers();
     unless( @accountIds ) {
-        # create account -- FIXME
-        error( 'No LetsEncrypt account found' );
-        return 0;
+        unless( register( $adminEmail )) {
+            error( $@ );
+            return 0;
+        }
+        @accountIds = accountIdentifiers();
+        unless( @accountIds ) {
+            error( 'No LetsEncrypt account found' );
+            return 0;
+        }
     }
 
     foreach my $dir ( $LETSENCRYPT_RENEWAL_DIR, "$LETSENCRYPT_ARCHIVE_DIR/$hostname", "$LETSENCRYPT_LIVE_DIR/$hostname" ) {

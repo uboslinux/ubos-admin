@@ -138,9 +138,8 @@ sub _siteJsonWithout {
     unless( $noAdminCredential ) {
         $ret->{admin}->{credential} = $json->{admin}->{credential};
     }
-    if( !$noTls ) {
-        if(    exists( $json->{tls} )
-            && exists( $json->{tls}->{letsencrypt} )
+    if( !$noTls && exists( $json->{tls} )) {
+        if(    exists( $json->{tls}->{letsencrypt} )
             && $json->{tls}->{letsencrypt}
             && $noLetsEncryptCerts )
         {
@@ -314,10 +313,10 @@ sub isLetsEncryptTls {
     my $self = shift;
 
     my $json = $self->{json};
-    if( !defined( $json->{tls} )) {
+    if( !exists( $json->{tls} )) {
         return 0;
     }
-    return defined( $json->{tls}->{letsencrypt} ) ? 1 : 0;
+    return $json->{tls}->{letsencrypt} ? 1 : 0;
 }
 
 ##
@@ -327,7 +326,7 @@ sub tlsKey {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{tls} )) {
+    if( exists( $json->{tls} ) && exists( $json->{tls}->{key} )) {
         return $json->{tls}->{key};
     } else {
         return undef;
@@ -341,7 +340,7 @@ sub tlsCert {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{tls} )) {
+    if( exists( $json->{tls} ) && exists( $json->{tls}->{crt} )) {
         return $json->{tls}->{crt};
     } else {
         return undef;
@@ -355,7 +354,7 @@ sub unsetLetsEncryptTls {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{tls} )) {
+    if( exists( $json->{tls} )) {
         delete $json->{tls}; # delete the whole subtree
     }
 }
@@ -367,7 +366,7 @@ sub deleteTlsInfo {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{tls} )) {
+    if( exists( $json->{tls} )) {
         delete $json->{tls}; # delete the whole subtree
     }
 }
@@ -378,7 +377,7 @@ sub tlsCaCert {
     my $self = shift;
 
     my $json = $self->{json};
-    if( defined( $json->{tls} )) {
+    if( exists( $json->{tls} ) && exists( $json->{tls}->{cacrt} )) {
         return $json->{tls}->{cacrt};
     } else {
         return undef;
@@ -805,10 +804,9 @@ sub _deployOrCheck {
         if( $self->isLetsEncryptTls()) {
             my $success = $self->obtainLetsEncryptCertificate();
             unless( $success ) {
-                warning( 'Failed to obtain LetsEncrypt certificate for site', $self->hostname, '(', $self->siteId, '). Deploying site without TLS.' );
                 $self->unsetLetsEncryptTls;
             }
-            $ret &= $success;
+            # do not pass on failure, as we will indeed set up a Site, just not with LetsEncrypt
 
         } elsif( $self->isTls() ) {
             foreach my $role ( @rolesOnHost ) {
@@ -1113,13 +1111,7 @@ sub hasLetsEncryptCertificate {
     if( $self->tlsKey() && $self->tlsCert() ) {
         return 1;
     }
-
-    my $status = UBOS::LetsEncrypt::determineCertificateStatus( $self->hostname );
-    if( $status ) {
-        return $status->{isvalid};
-    } else {
-        return undef;
-    }
+    return 0;
 }
 
 ##
@@ -1147,7 +1139,13 @@ sub obtainLetsEncryptCertificate {
         close $tlsCertFile;
 
         unless( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCertFile )) {
-            if( UBOS::LetsEncrypt::importCertificate( $self->hostname, $siteWellknownParentDir, $tlsKey, $tlsCert )) {
+            if( UBOS::LetsEncrypt::importCertificate(
+                    $self->hostname,
+                    $siteWellknownParentDir,
+                    $tlsKey,
+                    $tlsCert,
+                    $self->obtainSiteAdminHash()->{email} ))
+            {
                 return 1;
             }
             error( 'Importing LetsEncrypt certificate failed' );
@@ -1165,7 +1163,14 @@ sub obtainLetsEncryptCertificate {
 
         if( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCrtFile )) {
             UBOS::LetsEncrypt::unstashCertificate( $self->hostname() );
-            UBOS::LetsEncrypt::renewCertificates();
+            unless( UBOS::LetsEncrypt::renewCertificates()) {
+                if( UBOS::Logging::isTraceActive() ) {
+                    warning( $@ );
+                } else {
+                    warning( 'Failed to renew LetsEncrypt certificates' );
+                }
+                return 0;
+            }
             return 1;
         } else {
             UBOS::LetsEncrypt::unstashCertificate( $self->hostname() );
@@ -1176,12 +1181,19 @@ sub obtainLetsEncryptCertificate {
     # Get a new cert
     my $adminHash = $self->obtainSiteAdminHash;
 
-    my $ret = UBOS::LetsEncrypt::provisionCertificate(
+    my $success = UBOS::LetsEncrypt::provisionCertificate(
             $self->hostname(),
             $siteWellknownParentDir, # use as fake documentroot
             $adminHash->{email} );
-
-    return $ret;
+    unless( $success ) {
+        if( UBOS::Logging::isTraceActive() ) {
+            warning( "Provisioning LetsEncrypt certificate failed for site " . $self->hostname . ":\n$@" );
+        } else {
+            warning( "Provisioning LetsEncrypt certificate failed for site " . $self->hostname . ".\nProceeding without certificate or TLS/SSL.\n"
+                     . "Make sure you are not running this behind a firewall, and that DNS is set up properly." );
+        }
+    }
+    return $success;
 }
 
 ##
