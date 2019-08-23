@@ -63,6 +63,7 @@ sub run {
     my $showDisks       = 0;
     my $showFailed      = 0;
     my $showLastUpdated = 0;
+    my $showLive        = 0;
     my $showMemory      = 0;
     my $showPacnew      = 0;
     my $showProblems    = 0;
@@ -85,6 +86,7 @@ sub run {
             'cpu'            => \$showCpu,
             'disks'          => \$showDisks,
             'failed'         => \$showFailed,
+            'live'           => \$showLive,
             'lastupdated'    => \$showLastUpdated,
             'memory'         => \$showMemory,
             'pacnew'         => \$showPacnew,
@@ -119,11 +121,11 @@ sub run {
         $isVirt = 1;
     }
 
-    my $showAspect =    $showArch    || $showChannel || $showCpu
-                     || $showDisks   || $showFailed  || $showLastUpdated
-                     || $showMemory  || $showPacnew  || $showProblems
-                     || $showProduct || $showReady   || $showSmart
-                     || $showVirt    || $showUptime;
+    my $showAspect =    $showArch     || $showChannel || $showCpu
+                     || $showDisks    || $showFailed  || $showLastUpdated
+                     || $showLive     || $showMemory  || $showPacnew
+                     || $showProblems || $showProduct || $showReady
+                     || $showSmart    || $showVirt    || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -144,6 +146,7 @@ sub run {
         $showDisks       = 1;
         $showFailed      = 1;
         $showLastUpdated = 1;
+        $showLive        = 1;
         $showMemory      = 1;
         $showPacnew      = 1;
         $showProblems    = 1;
@@ -158,6 +161,7 @@ sub run {
         $showChannel     = 1;
         $showDisks       = 1;
         $showLastUpdated = 1;
+        $showLive        = 1;
         $showMemory      = 1;
         $showProblems    = 1;
         $showProduct     = 1;
@@ -412,6 +416,20 @@ sub run {
         };
     }
 
+    trace( 'Check UBOS Live status' );
+    my $liveActive = eval "use UBOS::Live::UbosLive;  UBOS::Live::UbosLive::isUbosLiveActive();";
+    if( $@ ) {
+        # error --not installed
+        $json->{live} = {
+            'active'    => $JSON::false,
+            'installed' => $JSON::false
+        };
+    } else {
+        $json->{live} = {
+            'active'    => $liveActive ? $JSON::true : $JSON::false,
+            'installed' => $JSON::true
+        };
+    }
 
     # now display (or not)
 
@@ -424,7 +442,7 @@ sub run {
 
     } else {
         # will print to console
-        my $out  = 'Status: host ' . $json->{hostid} . "\n";
+        my $out  = 'Status: ' . $json->{hostid} . "\n";
         $out .= '=' x ( length( $out )-1 ) . "\n";
 
         colPrint( $out );
@@ -443,6 +461,19 @@ sub run {
             }
             if( exists( $json->{product}->{sku} )) {
                 $out .= '    SKU:            ' . $json->{product}->{sku} . "\n";
+            }
+        }
+        if( $showLive ) {
+            $out .= "UBOS Live:\n";
+            if( exists( $json->{live}->{installed} )) {
+                $out .= '    Installed:      ' . ( $json->{live}->{installed} ? 'yes' : 'no' ) . "\n";
+            } else {
+                $out .= '    Installed:      ' . '?' . "\n";
+            }
+            if( exists( $json->{live}->{active} )) {
+                $out .= '    Active:         ' . ( $json->{live}->{active} ? 'yes' : 'no' ) . "\n";
+            } else {
+                $out .= '    Active:         ' . '?' . "\n";
             }
         }
         if( $showArch ) {
@@ -716,7 +747,7 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--channel] [--cpu] [--disks] [--failed] [--lastupdated] [--memory] [--pacnew] [--ready] [--uptime]
+    [--channel] [--cpu] [--disks] [--failed] [--live] [--lastupdated] [--memory] [--pacnew] [--ready] [--uptime]
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
@@ -726,6 +757,7 @@ SSS
     * disks:          report on attached disks and their usage.
     * failed:         report on daemons that have failed.
     * lastupdated:    report when the device was last updated.
+    * live:           report on UBOS Live status.
     * memory:         report how much RAM and swap memory is being used.
     * pacnew:         report on manually modified configuration files.
     * problems:       report on any detected problems.
