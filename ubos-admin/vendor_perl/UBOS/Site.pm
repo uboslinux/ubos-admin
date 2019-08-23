@@ -499,7 +499,7 @@ sub _constructRobotsTxt {
                 }
             }
             if( exists( $wellknownJson->{'robots.txt'}->{disallow} )) {
-                foreach my $disallow ( $wellknownJson->{'robots.txt'}->{disallow} ) {
+                foreach my $disallow ( @{$wellknownJson->{'robots.txt'}->{disallow}} ) {
                     $disallowContent .= "Disallow: $context$disallow\n";
                 }
             }
