@@ -36,7 +36,7 @@ sub new {
     }
     $self->{kernelpackage} = undef; # no kernel
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-container ) ];
+        $self->{devicepackages} = [ qw( ubos-networking-container ubos-deviceclass-container ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [];

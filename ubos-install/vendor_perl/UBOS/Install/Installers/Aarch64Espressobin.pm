@@ -41,7 +41,7 @@ sub new {
         $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-espressobin
                 ubos-networking-standalone uboot-tools archlinuxarm-keyring
                 espressobin-uboot-config espressobin-ubos-state
-                smartmontools wpa_supplicant crda ) ];
+                smartmontools wpa_supplicant crda ubos-deviceclass-espressobin ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];

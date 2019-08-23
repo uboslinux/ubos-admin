@@ -33,6 +33,8 @@ sub new {
     }
     $self->SUPER::new( @args );
 
+    push @{$self->{devicepackages}}, 'ubos-deviceclass-rpi2';
+
     return $self;
 }
 
