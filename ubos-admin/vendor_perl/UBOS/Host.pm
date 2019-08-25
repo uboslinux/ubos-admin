@@ -114,12 +114,12 @@ sub sites {
                 }
             }
 
-            # Clean up TLS info in case we still have it
+            # Clean up LetsEncrypt TLS info in case we still have it
             foreach my $siteJson ( @siteJsons ) {
-                if( exists( $siteJson->{tls} )) {
+                if( exists( $siteJson->{tls} ) && exists( $siteJson->{tls}->{letsencrypt} ) && $siteJson->{tls}->{letsencrypt} ) {
                     delete $siteJson->{tls}->{key};
                     delete $siteJson->{tls}->{crt};
-                    delete $siteJson->{tls}->{cacrt};
+                    # not cacrt
                 }
             }
 

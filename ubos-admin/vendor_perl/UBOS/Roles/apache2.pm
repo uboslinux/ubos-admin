@@ -242,6 +242,10 @@ CONTENT
         } else {
             $keyFile = "$sslDir/$siteId.key";
             $crtFile = "$sslDir/$siteId.crt";
+
+            unless( -r $keyFile && -r $crtFile ) {
+                $tlsNow = 0; # Be a bit defensive
+            }
         }
     }
 

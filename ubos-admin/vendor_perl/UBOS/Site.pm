@@ -51,7 +51,7 @@ sub new {
             $json->{tls}->{key} = UBOS::Utils::slurpFile( $keyFile );
             $json->{tls}->{crt} = UBOS::Utils::slurpFile( $crtFile );
         } # Otherwise is fine: LetsEncrypt but not provisioned yet (new site) or stashed
-    }
+    } # If tls and not LetsEncrypt, the key/cert is in the Site JSON
 
     $self->{json}                 = $json;
     $self->{skipFilesystemChecks} = $skipFilesystemChecks;
@@ -795,11 +795,22 @@ sub _deployOrCheck {
 
     my $ret = 1;
     my @rolesOnHost = UBOS::Host::rolesOnHostInSequence();
+
+
+    if( $doIt && $self->isTls() && ! $self->isLetsEncryptTls() ) {
+        foreach my $role ( @rolesOnHost ) {
+            if( $self->needsRole( $role )) {
+                $ret &= $role->saveTlsKeyAndCertificate( $self );
+            }
+        }
+    }
+
     foreach my $role ( @rolesOnHost ) {
         if( $self->needsRole( $role )) {
             $ret &= $role->setupSiteOrCheck( $self, $doIt, $triggers );
         }
     }
+
     if( $doIt ) {
         if( $self->isLetsEncryptTls()) {
             my $success = $self->obtainLetsEncryptCertificate();
@@ -807,13 +818,6 @@ sub _deployOrCheck {
                 $self->unsetLetsEncryptTls;
             }
             # do not pass on failure, as we will indeed set up a Site, just not with LetsEncrypt
-
-        } elsif( $self->isTls() ) {
-            foreach my $role ( @rolesOnHost ) {
-                if( $self->needsRole( $role )) {
-                    $ret &= $role->saveTlsKeyAndCertificate( $self );
-                }
-            }
         }
     }
 
