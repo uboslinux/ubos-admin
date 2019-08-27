@@ -690,10 +690,14 @@ sub _formatBytes {
 sub _formatTimeStamp {
     my $ts = shift;
 
-    if( $ts =~ m!^(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)! ) {
-        return "$1/$2/$3 $4:$5:$6";
+    if( $ts ) {
+        if( $ts =~ m!^(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)! ) {
+            return "$1/$2/$3 $4:$5:$6";
+        } else {
+            return $ts; # best we can do
+        }
     } else {
-        return $ts; # best we can do
+        return '<never>';
     }
 }
 
