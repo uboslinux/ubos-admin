@@ -1637,11 +1637,11 @@ sub _checkJson {
                 UBOS::Utils::deleteFile( "$dir/key", "$dir/csr", "$dir/crt" );
             }
 
-            unless( $json->{tls}->{key} || !ref( $json->{tls}->{key} )) {
+            if( !$json->{tls}->{key} || ref( $json->{tls}->{key} )) {
                 $@ = 'Site JSON: tls section: missing or invalid key';
                 return 0;
             }
-            unless( $json->{tls}->{crt} || !ref( $json->{tls}->{crt} )) {
+            if( !$json->{tls}->{crt} || ref( $json->{tls}->{crt} )) {
                 $@ = 'Site JSON: tls section: missing or invalid crt';
                 return 0;
             }
