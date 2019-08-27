@@ -252,6 +252,8 @@ sub run {
                             }
                         }
                     }
+                } elsif( $smartJson && exists( $smartJson->{messages} ) && @{$smartJson->{messages}} ) {
+                    # some warning or error, but this is not material here
 
                 } else {
                     warning( 'Failed to parse smartctl json:', $@ );
