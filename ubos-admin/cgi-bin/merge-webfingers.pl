@@ -14,7 +14,10 @@ use JSON;
 use LWP::Simple;
 use UBOS::Utils;
 
-my $q = new CGI;
+my $q    = new CGI;
+my $qUrl = $q->url( -query => 1 );
+my $qm   = index( $qUrl, '?' );
+my $args = $qm >= 0 ? substr( $qUrl, $qm+1 ) : '';
 
 my $siteId          = $ENV{'SiteId'};
 my $siteProxiesFile = "/ubos/http/webfinger-proxies/$siteId";
@@ -25,7 +28,8 @@ if( -e $siteProxiesFile ) {
     my @urls = grep { /^http/ } split( "\n", $siteProxiesContent );
 
     foreach my $url ( @urls ) {
-        my $found = get( $url );
+        my $fullUrl = index( $url, '?' ) >= 0 ? "$url&$args" : "$url?$args";
+        my $found   = get( $fullUrl );
         unless( $found ) {
             # something may be temporarily unavailable
             next;

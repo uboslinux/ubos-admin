@@ -713,7 +713,7 @@ sub checkAppManifestForRole {
                         }
                         if(    ref( exists( $wellknownValue->{proxy} ))
                             || (    $wellknownValue->{proxy} !~ m!^https?://!
-                                 && $wellKnownValue->{proxy} !~ m!^\$\{site\.protocol\}! ))
+                                 && $wellknownValue->{proxy} !~ m!^\$\{site\.protocol\}! ))
                         {
                             $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey', sub-entry 'proxy' must be an HTTP or HTTPS URL" );
                         }
