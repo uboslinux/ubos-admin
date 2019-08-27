@@ -195,17 +195,39 @@ SSS
 DDD
         'cmds' => {
             <<SSS => <<HHH,
-    --backuptofile <backupfileurl>
+    --all [ --backuptofile <backupfileurl> | --backuptodirectory <backupdirurl> ]
 SSS
-    Back up to into the named file <backupfileurl>, which can be a local file
-    name or a URL.
+    Back up all sites on this device to into the named file <backupfileurl>,
+    or into the directory <backupdirurl>. Either can be a local name or a URL.
+HHH
+            <<SSS => <<HHH,
+    --siteid <siteid> [ --backuptofile <backupfileurl> | --backuptodirectory <backupdirurl> ]
+SSS
+    Only back up the site with site id <siteid>. This option may be repeated.
+HHH
+            <<SSS => <<HHH,
+    --siteid <siteid> [ --backuptofile <backupfileurl> | --backuptodirectory <backupdirurl> ]
+SSS
+    Only back up the site with site id <siteid>. This option may be repeated.
+HHH
+            <<SSS => <<HHH,
+    --hostname <hostname> [ --backuptofile <backupfileurl> | --backuptodirectory <backupdirurl> ]
+SSS
+    Only back up the site with hostnames <hostname>. This option may be
+    repeated.
+HHH
+            <<SSS => <<HHH,
+    --hostname <hostname> --context <context> [ --backuptofile <backupfileurl> | --backuptodirectory <backupdirurl> ]
+SSS
+    Only back up the AppConfiguration at context path <context> at the
+    site with hostname <hostname>. The option --context may be repeated.
+    In this mode, the option --hostname may not be repeated.
 HHH
             <<SSS => <<HHH
-    --backuptodirectory <backupdirurl>
+    --appconfigid <appconfigid> [ --backuptofile <backupfileurl> | --backuptodirectory <backupdirurl> ]
 SSS
-    Back up to a file with an auto-generated name, which will be located in
-    the directory <backupdirurl>, which can be a local directory name or a URL
-    referring to a directory.
+    Only back up the AppConfiguration with AppConfigId <appconfigid>.
+    This option may be repeated.
 HHH
         },
         'args' => {
@@ -214,11 +236,6 @@ HHH
 HHH
             '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
-HHH
-            '--all' => <<HHH,
-    Back up all sites on this device. If this option is not given,
-    the sites or appconfigurations to be backed up must be specified
-    individually.
 HHH
             '--[no]backuptls' => <<HHH,
     If a site uses TLS, specify whether to put the TLS key and certificate
@@ -240,25 +257,6 @@ HHH
     Do not store credentials or other configuration for future
     reuse. Do not use already-stored configuration information either.
     If this is given, do not specify --backupdatatransferconfigfile <configfile>.
-HHH
-            '--siteid <siteid>' => <<HHH,
-    Only back up the site with site id <siteid>. This option may be
-    repeated.
-HHH
-            '--hostname <hostname>' => <<HHH,
-    Only back up the site with hostnames <hostname>. This option may be
-    repeated. If using this option, --appconfigid cannot be used at the
-    same time.
-HHH
-            '--hostname <hostname> --context <context>' => <<HHH,
-    Only back up the AppConfiguration at context path <context> at the
-    site with hostname <hostname>. The option --context may be repeated.
-    In this mode, the option --hostname may not be repeated.
-HHH
-            '--appconfigid <appconfigid>' => <<HHH,
-    Only back up the AppConfiguration with AppConfigId <appconfigid>.
-    This option may be repeated. If using this option, --hostname or
-    --siteid cannot be used at the same time.
 HHH
         }
     };
