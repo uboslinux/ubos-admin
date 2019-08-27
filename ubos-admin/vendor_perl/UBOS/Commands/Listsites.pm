@@ -98,7 +98,8 @@ sub run {
 
     } elsif( $html ) {
         print( <<HTML );
-<html>
+<!DOCTYPE html>
+<html lang="en">
  <head>
   <title>Sites</title>
  </head>
