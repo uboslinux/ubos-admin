@@ -25,6 +25,7 @@ my %dontCompressExtensions = (
     # already compressed audio and video
     'mp3'   => 1,
     'mpeg'  => 1,
+    'mp4'   => 1,
     'ogg'   => 1,
     'm4a'   => 1,
     'm4p'   => 1,
