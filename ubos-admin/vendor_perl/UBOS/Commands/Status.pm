@@ -252,7 +252,11 @@ sub run {
                             }
                         }
                     }
-                } elsif( $smartJson && exists( $smartJson->{messages} ) && @{$smartJson->{messages}} ) {
+                } elsif(    $smartJson
+                         && exists( $smartJson->{smartctl} )
+                         && exists( $smartJson->{smartctl}->{messages} )
+                         && @{$smartJson->{smartctl}->{messages}} )
+                {
                     # some warning or error, but this is not material here
 
                 } else {
