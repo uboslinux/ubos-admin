@@ -54,8 +54,8 @@ sub parseArgumentsPartial {
 
     my $backupToFile             = undef;
     my $backupToDirectory        = undef;
-    my $backupTls                = undef;
-    my $backupTorKey             = undef;
+    my $backupTls                = 1;
+    my $backupTorKey             = 1;
     my $encryptId                = undef;
     my $gpgHomeDir               = undef;
     my $dataTransferConfigFile   = undef;
