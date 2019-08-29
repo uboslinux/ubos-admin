@@ -79,7 +79,7 @@ sub _getKeyAndCertificateFiles {
 sub register {
     my $adminEmail  = shift;
 
-    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', undef );
+    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', '' );
     if( $flags ) {
         $flags = " $flags";
     }
@@ -151,7 +151,7 @@ sub provisionCertificate {
 # return: 1 if success
 sub renewCertificates {
 
-    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', undef );
+    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', '' );
     if( $flags ) {
         $flags = " $flags";
     }
