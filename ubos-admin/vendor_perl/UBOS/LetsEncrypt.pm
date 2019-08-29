@@ -414,11 +414,22 @@ CONTENT
         ++$i;
     }
 
-    # save the same full cert in all three places
-    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/privkey$i.pem",   $key, 0644 );
-    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/fullchain$i.pem", $crt, 0644 );
-    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/chain$i.pem",     $crt, 0644 );
-    UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/cert$i.pem",      $crt, 0644 );
+    my $haveAlready = 0;
+    if( $i > 1 ) {
+        my $ii = $i - 1;
+        my $oldCrt = UBOS::Utils::slurpFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/cert$ii.pem" );
+        if( $oldCrt eq $crt ) {
+            $haveAlready = 1;
+        }
+    }
+
+    unless( $haveAlready ) {
+        # save the same full cert in all three places
+        UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/privkey$i.pem",   $key, 0644 );
+        UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/fullchain$i.pem", $crt, 0644 );
+        UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/chain$i.pem",     $crt, 0644 );
+        UBOS::Utils::saveFile( "$LETSENCRYPT_ARCHIVE_DIR/$hostname/cert$i.pem",      $crt, 0644 );
+    }
 
     UBOS::Utils::symlink( "../../archive/$hostname/privkey$i.pem",   "$LETSENCRYPT_LIVE_DIR/$hostname/privkey.pem" );
     UBOS::Utils::symlink( "../../archive/$hostname/fullchain$i.pem", "$LETSENCRYPT_LIVE_DIR/$hostname/fullchain.pem" );
