@@ -352,7 +352,7 @@ sub requires {
 sub requiresTls {
     my $self = shift;
 
-    if( exists( $self->{json}->{requiresTls} ) && $self->{json}->{requiresTls} ) {
+    if( exists( $self->{json}->{requirestls} ) && $self->{json}->{requirestls} ) {
         return 1;
     } else {
         return 0;
@@ -436,8 +436,8 @@ sub checkManifest {
         $self->myFatal( 'type must be', $type, 'is:', $json->{type} );
     }
 
-    if( exists( $json->{requiresTls} ) && !JSON::is_bool( $json->{requiresTls} )) {
-        fatal( 'requiresTls must be boolean' );
+    if( exists( $json->{requirestls} ) && !JSON::is_bool( $json->{requirestls} )) {
+        fatal( 'requirestls must be boolean' );
     }
 
     $self->checkManifestRolesSection( $vars, $skipFilesystemChecks );

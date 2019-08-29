@@ -260,7 +260,7 @@ sub run {
                     # some warning or error, but this is not material here
 
                 } else {
-                    warning( 'Failed to parse smartctl json:', $@ );
+                    warning( 'Failed to parse smartctl json for device', $name, ':', $out );
                 }
             }
 
