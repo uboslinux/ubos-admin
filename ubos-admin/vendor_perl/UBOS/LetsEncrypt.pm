@@ -396,11 +396,20 @@ sub importCertificate {
     my $accountId = $accountIds[0];
 
     UBOS::Utils::saveFile( "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf", <<CONTENT, 0644 );
+# renew_before_expiry = 30 days
+version = 0.32.0
+archive_dir = /etc/letsencrypt/archive/$hostname
+cert = /etc/letsencrypt/live/$hostname/cert.pem
+privkey = /etc/letsencrypt/live/$hostname/privkey.pem
+chain = /etc/letsencrypt/live/$hostname/chain.pem
+fullchain = /etc/letsencrypt/live/$hostname/fullchain.pem
+
+# Options used in the renewal process
 [renewalparams]
-account = $accountId
+account = 6bf0fdc8237f055b6f18bdfd4e53781d
 authenticator = webroot
+webroot_path = $webroot,
 server = https://acme-v02.api.letsencrypt.org/directory
-post_hook = /usr/bin/systemctl restart httpd.service
 [[webroot_map]]
 $hostname = $webroot
 CONTENT
