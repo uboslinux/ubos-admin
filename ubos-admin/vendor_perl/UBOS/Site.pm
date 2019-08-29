@@ -1143,6 +1143,9 @@ sub obtainLetsEncryptCertificate {
         close $tlsCertFile;
 
         unless( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCertFile )) {
+
+            UBOS::LetsEncrypt::deleteStashedCertificate( $self->hostname() ); # ok if does not exist
+
             if( UBOS::LetsEncrypt::importCertificate(
                     $self->hostname,
                     $siteWellknownParentDir,
