@@ -10,14 +10,15 @@ use warnings;
 
 package UBOS::Site;
 
+use JSON;
+use MIME::Base64;
 use UBOS::AppConfiguration;
 use UBOS::Host;
 use UBOS::LetsEncrypt;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
-use JSON;
-use MIME::Base64;
+use UBOS::X509;
 
 use fields qw( json skipFilesystemChecks manifestFileReader appConfigs vars);
 
@@ -1125,6 +1126,7 @@ sub hasLetsEncryptCertificate {
 sub obtainLetsEncryptCertificate {
     my $self = shift;
 
+    my $hostname               = $self->hostname();
     my $siteId                 = $self->siteId();
     my $sitesWellknownDir      = $self->vars()->getResolve( 'apache2.siteswellknowndir' );
     my $siteWellknownParentDir = "$sitesWellknownDir/$siteId";
@@ -1142,12 +1144,14 @@ sub obtainLetsEncryptCertificate {
         print $tlsCertFile $tlsCert;
         close $tlsCertFile;
 
-        unless( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCertFile )) {
+        my $crtInfo  = UBOS::X509::crtInfo( $tlsCertFile );
 
-            UBOS::LetsEncrypt::deleteStashedCertificate( $self->hostname() ); # ok if does not exist
+        if( $crtInfo =~ m!^CN\s*=\*s\Q$hostname\E$! && !UBOS::LetsEncrypt::certNeedsRenewal( $crtInfo )) {
+
+            UBOS::LetsEncrypt::deleteStashedCertificate( $hostname ); # ok if does not exist
 
             if( UBOS::LetsEncrypt::importCertificate(
-                    $self->hostname,
+                    $hostname,
                     $siteWellknownParentDir,
                     $tlsKey,
                     $tlsCert,
@@ -1162,14 +1166,14 @@ sub obtainLetsEncryptCertificate {
     }
 
     # Next attempt: use stashed cert
-    if( UBOS::LetsEncrypt::isCertificateStashed( $self->hostname() )) {
-        my( $tlsKeyFile, $tlsCrtFile ) = UBOS::LetsEncrypt::getStashedKeyAndCertificateFiles( $self->hostname() );
+    if( UBOS::LetsEncrypt::isCertificateStashed( $hostname )) {
+        my( $tlsKeyFile, $tlsCrtFile ) = UBOS::LetsEncrypt::getStashedKeyAndCertificateFiles( $hostname );
 
         # Certbot will not obtain a new cert if the archive directory for the domain exists,
         # so we will renew in that case.
 
         if( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCrtFile )) {
-            UBOS::LetsEncrypt::unstashCertificate( $self->hostname() );
+            UBOS::LetsEncrypt::unstashCertificate( $hostname );
             unless( UBOS::LetsEncrypt::renewCertificates()) {
                 if( UBOS::Logging::isTraceActive() ) {
                     warning( $@ );
@@ -1180,7 +1184,7 @@ sub obtainLetsEncryptCertificate {
             }
             return 1;
         } else {
-            UBOS::LetsEncrypt::unstashCertificate( $self->hostname() );
+            UBOS::LetsEncrypt::unstashCertificate( $hostname );
             return 1;
         }
     }
@@ -1189,14 +1193,14 @@ sub obtainLetsEncryptCertificate {
     my $adminHash = $self->obtainSiteAdminHash;
 
     my $success = UBOS::LetsEncrypt::provisionCertificate(
-            $self->hostname(),
+            $hostname,
             $siteWellknownParentDir, # use as fake documentroot
             $adminHash->{email} );
     unless( $success ) {
         if( UBOS::Logging::isTraceActive() ) {
-            warning( "Provisioning LetsEncrypt certificate failed for site " . $self->hostname . ":\n$@" );
+            warning( "Provisioning LetsEncrypt certificate failed for site $hostname:\n$@" );
         } else {
-            warning( "Provisioning LetsEncrypt certificate failed for site " . $self->hostname . ".\nProceeding without certificate or TLS/SSL.\n"
+            warning( "Provisioning LetsEncrypt certificate failed for site $hostname.\nProceeding without certificate or TLS/SSL.\n"
                      . "Make sure you are not running this behind a firewall, and that DNS is set up properly." );
         }
     }

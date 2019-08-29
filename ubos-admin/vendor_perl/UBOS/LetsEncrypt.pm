@@ -13,6 +13,7 @@ package UBOS::LetsEncrypt;
 use Time::Local;
 use UBOS::Logging;
 use UBOS::Host;
+use UBOS::X509;
 use UBOS::Utils;
 
 my $LETSENCRYPT_ARCHIVE_DIR   = '/etc/letsencrypt/archive';   # created by certbot
@@ -309,44 +310,40 @@ sub isCertificateStashed {
 }
 
 ##
-# Determine whether the certificate contained in this file has a sufficiently
-# far-ahead expiration time, or already has or will shortly expire.
-# $crtFile: name of the file containing the certificate
+# Determine whether the certificate whose info hash is provided
+# has a sufficiently far-ahead expiration time, or already has or
+# will shortly expire.
+# $crtInfo: info determined by X509
 # return: true or false
-sub certFileNeedsRenewal {
-    my $crtFile = shift;
+sub certNeedsRenewal {
+    my $crtInfo = shift;
 
-    my $out;
-    if( UBOS::Utils::myexec( "openssl x509 -in '$crtFile' -dates -noout", undef, \$out )) {
-        error( 'Failed to run opeenssl x509 against:', $crtFile );
-        return undef; # better return value?
-    }
-    foreach my $line ( split( "\n", $out )) {
+    my $notAfter = $crtInfo->{notAfter};
+    if( $notAfter && $notAfter =~ m!^(\S+)\s+(\d+)\s+(\d+):(\d+):(\d+)\s+(\d+)\s+(\S+)$! ) {
         # notAfter=Sep 22 17:52:55 2019 GMT
         # assuming no locale stuff
-        if( $line =~ m!^notAfter=(\S+)\s+(\d+)\s+(\d+):(\d+):(\d+)\s+(\d+)\s+(\S+)$! ) {
-            my( $month, $day, $hour, $minute, $second, $year, $tz ) = ( $1, $2, $3, $4, $5, $6, $7 );
-            if( $tz ne 'GMT' ) {
-                error( 'Wrong time zone reported by openssl' );
-                # but we continue, we are not too far off
-            }
-            my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
-            for( my $i=0 ; $i<@months ; ++$i ) {
-                if( $month =~ m!^$months[$i]! ) {
-                    $month = $i;
-                    last;
-                }
-            }
 
-            my $certTs = timegm( $second, $minute, $hour, $day, $month, $year-1900 );
-            my $now    = UBOS::Utils::now();
-            my $delta  = $certTs - $now;
-            my $cutoff = UBOS::Host::vars()->get( 'host.letsencryptreissuecutoff', 172800 );
-
-            trace( 'LetsEncrypt certFileNeedsRenewal for', $crtFile, 'returns', $delta, '<', $cutoff );
-
-            return $delta < $cutoff;
+        my( $month, $day, $hour, $minute, $second, $year, $tz ) = ( $1, $2, $3, $4, $5, $6, $7 );
+        if( $tz ne 'GMT' ) {
+            error( 'Wrong time zone reported by openssl' );
+            # but we continue, we are not too far off
         }
+        my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
+        for( my $i=0 ; $i<@months ; ++$i ) {
+            if( $month =~ m!^$months[$i]! ) {
+                $month = $i;
+                last;
+            }
+        }
+
+        my $certTs = timegm( $second, $minute, $hour, $day, $month, $year-1900 );
+        my $now    = UBOS::Utils::now();
+        my $delta  = $certTs - $now;
+        my $cutoff = UBOS::Host::vars()->get( 'host.letsencryptreissuecutoff', 172800 );
+
+        trace( 'LetsEncrypt certFileNeedsRenewal for', $crtFile, 'returns', $delta, '<', $cutoff );
+
+        return $delta < $cutoff;
     }
     error( 'Failed to parse time stamp:', $out );
 
