@@ -1144,7 +1144,7 @@ sub obtainLetsEncryptCertificate {
         print $tlsCertFile $tlsCert;
         close $tlsCertFile;
 
-        my $crtInfo  = UBOS::X509::crtInfo( $tlsCertFile );
+        my $crtInfo = UBOS::X509::crtInfo( $tlsCertFile );
 
         if( $crtInfo =~ m!^CN\s*=\*s\Q$hostname\E$! && !UBOS::LetsEncrypt::certNeedsRenewal( $crtInfo )) {
 
@@ -1172,7 +1172,9 @@ sub obtainLetsEncryptCertificate {
         # Certbot will not obtain a new cert if the archive directory for the domain exists,
         # so we will renew in that case.
 
-        if( UBOS::LetsEncrypt::certFileNeedsRenewal( $tlsCrtFile )) {
+        my $crtInfo  = UBOS::X509::crtInfo( $tlsCertFile );
+
+        if( UBOS::LetsEncrypt::certNeedsRenewal( $crtInfo )) {
             UBOS::LetsEncrypt::unstashCertificate( $hostname );
             unless( UBOS::LetsEncrypt::renewCertificates()) {
                 if( UBOS::Logging::isTraceActive() ) {
