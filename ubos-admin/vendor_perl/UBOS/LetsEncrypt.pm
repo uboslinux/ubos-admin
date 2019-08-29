@@ -341,11 +341,9 @@ sub certNeedsRenewal {
         my $delta  = $certTs - $now;
         my $cutoff = UBOS::Host::vars()->get( 'host.letsencryptreissuecutoff', 172800 );
 
-        trace( 'LetsEncrypt certFileNeedsRenewal for', $crtFile, 'returns', $delta, '<', $cutoff );
-
         return $delta < $cutoff;
     }
-    error( 'Failed to parse time stamp:', $out );
+    error( 'Failed to parse time stamp:', $notAfter );
 
     return undef; # better return value
 }
