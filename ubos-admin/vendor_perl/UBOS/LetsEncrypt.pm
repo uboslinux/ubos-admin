@@ -116,7 +116,7 @@ sub provisionCertificate {
     my $webrootPath = shift;
     my $adminEmail  = shift;
 
-    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', undef );
+    my $flags = UBOS::Host::vars()->get( 'host.certbotflags', '' );
     if( $flags ) {
         $flags = " $flags";
     }
