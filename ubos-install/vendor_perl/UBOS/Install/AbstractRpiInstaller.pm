@@ -43,7 +43,7 @@ sub new {
         $self->{devicepackages} = [ qw( ubos-networking-client
                 raspberrypi-firmware raspberrypi-bootloader
                 raspberrypi-bootloader-x archlinuxarm-keyring
-                rng-tools smartmontools wpa_supplicant crda ubos-deviceclass-rpi ) ];
+                rng-tools smartmontools wpa_supplicant crda ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service ) ];
