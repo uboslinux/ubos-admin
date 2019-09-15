@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.19
+pkgver=0.20
 pkgrel=1
 pkgdesc="UBOS Network management tools (ESPRESSObin)"
 arch=('aarch64')
@@ -9,7 +9,7 @@ maintainer=${url}
 license=('PPL3')
 depends=('ubos-networking-gateway')
 options=('!strip')
-_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
+_vendor_perl=/usr/share/perl5/vendor_perl
 
 package() {
 # Code

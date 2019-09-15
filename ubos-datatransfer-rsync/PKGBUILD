@@ -2,14 +2,14 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.3
+pkgver=0.4
 pkgrel=1
 pkgdesc="Adds rsync-over-ssh data transfer protocol to ubos-admin"
 arch=('any')
 license=("PPL3")
 options=('!strip')
 depends=('ubos-admin' 'rsync')
-_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
+_vendor_perl=/usr/share/perl5/vendor_perl
 
 package() {
 # Code

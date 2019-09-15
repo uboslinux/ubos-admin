@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.28
+pkgver=0.29
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -15,7 +15,7 @@ depends=(
     'ubos-admin'
     'ubos-live-certificates'
 )
-_vendor_perl=$(perl -V::vendorarch: | sed -e "s![' ]!!g")
+_vendor_perl=/usr/share/perl5/vendor_perl
 install=install
 
 package() {
