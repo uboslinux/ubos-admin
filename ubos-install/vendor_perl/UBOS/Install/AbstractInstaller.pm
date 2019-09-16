@@ -23,7 +23,7 @@ use fields qw( hostname
                checksignatures
                partitioningscheme
                packagedbs disablepackagedbs addpackagedbs removepackagedbs
-               shepherdKey productInfo );
+               productInfo );
 # basepackages: always installed, regardless
 # devicepackages: packages installed for this device class, but not necessarily all others
 # additionalpackages: packages installed because added on the command-line
@@ -252,16 +252,6 @@ sub setCheckSignatures {
     my $check = shift;
 
     $self->{checksignatures} = $check;
-}
-
-##
-# Set a public SSH key for a to-be-created shepherd account.
-# $shepherdKey: public SSH key
-sub setShepherdKey {
-    my $self        = shift;
-    my $shepherdKey = shift;
-
-    $self->{shepherdKey} = $shepherdKey;
 }
 
 ##
@@ -976,29 +966,6 @@ sub addConfigureSnapperToScript {
     # So we will have to do this during boot
     return $errors;
 }
-
-##
-# If a key is given, create the shepherd account and add the key
-# Add commands to the provided script, to be run in a chroot, that creates
-# the shepherd account and adds the key (if given)
-# $chrootScriptP: pointer to script
-# return: number of errors
-sub addSetupShepherdAndKeyToScript {
-    my $self          = shift;
-    my $chrootScriptP = shift;
-
-    my $ret = 0;
-    if( $self->{shepherdKey} ) {
-        # user was created by sysusers
-        $$chrootScriptP .= "mkdir -m 0700 /var/shepherd/.ssh\n";
-        $$chrootScriptP .= "cat > /var/shepherd/.ssh/authorized_keys <<END\n";
-        $$chrootScriptP .= $self->{shepherdKey} . "\n";
-        $$chrootScriptP .= "END\n";
-        $$chrootScriptP .= "chown -R shepherd:shepherd /var/shepherd\n";
-    }
-    return $ret;
-}
-
 
 ##
 # Clean up after install is done
