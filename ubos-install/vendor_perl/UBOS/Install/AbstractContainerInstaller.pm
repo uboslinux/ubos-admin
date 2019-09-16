@@ -192,7 +192,6 @@ sub saveSecuretty {
     my $self  = shift;
 
     my $target = $self->{target};
-    my $errors = 0;
 
     my $content = UBOS::Utils::slurpFile( "$target/etc/securetty" );
 
@@ -200,7 +199,12 @@ sub saveSecuretty {
     $content .= "# For systemd-nspawn\n";
     $content .= "pts/0\n";
 
-    return UBOS::Utils::saveFile( "$target/etc/securetty", $content );
+    if( UBOS::Utils::saveFile( "$target/etc/securetty", $content )) {
+        return 0;
+    } else {
+        error( "Failed to modify $target/etc/securetty" );
+        return 1;
+    }
 }
 
 1;
