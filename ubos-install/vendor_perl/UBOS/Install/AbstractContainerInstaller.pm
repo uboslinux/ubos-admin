@@ -184,4 +184,23 @@ sub addConfigureNetworkingToScript {
     return 0;
 }
 
+##
+# Generate and save a different /etc/securetty. systemd-nspawn now uses
+# /dev/pts/0 instead of /dev/console, and so we need to append that.
+# return: number of errors
+sub saveSecuretty {
+    my $self  = shift;
+
+    my $target = $self->{target};
+    my $errors = 0;
+
+    my $content = UBOS::Utils::slurpFile( "$target/etc/securetty" );
+
+    $content .= "\n";
+    $content .= "# For systemd-nspawn\n";
+    $content .= "pts/0\n";
+
+    return UBOS::Utils::saveFile( "$target/etc/securetty", $content );
+}
+
 1;
