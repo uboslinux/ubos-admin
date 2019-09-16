@@ -84,7 +84,6 @@ package() {
     install -D -m644 ${startdir}/systemd/certbot.timer                -t ${pkgdir}/usr/lib/systemd/system/
     install -D -m644 ${startdir}/systemd/{iptables,ip6tables}.service -t ${pkgdir}/etc/systemd/system/
     install -D -m644 ${startdir}/systemd/tun9x.network                -t ${pkgdir}/usr/lib/systemd/network/
-    install -D -m644 ${startdir}/systemd/ubos-admin.conf              -t ${pkgdir}/usr/lib/sysusers.d/
 
 # Snapper
     install -D -m644 ${startdir}/etc/snapper/config-templates/ubos-default -t ${pkgdir}/etc/snapper/config-templates/
