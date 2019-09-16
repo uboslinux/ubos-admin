@@ -286,7 +286,7 @@ sub setupUpdateShepherd {
     my $add   = shift;
     my $force = shift;
 
-    my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/ubos/shepherd' );
+    my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/var/shepherd' );
     if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
 
         trace( 'StaffManager::setupUpdateShepherd', $key, $add, $force );

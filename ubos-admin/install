@@ -30,11 +30,6 @@ pre_install() {
 }
 
 post_install() {
-    systemd-sysusers
-    [[ -d /var/shepherd ]] || mkdir -m755 /var/shepherd
-    chown shepherd:shepherd /var/shepherd
-    chsh -s /bin/bash shepherd > /dev/null 2>&1
-
     perl -MUBOS::Host -e 'UBOS::Host::ensureSnapperConfig();'
 }
 
@@ -53,11 +48,6 @@ pre_upgrade() {
 ## arg 1: the new package version
 ## arg 2: the old package version
 post_upgrade() {
-    systemd-sysusers
-    [[ -d /var/shepherd ]] || mkdir -m755 /var/shepherd
-    chown shepherd:shepherd /var/shepherd
-    chsh -s /bin/bash shepherd > /dev/null 2>&1
-
     ensureChattr
 
     # Make Java 8 the default
