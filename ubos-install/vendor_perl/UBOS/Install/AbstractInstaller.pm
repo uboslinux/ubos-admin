@@ -351,7 +351,6 @@ SCRIPT
         $errors += $self->addEnableServicesToScript( \$chrootScript );
         $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
         $errors += $self->addConfigureSnapperToScript( \$chrootScript, $diskLayout );
-        $errors += $self->addSetupShepherdAndKeyToScript( \$chrootScript );
 
         trace( "chroot script:\n" . $chrootScript );
         my $out;
