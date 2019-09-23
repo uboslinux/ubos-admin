@@ -53,7 +53,9 @@ sub ensureRunning {
         $initDbCmd .= ' --encoding=UTF8';
         $initDbCmd .= ' --locale=en_US.UTF-8';
         $initDbCmd .= ' --pgdata="' . $dataDir . '"';
-        executeCmdAsAdmin( $initDbCmd );
+        if( !executeCmdAsAdmin( $initDbCmd )) {
+            error( 'Init postgres failed:', $@ );
+        }
 
         # tighten down authentication
         UBOS::Utils::saveFile( "$dataDir/pg_hba.conf", <<CONTENT );
