@@ -33,8 +33,9 @@ sub run {
     }
 
     unless( UBOS::Lock::acquire() ) {
-        colPrintError( "$@\n" );
-        exit -2;
+        # This is most likely because we were invoked by update, and exec
+        # does not release the locks, so this is fine.
+        trace( 'UpdatedStage2::run', $@ );
     }
 
     # May not be interrupted, bad things may happen if it is
