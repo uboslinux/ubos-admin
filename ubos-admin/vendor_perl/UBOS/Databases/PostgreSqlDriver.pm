@@ -111,9 +111,9 @@ sub executeCmdAsAdmin {
 
     my $out;
     my $escapedCmd = $cmd;
-    $escapedCmd =~ s!'!'"'"'!g;
+    # $escapedCmd =~ s!'!'"'"'!g;
 
-    my $fullCmd = "su - postgres -c '$escapedCmd'";
+    my $fullCmd = "sudo -u postgres $escapedCmd";
     if( $outputFile ) {
         $fullCmd .= " > '$outputFile'";
     }
@@ -362,13 +362,13 @@ sub importLocalDatabase {
     my $cmd;
     if( $compress ) {
         if( $compress eq 'gz' ) {
-            $cmd = "zcat '$fileName' | su - postgres -c \"psql -v HISTFILE=/dev/null '$dbName'\"";
+            $cmd = "zcat '$fileName' | sudo -u postgres psql -v HISTFILE=/dev/null '$dbName'";
         } else {
             error( 'Unknown compression method:', $compress );
             return 0;
         }
     } else {
-        $cmd = "cat '$fileName' | su - postgres -c \"psql -v HISTFILE=/dev/null '$dbName'\"";
+        $cmd = "cat '$fileName' | sudo -u postgres psql -v HISTFILE=/dev/null '$dbName'";
     }
 
     my $ret = 1;
