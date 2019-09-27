@@ -69,7 +69,12 @@ END
 
             debugAndSuspend( 'Set root password' );
             my $sth = $dbh->prepare( <<SQL );
-UPDATE mysql.user SET Password=PASSWORD( '$password' ) WHERE User='root';
+ALTER USER root\@localhost IDENTIFIED VIA mysql_native_password;
+SQL
+            $sth->execute();
+
+            $sth = $dbh->prepare( <<SQL );
+SET Password=PASSWORD( '$password' );
 SQL
             $sth->execute();
 
