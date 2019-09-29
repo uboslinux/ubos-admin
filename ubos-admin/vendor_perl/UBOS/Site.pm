@@ -535,7 +535,9 @@ sub _determineWebfingerProxyUrls {
         my $wellknownJson = $app->wellknownJson();
 
         if( defined( $wellknownJson ) && exists( $wellknownJson->{webfinger} )) {
-            my $url = $appConfig->vars()->replaceVariables( $wellknownJson->{webfinger}->{proxy} );
+            my $vars = $app->obtainInstallableAtAppconfigVars( $appConfig, 1 );
+
+            my $url = $vars->replaceVariables( $wellknownJson->{webfinger}->{proxy} );
             push @ret, $url;
         }
     }
