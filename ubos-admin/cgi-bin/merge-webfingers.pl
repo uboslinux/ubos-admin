@@ -80,7 +80,7 @@ if( -e $siteProxiesFile ) {
 }
 
 if( $jsonResponse ) {
-    print $q->header( -status => 200 );
+    print $q->header( -status => 200, -type => 'application/json' );
     UBOS::Utils::writeJsonToStdout( $jsonResponse );
 } else {
     print $q->header( -status => 404 );
