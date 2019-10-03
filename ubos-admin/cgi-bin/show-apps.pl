@@ -12,7 +12,10 @@ use utf8;
 
 use CGI;
 use UBOS::Host;
+use UBOS::Logging;
 use UBOS::Site;
+
+UBOS::Logging::initialize( 'ubos-admin', 'show-apps.pl', 0, '/etc/ubos/log-system.conf' );
 
 my $siteId = $ENV{'SiteId'};
 my $site   = UBOS::Host::findSiteById( $siteId );

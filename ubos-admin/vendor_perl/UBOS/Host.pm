@@ -125,7 +125,7 @@ sub sites {
 
             # Instantiate Site objects
             foreach my $siteJson ( @siteJsons ) {
-                my $site = UBOS::Site->new( $siteJson );
+                my $site = UBOS::Site->new( $siteJson, 0, $< > 0 ); # Skip filesystem checks for non-root -- may not have rights
                 if( $site ) {
                     $_sites->{$site->siteId()} = $site;
                 } else {
