@@ -125,7 +125,7 @@ sub formatDisks {
                     $cmd .= ' ' . $data->{mkfsflags};
                 }
                 if( exists( $data->{label} )) {
-                    $cmd .= " -n '" . $data->{label} . "'";
+                    $cmd .= " -L '" . $data->{label} . "'";
                 }
                 $cmd .= " '$device'";
 
