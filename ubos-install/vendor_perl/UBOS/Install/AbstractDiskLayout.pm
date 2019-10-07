@@ -125,7 +125,13 @@ sub formatDisks {
                     $cmd .= ' ' . $data->{mkfsflags};
                 }
                 if( exists( $data->{label} )) {
-                    $cmd .= " -L '" . $data->{label} . "'";
+                    if( $fs eq 'vfat' ) {
+                        $cmd .= " -n '" . $data->{label} . "'";
+                    } elsif( $fs eq 'ext4' ) {
+                        $cmd .= " -L '" . $data->{label} . "'";
+                    } else {
+                        warning( "Don't know how to label filesystem of type:", $fs );
+                    }
                 }
                 $cmd .= " '$device'";
 
