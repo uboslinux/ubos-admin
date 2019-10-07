@@ -235,6 +235,19 @@ sub hostnameorsystemhostname {
 }
 
 ##
+# Obtain the site's host name, or, if it is *, the address of localhost
+# return: string
+sub hostnameorlocalhost {
+    my $self = shift;
+
+    my $ret = $self->hostname();
+    if( $ret eq '*' ) {
+        $ret = '127.0.0.1';
+    }
+    return $ret;
+}
+
+##
 # Obtain the site's port.
 # return: 80 or 443
 sub port {
@@ -275,6 +288,7 @@ sub vars {
                     {
                         "site" => {
                             "hostname"                 => $self->hostname(),
+                            "hostnameorlocalhost"      => $self->hostnameorlocalhost(),
                             "hostnameorwildcard"       => $self->hostnameorwildcard(),
                             "hostnameorsystemhostname" => $self->hostnameorsystemhostname(),
                             "port"                     => $self->port(),
@@ -531,7 +545,6 @@ sub _determineWebfingerProxyUrls {
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
         my $app           = $appConfig->app();
-        my $context       = $appConfig->context();
         my $wellknownJson = $app->wellknownJson();
 
         if( defined( $wellknownJson ) && exists( $wellknownJson->{webfinger} )) {
