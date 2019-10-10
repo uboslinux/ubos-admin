@@ -121,4 +121,46 @@ sub undeployOrCheck {
     return 1;
 }
 
+##
+# Resume this item.
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $vars: the Variables object that knows about symbolic names and variables
+# return: success or fail
+sub resume {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $vars           = shift;
+
+    my $name   = $self->{json}->{name};
+    my $scope  = $self->{json}->{scope};
+
+    trace( 'AbstractPort::resume', $self->{portType}, $name, $scope );
+
+    my $port = UBOS::ResourceManager::findProvisionedPortFor(
+            $self->{portType},
+            $self->{appConfig}->appConfigId,
+            $self->{installable}->packageName,
+            $name );
+
+    unless( $port ) {
+        $port = UBOS::ResourceManager::provisionPort(
+                $self->{portType},
+                $self->{appConfig}->appConfigId,
+                $self->{installable}->packageName,
+                $name );
+    }
+    # now insert those values into the vars object
+    if( 'tcp' eq $self->{portType} ) {
+        $vars->put( "appconfig.tcpport.$name", $port );
+    } elsif( 'udp' eq $self->{portType} ) {
+        $vars->put( "appconfig.udpport.$name", $port );
+    } else {
+        error( 'Unknown port type:', $self->{portType} );
+    }
+
+    return $port ? 1 : 0;
+}
+
 1;
