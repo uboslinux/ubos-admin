@@ -10,26 +10,21 @@ use warnings;
 
 package UBOS::Live::UbosLive;
 
+use File::Temp qw/ :POSIX /;
 use UBOS::Logging;
 use UBOS::Host;
 use UBOS::Utils;
 use WWW::Curl::Easy;
 
-my $OPENVPN_CLIENT_CONFIG    = '/etc/openvpn/client/ubos-live.conf';
-my $SERVICE_CERT_DIR         = '/etc/ubos-live-certificates';
-my $CLIENT_CERT_DIR          = '/etc/ubos-live';
-my $OPENVPN_CLIENT_KEY       = $CLIENT_CERT_DIR . '/client.key';
-my $OPENVPN_CLIENT_CSR       = $CLIENT_CERT_DIR . '/client.csr';
-my $OPENVPN_CLIENT_CRT       = $CLIENT_CERT_DIR . '/client.crt';
-my $CONF                     = $CLIENT_CERT_DIR . '/ubos-live.json';
+my $CONF                     = '/etc/ubos/ubos-live.json';
 my $MAX_REGISTRATION_TRIES   = 5;
 my $REGISTRATION_DELAY       = 5;
 my $API_HOST_PREFIX          = 'https://api.live';
 my $REGISTRATION_URL         = '.ubos.net/reg/register-device';
 my $DEVICE_STATUS_PARENT_URL = '.ubos.net/status/device';
-my $OPENVPN_SERVICE          = 'openvpn-client@ubos-live.service';
 my $STATUS_TIMER             = 'ubos-live-status-check.timer';
 my %CHANNELS                 = ( 'red' => 1, 'yellow' => 1, 'green' => 1 );
+my @NETWORKD_FILES           = map { '/etc/systemd/network/99-ubos-live.' . $_ } qw( netdev network );
 
 my $_conf      = undef; # content of the $CONF file; cached
 my $_subdomain = undef;
@@ -73,6 +68,7 @@ sub checkStatus {
     $response =~ s!\s+$!!;
 
     if( $response eq 'ubos-live-inactive' ) {
+        _makeSuspendedIfNeeded( $response );
         _deactivateIfNeeded();
 
     } elsif( $response =~ m!^ubos-live-active! ) {
@@ -121,48 +117,34 @@ sub isUbosLiveActive {
 }
 
 ##
-# Is UBOS Live operational?
-sub isUbosLiveOperational {
-
-    my $out;
-    my $status = UBOS::Utils::myexec( 'systemctl status ' . $OPENVPN_SERVICE, undef, \$out, \$out );
-
-    return $status == 0;
-}
-
-##
 # If not already active, activate UBOS Live
 sub _activateIfNeeded() {
     my $token           = shift || _generateRegistrationToken();
     my $registrationUrl = shift || ( $API_HOST_PREFIX . _subdomain() . $REGISTRATION_URL );
 
-    trace( 'UbosLive::_activateIfNeeded'. $token, $registrationUrl );
+    trace( 'UbosLive::_activateIfNeeded', $token, $registrationUrl );
 
     if( isUbosLiveActive()) {
         $@ = 'UBOS Live is active already';
         return 0;
     }
 
+    my $confJson = _getConf();
+
     my $errors = 0;
-    $errors += _ensureOpenvpnKeyCsr();
-    unless( $errors ) {
-        $errors += _ensureRegistered( $token, $registrationUrl );
-    }
-    unless( $errors ) {
-        $errors += _ensureOpenvpnClientConfig();
-    }
+    $errors += _ensureRegistered( $token, $registrationUrl, $confJson );
 
     if( $errors ) {
         $@ = "There were $errors errors.";
         return 0;
     }
 
-    my $confJson = _getConf();
-
     $confJson->{token}  = $token;
     $confJson->{status} = 'ubos-live-active'; # subclass unclear so far
 
     _setConf( $confJson );
+
+    # Don't handle live99 here: we only bring it up once status subclass is known / right
 
     my $out;
     my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $STATUS_TIMER, undef, \$out, \$out );
@@ -180,7 +162,7 @@ sub _deactivateIfNeeded() {
     trace( 'UbosLive::_deactivateIfNeeded' );
 
     my $confJson = _getConf();
-    unless( $confJson->{status} =~ m!^ubos-live-active! ) {
+    if( !exists( $confJson->{status} ) || $confJson->{status} !~ m!^ubos-live-active! ) {
         $@ = 'UBOS Live is not active';
         return 0;
     }
@@ -194,11 +176,7 @@ sub _deactivateIfNeeded() {
         ++$errors;
     }
 
-    $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
-    if( $status ) {
-        error( 'systemctl disable --now', $OPENVPN_SERVICE, ':', $out );
-        ++$errors;
-    }
+    _disableLiveLink();
 
     $confJson->{status} = 'ubos-live-inactive';
     _setConf( $confJson );
@@ -219,11 +197,7 @@ sub _makeOperationalIfNeeded() {
     my $errors = 0;
     my $out;
 
-    my $status = UBOS::Utils::myexec( 'systemctl enable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
-    if( $status ) {
-        error( 'systemctl enable --now', $OPENVPN_SERVICE, ':', $out );
-        ++$errors;
-    }
+    _enableLiveLink();
 
     my $confJson = _getConf();
     $confJson->{status} = $liveStatus;
@@ -245,11 +219,7 @@ sub _makeSuspendedIfNeeded() {
     my $errors = 0;
     my $out;
 
-    my $status = UBOS::Utils::myexec( 'systemctl disable --now ' . $OPENVPN_SERVICE, undef, \$out, \$out );
-    if( $status ) {
-        error( 'systemctl disable --now', $OPENVPN_SERVICE, ':', $out );
-        ++$errors;
-    }
+    _disableLiveLink();
 
     my $confJson = _getConf();
     $confJson->{status} = $liveStatus;
@@ -261,15 +231,42 @@ sub _makeSuspendedIfNeeded() {
 }
 
 ##
-# If UBOS Live is currently active, restart it
-sub _restartUbosLiveIfNeeded() {
+# Disable the live99 network link if it exists
+sub _disableLiveLink() {
 
-    if( isUbosLiveOperational()) {
-        my $out;
-        UBOS::Utils::myexec( 'systemctl restart  ' . $OPENVPN_SERVICE, undef, \$out, \$out );
+    foreach my $f ( @NETWORKD_FILES ) {
+        if( -e $f ) {
+            UBOS::Utils::deleteFile( $f );
+        }
     }
-    return 0;
+
+    UBOS::Utils::myexec( 'ip link delete dev live99' );
+    # ignore result
 }
+
+##
+# Enable the live99 network link if needed
+sub _enableLiveLink() {
+
+    my $confJson         = _getConf();
+    my $clientPrivateKey = $confJson->{wireguard}->{client}->{privatekey};
+    my $serverPublicKey  = $confJson->{wireguard}->{server}->{publickey};
+
+    foreach my $to ( @NETWORKD_FILES ) {
+        my $from    = '/usr/share/ubos-live/tmpl/' . basename( $to ) . '.tmpl';
+        my $content = UBOS::Utils::slurpFile( $from );
+
+        $content =~ s!WIREGUARD_CLIENT_PRIVATE_KEY!$clientPrivateKey!g;
+        $content =~ s!WIREGUARD_SERVER_PUBLIC_KEY!$serverPublicKey!g;
+
+        UBOS::Utils::saveFile( $to, $content, 'root', 'systemd-networkd', 0640 );
+    }
+
+    if( UBOS::Utils::myexec( 'systemctl restart systemd-networkd' )) {
+        error( 'Restarting systemd-networkd failed' );
+    }
+}
+
 
 ##
 # Get the current configuration as saved locally, or defaults
@@ -282,9 +279,34 @@ sub _getConf {
         } else {
             $_conf = {};
         }
-    }
-    if( !exists( $_conf->{channel} ) || !$CHANNELS{$_conf->{channel}} ) {
-        $_conf->{channel} = 'green';
+        $_conf->{registered} = 0;
+
+        if( !exists( $_conf->{wireguard} ) || !exists( $_conf->{wireguard}->{client} )) {
+            my $privateOut;
+            my $publicOut;
+
+            if( UBOS::Utils::myexec( 'wg genkey', undef, \$privateOut )) {
+                error( 'Failed to generate Wireguard key pair' );
+
+            } elsif( UBOS::Utils::myexec( 'wg pubkey', $privateOut, \$publicOut )) {
+                error( 'Failed to obtain Wireguard public key' );
+
+            } else {
+                $privateOut =~ s!^\s+!!;
+                $privateOut =~ s!\s+$!!;
+                $publicOut  =~ s!^\s+!!;
+                $publicOut  =~ s!\s+$!!;
+
+                $_conf->{wireguard}->{client} = {
+                    'privatekey' => $privateOut,
+                    'publickey'  => $publicOut
+                };
+            }
+        }
+
+        if( !exists( $_conf->{channel} ) || !$CHANNELS{$_conf->{channel}} ) {
+            $_conf->{channel} = 'green';
+        }
     }
 
     return $_conf;
@@ -300,51 +322,15 @@ sub _setConf {
 }
 
 ##
-# Ensure that there is an OpenVPN client key and csr
-# Return: number of errors
-sub _ensureOpenvpnKeyCsr {
-
-    trace( 'UbosLive::_ensureOpenvpnKeyCsr' );
-
-    my $errors = 0;
-    my $out;
-
-    my $swallow = UBOS::Logging::isInfoActive() ? undef : \$out;
-    unless( -e $OPENVPN_CLIENT_KEY ) {
-        if( UBOS::Utils::myexec( "openssl genrsa -out '$OPENVPN_CLIENT_KEY' 4096", undef, $swallow, $swallow )) {
-            error( 'openssl genrsa failed:', $swallow );
-            ++$errors;
-        }
-    }
-    unless( -e $OPENVPN_CLIENT_KEY ) {
-        $@ = 'Failed to generate UBOS Live client VPN key';
-        return $errors;
-    }
-    chmod 0600, $OPENVPN_CLIENT_KEY;
-
-    unless( -e $OPENVPN_CLIENT_CSR ) {
-        my $id = UBOS::Host::hostId();
-        $id = lc( $id );
-        if( UBOS::Utils::myexec( "openssl req -new -key '$OPENVPN_CLIENT_KEY' -out '$OPENVPN_CLIENT_CSR' -subj '/CN=$id.d.live.ubos.net'", undef, $swallow, $swallow )) {
-            error( 'openssl req failed:', $swallow );
-            ++$errors;
-        }
-    }
-    unless( -e $OPENVPN_CLIENT_CSR ) {
-        $@ = 'Failed to generate UBOS Live client VPN certificate request';
-        return $errors;
-    }
-    return $errors;
-}
-
-##
 # Ensure that the device is registered and has the appropriate key
 # $token: the registration token entered by the user
 # $registrationurl: URL to post the registration to
+# $confJson: configuration JSON
 # return: number of errors
 sub _ensureRegistered {
     my $token           = shift;
     my $registrationurl = shift;
+    my $confJson        = shift;
 
     trace( 'UbosLive::_ensureRegistered' );
 
@@ -356,27 +342,38 @@ sub _ensureRegistered {
 
     my $errors = 0;
 
-    unless( -e $OPENVPN_CLIENT_CRT ) {
+    unless( $confJson->{registered} ) {
         $token =~ s!\s!!g;
+
+        if(    !exists( $confJson->{wireguard} )
+            || !exists( $confJson->{wireguard}->{client} )
+            || !exists( $confJson->{wireguard}->{client}->{publickey} ))
+        {
+            error( 'Cannot register without Wireguard info' );
+            return 1;
+        }
+        my $clientPublicKey = $confJson->{wireguard}->{client}->{publickey};
 
         my $cmd = "curl";
         $cmd   .= " --silent";
         $cmd   .= " -XPOST";
         $cmd   .= " -w '%{http_code}'";
-        $cmd   .= " --data-urlencode 'token="       . $token              . "'";
-        $cmd   .= " --data-urlencode 'csr@"         . $OPENVPN_CLIENT_CSR . "'";
-        $cmd   .= " --data-urlencode 'hostid="      . $hostid             . "'";
-        $cmd   .= " --data-urlencode 'arch="        . $arch               . "'";
-        $cmd   .= " --data-urlencode 'deviceclass=" . $deviceClass        . "'";
-        $cmd   .= " --data-urlencode 'channel="     . $channel            . "'";
+        $cmd   .= " --data-urlencode 'token="               . $token           . "'";
+        $cmd   .= " --data-urlencode 'wireguard-publickey=" . $clientPublicKey . "'";
+        $cmd   .= " --data-urlencode 'hostid="              . $hostid          . "'";
+        $cmd   .= " --data-urlencode 'arch="                . $arch            . "'";
+        $cmd   .= " --data-urlencode 'deviceclass="         . $deviceClass     . "'";
+        $cmd   .= " --data-urlencode 'channel="             . $channel         . "'";
 
         if( $sku ) {
             # might be a download, self-assembled
             $cmd   .= " --data-urlencode 'sku="     . $sku                . "'";
         }
 
+        my $resultFile = tmpnam();
+
         $cmd   .= " '$registrationurl'";
-        $cmd   .= " -o " . $OPENVPN_CLIENT_CRT;
+        $cmd   .= " -o '$resultFile'";
 
         my $out;
         my $err;
@@ -387,60 +384,24 @@ sub _ensureRegistered {
             if( !$status && $out =~ m!200! ) {
                 last;
             }
-            if( -e $OPENVPN_CLIENT_CRT ) {
-                UBOS::Utils::deleteFile( $OPENVPN_CLIENT_CRT );
+            if( -e $resultFile ) {
+                UBOS::Utils::deleteFile( $resultFile );
             }
 
             info( 'UBOS Live registration unsucessful so far. Trying again in', $REGISTRATION_DELAY, 'seconds', "($i/$MAX_REGISTRATION_TRIES)" );
             sleep( $REGISTRATION_DELAY );
         }
-        unless( -e $OPENVPN_CLIENT_CRT ) {
+        if( -e $resultFile ) {
+            my $resultContent = UBOS::Utils::slurpFile( $resultFile );
+            foreach my $resultLine ( split /\n/, $resultContent ) {
+                if( $resultLine =~ m!^wireguard-publickey=(.+)$! ) {
+                    $confJson->{wireguard}->{server}->{publickey} = $1;
+                }
+            }
+        } else {
             $@ = 'Failed to register with UBOS Live.';
             ++$errors;
         }
-    }
-    return $errors;
-}
-
-##
-# Ensure that the OpenVPN client is set up correctly
-# return: number of errors
-sub _ensureOpenvpnClientConfig {
-
-    trace( 'UbosLive::_ensureOpenvpnClientConfig' );
-
-    my $errors    = 0;
-    my $subdomain = _subdomain();
-
-    # Always do that, so it's regenerated when the code has changed
-    unless( UBOS::Utils::saveFile( $OPENVPN_CLIENT_CONFIG, <<CONTENT )) {
-#
-# OpenVPN UBOS Live client-side config file.
-# Adopted from OpenVPN client.conf example
-# DO NOT MODIFY. UBOS WILL OVERWRITE MERCILESSLY.
-#
-client
-dev tun90
-# tun-ipv6 -- supposedly not needed any more
-proto udp
-remote vpn.live$subdomain.ubos.net 1194
-resolv-retry infinite
-nobind
-user nobody
-group nobody
-persist-key
-persist-tun
-;mute-replay-warnings
-ca $SERVICE_CERT_DIR/s-cas.live$subdomain.ubos.net.crt
-cert $OPENVPN_CLIENT_CRT
-key $OPENVPN_CLIENT_KEY
-;remote-cert-tls server
-;tls-auth ta.key 1
-comp-lzo
-verb 3
-;mute 20
-CONTENT
-        ++$errors;
     }
     return $errors;
 }
@@ -483,12 +444,8 @@ sub _generateRegistrationToken {
 # Invoked when the package installs
 sub postInstall {
 
-    _ensureOpenvpnClientConfig();
-
     _ensureUser();
     _ensureAuthorizedKeys();
-
-    _restartUbosLiveIfNeeded();
 
     return 0;
 }
@@ -497,12 +454,8 @@ sub postInstall {
 # Invoked when the package upgrades
 sub postUpgrade {
 
-    _ensureOpenvpnClientConfig();
-
     _ensureUser();
     _ensureAuthorizedKeys();
-
-    _restartUbosLiveIfNeeded();
 
     return 0;
 }

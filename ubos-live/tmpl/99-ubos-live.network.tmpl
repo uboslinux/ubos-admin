@@ -1,0 +1,13 @@
+[Match]
+Name = live99
+
+[Network]
+Address = 10.200.200.2/32
+# Address = fd75:626f:736c:6976:6500::2/128
+
+[Route]
+Gateway = 10.200.200.1
+# Gateway = fd75:626f:736c:6976:6500::0
+Destination = 10.200.200.0/24
+# Destination = fd75:626f:736c:6976:6500::/80
+GatewayOnlink=true

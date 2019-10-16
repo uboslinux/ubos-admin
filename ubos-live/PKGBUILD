@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.30
+pkgver=0.31
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -13,14 +13,13 @@ depends=(
     'openvpn'
     'perl-www-curl'
     'ubos-admin'
-    'ubos-live-certificates'
+    'wireguard-tools'
 )
 _vendor_perl=/usr/share/perl5/vendor_perl
 install=install
 
 package() {
 # Config
-    mkdir -p -m755 ${pkgdir}/etc/openvpn
     mkdir -p -m755 ${pkgdir}/etc/ubos-live
 
 # ubos-live user
@@ -28,7 +27,7 @@ package() {
     mkdir -m750 ${pkgdir}/etc/sudoers.d
     install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
 
-# Put obtained certificate(s) here; also, ssh keys
+# ssh keys
     install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/usr/share/ubos-live
 
 # Systemd
@@ -36,6 +35,9 @@ package() {
 
 # Initialize on boot with staff
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
+
+# Templates
+    install -D -m644 ${startdir}/tmpl/* -t ${pkgdir}/usr/share/${pkgname}/tmpl/
 
 # Code
     install -D -m755 ${startdir}/vendor_perl/UBOS/Commands/*.pm            -t ${pkgdir}${_vendor_perl}/UBOS/Commands/

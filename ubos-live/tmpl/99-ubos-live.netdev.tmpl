@@ -1,0 +1,17 @@
+[NetDev]
+Name = live99
+Kind = wireguard
+Description = Wireguard
+
+[WireGuard]
+# PrivateKey = AHAohxxrc30PevtEaShzgUD2UkOl+oBhAYmEZqImnkI=
+PrivateKey = WIREGUARD_CLIENT_PRIVATE_KEY
+
+[WireGuardPeer]
+# PublicKey = eG+NOIKXRpuYKmDh/6mwrlOaRo0GPVuNuYYEOz/3PnA=
+PublicKey = WIREGUARD_SERVER_PUBLIC_KEY
+AllowedIPs = 10.200.200.0/24
+# AllowedIPs = fd75:626f:736c:6976:6500::/80
+Endpoint = 192.168.138.139:51820
+PersistentKeepalive = 25
+
