@@ -29,28 +29,23 @@ sub run {
 
     my $verbose         = 0;
     my $logConfigFile   = undef;
-    my $token           = undef;
-    my $registrationUrl = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'          => \$verbose,
-            'logConfig=s'       => \$logConfigFile,
-            'token=s'           => \$token,
-            'registrationurl=s' => \$registrationUrl );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
         || @args
-        || ( $verbose && $logConfigFile )
-        || ( $registrationUrl && $registrationUrl !~ m!^https?://! ))
+        || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( UBOS::Live::UbosLive::ubosLiveActivate( $token, $registrationUrl )) {
+    if( UBOS::Live::UbosLive::ubosLiveActivate()) {
         return 0;
 
     } else {
@@ -68,13 +63,9 @@ sub synopsisHelp {
     Activate UBOS Live for this device.
 SSS
         'cmds' => {
-            <<SSS => <<HHH,
-    [--token <token>]
-SSS
-    Activate UBOS Live for this device. If provided, use registration
-    token <token>; otherwise use the existing one, or generate a new one.
+            '' => <<HHH,
+    Activate UBOS Live for this previously registered device.
 HHH
-    # --registrationurl is for development/testing only, so not documented
 
          },
         'args' => {

@@ -16,6 +16,9 @@ use UBOS::Logging;
 use UBOS::Utils;
 use UBOS::StaffManager;
 
+my $skipFile    = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
+my $accountFile = $UBOS::StaffManager::UBOS_LIVE_ACCOUNT_FILE;
+
 ##
 # Reading-from-Staff callback.
 # $staffRootDir the root directory of the Staff
@@ -29,10 +32,30 @@ sub performAtLoad {
 
     # activate UBOS Live unless there's a skip file
 
-    my $skipFile = $UBOS::StaffManager::SKIP_UBOS_LIVE_FILE;
     if( -e "$staffRootDir/$skipFile" ) {
         info( 'Skipping UBOS Live: user has chosen to self-administer' );
         return 0;
+    }
+
+    my $account = undef;
+    my $token   = undef;
+    if( -e "$staffRootDir/$accountFile" ) {
+        my $accountJson = UBOS::Utils::readJsonFromFile( "$staffRootDir/$accountFile" );
+        if( $accountJson ) {
+            if( exists( $accountJson->{accountid} ) && exists( $accountJson->{token} )) {
+                $account = $accountJson->{accountid};
+                $token   = $accountJson->{token};
+            } else {
+                warning( 'Account JSON file on Staff does not contain accountid or token:', $accountFile );
+            }
+        } else {
+            warning( 'Account JSON file on Staff is invalid:', $accountFile );
+        }
+    }
+
+    if( !UBOS::Live::UbosLive::registerIfNeeded( $account, $token ) ) {
+        warning( 'Failed to register with UBOS Live' );
+        # This is not fatal -- not associated with an account, but okay
     }
 
     if( UBOS::Live::UbosLive::ubosLiveActivate()) {

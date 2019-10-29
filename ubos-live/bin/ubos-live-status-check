@@ -13,6 +13,6 @@ use UBOS::Logging;
 
 UBOS::Logging::initialize( 'ubos-live', 'ubos-live-status-check', 0, '/etc/ubos/log-system.conf' );
 
-UBOS::Live::UbosLive::checkStatus();
+UBOS::Live::UbosLive::statusHandshake();
 
 1;

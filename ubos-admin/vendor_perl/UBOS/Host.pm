@@ -42,6 +42,7 @@ my $_sites                         = undef; # allocated as needed
 my $_allNics                       = undef; # allocated as needed
 my $_physicalNics                  = undef; # allocated as needed
 my $_gpgHostKeyFingerprint         = undef; # allocated as needed
+my $_gpgHostPublicKey              = undef; # allocated as needed
 my $_currentState                  = undef;
 
 ##
@@ -1117,6 +1118,61 @@ sub hostId {
     return $_gpgHostKeyFingerprint;
 }
 
+##
+# Obtain the public gpg key of this host.
+# return: the public key of the host
+sub hostPublicKey {
+
+    unless( $_gpgHostPublicKey ) {
+        my $out;
+        my $err;
+        if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --export --armor pacman@localhost', undef, \$out, \$err )) {
+            error( 'Cannot determine host key', $out, $err );
+            return '';
+        }
+        # gpg: WARNING: unsafe permissions on homedir '/etc/pacman.d/gnupg'
+        # gpg: Warning: using insecure memory!
+        # -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+        # mQENBFyhL+IBCADGzNkwXtMnZ8fHE5MddJ8fEJGeraqKtTOwc4udAed8EFFgCyCs
+        # ...
+        # ymqmWp6TWcU3DN7Qz1XutKzCjVCpnmELGU3XLaNjAQ==
+        # =7xqV
+        # -----END PGP PUBLIC KEY BLOCK-----
+
+        $_gpgHostPublicKey = $out;
+    }
+    return $_gpgHostPublicKey;
+}
+
+##
+# Sign payload with the private key of this host
+# $payload: the payload to sign
+# return: ( hash used ; the signature for the payload )
+sub hostSign {
+    my $payload = shift;
+
+    my $out;
+    my $err;
+    if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --clear-sign --armor --local-user pacman@localhost', $payload, \$out, \$err )) {
+        error( 'Cannot determine host key', $out, $err );
+        return '';
+    }
+    if( $out =~ m!-+BEGIN PGP SIGNED MESSAGE-+\s?Hash:\s*(\S+)\s.*(-+BEGIN PGP SIGNATURE.*-+END PGP SIGNATURE-+)!s ) {
+        my $hash      = $1;
+        my $signature = $2;
+
+        return( $hash, $signature );
+
+    } else {
+        error( 'Failed to parse GPG signature output:', $out );
+        return '';
+    }
+}
+
+
+##
+# Sign
 ##
 # Add a command to run after the next boot. The command must be of the
 # form "<tag>:<command>" where <tag> is either "bash" or "perleval".
