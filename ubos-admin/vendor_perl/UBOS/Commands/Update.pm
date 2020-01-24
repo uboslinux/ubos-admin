@@ -229,8 +229,6 @@ sub run {
             exit 0;
         }
 
-        info( 'Updating code' );
-
         my $rebootHeuristics = 0;
         if( $noPackageUpgrade ) {
             # do nothing
