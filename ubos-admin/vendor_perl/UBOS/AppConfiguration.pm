@@ -779,10 +779,14 @@ sub print {
                             $value = $custPointValue->{value};
                         }
 
-                        $value =~ s!\n!\\n!g; # don't do multi-line
-
                         colPrint( '          customizationpoint: ' . $custPointName . ': ' );
-                        colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+
+                        if( defined( $value )) {
+                            $value =~ s!\n!\\n!g; # don't do multi-line
+                            colPrint( ( length( $value ) < 60 ) ? $value : ( substr( $value, 0, 60 ) . '...' ));
+                        } else {
+                            colPrint( "<not set>" );
+                        }
                         colPrint( "\n" );
                     }
                 }
