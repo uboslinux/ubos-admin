@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::DeploySiteTemplates;
 
 use UBOS::Host;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::StaffManager;
 use UBOS::Utils;
@@ -197,7 +198,7 @@ sub deploySiteTemplates {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
 
     # No backup needed, we aren't redeploying
 

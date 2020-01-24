@@ -1008,15 +1008,6 @@ sub _parseFindMntJson {
     return @ret;
 }
 
-# Prevent interruptions of this script
-sub preventInterruptions {
-    $SIG{'HUP'}  = 'IGNORE';
-    $SIG{'INT'}  = 'IGNORE';
-    $SIG{'QUIT'} = 'IGNORE';
-
-    setState( 'InMaintenance' );
-}
-
 my $dbTypes           = {}; # cache
 my $dbDriverInstances = {}; # cache: maps short-name to host:port to instance of driver
 

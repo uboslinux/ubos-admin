@@ -736,7 +736,7 @@ sub run {
         }
 
         # May not be interrupted, bad things may happen if it is
-        UBOS::Host::preventInterruptions();
+        UBOS::Lock::preventInterruptions();
 
         info( 'Setting up placeholder sites' );
 

@@ -39,7 +39,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
 
     my $verbose       = 0;
     my $logConfigFile = undef;

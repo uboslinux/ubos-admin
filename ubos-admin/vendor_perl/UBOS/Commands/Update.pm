@@ -134,7 +134,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
     my $ret = 1;
 
     my $snapNumber = undef;

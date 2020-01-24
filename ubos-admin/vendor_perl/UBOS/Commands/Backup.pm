@@ -126,7 +126,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
 
     info( 'Suspending sites' );
 
@@ -160,6 +160,8 @@ sub run {
     unless( UBOS::Lock::release() ) {
         colPrintError( "$@Continuing anyway.\n" );
     }
+
+    UBOS::Lock::allowInterruptions();
 
     unless( $backupOperation->doUpload()) {
         error( $@ );
