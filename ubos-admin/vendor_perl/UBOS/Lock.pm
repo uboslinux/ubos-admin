@@ -48,9 +48,7 @@ sub release {
 # Prevent interruptions of this process
 sub preventInterruptions {
 
-    setpgrp(); # prevent signals from reaching sub-processes
-
-    foreach $key ( keys %NOINTERRUPTSIG ) {
+    foreach my $key ( keys %NOINTERRUPTSIG ) {
         $OLDSIG{$key} = $SIG{$key};
         $SIG{$key}    = $NOINTERRUPTSIG{$key};
     }
