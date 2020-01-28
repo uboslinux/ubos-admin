@@ -319,6 +319,7 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/mkdir *, \
     /usr/bin/mount *, \
     /usr/bin/pacman *, \
+    /usr/bin/pacman-key *, \
     /usr/bin/smartctl *, \
     /usr/bin/systemctl *, \
     /usr/bin/ubos-admin *, \
