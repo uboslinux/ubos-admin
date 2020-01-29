@@ -64,8 +64,9 @@ sub saveBootLog {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime( UBOS::Utils::now() );
     my $now = sprintf( "%04d%02d%02d-%02d%02d%02d", $year+1900, $mon+1, $mday, $hour, $min, $sec );
 
-    UBOS::Utils::myexec( 'journctl --boot', undef, "$staffRootDir/$bootLogDir/$now.txt" );
-    UBOS::Utils::myexec( 'journctl --boot', undef, "$staffRootDir/$bootLogDir/$now.txt" );
+    UBOS::Utils::myexec( "journalctl --boot > $staffRootDir/$bootLogDir/$now.txt" );
+
+    return 0;
 }
 
 1;
