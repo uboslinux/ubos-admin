@@ -183,17 +183,36 @@ sub activatePhpModules {
     my $ret = 0;
     foreach my $module ( @modules ) {
         if( -e "$phpModulesConfDir/$module.ini" ) {
-            next;
-        }
-        unless( -e "$phpModulesDir/$module.so" ) {
-            warning( 'Cannot find PHP module, not activating:', $module );
-            next;
-        }
+            my $content = UBOS::Utils::slurpFile( "$phpModulesConfDir/$module.ini" );
+            my $newContent;
+            my $found = 0;
+            foreach my $line ( split /\n/, $content ) {
+                unless( $found ) {
+                    # There are versions with extension=foo and extension=foo.so
+                    if( $line =~ m!^\s*extension\s*=\s*$module(\.so)?\s*$! ) {
+                        $found = 1;
+                    } elsif( $line =~ m!^\s*;\s*extension\s*=\s*$module*(\.so)?\s*$! ) {
+                        $line = "extension=$module";
+                        $found = 1;
+                    }
+                }
+                $newContent .= $line . "\n";
+            }
+            if( $newContent ne $content ) {
+                UBOS::Utils::saveFile( "$phpModulesConfDir/$module.ini", $newContent );
+                ++$ret;
+            }
+        } else {
+            unless( -e "$phpModulesDir/$module.so" ) {
+                warning( 'Cannot find PHP module, not activating:', $module );
+                next;
+            }
 
-        UBOS::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
+            UBOS::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
 extension=$module.so
 END
-        ++$ret;
+            ++$ret;
+        }
     }
 
     return $ret;
