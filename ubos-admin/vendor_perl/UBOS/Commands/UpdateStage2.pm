@@ -108,7 +108,8 @@ sub finishUpdate {
             $ret &= $backup->restoreSite( $site );
 
             debugAndSuspend( 'Run upgraders at site', $site->siteId );
-            $ret &= $site->runUpgraders();
+            $ret &= $site->runInstallersOrUpgraders( $site );
+            # Site configuration remains the same
         }
         $deployTriggers->{'httpd-restart'} = 1;
 

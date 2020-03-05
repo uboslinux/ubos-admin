@@ -750,7 +750,7 @@ sub run {
         my $deployUndeployTriggers = {};
         debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
-        $ret &= $newSite->runInstallers();
+        $ret &= $newSite->runInstallersOrUpgraders( undef );
 
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
 

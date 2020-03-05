@@ -328,11 +328,8 @@ sub deploySiteTemplates {
     info( 'Running installers/upgraders' );
 
     foreach my $site ( @newSites ) {
-        foreach my $appConfig ( @{$site->appConfigs} ) {
-            debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-            unless( $appConfig->runInstallers()) {
-                ++$errors;
-            }
+        unless( $site->runInstallersOrUpgraders( $oldSites->{$site->siteId} )) {
+            ++$errors;
         }
     }
 

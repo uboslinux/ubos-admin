@@ -474,34 +474,15 @@ sub resume {
 }
 
 ##
-# Run the installer(s) for the app at this AppConfiguration
+# Run the upgrader(s), or installer(s) as appropriate for the app and
+# accessories at this AppConfiguration
+# $oldAppConfig: if the AppConfiguration existed before, the old AppConfiguration
 # return: success or fail
-sub runInstallers {
-    my $self = shift;
+sub runInstallersOrUpgraders {
+    my $self         = shift;
+    my $oldAppConfig = shift;
 
-    return $self->_runPostDeploy( 'installers', 'install' );
-}
-
-##
-# Run the upgrader(s) for the app at this AppConfiguration
-# return: success or fail
-sub runUpgraders {
-    my $self = shift;
-
-    return $self->_runPostDeploy( 'upgraders', 'upgrade' );
-}
-
-##
-# Common code for running installers and upgraders.
-# $jsonSection: name of the JSON section that holds the script(s)
-# $methodName: name of the method on AppConfigurationItem to invoke
-# return: success or fail
-sub _runPostDeploy {
-    my $self        = shift;
-    my $jsonSection = shift;
-    my $methodName  = shift;
-
-    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->_runPostDeploy', $methodName );
+    trace( 'AppConfiguration', $self->appConfigId(), '->runInstallersOrUpgraders', $oldAppConfig ? $oldAppConfig->appConfigId() : undef );
 
     unless( $self->{site} ) {
         fatal( 'Cannot _runPostDeploy AppConfiguration without site' );
@@ -514,6 +495,18 @@ sub _runPostDeploy {
 
     foreach my $installable ( @installables ) {
         my $vars = $installable->obtainInstallableAtAppconfigVars( $self, 1 );
+
+        my $oldInstallable = $oldAppConfig ? $oldAppConfig->installable( $installable->packageName() ) : undef;
+
+        my $jsonSection;
+        my $methodName;
+        if( $oldInstallable ) {
+            $jsonSection = 'upgraders';
+            $methodName  = 'upgrade';
+        } else {
+            $jsonSection = 'installers';
+            $methodName  = 'install';
+        }
 
         foreach my $role ( @rolesOnHost ) {
             if( $self->needsRole( $role )) {

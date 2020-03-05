@@ -450,7 +450,7 @@ sub restoreAppConfigs {
                 $migratePackages );
 
         debugAndSuspend( 'Running upgraders at appconfig', $newAppConfigId );
-        $ret &= $newAppConfigs{$newAppConfigId}->runUpgraders();
+        $ret &= $newAppConfigs{$newAppConfigId}->runInstallersOrUpgraders( $newAppConfigs{$newAppConfigId} );
     }
 
     info( 'Resuming site(s)' );
@@ -711,7 +711,7 @@ sub restoreSites {
         foreach my $newAppConfigId ( @{$siteIdsToAppConfigIds{$newSiteId}} ) {
             my $newAppConfig = UBOS::Host::findAppConfigurationById( $newAppConfigId );
             debugAndSuspend( 'Run upgraders for appconfig', $newAppConfig->appConfigId );
-            $ret &= $newAppConfig->runUpgraders();
+            $ret &= $newAppConfig->runInstallersOrUpgraders( $newAppConfig );
         }
     }
 

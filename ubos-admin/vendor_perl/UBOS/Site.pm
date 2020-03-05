@@ -1057,27 +1057,20 @@ sub deployAppConfigurationForRestore {
 }
 
 ##
-# Run the installer(s) for everything installed at this Site
+# Run the upgrader(s), or installer(s) as appropriate for everything installed
+# at this Site
+# $oldSite: if this Site existed before, the old Site configuration
 # return: success or fail
-sub runInstallers {
-    my $self = shift;
+sub runInstallersOrUpgraders {
+    my $self    = shift;
+    my $oldSite = shift;
+
+    trace( 'Site::runInstallersOrUpgraders', $self->siteId, $oldSite ? $oldSite->siteId : undef );
 
     my $ret = 1;
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $ret &= $appConfig->runInstallers();
-    }
-    return $ret;
-}
-
-##
-# Run the upgrader(s) for everything installed at this Site
-# return: success or fail
-sub runUpgraders {
-    my $self = shift;
-
-    my $ret = 1;
-    foreach my $appConfig ( @{$self->appConfigs} ) {
-        $ret &= $appConfig->runUpgraders();
+        my $oldAppConfig = $oldSite ? $oldSite->appConfig( $appConfig->appConfigId() ) : undef;
+        $ret &= $appConfig->runInstallersOrUpgraders( $oldAppConfig );
     }
     return $ret;
 }
