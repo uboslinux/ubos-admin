@@ -1,19 +1,13 @@
 #
-# Abstract superclass for Raspberry Pi installers.
+# Install UBOS on an SD Card for an Odroid XU3, XU4 or HC2.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
-# Device-specific notes:
-# * random number generator: PI has /dev/hwrng, so we run rngd, and patch its
-#   configuration file during ubos-install, as long as Arch ARM hasn't updated the
-#   default configuration they ship, which is identical as the x86 one:
-#   http://archlinuxarm.org/forum/viewtopic.php?f=60&t=8571,
-
 use strict;
 use warnings;
 
-package UBOS::Install::AbstractRpiInstaller;
+package UBOS::Install::Installers::Armv7hOdroidXu3;
 
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
@@ -29,6 +23,7 @@ use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
 use UBOS::Logging;
 use UBOS::Utils;
 
+
 ##
 # Constructor
 sub new {
@@ -38,29 +33,31 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    unless( $self->{hostname} ) {
+        $self->{hostname} = 'ubos-odroid-xu3';
+    }
+    $self->{kernelpackage} = 'linux-odroid-xu3';
+
+    $self->SUPER::new( @args );
+
+    push @{$self->{devicepackages}}, 'ubos-deviceclass-odroidxu3';
+
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw(
                 ubos-networking-client
-                raspberrypi-firmware
-                raspberrypi-bootloader raspberrypi-bootloader-x
+                uboot-odroid-xu3
                 archlinuxarm-keyring
                 rng-tools
                 smartmontools
-                wpa_supplicant
-                crda
         ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service ) ];
     }
-    unless( $self->{devicemodules} ) {
-        $self->{devicemodules} = [ qw( snd-bcm2835 ) ];
-    }
-
-    $self->SUPER::new( @args );
 
     return $self;
 }
+
 
 ##
 # Create a DiskLayout object that goes with this Installer.
@@ -74,28 +71,30 @@ sub createDiskLayout {
     my $argvp  = shift;
     my $config = shift;
 
+FIXME
+
     # Option 1: a single image file
     # ubos-install ... image.img
 
     # Option 2: a single disk device
     # ubos-install ... /dev/sda
 
-    # Option 3: a boot partition device, one or more root partition devices
-    # ubos-install ... --bootpartition /dev/sda1 --rootpartition /dev/sda2 --rootpartition /dev/sdb1
+    # Option 3: a boot device, one or more root partition devices
+    # ubos-install ... --bootdevice /dev/sda --rootpartition /dev/sda2 --rootpartition /dev/sdb1
 
     # Option 4: a boot partition device, one or more root partition devices, one or more ubos partition devices
     # as #3, plus add --ubospartition /dev/sda3 --ubospartition /dev/sdd1
 
     # Option 5: a directory (invalid)
 
-    my $bootpartition;
+    my $bootdevice;
     my @rootpartitions;
     my @ubospartitions;
     my $directory;
 
     my $parseOk = GetOptionsFromArray(
             $argvp,
-            'bootpartition=s' => \$bootpartition,
+            'bootdevice=s'    => \$bootdevice,
             'rootpartition=s' => \@rootpartitions,
             'ubospartition=s' => \@ubospartitions,
             'directory=s'     => \$directory );
@@ -104,8 +103,8 @@ sub createDiskLayout {
         return undef;
     }
 
-    if( !$bootpartition && exists( $config->{bootpartition} )) {
-        $bootpartition = $config->{bootpartition};
+    if( !$bootdevice && exists( $config->{bootdevice} )) {
+        $bootdevice = $config->{bootdevice};
     }
     if( !@rootpartitions ) {
         if( exists( $config->{rootpartitions} )) {
@@ -142,7 +141,7 @@ sub createDiskLayout {
         error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
         $ret = undef;
 
-    } elsif( $bootpartition || @rootpartitions || @ubospartitions ) {
+    } elsif( $bootdevice || @rootpartitions || @ubospartitions ) {
         # Option 3 or 4
         if( $noswap ) {
             error( 'Invalid invocation: --noswap cannot be used if specifying partitions' );
@@ -152,21 +151,21 @@ sub createDiskLayout {
             error( 'Invalid invocation: either specify entire disks, or partitions; do not mix' );
             $ret = undef;
         }
-        if( $ret && !$bootpartition ) {
-            error( 'Invalid invocation: this device class requires a --bootpartition parameter when specifying partitions' );
+        if( $ret && !$bootdevice ) {
+            error( 'Invalid invocation: this device class requires a --bootdevice parameter when specifying partitions' );
             $ret = undef;
         }
         if( $ret && @rootpartitions == 0 ) {
             error( 'Invalid invocation: A --rootpartition must be provided when specifying partitions' );
             $ret = undef;
         }
-        if( $ret && !UBOS::Install::AbstractDiskLayout::isPartition( $bootpartition )) {
-            error( 'Provided bootpartition is not a partition:', $bootpartition );
+        if( $ret && !UBOS::Install::AbstractDiskLayout::isDisk( $bootdevice )) {
+            error( 'Provided bootdevice is not a disk:', $bootdevice );
             $ret = undef;
         }
         my %haveAlready = ();
-        if( defined( $bootpartition )) {
-            $haveAlready{$bootpartition} = 1;
+        if( defined( $bootdevice )) {
+            $haveAlready{$bootdevice} = 1;
         }
 
         if( $ret ) {
@@ -187,18 +186,9 @@ sub createDiskLayout {
         if( $ret && @ubospartitions == 0 ) {
             # Option 3
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
-                    {   '/boot' => {
-                            'index'       => 1,
-                            'fs'          => 'vfat',
-                            'devices'     => [ $bootpartition ],
-                            'mkfsflags'   => '-F32',
-                            'mbrboot'     => 1,
-                            'mbrparttype' => 'c'
-                            # default partition type for gpt
-                        },
-                        '/' => {
-                            'index'  => 2,
-                            'fs'      => 'btrfs',
+                    {   '/' => {
+                            'index'   => 1,
+                            'fs'      => 'ext4',
                             'devices' => \@rootpartitions
                              # default partition type
                         }
@@ -206,23 +196,14 @@ sub createDiskLayout {
         } elsif( $ret ) {
             # Options 4
             $ret = UBOS::Install::DiskLayouts::PartitionBlockDevices->new(
-                    {   '/boot' => {
-                            'index'       => 1,
-                            'fs'          => 'vfat',
-                            'devices'     => [ $bootpartition ],
-                            'mkfsflags'   => '-F32',
-                            'mbrboot'     => 1,
-                            'mbrparttype' => 'c'
-                            # default partition type for gpt
-                        },
-                        '/' => {
-                            'index'   => 2,
-                            'fs'      => 'btrfs',
+                    {   '/' => {
+                            'index'   => 1,
+                            'fs'      => 'ext4',
                             'devices' => \@rootpartitions
                              # default partition type
                         },
                         '/ubos' => {
-                            'index'  => 3,
+                            'index'  => 2,
                             'fs'      => 'btrfs',
                             'devices' => \@ubospartitions
                              # default partition type
@@ -242,17 +223,9 @@ sub createDiskLayout {
                 } else {
                     $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
                             $rootDiskOrImage,
-                            {   '/boot' => {
-                                    'index'       => 1,
-                                    'fs'          => 'vfat',
-                                    'size'        => 200 * 1024, # 100M at 512/sector
-                                    'mkfsflags'   => '-F32',
-                                    'mbrparttype' => 'c'
-                                    # default partition type for gpt
-                                },
-                                '/' => {
-                                    'index' => 2,
-                                    'fs'    => 'btrfs'
+                            {   '/' => {
+                                    'index' => 1,
+                                    'fs'    => 'ext4'
                                     # default partition type
                                 },
                             } );
@@ -264,25 +237,16 @@ sub createDiskLayout {
                     $ret = undef;
                 } else {
                     my $deviceTable = {
-                        '/boot' => {
-                            'index'       => 1,
-                            'fs'          => 'vfat',
-                            'size'        => 200 * 1024, # 100M at 512/sector
-                            'mkfsflags'   => '-F32',
-                            'mbrparttype' => 'c',
-                            'label'       => 'UBOS_boot'
-                            # default partition type for gpt
-                        },
-                        '/' => {
-                            'index' => 2,
-                            'fs'    => 'btrfs',
+=                        '/' => {
+                            'index' => 1,
+                            'fs'    => 'ext4',
                             'label' => 'UBOS_root'
                             # default partition type
                         },
                     };
                     unless( $noswap ) {
                         $deviceTable->{swap} = {
-                            'index'       => 3,
+                            'index'       => 2,
                             'fs'          => 'swap',
                             'size'        => 2048 * 1024, # 1G at 512/sector
                             'mbrparttype' => '82',
@@ -314,31 +278,19 @@ sub createDiskLayout {
 }
 
 ##
-# Generate and save different other files if needed
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# $diskLayout: the disk layout
 # return: number of errors
-sub saveOther {
-    my $self = shift;
+sub installBootLoader {
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+    my $diskLayout       = shift;
 
-    my $ret    = 0;
-    my $target = $self->{target};
+    # don't do anything here. All contained in uboot-espressobin-config
+    my $errors           = 0;
 
-    # Use hardware random generator by default
-
-    unless( UBOS::Utils::saveFile( "$target/etc/conf.d/rngd", <<CONTENT )) {
-# Changed for UBOS
-RNGD_OPTS="-o /dev/random -r /dev/hwrng"
-CONTENT
-        ++$ret;
-    }
-
-    unless( UBOS::Utils::saveFile( "$target/etc/udev/rules.d/raspberrypi.rules", <<CONTENT )) {
-SUBSYSTEM=="vchiq|input", MODE="0777"
-KERNEL=="mouse*|mice|event*", MODE="0777"
-CONTENT
-        ++$ret;
-    }
-
-    return $ret;
+    return $errors;
 }
 
 ##
@@ -354,6 +306,29 @@ sub addConfigureNetworkingToScript {
     $$chrootScriptP .= "ubos-admin setnetconfig --skip-check-ready --init-only client\n";
 
     return 0;
+}
+
+##
+# Returns the arch for this device.
+# return: the arch
+sub arch {
+    my $self = shift;
+
+    return 'armv7h';
+}
+
+##
+# Returns the device class
+sub deviceClass {
+    my $self = shift;
+
+    return 'odroid-xu3';
+}
+
+##
+# Help text
+sub help {
+    return 'SD card for Odroid-XU3/XU4/HC2';
 }
 
 1;
