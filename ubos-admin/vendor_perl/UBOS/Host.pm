@@ -1146,7 +1146,11 @@ sub hostPublicKey {
         # =7xqV
         # -----END PGP PUBLIC KEY BLOCK-----
 
-        $_gpgHostPublicKey = $out;
+        if( $out =~ m!(-+BEGIN PGP PUBLIC KEY BLOCK-+.+-+END PGP PUBLIC KEY BLOCK-+)!s ) {
+            $_gpgHostPublicKey = $1;
+        } else {
+            error( 'Failed to parse public key on host' );
+        }
     }
     return $_gpgHostPublicKey;
 }
@@ -1176,9 +1180,6 @@ sub hostSign {
     }
 }
 
-
-##
-# Sign
 ##
 # Add a command to run after the next boot. The command must be of the
 # form "<tag>:<command>" where <tag> is either "bash" or "perleval".
