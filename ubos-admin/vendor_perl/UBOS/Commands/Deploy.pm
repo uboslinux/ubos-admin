@@ -219,7 +219,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
     my $ret = 1;
 
     UBOS::UpdateBackup::checkReadyOrQuit();
@@ -329,7 +329,7 @@ sub run {
 
                 debugAndSuspend( 'Restoring from UpdateBackup for site', $site->siteId() );
                 $ret &= $updateBackup->restoreSite( $site );
-                $ret &= $site->runUpgraders();
+                $ret &= $site->runInstallersOrUpgraders( $oldSite );
 
                 if( $ret ) {
                     trace( 'Deleting update backup for site', $site->siteId );
@@ -342,7 +342,7 @@ sub run {
             } else {
                 debugAndSuspend( 'Deploying site', $site->siteId() );
                 $ret &= $site->deploy( $deployUndeployTriggers );
-                $ret &= $site->runInstallers();
+                $ret &= $site->runInstallersOrUpgraders( undef );
             }
         }
         UBOS::Networking::NetConfigUtils::updateOpenPorts();

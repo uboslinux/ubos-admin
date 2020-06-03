@@ -736,7 +736,7 @@ sub run {
         }
 
         # May not be interrupted, bad things may happen if it is
-        UBOS::Host::preventInterruptions();
+        UBOS::Lock::preventInterruptions();
 
         info( 'Setting up placeholder sites' );
 
@@ -750,7 +750,7 @@ sub run {
         my $deployUndeployTriggers = {};
         debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
-        $ret &= $newSite->runInstallers();
+        $ret &= $newSite->runInstallersOrUpgraders( undef );
 
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
 

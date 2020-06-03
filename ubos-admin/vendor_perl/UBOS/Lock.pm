@@ -1,13 +1,22 @@
 #!/usr/bin/perl
 #
-# Central administration script for UBOS administration
+# Prevent multiple executions of this script in parallel, and
+# related functionality.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
 package UBOS::Lock;
 
+use UBOS::Host;
 use Fcntl ':flock';
+
+my %NOINTERRUPTSIG = (
+    'HUP'  => 'IGNORE',
+    'INT'  => 'IGNORE',
+    'QUIT' => 'IGNORE'
+);
+my %OLDSIG; # Store previous values of $SIG
 
 #####
 # Check that only one copy of the script is running at any time.
@@ -32,6 +41,27 @@ sub release {
     } else {
         $@ = "Failed to release UBOS::Lock.";
         return 0;
+    }
+}
+
+#####
+# Prevent interruptions of this process
+sub preventInterruptions {
+
+    foreach my $key ( keys %NOINTERRUPTSIG ) {
+        $OLDSIG{$key} = $SIG{$key};
+        $SIG{$key}    = $NOINTERRUPTSIG{$key};
+    }
+
+    UBOS::Host::setState( 'InMaintenance' );
+}
+
+#####
+# Allow interruptions of this process again
+sub allowInterruptions {
+
+    foreach $key ( keys %NOINTERRUPTSIG ) {
+        $SIG{$key} = $OLDSIG{$key};
     }
 }
 

@@ -31,6 +31,8 @@ sub new {
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-raspberry-pi2';
     }
+    $self->{kernelpackage} = 'linux-raspberrypi';
+
     $self->SUPER::new( @args );
 
     push @{$self->{devicepackages}}, 'ubos-deviceclass-rpi2';

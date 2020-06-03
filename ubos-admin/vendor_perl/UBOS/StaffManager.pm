@@ -318,16 +318,23 @@ sub setupUpdateShepherd {
 
         unless( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
 shepherd ALL = NOPASSWD: \
+    /usr/bin/docker *, \
     /usr/bin/journalctl *, \
     /usr/bin/mkdir *, \
     /usr/bin/mount *, \
     /usr/bin/pacman *, \
+    /usr/bin/pacman-key *, \
     /usr/bin/smartctl *, \
     /usr/bin/systemctl *, \
     /usr/bin/ubos-admin *, \
     /usr/bin/ubos-install *, \
     /usr/bin/umount *, \
     /usr/bin/snapper *, \
+    /usr/bin/storj-gateway *, \
+    /usr/bin/storj-gateway-credentials *, \
+    /usr/bin/storj-identity *, \
+    /usr/bin/storj-linksharing *, \
+    /usr/bin/storj-uplink *, \
     /usr/bin/su *, \
     /bin/bash *
 CONTENT

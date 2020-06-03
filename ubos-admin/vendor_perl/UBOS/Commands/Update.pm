@@ -134,7 +134,7 @@ sub run {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
     my $ret = 1;
 
     my $snapNumber = undef;
@@ -228,8 +228,6 @@ sub run {
             colPrint( "3. If you did not reboot: manually run stage 2: $stage2Cmd\n" );
             exit 0;
         }
-
-        info( 'Updating code' );
 
         my $rebootHeuristics = 0;
         if( $noPackageUpgrade ) {

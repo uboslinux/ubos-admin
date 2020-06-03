@@ -50,7 +50,7 @@ pre_upgrade() {
 post_upgrade() {
     ensureChattr
 
-    # Make Java 8 the default
+    # Make Java 11 the default
     if [ -e /usr/lib/jvm/default ]; then
         rm /usr/lib/jvm/default
     fi
@@ -60,8 +60,8 @@ post_upgrade() {
     if [ ! -d /usr/lib/jvm ]; then
         mkdir -m755 /usr/lib/jvm
     fi
-    ln -sf java-8-openjdk/jre /usr/lib/jvm/default
-    ln -sf java-8-openjdk/jre /usr/lib/jvm/default-runtime
+    ln -sf java-11-openjdk /usr/lib/jvm/default
+    ln -sf java-11-openjdk /usr/lib/jvm/default-runtime
 
     systemctl daemon-reload
 

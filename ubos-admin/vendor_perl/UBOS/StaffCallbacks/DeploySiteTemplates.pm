@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::DeploySiteTemplates;
 
 use UBOS::Host;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::StaffManager;
 use UBOS::Utils;
@@ -197,7 +198,7 @@ sub deploySiteTemplates {
     }
 
     # May not be interrupted, bad things may happen if it is
-    UBOS::Host::preventInterruptions();
+    UBOS::Lock::preventInterruptions();
 
     # No backup needed, we aren't redeploying
 
@@ -327,11 +328,8 @@ sub deploySiteTemplates {
     info( 'Running installers/upgraders' );
 
     foreach my $site ( @newSites ) {
-        foreach my $appConfig ( @{$site->appConfigs} ) {
-            debugAndSuspend( 'Running installer for appconfig', $appConfig->appConfigId );
-            unless( $appConfig->runInstallers()) {
-                ++$errors;
-            }
+        unless( $site->runInstallersOrUpgraders( $oldSites->{$site->siteId} )) {
+            ++$errors;
         }
     }
 

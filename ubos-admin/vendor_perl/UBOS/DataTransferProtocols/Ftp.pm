@@ -140,7 +140,11 @@ sub send {
     my $out;
     UBOS::Utils::myexec( $cmd, $script, \$out, \$out );
 
-    if( $out =~ m!Permission denied! || $out =~ m!No such! ) {
+    if(    $out =~ m!Permission denied!
+        || $out =~ m!No such!
+        || $out =~ m!No address associated!
+        || $out =~ m!Not connected! )
+    {
         $@ = "Upload failed to: $toFile : $out";
         return 0;
 

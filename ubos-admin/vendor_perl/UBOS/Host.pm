@@ -570,6 +570,19 @@ sub updateCode {
     }
 
     my $out;
+    if( myexec( 'pacman-key --list-keys | grep expired', undef, \$out, \$out ) == 0 ) {
+        # at least one key is expired
+
+        info( 'Refreshing keys' );
+
+        if( myexec( 'pacman-key --refresh-keys', undef, \$out, \$out )) {
+            warning( 'Failed to refresh some expired keys' );
+            trace( $out );
+        }
+    }
+
+    info( 'Updating code' );
+
     if( $syncFirst ) {
         $cmd = 'pacman -Sy --noconfirm';
         debugAndSuspend( 'Execute pacman -Sy' );
@@ -753,6 +766,8 @@ sub ensurePackages {
 sub installPackageFiles {
     my $packageFiles = shift;
     my $showPackages = shift;
+
+    info( 'Installing packages' );
 
     my $out;
     my $cmd = 'pacman -U --noconfirm ' . join( ' ', @$packageFiles );
@@ -992,15 +1007,6 @@ sub _parseFindMntJson {
         }
     }
     return @ret;
-}
-
-# Prevent interruptions of this script
-sub preventInterruptions {
-    $SIG{'HUP'}  = 'IGNORE';
-    $SIG{'INT'}  = 'IGNORE';
-    $SIG{'QUIT'} = 'IGNORE';
-
-    setState( 'InMaintenance' );
 }
 
 my $dbTypes           = {}; # cache
