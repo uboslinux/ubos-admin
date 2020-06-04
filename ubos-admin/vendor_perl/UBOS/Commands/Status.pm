@@ -63,6 +63,7 @@ sub run {
     my $showPacnew      = 0;
     my $showProblems    = 0;
     my $showProduct     = 0;
+    my $showPublicKey   = 0;
     my $showReady       = 0;
     my $showSmart       = 0;
     my $showVirt        = 0;
@@ -87,6 +88,7 @@ sub run {
             'pacnew'         => \$showPacnew,
             'problems'       => \$showProblems,
             'product'        => \$showProduct,
+            'publickey'      => \$showPublicKey,
             'ready'          => \$showReady,
             'smart'          => \$showSmart,
             'virtualization' => \$showVirt,
@@ -98,8 +100,9 @@ sub run {
     my $showAspect =    $showArch     || $showChannel || $showCpu
                      || $showDisks    || $showFailed  || $showLastUpdated
                      || $showLive     || $showMemory  || $showPacnew
-                     || $showProblems || $showProduct || $showReady
-                     || $showSmart    || $showVirt    || $showUptime;
+                     || $showProblems || $showProduct || $showPublicKey
+                     || $showReady    || $showSmart   || $showVirt
+                     || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -249,6 +252,11 @@ sub run {
             if( $showDetail ) {
                 $out .= '    users:    ' .  $uptime->{nusers} . "\n";
             }
+        }
+
+        if( $showPublicKey ) {
+            $out .= "Host public key:\n";
+            $out .= $json->{publickey} . "\n";
         }
 
         if( $showDisks || $showSmart ) {
@@ -472,25 +480,26 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--channel] [--cpu] [--disks] [--failed] [--live] [--lastupdated] [--memory] [--pacnew] [--ready] [--uptime]
+    [--channel] [--cpu] [--arch] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--virtualization] [--uptime]
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
-    * channel:        report on the UBOS release channel used by this device.
-    * cpu:            report on the CPUs available.
-    * arch:           report on the arch and device class.
-    * disks:          report on attached disks and their usage.
-    * failed:         report on daemons that have failed.
-    * lastupdated:    report when the device was last updated.
-    * live:           report on UBOS Live status.
-    * memory:         report how much RAM and swap memory is being used.
-    * pacnew:         report on manually modified configuration files.
-    * problems:       report on any detected problems.
-    * product:        report on the product.
-    * ready:          report whether the device is ready or not.
-    * smart:          report on disk health via S.M.A.R.T.
-    * virtualization: report on the use of virtualization.
-    * uptime:         report how long the device has been up since last boot.
+    * channel:        UBOS release channel used by this device
+    * cpu:            CPUs available
+    * arch:           arch and device class
+    * disks:          attached disks and their usage
+    * failed:         daemons that have failed
+    * lastupdated:    when the device was last updated
+    * live:           UBOS Live status
+    * memory:         how much RAM and swap memory is being used
+    * pacnew:         manually modified configuration files
+    * problems:       any detected problems
+    * product:        product identifier
+    * publickey:      the host's public key
+    * ready:          whether the device is ready or not
+    * smart:          disk health via S.M.A.R.T
+    * virtualization: use of virtualization
+    * uptime:         how long the device has been up since last boot
 HHH
             <<SSS => <<HHH
     --all

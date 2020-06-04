@@ -290,6 +290,9 @@ sub statusJson {
         };
     }
 
+    trace( 'Host public key' );
+    $json->{publickey} = UBOS::Host::hostPublicKey();
+
     trace( 'Check UBOS Live status' );
     my $liveActive = eval "use UBOS::Live::UbosLive;  UBOS::Live::UbosLive::isUbosLiveActive();";
     if( $@ ) {
