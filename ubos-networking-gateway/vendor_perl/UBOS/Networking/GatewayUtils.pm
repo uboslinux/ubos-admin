@@ -13,6 +13,7 @@ use warnings;
 package UBOS::Networking::GatewayUtils;
 
 use JSON;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Networking::NetConfigUtils;
 
@@ -36,7 +37,7 @@ sub isPossible {
     my $gatewayNicPatterns        = shift || \@defaultGatewayNicPatterns;
     my $upUnconfiguredNicPatterns = shift || [];
 
-    my $allNics = UBOS::Host::nics();
+    my $allNics = UBOS::HostStatus::nics();
     map {   my $nic = $_;
             foreach my $pattern ( @$upUnconfiguredNicPatterns ) {
                 if( $nic =~ m!^$pattern$! ) {
@@ -76,7 +77,7 @@ sub activate {
     my $gatewayNicPatterns        = shift || \@defaultGatewayNicPatterns;
     my $upUnconfiguredNicPatterns = shift || [];
 
-    my $allNics            = UBOS::Host::nics();
+    my $allNics            = UBOS::HostStatus::nics();
     my $upUnconfiguredNics = {};
     map {   my $nic = $_;
             foreach my $pattern ( @$upUnconfiguredNicPatterns ) {

@@ -11,6 +11,7 @@ use warnings;
 package UBOS::Live::StaffCallbacks::ActivateUbosLive;
 
 use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Live::UbosLive;
 use UBOS::Logging;
 use UBOS::Utils;
@@ -81,7 +82,7 @@ sub performAtSave {
 
     # Write the UBOS Live info to the Staff
 
-    my $hostId  = UBOS::Host::hostId();
+    my $hostId  = UBOS::HostStatus::hostId();
     my $infoDir = "flock/$hostId/device-info";
     my $errors  = 0;
 

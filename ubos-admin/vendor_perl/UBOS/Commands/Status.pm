@@ -20,6 +20,7 @@ use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
 
+# report on those disk fields
 my %defaultDiskFields = ();
 map { $defaultDiskFields{$_} = 1; } qw (
     size
@@ -28,7 +29,7 @@ map { $defaultDiskFields{$_} = 1; } qw (
     fssize
     type
     smart_status_passed
-); # name is shown separately
+);
 
 ##
 # Execute this command.
@@ -113,9 +114,7 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $json = UBOS::HostStatus::statusJson();
-
-    if( $showSmart && exists( $json->{systemd_detect_virt} )) {
+    if( $showSmart && UBOS::HostStatus::virtualization()) {
         fatal( 'Cannot show S.M.A.R.T. disk health in a virtualized system' );
     }
 
@@ -132,7 +131,7 @@ sub run {
         $showProblems    = 1;
         $showProduct     = 1;
         $showReady       = 1;
-        $showSmart       = !exists( $json->{systemd_detect_virt} );
+        $showSmart       = !UBOS::HostStatus::virtualization(),
         $showVirt        = 1;
         $showUptime      = 1;
 
@@ -146,27 +145,16 @@ sub run {
         $showProblems    = 1;
         $showProduct     = 1;
         $showReady       = 1;
-        $showSmart       = !exists( $json->{systemd_detect_virt} );
+        $showSmart       = !UBOS::HostStatus::virtualization();
         $showUptime      = 1;
     }
 
-    unless( $showFailed ) {
-        # don't report twice
-        push @{$json->{problems}}, map { 'System service ' . $_ . ' has failed.' } @{$json->{failedservices}};
-    }
-
-    # now display (or not)
-
-    unless( @{$json->{problems}} ) {
-        delete $json->{problems};
-    }
-
     if( $showJson ) {
-        UBOS::Utils::writeJsonToStdout( $json );
+        UBOS::Utils::writeJsonToStdout( UBOS::HostStatus::allAsJson() );
 
     } else {
         # will print to console
-        my $out  = 'Status: ' . $json->{hostid} . "\n";
+        my $out  = 'Status: ' . UBOS::HostStatus::hostId() . "\n";
         $out .= '=' x ( length( $out )-1 ) . "\n";
 
         colPrint( $out );
@@ -174,94 +162,110 @@ sub run {
         $out = ''; # reset $out
 
         if( $showProduct ) {
+            my $productJson = UBOS::HostStatus::productJson();
+
             $out .= "Product:\n";
-            if( exists( $json->{product}->{name} )) {
-                $out .= '    Name:           ' . $json->{product}->{name} . "\n";
+            if( exists( $productJson->{name} )) {
+                $out .= '    Name:           ' . $productJson->{name} . "\n";
             } else {
                 $out .= '    Name:           ' . '?' . "\n";
             }
-            if( exists( $json->{product}->{vendor} )) {
-                $out .= '    Vendor:         ' . $json->{product}->{vendor} . "\n";
+            if( exists( $productJson->{vendor} )) {
+                $out .= '    Vendor:         ' . $productJson->{vendor} . "\n";
             }
-            if( exists( $json->{product}->{sku} )) {
-                $out .= '    SKU:            ' . $json->{product}->{sku} . "\n";
+            if( exists( $productJson->{sku} )) {
+                $out .= '    SKU:            ' . $productJson->{sku} . "\n";
             }
         }
         if( $showLive ) {
+            my $liveJson = UBOS::HostStatus::liveJson();
+
             $out .= "UBOS Live:\n";
-            if( exists( $json->{live}->{installed} )) {
-                $out .= '    Installed:      ' . ( $json->{live}->{installed} ? 'yes' : 'no' ) . "\n";
+            if( exists( $liveJson->{installed} )) {
+                $out .= '    Installed:      ' . ( $liveJson->{installed} ? 'yes' : 'no' ) . "\n";
             } else {
                 $out .= '    Installed:      ' . '?' . "\n";
             }
-            if( exists( $json->{live}->{active} )) {
-                $out .= '    Active:         ' . ( $json->{live}->{active} ? 'yes' : 'no' ) . "\n";
+            if( exists( $liveJson->{active} )) {
+                $out .= '    Active:         ' . ( $liveJson->{active} ? 'yes' : 'no' ) . "\n";
             } else {
                 $out .= '    Active:         ' . '?' . "\n";
             }
         }
         if( $showArch ) {
-            if( exists( $json->{arch} )) {
-                $out .= 'Arch:               ' . $json->{arch} . "\n";
+            my $arch        = UBOS::HostStatus::arch();
+            my $deviceClass = UBOS::HostStatus::deviceClass();
+            if( $arch ) {
+                $out .= 'Arch:               ' . $arch . "\n";
             }
-            if( exists( $json->{deviceclass} )) {
-                $out .= 'Device class:       ' . $json->{deviceclass} . "\n";
+            if( $deviceClass ) {
+                $out .= 'Device class:       ' . $deviceClass . "\n";
             }
         }
         if( $showVirt ) {
-            if( exists( $json->{systemd_detect_virt} )) {
-                $out .= 'Virtualization:     ' . $json->{systemd_detect_virt} . "\n";
+            my $virtualization = UBOS::HostStatus::virtualization();
+            if( $virtualization ) {
+                $out .= 'Virtualization:     ' . $virtualization. "\n";
             } else {
-                $out .= 'Virtualization:     ' . '?' . "\n";
+                $out .= 'Virtualization:     ' . 'None' . "\n";
             }
         }
 
         if( $showReady ) {
             $out .= "Ready:\n";
-            if( exists( $json->{'ubos-admin-ready'} ) && exists( $json->{'ubos-admin-ready'} )) {
-                $out .= '    since:          ' . _formatTimeStamp( $json->{'ubos-admin-ready'} ) . "\n";
+            my $readySince = UBOS::HostStatus::readySince();
+            if( $readySince ) {
+                $out .= '    since:          ' . _formatTimeStamp( $readySince ) . "\n";
             } else {
                 $out .= "    NOT READY\n";
             }
         }
 
         if( $showLastUpdated ) {
-            $out .= 'Last updated:       ' . _formatTimeStamp( $json->{lastupdated} ) . "\n";
+            my $lastUpdated = UBOS::HostStatus::lastUpdated();
+            if( $lastUpdated ) {
+                $out .= 'Last updated:       ' . _formatTimeStamp( $lastUpdated ) . "\n";
+            } else {
+                $out .= 'Last updated:       ' . 'Never' . "\n";
+            }
         }
 
         if( $showChannel ) {
-            $out .= 'Channel:            ' . $json->{channel} . "\n";
+            $out .= 'Channel:            ' . UBOS::HostStatus::channel() . "\n";
         }
 
         if( $showCpu ) {
+            my $cpuJson = UBOS::HostStatus::cpuJson();
             $out .= "CPU:\n";
-            $out .= '    number:         ' . $json->{cpu}->{ncpu} . "\n";
-            if( exists( $json->{cpu}->{virttype} )) {
-                $out .= '    virtualization: ' . $json->{cpu}->{virttype} . "\n";
+            $out .= '    number:         ' . $cpuJson->{ncpu} . "\n";
+            if( exists( $cpuJson->{virttype} )) {
+                $out .= '    virtualization: ' . $cpuJson->{virttype} . "\n";
             }
         }
 
         if( $showUptime ) {
-            my $uptime = $json->{uptime};
+            my $uptimeJson = UBOS::HostStatus::uptimeJson();
             $out .= "Uptime:\n";
-            $out .= '    for:            ' . $uptime->{uptime} . "\n";
-            $out .= '    load avg:       ' . $uptime->{loadavg1}  . ' (1 min) '
-                                           . $uptime->{loadavg5}  . ' (5 min) '
-                                           . $uptime->{loadavg15} . " (15 min)\n";
+            $out .= '    for:            ' . $uptimeJson->{uptime} . "\n";
+            $out .= '    load avg:       ' . $uptimeJson->{loadavg1}  . ' (1 min) '
+                                           . $uptimeJson->{loadavg5}  . ' (5 min) '
+                                           . $uptimeJson->{loadavg15} . " (15 min)\n";
 
             if( $showDetail ) {
-                $out .= '    users:    ' .  $uptime->{nusers} . "\n";
+                $out .= '    users:    ' .  $uptimeJson->{nusers} . "\n";
             }
         }
 
         if( $showPublicKey ) {
             $out .= "Host public key:\n";
-            $out .= $json->{publickey} . "\n";
+            $out .= UBOS::HostStatus::hostPublicKey() . "\n";
         }
 
         if( $showDisks || $showSmart ) {
             $out .= "Disks:\n";
-            foreach my $blockDevice ( @{$json->{blockdevices}} ) {
+            my $blockDevicesJson = UBOS::HostStatus::blockDevicesJson();
+
+            foreach my $blockDevice ( @$blockDevicesJson ) {
                 $out .= "    " . $blockDevice->{name} . "\n";
                 if( $showDisks ) {
                     foreach my $att ( sort keys %$blockDevice ) {
@@ -311,9 +315,10 @@ sub run {
             } else {
                 @memcats = qw( mem swap total );
             }
+            my $memoryJson = UBOS::HostStatus::memoryJson();
 
             foreach my $memcat ( @memcats ) {
-                my $mem = $json->{memory}->{$memcat};
+                my $mem = $memoryJson->{$memcat};
                 $out .= sprintf(
                         "    %-10s %11s %11s %11s %11s %11s %11s\n",
                         uc( substr( $memcat, 0, 1 )) . substr( $memcat, 1 ) . ':',
@@ -327,22 +332,27 @@ sub run {
         }
 
         if( $showFailed ) {
+            my $failedServices = UBOS::HostStatus::failedServices();
+
             $out .= "Failed system services:\n";
-            if( @{$json->{failedservices}} ) {
-                foreach my $service ( @{$json->{failedservices}} ) {
+            if( @$failedServices ) {
+                foreach my $service ( @$failedServices ) {
                     $out .= "    $service\n";
                 }
             } else {
                 $out .= "    None\n";
             }
         }
+
         if( $showPacnew ) {
+            my $pacnewFiles = UBOS::HostStatus::pacnewFiles();
+
             $out .= "Changed config files (.pacnew):\n";
-            if( @{$json->{pacnew}} ) {
+            if( @$pacnewFiles ) {
                 if( $showDetail ) {
-                    $out .= join( '', map( "        $_\n", @{$json->{pacnew}} ));
+                    $out .= join( '', map( "        $_\n", @$pacnewFiles ));
                 } else {
-                    $out .= "    " . ( 0 + @{$json->{pacnew}} ) . "\n";
+                    $out .= "    " . ( 0 + @$pacnewFiles ) . "\n";
                 }
             } else {
                 $out .= "    None\n";
@@ -350,9 +360,16 @@ sub run {
         }
 
         if( $showProblems ) {
+            my $problems = UBOS::HostStatus::problems();
+
+            unless( $showFailed ) {
+                # don't report twice
+                push @$problems, map { 'System service ' . $_ . ' has failed.' } @{UBOS::HostStatus::failedServices()};
+            }
+
             $out .= "Problems:\n";
-            if( exists( $json->{problems} )) {
-                $out .= join( "", map { "    * $_\n" } @{$json->{problems}} ) . "\n";
+            if( @$problems ) {
+                $out .= join( "", map { "    * $_\n" } @$problems ) . "\n";
             } else {
                 $out .= "    None\n";
             }
@@ -431,46 +448,6 @@ sub _formatTimeStamp {
 }
 
 ##
-# Helper method to determine the disk usage of a partition
-# $device: the device, e.g. /dev/sda1
-# $fstype: the file system type, e.g. btrfs
-# $mountpoint: the mount point, e.g. /var
-# return: a JSON hash showing usage
-sub _usageAsJson {
-    my $device     = shift;
-    my $fstype     = shift;
-    my $mountpoint = shift;
-
-    my $ret = {};
-    if( 'btrfs' eq $fstype && $mountpoint ) {
-        # even if it is btrfs, if it's not mounted, we need to fall back to df
-        my $out;
-        UBOS::Utils::myexec( "btrfs filesystem df -h '$mountpoint'", undef, \$out );
-        foreach my $line ( split "\n", $out ) {
-            if( $out =~ m!^(\s+),\s*(\S+):\S*total=([^,]+),\S*used=(\S*)$! ) {
-                $ret->{lc($1)} = {
-                    'allocationprofile' => lc($2),
-                    'total' => $3,
-                    'used'  => $4
-                };
-            }
-        }
-    } else {
-        my $out;
-        UBOS::Utils::myexec( "df -h '$device' --output=used,size,pcent", undef, \$out );
-        my @lines = split( "\n", $out );
-        my $data  = pop @lines;
-        $data =~ s!^\s+!!;
-        $data =~ s!\s+$!!;
-        my ( $used, $size, $pcent ) = split( /\s+/, $data );
-        $ret->{'used'}  = $used;
-        $ret->{'size'}  = $size;
-        $ret->{'pcent'} = $pcent;
-    }
-    return $ret;
-}
-
-##
 # Return help text for this command.
 # return: hash of synopsis to help text
 sub synopsisHelp {
@@ -480,13 +457,13 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--channel] [--cpu] [--arch] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--virtualization] [--uptime]
+    [--arch] [--channel] [--cpu] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--uptime] [--virtualization]
 SSS
     If any of the optional arguments are given, only report on the
     specified subjects:
+    * arch:           arch and device class
     * channel:        UBOS release channel used by this device
     * cpu:            CPUs available
-    * arch:           arch and device class
     * disks:          attached disks and their usage
     * failed:         daemons that have failed
     * lastupdated:    when the device was last updated
@@ -498,8 +475,8 @@ SSS
     * publickey:      the host's public key
     * ready:          whether the device is ready or not
     * smart:          disk health via S.M.A.R.T
-    * virtualization: use of virtualization
     * uptime:         how long the device has been up since last boot
+    * virtualization: use of virtualization
 HHH
             <<SSS => <<HHH
     --all

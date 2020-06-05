@@ -11,8 +11,11 @@ use warnings;
 use UBOS::Live::UbosLive;
 use UBOS::Logging;
 
-UBOS::Logging::initialize( 'ubos-live', 'ubos-live-status-check', 0, '/etc/ubos/log-system.conf' );
+# UBOS::Logging::initialize( 'ubos-live', 'ubos-live-status-check', 0, '/etc/ubos/log-system.conf' );
+UBOS::Logging::initialize( 'ubos-live', 'ubos-live-status-check', 2 );
 
-UBOS::Live::UbosLive::statusHandshake();
+my $exit = UBOS::Live::UbosLive::statusHandshake();
+
+exit( $exit );
 
 1;

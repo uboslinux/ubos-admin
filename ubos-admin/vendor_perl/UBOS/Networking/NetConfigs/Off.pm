@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::Networking::NetConfigs::Off;
 
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Networking::NetConfigUtils;
 
 my $name = 'off';
@@ -40,7 +40,7 @@ sub activate {
     my $initOnly = shift;
     my $force    = shift;
 
-    my $allNics = UBOS::Host::nics();
+    my $allNics = UBOS::HostStatus::nics();
 
     my $conf = {};
     foreach my $nic ( keys %$allNics ) {

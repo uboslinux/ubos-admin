@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::Networking::NetConfigUtils;
 
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -255,7 +255,7 @@ sub configure {
         return configureAll( $name, $config, $initOnly );
 
     } else {
-        my $nics = UBOS::Host::nics();
+        my $nics = UBOS::HostStatus::nics();
 
         my $filteredConfig = {};
         map { $filteredConfig->{$_} = $config->{$_}; } grep { exists( $nics->{$_} ) } keys %$config;

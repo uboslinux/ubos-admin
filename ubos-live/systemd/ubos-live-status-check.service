@@ -5,5 +5,9 @@ Description=Check UBOS Live status
 ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-live-status-check
 ExecStart=/usr/share/ubos-live/bin/ubos-live-status-check
 
+# If failure, try every hour
+Restart=always
+RestartSec=1h
+
 [Install]
 WantedBy=basic.target

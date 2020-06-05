@@ -35,15 +35,11 @@ my $LAST_UPDATE_FILE        = '/etc/ubos/last-ubos-update'; # not /var, as /var 
 my $HOSTNAME_CALLBACKS_DIR  = '/etc/ubos/hostname-callbacks';
 my $STATE_CALLBACKS_DIR     = '/etc/ubos/state-callbacks';
 
-my $_hostVars                      = undef; # allocated as needed
-my $_rolesOnHostInSequence         = undef; # allocated as needed
-my $_rolesOnHost                   = undef; # allocated as needed
-my $_sites                         = undef; # allocated as needed
-my $_allNics                       = undef; # allocated as needed
-my $_physicalNics                  = undef; # allocated as needed
-my $_gpgHostKeyFingerprint         = undef; # allocated as needed
-my $_gpgHostPublicKey              = undef; # allocated as needed
-my $_currentState                  = undef;
+my $_hostVars               = undef; # allocated as needed
+my $_rolesOnHostInSequence  = undef; # allocated as needed
+my $_rolesOnHost            = undef; # allocated as needed
+my $_sites                  = undef; # allocated as needed
+my $_currentState           = undef;
 
 ##
 # Obtain the Variables object for the Host.
@@ -1095,67 +1091,6 @@ sub ensurePacmanInit {
 }
 
 ##
-# Determine the unique id of this host. It is determined as a
-# fingerprint of the host key.
-# return: the host id
-sub hostId {
-
-    unless( $_gpgHostKeyFingerprint ) {
-        my $out;
-        my $err;
-        if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --fingerprint pacman@localhost', undef, \$out, \$err )) {
-            error( 'Cannot determine host key', $out, $err );
-            return '';
-        }
-        # gpg: WARNING: unsafe permissions on homedir '/etc/pacman.d/gnupg'
-        # pub   rsa2048/B0B434F0 2015-02-15
-        #       Key fingerprint = 26FC BC8B 874A 9744 7718  5E8C 5311 6A36 B0B4 34F0
-        # uid       [ultimate] Pacman Keyring Master Key <pacman@localhost>
-        # 2016-07: apparently the "Key fingerprint =" is not being emitted any more
-
-        if( $out =~ m!((\s+[0-9A-F]{4}){10})!m ) {
-            $_gpgHostKeyFingerprint = lc( $1 );
-            $_gpgHostKeyFingerprint =~ s!\s+!!g;
-        } else {
-            error( 'Unexpected fingerprint format:', $out );
-            $_gpgHostKeyFingerprint = '';
-        }
-    }
-    return $_gpgHostKeyFingerprint;
-}
-
-##
-# Obtain the public gpg key of this host.
-# return: the public key of the host
-sub hostPublicKey {
-
-    unless( $_gpgHostPublicKey ) {
-        my $out;
-        my $err;
-        if( myexec( 'GNUPGHOME=/etc/pacman.d/gnupg gpg --export --armor pacman@localhost', undef, \$out, \$err )) {
-            error( 'Cannot determine host key', $out, $err );
-            return '';
-        }
-        # gpg: WARNING: unsafe permissions on homedir '/etc/pacman.d/gnupg'
-        # gpg: Warning: using insecure memory!
-        # -----BEGIN PGP PUBLIC KEY BLOCK-----
-
-        # mQENBFyhL+IBCADGzNkwXtMnZ8fHE5MddJ8fEJGeraqKtTOwc4udAed8EFFgCyCs
-        # ...
-        # ymqmWp6TWcU3DN7Qz1XutKzCjVCpnmELGU3XLaNjAQ==
-        # =7xqV
-        # -----END PGP PUBLIC KEY BLOCK-----
-
-        if( $out =~ m!(-+BEGIN PGP PUBLIC KEY BLOCK-+.+-+END PGP PUBLIC KEY BLOCK-+)!s ) {
-            $_gpgHostPublicKey = $1;
-        } else {
-            error( 'Failed to parse public key on host' );
-        }
-    }
-    return $_gpgHostPublicKey;
-}
-
-##
 # Sign payload with the private key of this host
 # $payload: the payload to sign
 # return: ( hash used ; the signature for the payload )
@@ -1251,69 +1186,6 @@ sub runAfterBootCommandsIfNeeded {
         UBOS::Utils::deleteFile( $afterBootFile );
     }
     return $errors;
-}
-
-##
-# Determine the current network interfaces of this host and their properties.
-# Unless $all is specified, this does not return loopback and virtual devices
-#
-# $all: if 1, list all nics including loopback and virtual devices
-# return: hash, e.g. { enp0s1 => { index => 1, type => "ethernet", operational => 'carrier', setup => 'configured' }}}
-sub nics {
-    my $all = shift || 0;
-
-    unless( defined( $_allNics )) {
-        my $netctl;
-        my $err; # swallow error messages
-        myexec( "networkctl --no-pager --no-legend", undef, \$netctl, \$err );
-        if( $err ) {
-            trace( 'Host::nics: networkctl said:', $err );
-        }
-
-        $_allNics = {};
-        foreach my $line ( split "\n", $netctl ) {
-            if( $line =~ /^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$/ ) {
-                my( $index, $link, $type, $operational, $setup ) = ( $1, $2, $3, $4, $5 );
-
-                my $n = {};
-
-                $n->{index}       = $index;
-                $n->{type}        = $type;
-                $n->{operational} = $operational;
-                $n->{setup}       = $setup;
-
-                $_allNics->{$link} = $n;
-            }
-        }
-    }
-    if( $all ) {
-        my %copy = %$_allNics;
-        return \%copy;
-    }
-    unless( defined( $_physicalNics )) {
-        $_physicalNics = {};
-        foreach my $nic ( keys %$_allNics ) {
-            if(    $nic !~ m!^(ve-|tun|tap|docker)!
-                && $_allNics->{$nic}->{type} !~ m!^loopback! )
-            {
-                $_physicalNics->{$nic} = $_allNics->{$nic};
-            }
-        }
-    }
-    my %copy = %$_physicalNics;
-    return \%copy;
-}
-
-##
-# Determine all current WiFi interfaces of this host and their properties.
-# return: see #nics()
-sub wlanNics {
-    my $allNics = nics();
-
-    my %ret = ();
-    map { $ret{$_} = $allNics->{$_} } grep { $allNics->{$_}->{type} eq 'wlan' } keys %$allNics;
-
-    return \%ret;
 }
 
 ##

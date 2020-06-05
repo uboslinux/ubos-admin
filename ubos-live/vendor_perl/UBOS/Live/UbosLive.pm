@@ -11,8 +11,10 @@ use warnings;
 package UBOS::Live::UbosLive;
 
 use File::Temp qw/ :POSIX /;
+use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Utils;
 use URI::Escape;
 use WWW::Curl::Easy;
@@ -52,49 +54,46 @@ sub _subdomain() {
 #
 # $account: the account identifier provided by the user or through the Staff (if any)
 # $token: the registration token provided by the user or through the Staff (if any)
-# return: status
+# return: exit code
 sub statusHandshake {
     my $account  = shift;
     my $token    = shift;
 
     trace( 'UbosLive::statusHandshake' );
 
+    UBOS::Lock::acquire();
+
     my $confJson = _getConf();
 
-    my $hostId    = UBOS::Host::hostId();
-    my $statusUrl = $API_HOST_PREFIX . _subdomain() . $DEVICE_STATUS_PARENT_URL . $hostId;
-
-    my $request = {
-        'hostid'      => UBOS::Host::hostId(),
-        'arch'        => UBOS::Utils::arch(),
-        'deviceclass' => UBOS::Utils::deviceClass(),
-        'channel'     => UBOS::Utils::channel(),
-        'sku'         => UBOS::Utils::sku()
-    };
-
-    if( defined( $confJson->{registered} )) {
-        $request->{registered} = $confJson->{registered};
-    }
-
-    if( defined( $confJson->{status} )) {
-        $request->{status} = $confJson->{status};
-    }
-
     if( $account && $token ) {
-        $request->{account} = {
+        $confJson->{account} = {
             'account' => $account,
             'token'   => $token
         };
-
-    } elsif( defined( $confJson->{account} )) {
-        $request->{account} = $confJson->{account};
     }
 
-    if(    exists( $confJson->{wireguard} )
-        && exists( $confJson->{wireguard}->{client} )
-        && exists( $confJson->{wireguard}->{client}->{publickey} ))
+    my $statusUrl = $API_HOST_PREFIX . _subdomain() . $DEVICE_STATUS_PARENT_URL . UBOS::Host::hostId();
+
+    my $request = UBOS::HostStatus::statusJson();
+
+    if(    $confJson
+        && exists( $confJson->{wireguard} ))
     {
-        $request->{wireguard}->{client}->{publickey} = $confJson->{wireguard}->{client}->{publickey};
+        if( exists( $confJson->{channel} )) {
+            $request->{live}->{channel} = $confJson->{channel};
+        }
+        if( exists( $confJson->{status} )) {
+            $request->{live}->{status} = $confJson->{status};
+        }
+        if( exists( $confJson->{registered} )) {
+            $request->{live}->{registered} = $confJson->{registered};
+        }
+        if( exists( $confJson->{wireguard}->{client} )) {
+            if( exists( $confJson->{wireguard}->{client}->{publickey} )) {
+                $request->{live}->{wireguard}->{client}->{publickey} = $confJson->{wireguard}->{client}->{publickey};
+            }
+            # don't send private key
+        }
     }
 
     my $requestString          = UBOS::Utils::writeJsonToString( $request );
@@ -124,13 +123,15 @@ sub statusHandshake {
 
         trace( 'CURL response:', $retCode, ':', $error, ', HTTP status:', $httpCode );
 
-        info( 'UBOS Live status check unsucessful so far. Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
+        info( 'UBOS Live status check unsucessful to . Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
 
         sleep( $STATUS_DELAY );
     }
 
+    my $ret;
     if( $response ) {
         my $responseJson = UBOS::Utils::readJsonFromString( $response );
+
         if( exists( $responseJson->{wireguard} ) && exists( $responseJson->{wireguard}->{server} )) {
             $confJson->{wireguard}->{server} = $responseJson->{wireguard}->{server};
         }
@@ -161,11 +162,16 @@ sub statusHandshake {
                 }
             }
         }
+        $ret = 0;
 
     } else {
-        warning( 'Unexpected UBOS Live state:', $response );
-        return 0;
+        warning( 'Failed to contact UBOS Live' );
+        $ret = 1;
     }
+
+    UBOS::Lock::release();
+
+    return $ret;
 }
 
 ##
@@ -297,7 +303,8 @@ sub _disableLiveLink() {
         }
     }
 
-    UBOS::Utils::myexec( 'ip link delete dev live99' );
+    my $out;
+    UBOS::Utils::myexec( 'ip link delete dev live99', undef, \$out, \$out );
     # ignore result
 }
 

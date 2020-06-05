@@ -12,7 +12,7 @@ use warnings;
 package UBOS::Networking::NetConfigs::Standalone;
 
 use JSON;
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Networking::NetConfigUtils;
 
 my $name = 'standalone';
@@ -42,7 +42,7 @@ sub activate {
     my $initOnly = shift;
     my $force    = shift;
 
-    my $allNics = UBOS::Host::nics();
+    my $allNics = UBOS::HostStatus::nics();
 
     my $conf    = undef;
     my $error   = 0;
