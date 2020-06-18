@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::Live::UbosLive;
 
-use File::Temp qw/ :POSIX /;
+use JSON;
 use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Host;
@@ -19,18 +19,16 @@ use UBOS::Utils;
 use URI::Escape;
 use WWW::Curl::Easy;
 
-my $CONF                     = '/etc/ubos/ubos-live.json';
-my $MAX_STATUS_TRIES         = 5;
-my $STATUS_DELAY             = 10;
-my $API_HOST_PREFIX          = 'https://api.live';
-my $REGISTRATION_URL         = '.ubos.net/reg/register-device';
-my $DEVICE_STATUS_PARENT_URL = '.ubos.net/status/device/';
-my $STATUS_TIMER             = 'ubos-live-status-check.timer';
-my %CHANNELS                 = ( 'red' => 51820, 'yellow' => 51820, 'green' => 51820 );
-my @NETWORKD_FILES           = map { '/etc/systemd/network/99-ubos-live.' . $_ } qw( netdev network );
+my $CONF                   = '/etc/ubos/ubos-live.json';
+my $MAX_STATUS_TRIES       = 5;
+my $STATUS_DELAY           = 10;
+my $API_HOST_PREFIX        = 'http://api.live'; # FIXME https
+my $DEVICE_PING_PARENT_URL = '.ubos.net/ping/device/';
+my $STATUS_TIMER           = 'ubos-live-ping.timer';
+my %CHANNELS               = ( 'red' => 1, 'yellow' => 1, 'green' => 1 );
 
 my $_conf      = undef; # content of the $CONF file; cached
-my $_subdomain = undef;
+my $_subdomain = undef; # insert subdomain into status URL; cached
 
 ##
 # Determine which subdomain to use when contacting cloud.
@@ -45,56 +43,21 @@ sub _subdomain() {
 }
 
 ##
-# Contact live.ubos.net, tell it what it does not know already, and
-# do the right thing based on the results, such as de/activate the VPN.
+# Contact live.ubos.net, report status, and do the right thing based on the results.
 #
-# If something that was attempted (such as registration) failed, returns 0.
-# If the same thing succeeded, or if something was skipped because not
-# enough information was available (such as for registration), returns 1.
-#
-# $account: the account identifier provided by the user or through the Staff (if any)
-# $token: the registration token provided by the user or through the Staff (if any)
-# return: exit code
-sub statusHandshake {
-    my $account  = shift;
-    my $token    = shift;
-
-    trace( 'UbosLive::statusHandshake' );
+# return: desired exit code
+sub statusPing {
+    trace( 'UbosLive::statusPing' );
 
     UBOS::Lock::acquire();
 
     my $confJson = _getConf();
 
-    if( $account && $token ) {
-        $confJson->{account} = {
-            'account' => $account,
-            'token'   => $token
-        };
-    }
+    my $statusUrl = $API_HOST_PREFIX . _subdomain() . $DEVICE_PING_PARENT_URL . UBOS::HostStatus::hostId();
 
-    my $statusUrl = $API_HOST_PREFIX . _subdomain() . $DEVICE_STATUS_PARENT_URL . UBOS::Host::hostId();
+    my $request = UBOS::HostStatus::liveAsJson();
 
-    my $request = UBOS::HostStatus::statusJson();
-
-    if(    $confJson
-        && exists( $confJson->{wireguard} ))
-    {
-        if( exists( $confJson->{channel} )) {
-            $request->{live}->{channel} = $confJson->{channel};
-        }
-        if( exists( $confJson->{status} )) {
-            $request->{live}->{status} = $confJson->{status};
-        }
-        if( exists( $confJson->{registered} )) {
-            $request->{live}->{registered} = $confJson->{registered};
-        }
-        if( exists( $confJson->{wireguard}->{client} )) {
-            if( exists( $confJson->{wireguard}->{client}->{publickey} )) {
-                $request->{live}->{wireguard}->{client}->{publickey} = $confJson->{wireguard}->{client}->{publickey};
-            }
-            # don't send private key
-        }
-    }
+    UBOS::Lock::release();
 
     my $requestString          = UBOS::Utils::writeJsonToString( $request );
     my $statusUrlWithSignature = _signRequest( $statusUrl, 'POST', $requestString );
@@ -103,87 +66,41 @@ sub statusHandshake {
 
     my $response;
     my $error;
+    my $ret = 1; # error unless success
     for( my $i=1 ; $i<=$MAX_STATUS_TRIES ; ++$i ) { # prints better that way
 
-        my $curl = WWW::Curl::Easy->new;
-        $curl->setopt( CURLOPT_URL,       $statusUrlWithSignature );
-        $curl->setopt( CURLOPT_UPLOAD,    1 );
-        $curl->setopt( CURLOPT_POST,      1 );
-        $curl->setopt( CURLOPT_READDATA,  $requestString );
-        $curl->setopt( CURLOPT_WRITEDATA, \$response );
+        eval {
+            my $curl = WWW::Curl::Easy->new;
+            $curl->setopt( CURLOPT_URL,        $statusUrlWithSignature );
+            $curl->setopt( CURLOPT_HTTPHEADER, [ 'Expect:' ] );
+            $curl->setopt( CURLOPT_UPLOAD,     1 );
+            $curl->setopt( CURLOPT_POST,       1 );
+            $curl->setopt( CURLOPT_READDATA,   $requestString );
+            $curl->setopt( CURLOPT_WRITEDATA,  \$response );
 
-        my $retCode  = $curl->perform;
-        my $httpCode = $curl->getinfo( CURLINFO_HTTP_CODE );
+            my $retCode  = $curl->perform;
+            my $httpCode = $curl->getinfo( CURLINFO_HTTP_CODE );
 
-        if( $retCode == 0 && $httpCode =~ m!^200 ! ) {
-            trace( 'Successful CURL response, HTTP status:', $httpCode, ', payload:', $response );
-            last;
+            if( $retCode == 0 && $httpCode =~ m!^200 ! ) {
+                trace( 'Successful CURL response, HTTP status:', $httpCode, ', payload:', $response );
+                $ret = 0;
+                last;
+            }
+            $error = $curl->strerror( $retCode );
+
+            trace( 'CURL response:', $retCode, ':', $error, ', HTTP status:', $httpCode );
+        };
+        if( $@ ) {
+            trace( 'CURL threw exception:', $@ );
         }
-        $error = $curl->strerror( $retCode );
-
-        trace( 'CURL response:', $retCode, ':', $error, ', HTTP status:', $httpCode );
-
-        info( 'UBOS Live status check unsucessful to . Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
+        info( 'UBOS Live status check unsucessful to', $statusUrl, '. Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
 
         sleep( $STATUS_DELAY );
     }
 
-    my $ret;
-    if( $response ) {
-        my $responseJson = UBOS::Utils::readJsonFromString( $response );
-
-        if( exists( $responseJson->{wireguard} ) && exists( $responseJson->{wireguard}->{server} )) {
-            $confJson->{wireguard}->{server} = $responseJson->{wireguard}->{server};
-        }
-        if( exists( $responseJson->{registered} )) {
-            $confJson->{registered} = $responseJson->{registered};
-        }
-        if( exists( $responseJson->{status} )) {
-            $confJson->{status} = $responseJson->{status};
-        }
-        if( exists( $responseJson->{account} )) {
-            $confJson->{account} = $responseJson->{account};
-        }
-
-        if( defined( $confJson->{status} )) {
-            my $status = $confJson->{status};
-
-            if( $status eq 'ubos-live-inactive' ) {
-                _makeSuspendedIfNeeded();
-                _deactivateIfNeeded();
-
-            } elsif( $status =~ m!^ubos-live-active! ) {
-                _activateIfNeeded();
-
-                if( $status eq 'ubos-live-active/ubos-live-operational' ) {
-                    _makeOperationalIfNeeded();
-                } else {
-                    _makeSuspendedIfNeeded();
-                }
-            }
-        }
-        $ret = 0;
-
-    } else {
-        warning( 'Failed to contact UBOS Live' );
-        $ret = 1;
-    }
-
-    UBOS::Lock::release();
+    # response payload is currently ignored
 
     return $ret;
-}
-
-##
-# Register for UBOS Live.
-# $account: account identifier on UBOS Live provided by the user (if any)
-# $token: security token provided by the user (if any)
-# return: 1 if successful
-sub ubosLiveRegister {
-    my $account = shift;
-    my $token   = shift;
-
-    return statusHandshake( $account, $token );
 }
 
 ##
@@ -223,8 +140,6 @@ sub _activateIfNeeded() {
         return 0;
     }
 
-    # Don't handle live99 here: we only bring it up once status subclass is known / right
-
     my $errors = 0;
     my $out;
 
@@ -235,11 +150,12 @@ sub _activateIfNeeded() {
     }
 
     my $confJson = _getConf();
-
-    $confJson->{status} = 'ubos-live-active'; # subclass unclear so far
+    $confJson->{active} = JSON::true;
     _saveConf();
 
-    $@ = "There were $errors errors.";
+    if( $errors ) {
+        $@ = "There were $errors errors.";
+    }
 
     return $errors == 0;
 }
@@ -264,83 +180,16 @@ sub _deactivateIfNeeded() {
         ++$errors;
     }
 
-    _disableLiveLink();
-
     my $confJson = _getConf();
-    $confJson->{status} = 'ubos-live-inactive';
+    $confJson->{active} = JSON::false;
     _saveConf();
 
-    $@ = "There were $errors errors.";
+    if( $errors ) {
+        $@ = "There were $errors errors.";
+    }
 
     return $errors == 0;
 }
-
-##
-# If not already operational, make UBOS Live operational
-sub _makeOperationalIfNeeded() {
-
-    trace( 'UbosLive::_makeOperationalIfNeeded' );
-
-    _enableLiveLink();
-}
-
-##
-# If not already suspended, make UBOS Live suspended
-sub _makeSuspendedIfNeeded() {
-
-    trace( 'UbosLive::_makeSuspendedIfNeeded' );
-
-    _disableLiveLink();
-}
-
-##
-# Disable the live99 network link if it exists
-sub _disableLiveLink() {
-
-    foreach my $f ( @NETWORKD_FILES ) {
-        if( -e $f ) {
-            UBOS::Utils::deleteFile( $f );
-        }
-    }
-
-    my $out;
-    UBOS::Utils::myexec( 'ip link delete dev live99', undef, \$out, \$out );
-    # ignore result
-}
-
-##
-# Enable the live99 network link if needed
-sub _enableLiveLink() {
-
-    my $channel = UBOS::Utils::channel();
-    my $serverPort = $CHANNELS{$channel};
-    unless( $serverPort ) {
-        $channel    = 'green';
-        $serverPort = $CHANNELS{$channel};
-    }
-
-    my $confJson         = _getConf();
-    my $clientPrivateKey = $confJson->{wireguard}->{client}->{privatekey};
-    my $serverPublicKey  = $confJson->{wireguard}->{server}->{publickey};
-    my $serverName       = "wg.$channel.live.ubos.net";
-
-    foreach my $to ( @NETWORKD_FILES ) {
-        my $from    = '/usr/share/ubos-live/tmpl/' . basename( $to ) . '.tmpl';
-        my $content = UBOS::Utils::slurpFile( $from );
-
-        $content =~ s!WIREGUARD_CLIENT_PRIVATE_KEY!$clientPrivateKey!g;
-        $content =~ s!WIREGUARD_SERVER_PUBLIC_KEY!$serverPublicKey!g;
-        $content =~ s!WIREGUARD_SERVER_NAME!$serverName!g;
-        $content =~ s!WIREGUARD_SERVER_PORT!$serverPort!g;
-
-        UBOS::Utils::saveFile( $to, $content, 'root', 'systemd-networkd', 0640 );
-    }
-
-    if( UBOS::Utils::myexec( 'systemctl restart systemd-networkd' )) {
-        error( 'Restarting systemd-networkd failed' );
-    }
-}
-
 
 ##
 # Get the current configuration as saved locally, or defaults
@@ -353,31 +202,8 @@ sub _getConf {
         } else {
             $_conf = {};
         }
-        unless( exists( $_conf->{registered} )) {
-            $_conf->{registered} = JSON::false;
-        }
-
-        if( !exists( $_conf->{wireguard} ) || !exists( $_conf->{wireguard}->{client} )) {
-            my $privateOut;
-            my $publicOut;
-
-            if( UBOS::Utils::myexec( 'wg genkey', undef, \$privateOut )) {
-                error( 'Failed to generate Wireguard key pair' );
-
-            } elsif( UBOS::Utils::myexec( 'wg pubkey', $privateOut, \$publicOut )) {
-                error( 'Failed to obtain Wireguard public key' );
-
-            } else {
-                $privateOut =~ s!^\s+!!;
-                $privateOut =~ s!\s+$!!;
-                $publicOut  =~ s!^\s+!!;
-                $publicOut  =~ s!\s+$!!;
-
-                $_conf->{wireguard}->{client} = {
-                    'privatekey' => $privateOut,
-                    'publickey'  => $publicOut
-                };
-            }
+        unless( exists( $_conf->{active} )) {
+            $_conf->{active} = JSON::true;
         }
 
         if( !exists( $_conf->{channel} ) || !$CHANNELS{$_conf->{channel}} ) {
@@ -393,26 +219,6 @@ sub _getConf {
 sub _saveConf {
     if( $_conf ) {
         UBOS::Utils::writeJsonToFile( $CONF, $_conf );
-    }
-}
-
-##
-# Because the systemd-sysusers hook only runs after the package install
-# script is completed, we run it ourselves from the package install script.
-sub _ensureUser {
-    UBOS::Utils::myexec( "systemd-sysusers /usr/lib/sysusers.d/ubos-live.conf" );
-}
-
-##
-# Copy the authorized SSH keys into ~ubos-live/.ssh/authorized_keys
-sub _ensureAuthorizedKeys {
-    my $keys = UBOS::Utils::slurpFile( '/usr/share/ubos-live/authorized_keys' );
-    if( $keys ) {
-        my $dir = '/var/ubos-live/.ssh';
-        unless( -d $dir ) {
-            UBOS::Utils::mkdirDashP( $dir, 0700, 'ubos-live', 'ubos-live' );
-        }
-        UBOS::Utils::saveFile( "$dir/authorized_keys", $keys, 0600, 'ubos-live', 'ubos-live' );
     }
 }
 
@@ -433,13 +239,17 @@ sub _signRequest {
     } else {
         $ret .= '?';
     }
-    $ret .= '&lid=gpg%3A' . uri_escape( UBOS::Host::hostPublicKey());
+    $ret .= '&lid=gpg%3A' . uri_escape( UBOS::HostStatus::hostPublicKey());
     $ret .= '&lid-version=3';
     $ret .= '&lid-credtype=gpg%20--clearsign';
 
     my $toSign = $ret;
-    $toSign = '&lid-method=' . $method;
-    $toSign = '&lid-payload=' . $payload;
+    if( $method ) {
+        $toSign = '&lid-method=' . $method;
+    }
+    if( $payload ) {
+        $toSign = '&lid-payload=' . $payload;
+    }
 
     my $signature = UBOS::Host::hostSign( $toSign );
 
@@ -452,8 +262,7 @@ sub _signRequest {
 # Invoked when the package installs
 sub postInstall {
 
-    _ensureUser();
-    _ensureAuthorizedKeys();
+    # no op for now
 
     return 0;
 }
@@ -462,8 +271,7 @@ sub postInstall {
 # Invoked when the package upgrades
 sub postUpgrade {
 
-    _ensureUser();
-    _ensureAuthorizedKeys();
+    # no op for now
 
     return 0;
 }

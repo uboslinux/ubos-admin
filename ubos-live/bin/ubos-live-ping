@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+#
+# Check on the UBOS Live status of this device
+#
+# Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+use UBOS::Live::UbosLive;
+use UBOS::Logging;
+
+my $verbose       = 0;
+my $logConfigFile = undef;
+
+my $parseOk = GetOptions(
+        'verbose+'    => \$verbose,
+        'logConfig=s' => \$logConfigFile );
+
+UBOS::Logging::initialize(
+        'ubos-live',
+        'ubos-live-ping',
+        $verbose,
+        ( $verbose == 0 && !$logConfigFile )
+                ? '/etc/ubos/log-system.conf'
+                : $logConfigFile );
+
+if(    !$parseOk
+    || @ARGV
+    || ( $verbose && $logConfigFile ))
+{
+    fatal( 'Invalid invocation:', @ARGV );
+}
+
+my $exit = UBOS::Live::UbosLive::statusPing();
+
+exit( $exit );
+
+1;
+
+
+

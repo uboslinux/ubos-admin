@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.32
+pkgver=0.33
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -19,22 +19,11 @@ _vendor_perl=/usr/share/perl5/vendor_perl
 install=install
 
 package() {
-# ubos-live user
-    install -D -m644 ${startdir}/sysusers.d/ubos-live.conf -t ${pkgdir}/usr/lib/sysusers.d/
-    mkdir -p -m750 ${pkgdir}/etc/sudoers.d
-    install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
-
-# ssh keys
-    install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/usr/share/ubos-live
-
 # Systemd
     install -D -m644 ${startdir}/systemd/* -t ${pkgdir}/usr/lib/systemd/system/
 
 # Initialize on boot with staff
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
-
-# Templates
-    install -D -m644 ${startdir}/tmpl/* -t ${pkgdir}/usr/share/${pkgname}/tmpl/
 
 # Code
     install -D -m755 ${startdir}/vendor_perl/UBOS/Commands/*.pm            -t ${pkgdir}${_vendor_perl}/UBOS/Commands/
