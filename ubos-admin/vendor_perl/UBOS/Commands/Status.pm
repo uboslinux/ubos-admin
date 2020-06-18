@@ -448,7 +448,7 @@ sub run {
 
     } else {
         # will print to console
-        my $out  = 'Status: ' . $json->{hostid} . "\n";
+        my $out  = 'Host: ' . UBOS::HostStatus::hostId() . "\n";
         $out .= '=' x ( length( $out )-1 ) . "\n";
 
         colPrint( $out );
