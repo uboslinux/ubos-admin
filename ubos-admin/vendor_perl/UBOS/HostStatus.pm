@@ -685,6 +685,8 @@ sub allAsJson {
     failedServices();
     hardwareNics();
     hostId();
+    hostPublicKey();
+    hostname();
     lastUpdated();
     liveJson();
     memoryJson();
@@ -692,14 +694,20 @@ sub allAsJson {
     pacnewFiles();
     problems();
     productJson();
-    publicKey();
     readySince();
     softwareNics();
-    uptimeSince();
+    uptimeJson();
     virtualization();
     wlanNics();
 
     return $json;
+}
+
+##
+# Live status as JSON
+# return: JSON
+sub liveAsJson {
+    return allAsJson(); # for now
 }
 
 ##
