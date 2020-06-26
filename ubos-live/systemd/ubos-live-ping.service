@@ -1,5 +1,5 @@
 [Unit]
-Description=Ping and report UBOS Live status
+Description=Ping UBOS Live and report status
 
 [Service]
 ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-live-ping

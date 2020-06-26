@@ -10,8 +10,6 @@ license=("PPL3")
 options=('!strip')
 depends=(
     'coreutils'
-    'openvpn'
-    'perl-www-curl'
     'ubos-admin'
     'wireguard-tools'
 )

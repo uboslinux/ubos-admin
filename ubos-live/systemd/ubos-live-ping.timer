@@ -1,9 +1,9 @@
 [Unit]
-Description=Ping and report UBOS Live status
+Description=Ping UBOS Live and report status
 
 [Timer]
 OnBootSec=5min
-OnUnitActiveSec=1d
+OnUnitActiveSec=1h
 AccuracySec=1h
 Unit=ubos-live-ping.service
 

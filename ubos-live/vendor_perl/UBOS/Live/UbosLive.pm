@@ -17,30 +17,27 @@ use UBOS::Host;
 use UBOS::HostStatus;
 use UBOS::Utils;
 use URI::Escape;
-use WWW::Curl::Easy;
+use HTTP::Request;
+use LWP::UserAgent;
+use Time::HiRes;
 
 my $CONF                   = '/etc/ubos/ubos-live.json';
 my $MAX_STATUS_TRIES       = 5;
 my $STATUS_DELAY           = 10;
-my $API_HOST_PREFIX        = 'http://api.live'; # FIXME https
-my $DEVICE_PING_PARENT_URL = '.ubos.net/ping/device/';
 my $STATUS_TIMER           = 'ubos-live-ping.timer';
-my %CHANNELS               = ( 'red' => 1, 'yellow' => 1, 'green' => 1 );
-
-my $_conf      = undef; # content of the $CONF file; cached
-my $_subdomain = undef; # insert subdomain into status URL; cached
-
-##
-# Determine which subdomain to use when contacting cloud.
-sub _subdomain() {
-
-    unless( defined( $_subdomain )) {
-        my $confJson = _getConf();
-        my $channel  = $confJson->{channel};
-        $_subdomain  = ".$channel";
+my $CHANNELS               = {
+    'red'    => {
+        'pingendpoint' => 'http://api.live.red.ubos.net/ping' # no TLS
+    },
+    'yellow' => {
+        'pingendpoint' => 'https://api.live.yellow.ubos.net/ping'
+    },
+    'green'  => {
+        'pingendpoint' => 'https://api.live.ubos.net/ping'
     }
-    return $_subdomain;
-}
+};
+
+my $_conf = undef; # content of the $CONF file; cached
 
 ##
 # Contact live.ubos.net, report status, and do the right thing based on the results.
@@ -52,8 +49,12 @@ sub statusPing {
     UBOS::Lock::acquire();
 
     my $confJson = _getConf();
+    my $channel  = $confJson->{channel};
 
-    my $statusUrl = $API_HOST_PREFIX . _subdomain() . $DEVICE_PING_PARENT_URL . UBOS::HostStatus::hostId();
+    if( !exists( $CHANNELS->{$channel} ) || !exists( $CHANNELS->{$channel}->{pingendpoint} )) {
+        fatal( 'UBOS Live is not available on release channel', $channel );
+    }
+    my $statusUrl = $CHANNELS->{$channel}->{pingendpoint} . '/device/' . UBOS::HostStatus::hostId();
 
     my $request = UBOS::HostStatus::liveAsJson();
 
@@ -62,37 +63,27 @@ sub statusPing {
     my $requestString          = UBOS::Utils::writeJsonToString( $request );
     my $statusUrlWithSignature = _signRequest( $statusUrl, 'POST', $requestString );
 
-    trace( 'Curl operation to', $statusUrlWithSignature, 'with payload:', $requestString );
+    trace( 'HTTP to', $statusUrlWithSignature, 'with payload:', $requestString );
 
     my $response;
     my $error;
     my $ret = 1; # error unless success
     for( my $i=1 ; $i<=$MAX_STATUS_TRIES ; ++$i ) { # prints better that way
 
-        eval {
-            my $curl = WWW::Curl::Easy->new;
-            $curl->setopt( CURLOPT_URL,        $statusUrlWithSignature );
-            $curl->setopt( CURLOPT_HTTPHEADER, [ 'Expect:' ] );
-            $curl->setopt( CURLOPT_UPLOAD,     1 );
-            $curl->setopt( CURLOPT_POST,       1 );
-            $curl->setopt( CURLOPT_READDATA,   $requestString );
-            $curl->setopt( CURLOPT_WRITEDATA,  \$response );
+        my $req = HTTP::Request->new( 'POST', $statusUrlWithSignature );
+        $req->header( 'Content-Type' => 'application/json' );
+        $req->content( $requestString );
 
-            my $retCode  = $curl->perform;
-            my $httpCode = $curl->getinfo( CURLINFO_HTTP_CODE );
+        my $lwp      = LWP::UserAgent->new;
+        my $response = $lwp->request( $req );
 
-            if( $retCode == 0 && $httpCode =~ m!^200 ! ) {
-                trace( 'Successful CURL response, HTTP status:', $httpCode, ', payload:', $response );
-                $ret = 0;
-                last;
-            }
-            $error = $curl->strerror( $retCode );
-
-            trace( 'CURL response:', $retCode, ':', $error, ', HTTP status:', $httpCode );
-        };
-        if( $@ ) {
-            trace( 'CURL threw exception:', $@ );
+        if( $response->is_success() ) {
+            trace( 'Successful HTTP response, payload:', $response->decoded_content );
+            $ret = 0;
+            last;
         }
+        trace( 'HTTP response:', $response->status_line );
+
         info( 'UBOS Live status check unsucessful to', $statusUrl, '. Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
 
         sleep( $STATUS_DELAY );
@@ -206,8 +197,11 @@ sub _getConf {
             $_conf->{active} = JSON::true;
         }
 
-        if( !exists( $_conf->{channel} ) || !$CHANNELS{$_conf->{channel}} ) {
+        if( !exists( $_conf->{channel} )) {
             $_conf->{channel} = 'green';
+        }
+        unless( exists( $CHANNELS->{$_conf->{channel}} )) {
+            fatal( 'Unsupported release channel:', $_conf->{channel} );
         }
     }
 
@@ -239,8 +233,9 @@ sub _signRequest {
     } else {
         $ret .= '?';
     }
-    $ret .= '&lid=gpg%3A' . uri_escape( UBOS::HostStatus::hostPublicKey());
     $ret .= '&lid-version=3';
+    $ret .= '&lid=gpg%3A' . uri_escape( UBOS::HostStatus::hostPublicKey());
+    $ret .= '&lid-nonce=' . _nonce();
     $ret .= '&lid-credtype=gpg%20--clearsign';
 
     my $toSign = $ret;
@@ -255,6 +250,18 @@ sub _signRequest {
 
     $ret .= '&lid-credential=' . uri_escape( $signature );
 
+    return $ret;
+}
+
+##
+# Helper method to create a nonce
+sub _nonce {
+
+    my $now = Time::HiRes::time();
+    my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( $now );
+    my $millis = int(( $now - int( $now )) * 1000 );
+
+    my $ret = sprintf "%.4d%.2d%.2dT%.2d%.2d%.2d.%.3dZ", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec, $millis;
     return $ret;
 }
 
