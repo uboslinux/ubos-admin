@@ -1103,7 +1103,7 @@ sub hostSign {
         error( 'Cannot determine host key', $out, $err );
         return '';
     }
-    if( $out =~ m!-+BEGIN PGP SIGNED MESSAGE-+\s?Hash:\s*(\S+)\s.*(-+BEGIN PGP SIGNATURE.*-+END PGP SIGNATURE-+)!s ) {
+    if( $out =~ m!-+BEGIN PGP SIGNED MESSAGE-+\s?Hash:\s*(\S+)\s.*\s(-+BEGIN PGP SIGNATURE.*-+END PGP SIGNATURE-+)!s ) {
         my $hash      = $1;
         my $signature = $2;
 
