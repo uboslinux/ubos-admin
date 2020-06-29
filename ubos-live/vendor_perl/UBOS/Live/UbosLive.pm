@@ -15,11 +15,11 @@ use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::Host;
 use UBOS::HostStatus;
-use UBOS::Utils;
 use URI::Escape;
+use UBOS::Utils;
 use HTTP::Request;
 use LWP::UserAgent;
-use Time::HiRes;
+use Time::Local qw( timegm );
 
 my $CONF                   = '/etc/ubos/ubos-live.json';
 my $MAX_STATUS_TRIES       = 5;
@@ -61,7 +61,7 @@ sub statusPing {
     UBOS::Lock::release();
 
     my $requestString          = UBOS::Utils::writeJsonToString( $request );
-    my $statusUrlWithSignature = _signRequest( $statusUrl, 'POST', $requestString );
+    my $statusUrlWithSignature = _signRequest( $statusUrl, 'POST', 'application/json', $requestString );
 
     trace( 'HTTP to', $statusUrlWithSignature, 'with payload:', $requestString );
 
@@ -220,49 +220,109 @@ sub _saveConf {
 # Helper to sign a URL with payload
 # $url: the base URL
 # $method: the HTTP verb, such as GET
-# $payload: the payload
+# $contentType: the payload content type
+# $content: the payload
 # return: the signed URL
 sub _signRequest {
-    my $url     = shift;
-    my $method  = shift;
-    my $payload = shift;
+    my $url         = shift;
+    my $method      = shift;
+    my $contentType = shift;
+    my $content     = shift;
 
     my $ret = $url;
-    if( $url =~ m!\?! ) {
-        $ret .= '&';
-    } else {
-        $ret .= '?';
-    }
-    $ret .= '&lid-version=3';
-    $ret .= '&lid=gpg%3A' . uri_escape( UBOS::HostStatus::hostPublicKey());
-    $ret .= '&lid-nonce=' . _nonce();
-    $ret .= '&lid-credtype=gpg%20--clearsign';
+    $ret .= _appendQueryPair( $ret, 'lid-version',   '3' );
+    $ret .= _appendQueryPair( $ret, 'lid',           'gpg:' . _trimKey( UBOS::HostStatus::hostPublicKey()));
+    $ret .= _appendQueryPair( $ret, 'lid-nonce',     _nonce());
+    $ret .= _appendQueryPair( $ret, 'lid-credtype',  'gpg --clearsign,hash=SHA256' );
 
     my $toSign = $ret;
-    if( $method ) {
-        $toSign = '&lid-method=' . $method;
-    }
-    if( $payload ) {
-        $toSign = '&lid-payload=' . $payload;
+    $toSign .= _appendQueryPair( $toSign, 'lid-verb', $method );
+
+    if( $content ) {
+        if( $contentType ) {
+            $toSign .= _appendQueryPair( $toSign, 'lid-content-type', $contentType );
+        } else {
+            warning( 'No content type given for signing LID request' )
+        }
+        $toSign .= '&lid-content=' . $content; # Do not escape
     }
 
-    my $signature = UBOS::Host::hostSign( $toSign );
+    my ( $hash, $signature ) = UBOS::Host::hostSign( $toSign );
+    if( $hash ne 'SHA256' ) {
+        warning( 'Signed with the wrong hash', $hash )
+    }
 
-    $ret .= '&lid-credential=' . uri_escape( $signature );
+    $ret .= _appendQueryPair( $ret, 'lid-credential', $signature );
 
     return $ret;
 }
 
 ##
-# Helper method to create a nonce
+# Trim a public key by removing the ---XXX--- head and foot.
+#
+# $key: to-be-trimmed key
+# return: trimmed
+sub _trimKey {
+    my $key = shift;
+
+    if( $key =~ m!-----BEGIN PGP PUBLIC KEY BLOCK-----\s+(\S.*\S)\s+-----END PGP PUBLIC KEY BLOCK-----!s ) {
+        return $1;
+    } else {
+        error( 'Failed to trim public key:', $key );
+        return $key;
+    }
+}
+
+##
+# Helper method to create a nonce. The nonce is a timestamp
+# (so the receiver can discard already-used nonces after some time and
+# reject old nonces according to its policy) plus a random number
+# (to avoid collisions).
+#
+# return: nonce
 sub _nonce {
 
-    my $now = Time::HiRes::time();
-    my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( $now );
-    my $millis = int(( $now - int( $now )) * 1000 );
+    my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( time() );
+    my $rand = UBOS::Utils::randomHex( 16 );
+    my $ret = sprintf "%.4d%.2d%.2dT%.2d%.2d%.2dZ%s", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec, $rand;
 
-    my $ret = sprintf "%.4d%.2d%.2dT%.2d%.2d%.2d.%.3dZ", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec, $millis;
     return $ret;
+}
+
+##
+# Helper to append a name=value pair to the query of a URL.
+#
+# $url: the URL so far
+# $name: to append
+# $value: top append
+# return: the URL with appended query
+sub _appendQueryPair {
+    my $url   = shift;
+    my $name  = shift;
+    my $value = shift;
+
+    my $ret = $url;
+    if( $ret =~ m!\?! ) {
+        $ret = '&';
+    } else {
+        $ret = '?';
+    }
+
+    $ret .= _queryEscape( $name );
+    $ret .= '=';
+    $ret .= _queryEscape( $value );
+    return $ret;
+}
+
+##
+# Escape a name or value in a query.
+# Note: URI::Escape is too aggressive, it %-encodes /
+# $v: the value
+# return: escaped value
+sub _queryEscape {
+    my $v = shift;
+
+    return uri_escape( $v, "^A-Za-z0-9\-\._~/" ); # add slash to default
 }
 
 ##
