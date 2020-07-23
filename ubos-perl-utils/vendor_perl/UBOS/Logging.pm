@@ -35,7 +35,7 @@ log4perl.appender.CONSOLE.layout=PatternLayout
 log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
 );
         Log::Log4perl->init( \$config );
-        $LOG = Log::Log4perl->get_logger( $0 );
+        $LOG = Log::Log4perl->get_logger( $0 . '-uninitialized' );
     }
 }
 
