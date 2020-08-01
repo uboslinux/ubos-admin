@@ -524,6 +524,10 @@ sub restoreSites {
     unless( @oldSiteIds ) {
         # no --siteid or --hostname was specified: take all
         @oldSiteIds = keys %$sitesInBackup;
+
+        if( @oldSiteIds == 0 ) {
+            fatal( 'No sites found in backup that can be restored' );
+        }
     }
 
     trace( 'Backup siteids to restore:', @oldSiteIds );
