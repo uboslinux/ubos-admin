@@ -673,7 +673,7 @@ sub problems {
 }
 
 ##
-# Provide a full status as JSON
+# Provide a full status as JSON. Compare liveJson().
 # return: JSON
 sub allAsJson {
     # add new methods here
@@ -704,10 +704,34 @@ sub allAsJson {
 }
 
 ##
-# Live status as JSON
+# Live status as JSON. Compare allAsJson().
 # return: JSON
 sub liveAsJson {
-    return allAsJson(); # for now
+    # add new methods here
+    arch();
+    blockDevicesJson();
+    channel();
+    cpuJson();
+    deviceClass();
+    failedServices();
+    hardwareNics();
+    hostId();
+    hostPublicKey();
+    hostname();
+    lastUpdated();
+    liveJson();
+    memoryJson();
+    nics();
+    pacnewFiles();
+    problems();
+    productJson();
+    readySince();
+    softwareNics();
+    uptimeJson();
+    virtualization();
+    wlanNics();
+
+    return $json;
 }
 
 ##
