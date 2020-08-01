@@ -112,6 +112,8 @@ sub send {
         return 1; # nothing to do
     }
 
+    info( 'Saving to', $toFile );
+
     my $cmd = "cp --reflink=auto '$localFile' '" . $toFile . "'";
     my $err;
     if( UBOS::Utils::myexec( $cmd, undef, undef, \$err ) && $err !~ m!are the same file! ) {

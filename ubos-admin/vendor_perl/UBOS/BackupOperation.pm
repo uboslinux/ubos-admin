@@ -345,8 +345,6 @@ sub doUpload {
         }
     }
 
-    info( 'Sending backup to:', $self->{uploadFile} );
-
     my $ret = $self->{dataTransferProtocol}->send(
             $self->{stageToUploadFile},
             $self->{uploadFile},
