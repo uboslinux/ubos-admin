@@ -42,9 +42,12 @@ my $_conf = undef; # content of the $CONF file; cached
 ##
 # Contact live.ubos.net, report status, and do the right thing based on the results.
 #
+# #dryRun: if tri
 # return: desired exit code
 sub statusPing {
-    trace( 'UbosLive::statusPing' );
+    my $dryRun = shift;
+
+    trace( 'UbosLive::statusPing', $dryRun );
 
     UBOS::Lock::acquire();
 
@@ -65,31 +68,39 @@ sub statusPing {
 
     trace( 'HTTP to', $statusUrlWithSignature, 'with payload:', $requestString );
 
-    my $response;
-    my $error;
-    my $ret = 1; # error unless success
-    for( my $i=1 ; $i<=$MAX_STATUS_TRIES ; ++$i ) { # prints better that way
+    my $ret = 0;
+    if( $dryRun ) {
+        print( "Not POSTing to $statusUrlWithSignature:\n" );
+        print( $requestString );
 
-        my $req = HTTP::Request->new( 'POST', $statusUrlWithSignature );
-        $req->header( 'Content-Type' => 'application/json' );
-        $req->content( $requestString );
+    } else {
+        my $response;
+        my $error;
 
-        my $lwp      = LWP::UserAgent->new;
-        my $response = $lwp->request( $req );
+        $ret = 1; # error unless success
+        for( my $i=1 ; $i<=$MAX_STATUS_TRIES ; ++$i ) { # prints better that way
 
-        if( $response->is_success() ) {
-            trace( 'Successful HTTP response, payload:', $response->decoded_content );
-            $ret = 0;
-            last;
+            my $req = HTTP::Request->new( 'POST', $statusUrlWithSignature );
+            $req->header( 'Content-Type' => 'application/json' );
+            $req->content( $requestString );
+
+            my $lwp      = LWP::UserAgent->new;
+            my $response = $lwp->request( $req );
+
+            if( $response->is_success() ) {
+                trace( 'Successful HTTP response, payload:', $response->decoded_content );
+                $ret = 0;
+                last;
+            }
+            trace( 'HTTP response:', $response->status_line );
+
+            info( 'UBOS Live status check unsucessful to', $statusUrl, '. Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
+
+            sleep( $STATUS_DELAY );
         }
-        trace( 'HTTP response:', $response->status_line );
 
-        info( 'UBOS Live status check unsucessful to', $statusUrl, '. Trying again in', $STATUS_DELAY, 'seconds', "($i/$MAX_STATUS_TRIES)" );
-
-        sleep( $STATUS_DELAY );
+        # response payload is currently ignored
     }
-
-    # response payload is currently ignored
 
     return $ret;
 }
