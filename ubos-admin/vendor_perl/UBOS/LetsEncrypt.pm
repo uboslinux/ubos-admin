@@ -163,6 +163,7 @@ sub renewCertificates {
             . ' certbot renew'
             . ' --quiet'
             . ' --agree-tos'
+            . ' --max-log-backups 0' # disables built-in log rotation
             . $flags;
 
     my $out;

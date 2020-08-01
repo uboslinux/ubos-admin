@@ -102,6 +102,7 @@ package() {
     install -D -m644 ${startdir}/etc/diet4j/diet4j.conf  -t ${pkgdir}/etc/diet4j/
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
+    install -D -m644 ${startdir}/etc/logrotate.d/*               -t ${pkgdir}/etc/logrotate.d/
 
 # Give cronie no reason to complain
     install -D -m644 /dev/null ${pkgdir}/etc/crontab
