@@ -93,7 +93,7 @@ sub activateNetConfig {
 # This works by comparing the timestamp of the open-ports directory with
 # that of the active netconfig file.
 sub updateOpenPorts {
-    
+
     my $openPortsCtime        = ~0; # max
     my $currentNetConfigCtime =  0;
 
@@ -749,6 +749,8 @@ END
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
 -A INPUT -i tun90 -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-tun90-TCP
+-A INPUT -i lo -j ACCEPT
+-A INPUT -i ve-+ -j ACCEPT
 -A INPUT -p udp -j REJECT
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT
