@@ -45,10 +45,10 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw(
                 ubos-networking-client
-                uboot-odroid-xu3
                 archlinuxarm-keyring
-                rng-tools
+                rng-tools uboot-odroid-xu3
                 smartmontools
+                ubos-deviceclass-odroidxu3
         ) ];
     }
     unless( $self->{deviceservices} ) {

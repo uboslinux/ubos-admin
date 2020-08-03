@@ -38,10 +38,14 @@ sub new {
     $self->{kernelpackage} = 'linux-espressobin';
 
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( ubos-networking-client ubos-networking-espressobin
-                ubos-networking-standalone uboot-tools archlinuxarm-keyring
-                espressobin-uboot-config espressobin-ubos-state
-                smartmontools wpa_supplicant crda ubos-deviceclass-espressobin ) ];
+        $self->{devicepackages} = [ qw(
+                ubos-networking-client ubos-networking-espressobin ubos-networking-standalone
+                archlinuxarm-keyring
+                uboot-tools espressobin-uboot-config espressobin-ubos-state
+                smartmontools
+                wpa_supplicant crda
+                ubos-deviceclass-espressobin
+        ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];

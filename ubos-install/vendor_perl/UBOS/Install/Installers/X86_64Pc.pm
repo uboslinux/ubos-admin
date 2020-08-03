@@ -42,9 +42,13 @@ sub new {
     }
     $self->{kernelpackage} = 'linux';
     unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw( rng-tools mkinitcpio
-                ubos-networking-client ubos-networking-gateway
-                ubos-networking-standalone smartmontools wpa_supplicant crda ubos-deviceclass-pc ) ];
+        $self->{devicepackages} = [ qw(
+                ubos-networking-client ubos-networking-gateway ubos-networking-standalone
+                rng-tools mkinitcpio linux-firmware
+                smartmontools
+                wpa_supplicant crda
+                ubos-deviceclass-pc
+        ) ];
     }
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service smartd.service ) ];

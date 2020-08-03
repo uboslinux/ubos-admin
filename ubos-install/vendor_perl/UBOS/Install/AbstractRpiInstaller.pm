@@ -41,13 +41,10 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw(
                 ubos-networking-client
-                raspberrypi-firmware
-                raspberrypi-bootloader raspberrypi-bootloader-x
                 archlinuxarm-keyring
-                rng-tools
+                rng-tools raspberrypi-firmware raspberrypi-bootloader raspberrypi-bootloader-x
                 smartmontools
-                wpa_supplicant
-                crda
+                wpa_supplicant crda
         ) ];
     }
     unless( $self->{deviceservices} ) {
