@@ -73,6 +73,7 @@ sub parseArgumentsPartial {
             'nobackupdatatransferconfigfile'  => \$ignoreDataTransferConfig );
 
     if(     !$parseOk
+        || @$argP
         || ( $backupToFile && $backupToDirectory )
         || ( $dataTransferConfigFile && $ignoreDataTransferConfig )
         || ( $gpgHomeDir && !$encryptId ))
