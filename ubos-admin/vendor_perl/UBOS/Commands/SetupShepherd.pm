@@ -57,7 +57,6 @@ sub run {
     if(    !$parseOk
         || @args > 1
         || ( $file  && @args )
-        || ( !$file && @args == 0 )
         || ( $add && $force )
         || ( $verbose && $logConfigFile ))
     {
@@ -67,13 +66,15 @@ sub run {
     my $key;
     if( @args ) {
         $key = $args[0];
-    } elsif( -r $file ) {
-        $key = UBOS::Utils::slurpFile( $file );
-    } else {
-        fatal( 'File cannot be read or does not exist:', $file );
+    } elsif( $file ) {
+        if( -r $file ) {
+            $key = UBOS::Utils::slurpFile( $file );
+        } else {
+            fatal( 'File cannot be read or does not exist:', $file );
+        }
     }
 
-    unless( $key =~ m!^ssh-\S+ ! ) {
+    if( $key && $key !~ m!^ssh-\S+ ! ) {
         if( $file ) {
             fatal( 'This does not look like a valid ssh public key:', $key );
         } else {

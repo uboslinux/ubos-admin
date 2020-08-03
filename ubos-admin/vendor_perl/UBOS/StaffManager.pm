@@ -277,7 +277,7 @@ sub saveCurrentConfiguration {
 
 ##
 # Create or update the shepherd user
-# $key: the public ssh key which is allowed to log in
+# $key: the public ssh key which is allowed to log in, if any
 # $add: if true, add the keys
 # $force: if true, replace an existing key
 # return: 1 if ok
