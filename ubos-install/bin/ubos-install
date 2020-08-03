@@ -262,6 +262,12 @@ trace( 'Using installer', ref( $installer ));
 
 my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV, $config );
 if( $diskLayout ) {
+    trace( 'Checking the network' );
+    # If we do this here, we can play with disk layout arguments without the network
+    unless( UBOS::Utils::isOnline() ) {
+        fatal( 'Cannot reach the UBOS software depot; leaving disk unchanged' );
+    }
+
     my $errors = $installer->install( $diskLayout );
     if( $errors ) {
         info( 'There were', $errors, 'errors.' );

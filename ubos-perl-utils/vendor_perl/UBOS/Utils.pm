@@ -13,6 +13,7 @@ package UBOS::Utils;
 use Exporter qw( import );
 use File::Spec;
 use File::Temp;
+use Net::Ping;
 use JSON;
 use Lchown;
 use POSIX;
@@ -1348,6 +1349,17 @@ sub isIpv6Address {
     } else {
         return 0;
     }
+}
+
+##
+# Determine whether we can reach the internet
+# $host: hostname to attempt to reach
+# return: true or false
+sub isOnline {
+    my $host = shift || 'depot.ubos.net';
+    my $ret = Net::Ping->new( 'icmp' )->ping( $host );
+
+    return $ret;
 }
 
 ##
