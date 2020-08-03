@@ -200,7 +200,7 @@ sub createDiskLayout {
                     $ret = undef;
                     last;
                 }
-                if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $part )) {
+                if( UBOS::Install::AbstractDiskLayout::isMountedOrChildMounted( $part )) {
                     error( 'Cannot install to mounted disk:', $part );
                     $ret = undef;
                     last;
@@ -306,9 +306,9 @@ sub createDiskLayout {
                                 } );
                     }
                 }
-            } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
+            } elsif( $ret && UBOS::Install::AbstractDiskLayout::isDisk( $first )) {
                 # Option 2
-                if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $first )) {
+                if( UBOS::Install::AbstractDiskLayout::isMountedOrChildMounted( $first )) {
                     error( 'Cannot install to mounted disk:', $first );
                     $ret = undef;
                 } else {
@@ -322,7 +322,7 @@ sub createDiskLayout {
                             $ret = undef;
                             last;
                         }
-                        unless( UBOS::Install::AbstractDiskLayout::isBlockDevice( $disk )) {
+                        unless( UBOS::Install::AbstractDiskLayout::isDisk( $disk )) {
                             error( 'Not a block device:', $disk );
                             $ret = undef;
                             last;

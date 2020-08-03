@@ -15,7 +15,8 @@ use Cwd 'abs_path';
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $pathFacts = {}; # cache of facts about particular paths, hash of <string,hash>
+my $_pathFacts = {}; # cache of facts about particular paths, hash of <string,hash>
+my $_lsBlk     = undef; # cache of lsblk output
 
 ##
 # Constructor for subclasses only
@@ -398,48 +399,79 @@ sub _determineDeviceFact {
     my $path = shift;
     my $fact = shift;
 
-    my $facts = $pathFacts->{$path};
-    unless( $facts ) {
-        $facts = {}; # default
+    my $facts;
+    if( exists( $_pathFacts->{$path} )) {
+        $facts = $_pathFacts->{$path};
 
+    } else {
         if( -e $path ) {
             my $absPath = abs_path( $path );
 
             if( -f $absPath ) {
-                $facts->{devicetype} = 'file';
+                $facts = {
+                    'devicetype' => 'file'
+                };
 
             } elsif( -d $absPath ) {
-                $facts->{devicetype} = 'directory';
+                $facts = {
+                    'devicetype' => 'directory'
+                };
 
             } elsif( -b $absPath ) {
 
-                my $out;
-                if( UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n '$absPath'", undef, \$out )) {
-                    fatal( 'lsblk of device failed:', $absPath );
+                unless( $_lsBlk ) {
+                    my $out;
+                    if( UBOS::Utils::myexec( "lsblk -o NAME,TYPE,PARTUUID,MOUNTPOINT --json -n", undef, \$out )) {
+                        fatal( 'lsblk of device failed:', $absPath );
+                    }
+
+                    $_lsBlk = UBOS::Utils::readJsonFromString( $out );
                 }
 
-                my $deviceName = $absPath;
-                $deviceName =~ s!(.*/)!!;
+                foreach my $deviceEntry ( @{$_lsBlk->{blockdevices}} ) {
+                    my $deviceName = $deviceEntry->{name};
+                    my $deviceFacts = {
+                        'devicetype' => $deviceEntry->{type},
+                        'partuuid'   => $deviceEntry->{partuuid},
+                        'mountpoint' => $deviceEntry->{mountpoint}
+                    };
+                    $_pathFacts->{ "/dev/$deviceName" } = $deviceFacts;
 
-                my $json = UBOS::Utils::readJsonFromString( $out );
 
-                foreach my $deviceEntry ( @{$json->{blockdevices}} ) {
-                    if( $deviceName eq $deviceEntry->{name} ) {
-                        $facts->{devicetype} = $deviceEntry->{type};
-                        $facts->{partuuid}   = $deviceEntry->{partuuid};
-                        $facts->{mountpoint} = $deviceEntry->{mountpoint};
+                    if( exists( $deviceEntry->{children} )) {
+                        # flatten this
+                        foreach my $child ( @{$deviceEntry->{children}} ) {
+                            my $childName = $child->{name};
+                            my $childFacts = {
+                                'devicetype' => $child->{type},
+                                'partuuid'   => $child->{partuuid},
+                                'mountpoint' => $child->{mountpoint}
+                            };
+                            $_pathFacts->{ "/dev/$childName" } = $childFacts;
+                        }
                     }
                 }
-            }
-            unless( keys %$facts ) {
+                if( exists( $_pathFacts->{$absPath} )) {
+                    $facts = $_pathFacts->{$absPath};
+                }
+            } else {
                 warning( 'Cannot determine type of path:', $path );
+                $facts = {
+                    'devicetype' => 'unknown'
+                };
             }
         } else {
-            $facts->{devicetype} = 'missing';
+            $facts = {
+                'devicetype' => 'missing'
+            };
         }
-        $pathFacts->{$path} = $facts;
+        $_pathFacts->{$path} = $facts;
     }
-    return $facts->{$fact};
+    if( $facts && exists( $facts->{$fact} )) {
+        return $facts->{$fact};
+    } else {
+        return undef;
+    }
 }
 
 ##
@@ -515,6 +547,29 @@ sub determineMountPoint {
     } else {
         return undef;
     }
+}
+
+##
+# Helper method to determine whether or not a given device, or a child device
+# is mounted. E.g. for /dev/sda, it will return 0 only if neither /dev/sda nor
+# any of the /dev/sda1 ... /dev/sdaX are mounted; 1 otherwise
+# $path: the block device's
+# return: true or false
+sub isMountedOrChildMounted {
+    my $path = shift;
+
+    if( determineMountPoint( $path )) {
+        return 1;
+    }
+
+    foreach my $childPath ( keys %$_pathFacts ) {
+        if( $childPath =~ m!^$path! ) {
+            if( determineMountPoint( $childPath )) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 1;

@@ -232,7 +232,7 @@ FIXME
                 }
             } elsif( $ret && UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
                 # Option 2
-                if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $rootDiskOrImage )) {
+                if( UBOS::Install::AbstractDiskLayout::isMountedOrChildMounted( $rootDiskOrImage )) {
                     error( 'Cannot install to mounted disk:', $rootDiskOrImage );
                     $ret = undef;
                 } else {

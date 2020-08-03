@@ -111,7 +111,7 @@ sub createDiskLayout {
             }
         } elsif( $ret && UBOS::Install::AbstractDiskLayout::isBlockDevice( $first )) {
             # Option 2
-            if( UBOS::Install::AbstractDiskLayout::determineMountPoint( $first )) {
+            if( UBOS::Install::AbstractDiskLayout::isMountedOrChildMounted( $first )) {
                 error( 'Cannot install to mounted disk:', $first );
                 $ret = undef;
             } else {
