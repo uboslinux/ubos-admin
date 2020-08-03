@@ -372,7 +372,19 @@ HTML
          </tr>
         </table>
        </div>
+HTML
+
+            if( $accessAtHost ) {
+                $html .= <<HTML;
        <h3>Site: <a href="$protocol://$accessAtHost/">$hostName</a>
+HTML
+            } else {
+                $html .= <<HTML;
+       <h3>Site: $hostName
+HTML
+            }
+
+            $html .= <<HTML;
         <span id="lastupdated-$siteId" class="hide sidenote"></span>
         <span class="site-$siteId-reveal reveal sidenote">
          <a href="javascript:toggle('site-$siteId');">Show details</a>
@@ -381,6 +393,13 @@ HTML
          <a href="javascript:toggle('site-$siteId');">Hide details</a>
         </span>
        </h3>
+HTML
+            unless( $accessAtHost ) {
+                $html .= <<HTML;
+       <p class="note">The UBOS device was disconnected from the network when this information was saved.</p>
+HTML
+            }
+            $html .= <<HTML;
        <p class="site-$siteId-hide hide">Site ID: $siteId</p>
        <div class="appconfigs">
 HTML
@@ -400,9 +419,15 @@ HTML
                     if( defined( $context )) {
                         my $contextName = $context ? $context : 'root of site';
 
-                        $html .= <<HTML;
+                        if( $accessAtHost ) {
+                            $html .= <<HTML;
           App $appId at <a href="$protocol://$accessAtHost$context/">$contextName</a>
 HTML
+                        } else {
+                            $html .= <<HTML;
+          App $appId at $contextName
+HTML
+                        }
                     } else {
                         $html .= <<HTML;
           App $appId (not a web app)
