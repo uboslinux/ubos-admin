@@ -362,7 +362,11 @@ HTML
            <span class="site-$siteId-passwd-hide hide">
             <span class="tt" id="site-$siteId-passwd-copy-fromhere">$siteAdminCred</span>
             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Hide</a>
-            <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">Copy</a>
+            <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">
+HTML
+            $html .= $UBOS::Live::UbosLiveHtmlConstants::copyImage . "\n";
+            $html .= <<HTML;
+            </a>
            </span>
           </td>
          </tr>

@@ -265,7 +265,8 @@ function calculateTimeUpdated( updated, id ) {
 JAVASCRIPT
 
 ## inlined images
-our $staffImage = '<img width=63 height=137 src="data:image/png;base64,UBOS_STAFF_IMAGE_BASE64">';
-our $helpImage  = '<img width=24 height=24 src="data:image/png;base64,HELP_IMAGE_BASE64">';
+our $staffImage = '<img width=63 height=137 src="data:image/png;base64,UBOS_STAFF_IMAGE_BASE64" alt="UBOS Staff">';
+our $helpImage  = '<img width=24 height=24 src="data:image/png;base64,HELP_IMAGE_BASE64" alt="Help">';
+our $copyImage  = '<img width=24 height=24 src="data:image/png;base64,COPY_IMAGE_BASE64" alt="Copy">';
 
 1;
