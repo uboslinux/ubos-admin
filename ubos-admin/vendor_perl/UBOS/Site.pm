@@ -1325,7 +1325,7 @@ sub print {
                                         my $custPointValueStruct = $installableCustPoints->{$custPointName};
                                         my $custPointDef         = $installable->customizationPoints();
 
-                                        if( exists( $custPointDef->{internal} ) && $custPointDef->{internal} ) {
+                                        if( exists( $custPointDef->{$custPointName}->{internal} ) && $custPointDef->{$custPointName}->{internal} ) {
                                             next;
                                         }
 
@@ -1334,10 +1334,10 @@ sub print {
                                             && exists( $custPointDef->{$custPointName}->{private} )
                                             && $custPointDef->{$custPointName}->{private} )
                                         {
-                                            $value = "<not shown>";
-                                        } else {
-                                            $value = $custPointValueStruct->{value};
+                                            next;
                                         }
+
+                                        $value = $custPointValueStruct->{value};
 
                                         colPrint( '            customizationpoint: ' . $custPointName . ': ' );
 
