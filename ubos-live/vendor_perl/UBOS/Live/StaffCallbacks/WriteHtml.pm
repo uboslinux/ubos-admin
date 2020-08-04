@@ -354,6 +354,11 @@ HTML
          <tr>
           <th>Site admin user password:</th>
           <td>
+           <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">
+HTML
+            $html .= $UBOS::Live::UbosLiveHtmlConstants::copyImage . "\n";
+            $html .= <<HTML;
+           </a>
            <div id="site-$siteId-passwd" class="hide"></div>
            <span class="site-$siteId-passwd-reveal reveal">
             &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
@@ -362,11 +367,6 @@ HTML
            <span class="site-$siteId-passwd-hide hide">
             <span class="tt" id="site-$siteId-passwd-copy-fromhere">$siteAdminCred</span>
             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Hide</a>
-            <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">
-HTML
-            $html .= $UBOS::Live::UbosLiveHtmlConstants::copyImage . "\n";
-            $html .= <<HTML;
-            </a>
            </span>
           </td>
          </tr>
