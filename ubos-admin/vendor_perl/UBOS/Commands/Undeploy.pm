@@ -155,7 +155,9 @@ sub run {
     debugAndSuspend( 'Execute triggers', keys %$suspendTriggers );
     UBOS::Host::executeTriggers( $suspendTriggers );
 
-    info( 'Backing up' );
+    unless( $backupOperation->isNoOp() ) {
+        info( 'Backing up' );
+    }
 
     $backupOperation->setSitesToBackUp( $oldSites );
     my $backupSucceeded  = $backupOperation->constructCheckPipeline();
