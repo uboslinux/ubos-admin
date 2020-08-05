@@ -202,11 +202,17 @@ HHH
             '--ids-only' => <<HHH,
     Show Site and AppConfiguration ids only.
 HHH
-            '--adminuser' => <<HHH,
-    Show information about the Site administrator.
+            '--hostname-only' => <<HHH,
+    Show the hostname only.
+HHH
+            '--html' => <<HHH,
+    Show in HTML format.
 HHH
             '--privatecustomizationpoints' => <<HHH
     Do not mask the values for private customizationpoints.
+HHH
+            '--adminuser' => <<HHH,
+    Show information about the Site administrator.
 HHH
         }
     };

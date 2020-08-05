@@ -42,20 +42,22 @@ sub run {
     my $html              = 0;
     my $privateCustPoints = 0;
     my $adminUser         = 0;
+    my $withInstallable   = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'                     => \$verbose,
-            'logConfig=s'                  => \$logConfigFile,
-            'debug'                        => \$debug,
-            'json'                         => \$json,
-            'detail'                       => \$detail,
-            'brief'                        => \$brief,
-            'ids-only|idsonly'             => \$idsOnly,
-            'hostnames-only|hostnamesonly' => \$hostnamesOnly,
-            'html'                         => \$html,
-            'privatecustomizationpoints'   => \$privateCustPoints,
-            'adminuser'                    => \$adminUser );
+            'verbose+'                       => \$verbose,
+            'logConfig=s'                    => \$logConfigFile,
+            'debug'                          => \$debug,
+            'json'                           => \$json,
+            'detail'                         => \$detail,
+            'brief'                          => \$brief,
+            'ids-only|idsonly'               => \$idsOnly,
+            'hostnames-only|hostnamesonly'   => \$hostnamesOnly,
+            'html'                           => \$html,
+            'privatecustomizationpoints'     => \$privateCustPoints,
+            'adminuser'                      => \$adminUser,
+            'with-installable=s'             => \$withInstallable );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -92,6 +94,9 @@ sub run {
     }
 
     my $sites = UBOS::Host::sites();
+    if( $withInstallable ) {
+        $sites = _filterByInstallable( $withInstallable, $sites );
+    }
 
     if( $json ) {
         my $sitesJson = {};
@@ -191,27 +196,77 @@ SSS
     customization points marked as "private").
 DDD
         'cmds' => {
-            '[ --brief | --detail | --ids-only | --hostnames-only ] [ --privatecustomizationpoints ]' => <<HHH,
-    Show all currently deployed sites. Depending on the provided flag
-    (if any), more or less information is shown.
-HHH
-            '--json' => <<HHH,
-    Show all currently deployed sites in JSON format
-HHH
-            '--html [ --brief | --detail ] [ --privatecustomizationpoints ]' => <<HHH,
-    Show all currently deployed sites in HTML format. Depending on the provided flag
-    (if any), more or less information is shown.
+            '' => <<HHH
+    Show information about the sites currently deployed on this device.
 HHH
         },
         'args' => {
             '--verbose' => <<HHH,
     Display extra output. May be repeated for even more output.
 HHH
-            '--logConfig <file>' => <<HHH
+            '--logConfig <file>' => <<HHH,
     Use an alternate log configuration file for this command.
+HHH
+            '--json' => <<HHH,
+    Use JSON as the output format, instead of human-readable text.
+HHH
+            '--detail' => <<HHH,
+    Show more detail.
+HHH
+            '--brief' => <<HHH,
+    Show less detail.
+HHH
+            '--ids-only' => <<HHH,
+    Show Site and AppConfiguration ids only.
+HHH
+            '--hostnames-only' => <<HHH,
+    Show the hostnames only.
+HHH
+            '--html' => <<HHH,
+    Show in HTML format.
+HHH
+            '--privatecustomizationpoints' => <<HHH,
+    Do not mask the values for private customizationpoints.
+HHH
+            '--adminuser' => <<HHH,
+    Show information about the Site administrator.
+HHH
+            '--with-installable <installable>' => <<HHH
+    Only list sites that run app or accessory <installable>.
 HHH
         }
     };
 }
 
+###
+# Helper method to filter a hash of Sites by the existence of an App or
+# Accessory at a Site.
+# $packageName: the identifier of the App or Accessory to filter by
+# $sites: the sites
+# return: filtered sites
+sub _filterByInstallable {
+    my $packageName = shift;
+    my $sites       = shift;
+
+    my %ret = ();
+
+    foreach my $site ( values %$sites ) {
+        my $found = 0;
+
+        MIDDLE: foreach my $appConfig ( @{$site->appConfigs} ) {
+            foreach my $installable ( $appConfig->installables() ) {
+                if( $packageName eq $installable->packageName() ) {
+                    $found = 1;
+                    last MIDDLE;
+                }
+            }
+        }
+
+        if( $found ) {
+            $ret{$site->siteId} = $site;
+        }
+    }
+
+    return \%ret;
+}
 1;
