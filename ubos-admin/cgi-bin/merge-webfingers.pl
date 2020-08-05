@@ -10,8 +10,9 @@ use warnings;
 use utf8;
 
 use CGI;
+use HTTP::Request;
 use JSON;
-use LWP::Simple;
+use LWP::UserAgent;
 use UBOS::Utils;
 
 my $q    = new CGI;
@@ -30,19 +31,25 @@ if( -e $siteProxiesFile ) {
     my $siteProxiesContent = UBOS::Utils::slurpFile( $siteProxiesFile );
     my @urls = grep { /^http/ } split( "\n", $siteProxiesContent );
 
+    my $lwp = LWP::UserAgent->new;
+
     foreach my $url ( @urls ) {
         my $fullUrl = $url;
         if( $args ) {
             $fullUrl .= index( $fullUrl, '?' ) >= 0 ? "&$args" : "?$args";
         }
 
-        my $found   = get( $fullUrl );
-        unless( $found ) {
+        # Need to set JSON content-type
+        my $req = HTTP::Request->new( 'GET', $fullUrl );
+        $req->header( 'Content-Type' => 'application/json' );
+
+        my $response = $lwp->request( $req );
+        unless( $response->is_success ) {
             # something may be temporarily unavailable
             next;
         }
 
-        my $foundJson = UBOS::Utils::readJsonFromString( $found );
+        my $foundJson = UBOS::Utils::readJsonFromString( $response->decoded_content );
 
         if( $jsonResponse ) {
             # merge
