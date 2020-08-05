@@ -48,12 +48,12 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'                        => \$verbose,
-            'logConfig=s'                     => \$logConfigFile,
-            'debug'                           => \$debug,
-            'template'                        => \$useAsTemplate,
-            'file=s'                          => \@files,
-            'stdin'                           => \$stdin );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile,
+            'debug'       => \$debug,
+            'template'    => \$useAsTemplate,
+            'file=s'      => \@files,
+            'stdin'       => \$stdin );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
