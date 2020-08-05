@@ -37,6 +37,8 @@ sub run {
     my $detail            = 0;
     my $brief             = 0;
     my $idsOnly           = 0;
+    my $hostnamesOnly     = 0;
+    my $html              = 0;
     my $privateCustPoints = 0;
     my $adminUser         = 0;
     my $siteId;
@@ -51,6 +53,8 @@ sub run {
             'detail'                     => \$detail,
             'brief'                      => \$brief,
             'ids-only|idsonly'           => \$idsOnly,
+            'hostnames-only|hostnamesonly|hostname-only|hostnameonly' => \$hostnamesOnly,
+            'html'                       => \$html,
             'privatecustomizationpoints' => \$privateCustPoints,
             'adminuser'                  => \$adminUser,
             'siteid=s'                   => \$siteId,
@@ -59,12 +63,28 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
+    my $nDetail = 0;
+    if( $detail ) {
+        ++$nDetail;
+    }
+    if( $brief ) {
+        ++$nDetail;
+    }
+    if( $idsOnly ) {
+        ++$nDetail;
+    }
+    if( $hostnamesOnly ) {
+        ++$nDetail;
+    }
+
     if(    !$parseOk
-        || ( $json && ( $detail || $brief || $idsOnly || $privateCustPoints ))
-        || ( $adminUser && ( $json || $detail || $brief || $idsOnly ))
-        || ( $detail && $brief )
-        || ( $brief && $idsOnly )
-        || ( $idsOnly && $detail )
+        || ( $json && $nDetail )
+        || ( $json && $html )
+        || ( $json && $privateCustPoints )
+        || ( $json && $adminUser )
+        || ( $adminUser && $nDetail )
+        || ( $html && ( $idsOnly || $hostnamesOnly ))
+        || ( $nDetail > 1 )
         || ( !$siteId && !$host )
         || ( $siteId && $host )
         || @args
@@ -93,14 +113,39 @@ sub run {
     if( $json ) {
         UBOS::Utils::writeJsonToStdout( $site->siteJson );
 
-    } elsif( $idsOnly ) {
-        $site->printSiteId();
+    } elsif( $html ) {
+        print( <<HTML );
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <title>Sites</title>
+ </head>
+ <body>
+  <h1>Sites</h1>
+HTML
+        if( $detail ) {
+            $site->printHtmlDetail( $privateCustPoints );
+        } elsif( $brief ) {
+            $site->printHtmlBrief();
+        } else {
+            $site->printHtml( $privateCustPoints );
+        }
+        print( <<HTML );
+ </body>
+</html>
+HTML
+
+    } elsif( $detail ) {
+        $site->printDetail( $privateCustPoints );
 
     } elsif( $brief ) {
         $site->printBrief();
 
-    } elsif( $detail ) {
-        $site->printDetail( $privateCustPoints );
+    } elsif( $idsOnly ) {
+        $site->printSiteId();
+
+    } elsif( $hostnamesOnly ) {
+        print $site->hostname() . "\n";
 
     } elsif( $adminUser ) {
         $site->printAdminUser();

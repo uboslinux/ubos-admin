@@ -41,6 +41,7 @@ sub run {
     my $hostnamesOnly     = 0;
     my $html              = 0;
     my $privateCustPoints = 0;
+    my $adminUser         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -53,7 +54,8 @@ sub run {
             'ids-only|idsonly'             => \$idsOnly,
             'hostnames-only|hostnamesonly' => \$hostnamesOnly,
             'html'                         => \$html,
-            'privatecustomizationpoints'   => \$privateCustPoints );
+            'privatecustomizationpoints'   => \$privateCustPoints,
+            'adminuser'                    => \$adminUser );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -75,6 +77,8 @@ sub run {
         || ( $json && $nDetail )
         || ( $json && $html )
         || ( $json && $privateCustPoints )
+        || ( $json && $adminUser )
+        || ( $adminUser && $nDetail )
         || ( $html && ( $idsOnly || $hostnamesOnly ))
         || ( $nDetail > 1 )
         || @args
@@ -157,6 +161,12 @@ HTML
         }
     } elsif( $hostnamesOnly ) {
         print join( '', map { "$_\n" } sort map { $_->hostname() } values %$sites );
+
+    } elsif( $adminUser ) {
+        foreach my $siteId ( sort keys %$sites ) {
+            print( 'Site: ' . $sites->{$siteId}->hostname() . "\n" );
+            $sites->{$siteId}->printAdminUser( 1 );
+        }
 
     } else {
         foreach my $siteId ( sort keys %$sites ) {

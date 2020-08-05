@@ -1227,22 +1227,25 @@ sub printSiteId {
 
 ##
 # Print information about this Site's administrator
+# $indent: should the printed text be indented
 sub printAdminUser {
-    my $self = shift;
+    my $self   = shift;
+    my $indent = shift || 0;
 
-    my $admin = $self->obtainSiteAdminHash(); # Returns something different for root/non-root
+    my $admin        = $self->obtainSiteAdminHash(); # Returns something different for root/non-root
+    my $indentString = $indent ? '    ' : '';
 
     if( exists( $admin->{userid} )) {
-        colPrint( 'Site admin user id:       "' . $admin->{userid}     . "\"\n" );
+        colPrint( $indentString . 'Site admin user id:       "' . $admin->{userid}     . "\"\n" );
     }
     if( exists( $admin->{username} )) {
-        colPrint( 'Site admin user name:     "' . $admin->{username}   . "\"\n" );
+        colPrint( $indentString . 'Site admin user name:     "' . $admin->{username}   . "\"\n" );
     }
     if( exists( $admin->{credential} )) {
-        colPrint( 'Site admin user password: "' . $admin->{credential} . "\"\n" );
+        colPrint( $indentString . 'Site admin user password: "' . $admin->{credential} . "\"\n" );
     }
     if( exists( $admin->{email} )) {
-        colPrint( 'Site admin user e-mail:   "' . $admin->{email}      . "\"\n" );
+        colPrint( $indentString . 'Site admin user e-mail:   "' . $admin->{email}      . "\"\n" );
     }
 }
 
