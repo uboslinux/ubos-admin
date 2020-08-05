@@ -31,7 +31,11 @@ if( -e $siteProxiesFile ) {
     my @urls = grep { /^http/ } split( "\n", $siteProxiesContent );
 
     foreach my $url ( @urls ) {
-        my $fullUrl = index( $url, '?' ) >= 0 ? "$url&$args" : "$url?$args";
+        my $fullUrl = $url;
+        if( $args ) {
+            $fullUrl .= index( $fullUrl, '?' ) >= 0 ? "&$args" : "?$args";
+        }
+
         my $found   = get( $fullUrl );
         unless( $found ) {
             # something may be temporarily unavailable
