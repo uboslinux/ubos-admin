@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::TemplateProcessor::Varsubst;
 
-use base qw( UBOS::TemplateProcessor::TemplateProcessor );
+use base qw( UBOS::TemplateProcessor );
 use fields;
 
 ##

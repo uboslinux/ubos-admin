@@ -734,11 +734,22 @@ sub checkAppManifestForRole {
                             if( exists( $wellknownValue->{location} )) {
                                 $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not define both value and location" );
                             }
+                            if( exists( $wellknownValue->{template} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' must not define both value and template" );
+                            }
                             if( exists( $wellknownValue->{encoding} ) && $wellknownValue->{encoding} ne 'base64' ) {
                                 $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' specifies invalid encoding: " . $wellknownValue->{encoding} );
                             }
                             if( exists( $wellknownValue->{status} )) {
                                 $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey' may not specify status" );
+                            }
+
+                        } elsif( exists( $wellknownValue->{template} )) {
+                            if( ref( $wellknownValue->{templatelang} )) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey': field 'templatelang' must be a string" );
+                            }
+                            unless( $wellknownValue->{templatelang} =~ m!^(varsubst|perlscript)$! ) {
+                                $installable->myFatal( "roles section: role $roleName: field 'wellknown' entry '$wellknownKey': invalid templatelang: " . $wellknownValue->{templatelang} );
                             }
 
                         } elsif( exists( $wellknownValue->{location} )) {

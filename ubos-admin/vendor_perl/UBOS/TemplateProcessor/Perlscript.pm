@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::TemplateProcessor::Perlscript;
 
-use base qw( UBOS::TemplateProcessor::TemplateProcessor );
+use base qw( UBOS::TemplateProcessor );
 use fields;
 use UBOS::Logging;
 
@@ -32,19 +32,19 @@ sub new {
 # Process content
 # $raw: the input content
 # $vars: the Variables object that knows about symbolic names and variables
-# $rawFileName: the source of the $raw content
+# $rawSourceLabel: the source of the $raw content, for error messages
 # return: the output content
 sub process {
-    my $self        = shift;
-    my $raw         = shift;
-    my $vars        = shift;
-    my $rawFileName = shift;
+    my $self           = shift;
+    my $raw            = shift;
+    my $vars           = shift;
+    my $rawSourceLabel = shift;
 
     my $config = $vars; # for backwards compatibility
 
     my $ret = eval $raw;
     unless( $ret ) {
-        error( "Error when attempting to eval file $rawFileName:", $@ );
+        error( "Error when attempting to eval $rawSourceLabel:", $@ );
     }
 
     return $ret;

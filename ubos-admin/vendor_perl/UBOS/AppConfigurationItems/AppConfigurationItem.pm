@@ -13,9 +13,6 @@ package UBOS::AppConfigurationItems::AppConfigurationItem;
 use fields qw( json role appConfig installable );
 
 use UBOS::Logging;
-use UBOS::TemplateProcessor::Passthrough;
-use UBOS::TemplateProcessor::Perlscript;
-use UBOS::TemplateProcessor::Varsubst;
 
 ##
 # Constructor
@@ -241,30 +238,6 @@ sub permissionToMode {
     } else {
         return $default;
     }
-}
-
-##
-# Internal helper to instantiate the right subclass of TemplateProcessor.
-# return: instance of subclass of TemplateProcessor
-sub _instantiateTemplateProcessor {
-    my $self         = shift;
-    my $templateLang = shift;
-    my $ret;
-
-    if( !defined( $templateLang )) {
-        $ret = UBOS::TemplateProcessor::Passthrough->new();
-
-    } elsif( 'varsubst' eq $templateLang ) {
-        $ret = UBOS::TemplateProcessor::Varsubst->new();
-
-    } elsif( 'perlscript' eq $templateLang ) {
-        $ret = UBOS::TemplateProcessor::Perlscript->new();
-
-    } else {
-        error( 'Unknown templatelang:', $templateLang );
-        $ret = UBOS::TemplateProcessor::Passthrough->new();
-    }
-    return $ret;
 }
 
 1;

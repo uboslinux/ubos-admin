@@ -61,7 +61,7 @@ sub run {
             'verbose+'                        => \$verbose,
             'logConfig=s'                     => \$logConfigFile,
             'debug'                           => \$debug,
-            'pkgFiles'                        => \$restIsPackages,
+            'pkgfiles'                        => \$restIsPackages,
             'reboot'                          => \$reboot,
             'noreboot'                        => \$noReboot,
             'nosynchronize'                   => \$noSync,

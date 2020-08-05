@@ -15,6 +15,7 @@ use fields;
 
 use UBOS::Databases::MySqlDriver;
 use UBOS::Logging;
+use UBOS::TemplateProcessor;
 use UBOS::Utils qw( saveFile slurpFile );
 
 ##
@@ -125,9 +126,9 @@ sub _runIt {
 
     if( $doIt ) {
         my $content           = slurpFile( $sourceOrTemplate );
-        my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
+        my $templateProcessor = UBOS::TemplateProcessor::create( $templateLang );
 
-        my $sql    = $templateProcessor->process( $content, $vars, $sourceOrTemplate );
+        my $sql    = $templateProcessor->process( $content, $vars, "file $sourceOrTemplate" );
         my $dbType = $self->{role}->name();
 
         my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )

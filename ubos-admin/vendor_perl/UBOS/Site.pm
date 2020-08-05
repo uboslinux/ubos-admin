@@ -16,6 +16,7 @@ use UBOS::AppConfiguration;
 use UBOS::Host;
 use UBOS::LetsEncrypt;
 use UBOS::Logging;
+use UBOS::TemplateProcessor;
 use UBOS::Terminal;
 use UBOS::Utils;
 use UBOS::X509;
@@ -590,6 +591,15 @@ sub _addWellKnownIfNotPresent {
             $tmp->{$wellknownKey} = {
                 'value' => $value
             };
+        } elsif( exists( $wellknownValue->{template} )) {
+            my $templateLang      = exists( $wellknownValue->{templatelang} ) ? $wellknownValue->{templatelang} : undef;
+            my $templateProcessor = UBOS::TemplateProcessor::create( $templateLang );
+
+            my $value = $templateProcessor->process( $wellknownValue->{template}, $vars, "template in manifest: $wellknownKey" );
+            $tmp->{$wellknownKey} = {
+                'value' => $value
+            };
+
         } elsif( exists( $wellknownValue->{location} )) {
             my $status = '307';
             if( exists( $wellknownValue->{status} )) {

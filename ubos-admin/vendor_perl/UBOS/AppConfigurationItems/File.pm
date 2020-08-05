@@ -14,6 +14,7 @@ use base qw( UBOS::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
 use UBOS::Logging;
+use UBOS::TemplateProcessor;
 use UBOS::Utils qw( saveFile slurpFile );
 
 ##
@@ -65,7 +66,7 @@ sub deployOrCheck {
 
     trace( 'File::deployOrCheck', $doIt, $defaultFromDir, $defaultToDir, $sourceOrTemplate, @$names );
 
-    my $templateLang = $self->{json}->{templatelang};
+    my $templateLang = exists( $self->{json}->{templatelang} ) ? $self->{json}->{templatelang} : undef;
     my $permissions  = $vars->replaceVariables( $self->{json}->{permissions} );
     my $uname        = $vars->replaceVariables( $self->{json}->{uname} );
     my $gname        = $vars->replaceVariables( $self->{json}->{gname} );
@@ -91,9 +92,9 @@ sub deployOrCheck {
         }
         if( -r $fromName ) {
             my $content           = slurpFile( $fromName );
-            my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
+            my $templateProcessor = UBOS::TemplateProcessor::create( $templateLang );
 
-            my $contentToSave = $templateProcessor->process( $content, $vars, $sourceOrTemplate );
+            my $contentToSave = $templateProcessor->process( $content, $vars, "file $sourceOrTemplate" );
 
             if( $doIt ) {
                 unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
