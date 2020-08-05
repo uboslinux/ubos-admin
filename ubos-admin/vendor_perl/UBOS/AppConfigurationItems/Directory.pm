@@ -228,7 +228,7 @@ sub restore {
                         }
                     }
                 },
-                $toName );
+                $fullName );
     }
 
     return $ret;
