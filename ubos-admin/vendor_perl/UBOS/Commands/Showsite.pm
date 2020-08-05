@@ -208,7 +208,7 @@ HHH
             '--html' => <<HHH,
     Show in HTML format.
 HHH
-            '--privatecustomizationpoints' => <<HHH
+            '--privatecustomizationpoints' => <<HHH,
     Do not mask the values for private customizationpoints.
 HHH
             '--adminuser' => <<HHH,
