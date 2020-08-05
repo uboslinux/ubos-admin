@@ -15,6 +15,9 @@ use LWP::Simple;
 use UBOS::Utils;
 
 my $q    = new CGI;
+my $utf8 = 'utf-8';
+$q->charset( $utf8 );
+
 my $qUrl = $q->url( -query => 1 );
 my $qm   = index( $qUrl, '?' );
 my $args = $qm >= 0 ? substr( $qUrl, $qm+1 ) : '';
@@ -80,7 +83,7 @@ if( -e $siteProxiesFile ) {
 }
 
 if( $jsonResponse ) {
-    print $q->header( -status => 200, -type => 'application/json' );
+    print $q->header( -status => 200, -type => 'application/json', -charset => $utf8 );
     UBOS::Utils::writeJsonToStdout( $jsonResponse );
 } else {
     print $q->header( -status => 404 );
