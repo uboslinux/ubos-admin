@@ -13,6 +13,7 @@ package UBOS::AppConfigurationItems::Directory;
 use base qw( UBOS::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
+use File::Find;
 use UBOS::Logging;
 
 ##
@@ -212,21 +213,24 @@ sub restore {
         $ret = 0;
     }
 
-    if( $filemode > -1 ) {
-        my $asOct = sprintf( "%o", $filemode );
-        UBOS::Utils::myexec( "find '$fullName' -type f -exec chmod $asOct {} \\;" ); # no -h on Linux
-    }
-    if( $dirmode > -1 ) {
-        my $asOct = sprintf( "%o", $dirmode );
-        UBOS::Utils::myexec( "find '$fullName' -type d -exec chmod $asOct {} \\;" ); # no -h on Linux
+    if( $uid || $gid || ( defined( $filemode ) && $filemode != -1 ) || ( defined( $dirmode ) && $dirmode != -1 )) {
+        find(   sub {
+                    if( $uid || $gid ) {
+                        chown $uid, $gid, $File::Find::name;
+                    }
+                    if( -d $File::Find::name ) {
+                        if( defined( $dirmode ) && $dirmode != -1 ) {
+                            chmod $dirmode, $File::Find::name;
+                        }
+                    } else {
+                        if( defined( $filemode ) && $filemode != -1 ) {
+                            chmod $filemode, $File::Find::name;
+                        }
+                    }
+                },
+                $toName );
     }
 
-    if( defined( $uid )) {
-        UBOS::Utils::myexec( 'chown -R -h ' . ( 0 + $uid ) . " $fullName" );
-    }
-    if( defined( $gid )) {
-        UBOS::Utils::myexec( 'chgrp -R -h ' . ( 0 + $gid ) . " $fullName" );
-    }
     return $ret;
 }
 
