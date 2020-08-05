@@ -61,7 +61,6 @@ sub run {
 
     if(    !$parseOk
         || ( !@siteIds && !@hosts && !$all && !$file )
-        || ( @siteIds && @hosts )
         || ( @siteIds && $file )
         || ( @hosts && $file )
         || ( $all && ( @siteIds || @hosts || $file ))
