@@ -481,7 +481,7 @@ sub nics {
         # Add IP addresses
         foreach my $nicName ( keys %{$json->{nics}} ) {
             my $nic   = $json->{nics}->{$nicName};
-            my @allIp = UBOS::Host::ipAddressesOnNic( $nicName );
+            my @allIp = ipAddressesOnNic( $nicName );
             $nic->{ipv4address} = [ grep { UBOS::Utils::isIpv4Address( $_ ) } @allIp ];
             $nic->{ipv6address} = [ grep { UBOS::Utils::isIpv6Address( $_ ) } @allIp ];
             $nic->{macaddress}  = UBOS::Host::macAddressOfNic( $nicName );
