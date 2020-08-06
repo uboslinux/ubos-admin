@@ -255,7 +255,7 @@ sub configure {
         return configureAll( $name, $config, $initOnly );
 
     } else {
-        my $nics = UBOS::HostStatus::nics();
+        my $nics = UBOS::HostStatus::hardwareNics();
 
         my $filteredConfig = {};
         map { $filteredConfig->{$_} = $config->{$_}; } grep { exists( $nics->{$_} ) } keys %$config;

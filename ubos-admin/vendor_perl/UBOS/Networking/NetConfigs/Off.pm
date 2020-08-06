@@ -40,7 +40,7 @@ sub activate {
     my $initOnly = shift;
     my $force    = shift;
 
-    my $allNics = UBOS::HostStatus::nics();
+    my $allNics = UBOS::HostStatus::hardwareNics();
 
     my $conf = {};
     foreach my $nic ( keys %$allNics ) {

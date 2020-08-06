@@ -10,6 +10,7 @@ use warnings;
 
 package UBOS::HostnameCallbacks::UpdateEtcHosts;
 
+use UBOS::HostStatus;
 use UBOS::Networking::NetConfigUtils;
 use UBOS::Utils;
 
@@ -43,7 +44,7 @@ sub siteDeployed {
 
     unless( '*' eq $hostname ) {
         my @ips = ();
-        map { push @ips, UBOS::Host::ipAddressesOnNic( $_ ) } @nics;
+        map { push @ips, UBOS::HostStatus::ipAddressesOnNic( $_ ) } @nics;
         my @ipsOnLan = grep { UBOS::Networking::NetConfigUtils::isOnLan( $_ ) } @ips;
 
         if( @ipsOnLan ) {
