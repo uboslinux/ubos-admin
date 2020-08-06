@@ -461,31 +461,21 @@ HTML
                     push @installableIds, sort @accessoryIds;
                     foreach my $installableId ( @installableIds ) {
 
+                        my @custPointHtmlRows = (); # Only if we have any do we add it
                         if(    exists( $appConfig->{customizationpoints} )
                             && exists( $appConfig->{customizationpoints}->{$installableId} )
                             && keys %{ $appConfig->{customizationpoints}->{$installableId}} )
                         {
-                            my $nPoints = keys %{$appConfig->{customizationpoints}->{$installableId}};
-                            my $rowSpan = $nPoints == 1 ? '' : " rowspan=$nPoints";
-                            my $isFirst = 1;
                             foreach my $pointName ( sort keys %{$appConfig->{customizationpoints}->{$installableId}} ) {
                                 my $pointValue = _formatValue( $appConfig->{customizationpoints}->{$installableId}->{$pointName} );
-                                $html .= <<HTML;
-           <tr>
-HTML
-                                if( $isFirst ) {
-                                    $html .= <<HTML;
-            <th$rowSpan>$installableId</th>
-HTML
-                                }
-                                $html .= <<HTML;
+                                my $custPointHtml .= <<HTML;
             <td>$pointName</td>
             <td>
 HTML
                                 if(    exists( $appConfig->{customizationpoints}->{$installableId}->{$pointName}->{private} )
                                     && $appConfig->{customizationpoints}->{$installableId}->{$pointName}->{private} )
                                 {
-                                    $html .= <<HTML;
+                                    $custPointHtml .= <<HTML;
            <div id="appconfig-$appConfigId-$installableId-$pointName" class="hide"></div>
            <span class="appconfig-$appConfigId-$installableId-$pointName-reveal reveal">
             &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
@@ -497,17 +487,32 @@ HTML
            </span>
 HTML
                                 } else {
-                                    $html .= <<HTML;
+                                    $custPointHtml .= <<HTML;
              $pointValue
 HTML
                                 }
-                                $html .= <<HTML;
+                                $custPointHtml .= <<HTML;
             </td>
-           </tr>
 HTML
-                                $isFirst = 0;
+                                push @custPointHtmlRows, $custPointHtml;
                             }
-                        } else { # no customization points
+                        }
+                        if( @custPointHtmlRows ) {
+                            my $nRows = @custPointHtmlRows;
+                            $html .= <<HTML;
+           <tr>
+            <th rowspan=$nRows>$installableId</th>
+HTML
+                            my $sep = ' ';
+                            foreach my $row ( @custPointHtmlRows ) {
+                                $html .= "           $sep$row</tr>\n";
+                                $sep = '<tr>';
+                            }
+                            $html .= <<HTML;
+           </tr>
+
+HTML
+                        } else {
                             $html .= <<HTML;
            <tr>
             <th>$installableId</th>
