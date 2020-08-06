@@ -1,0 +1,11 @@
+[Unit]
+Description=Ping UBOS Live and report status
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+AccuracySec=1h
+Unit=ubos-live-ping.service
+
+[Install]
+WantedBy=timers.target

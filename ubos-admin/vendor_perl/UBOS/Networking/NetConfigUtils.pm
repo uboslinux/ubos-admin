@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::Networking::NetConfigUtils;
 
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -255,7 +255,7 @@ sub configure {
         return configureAll( $name, $config, $initOnly );
 
     } else {
-        my $nics = UBOS::Host::nics();
+        my $nics = UBOS::HostStatus::nics();
 
         my $filteredConfig = {};
         map { $filteredConfig->{$_} = $config->{$_}; } grep { exists( $nics->{$_} ) } keys %$config;
@@ -514,11 +514,6 @@ END
 :OPEN-PORTS - [0:0]
 END
 
-    # UBOS Live
-    $iptablesContent .= <<END;
-:NIC-tun90-TCP - [0:0]
-END
-
     # don't accept anything from nics that are off or switch
     foreach my $nic ( sort keys %$config ) {
         my $noWildNic = $nic;
@@ -588,7 +583,6 @@ END
         }
     }
     $iptablesContent .= <<END;
--A INPUT -i tun90 -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-tun90-TCP
 -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT --reject-with icmp-proto-unreachable
@@ -640,8 +634,6 @@ END
             }
         }
     }
-
-    $iptablesContent .= "-A NIC-tun90-TCP -p tcp --dport ssh -j ACCEPT\n";
 
     # determine the appropriate content to insert into iptables configuration
     # for those interfaces that have application ports open
@@ -745,16 +737,13 @@ END
 :INPUT DROP [0:0]
 :FORWARD DROP [0:0]
 :OUTPUT - [0:0]
-:NIC-tun90-TCP - [0:0]
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
--A INPUT -i tun90 -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-tun90-TCP
 -A INPUT -i lo -j ACCEPT
 -A INPUT -i ve-+ -j ACCEPT
 -A INPUT -p udp -j REJECT
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT
--A NIC-tun90-TCP -p tcp --dport ssh -j ACCEPT
 COMMIT
 END
 

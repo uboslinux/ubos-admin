@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::DeploySiteTemplates;
 
 use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Lock;
 use UBOS::Logging;
 use UBOS::StaffManager;
@@ -61,7 +62,7 @@ sub deploySiteTemplates {
 
     my $errors = 0;
 
-    my $hostId = UBOS::Host::hostId();
+    my $hostId = UBOS::HostStatus::hostId();
 
     my @templateFiles = ();
     foreach my $templateDir (

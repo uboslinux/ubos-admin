@@ -15,6 +15,7 @@ use fields qw( toDirectory );
 
 use Getopt::Long qw( GetOptionsFromArray :config pass_through );
 use UBOS::AbstractDataTransferProtocol;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -102,7 +103,7 @@ sub constructFileName {
         $name = sprintf( "site-%s-%s.ubos-backup", $siteId, $now );
 
     } elsif( keys %$sitesP ) {
-        my $hostId = lc( UBOS::Host::hostId());
+        my $hostId = lc( UBOS::HostStatus::hostId());
         $name = sprintf( "site-multi-%s-%s.ubos-backup", $hostId, $now );
 
     } elsif( keys %$appConfigsP == 1 ) {
@@ -110,7 +111,7 @@ sub constructFileName {
         $name = sprintf( "appconfig-%s-%s.ubos-backup", $appConfigId, $now );
 
     } else {
-        my $hostId = lc( UBOS::Host::hostId());
+        my $hostId = lc( UBOS::HostStatus::hostId());
         $name = sprintf( "appconfig-multi-%s-%s.ubos-backup", $hostId, $now );
     }
     $backupToFile .= $name;

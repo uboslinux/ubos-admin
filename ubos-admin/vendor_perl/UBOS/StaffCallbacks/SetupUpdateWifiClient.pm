@@ -10,7 +10,7 @@ use warnings;
 
 package UBOS::StaffCallbacks::SetupUpdateWifiClient;
 
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -62,7 +62,7 @@ sub loadCurrentWiFiConfiguration {
 
         } else {
             my $confs    = UBOS::Utils::readFilesInDirectory( "$staffRootDir/wifi", '^[^\.].*\.conf$' );
-            my $wlanNics = UBOS::Host::wlanNics();
+            my $wlanNics = UBOS::HostStatus::wlanNics();
 
             if(( keys %$confs ) && ( keys %$wlanNics )) {
                 unless( -d '/etc/wpa_supplicant' ) {

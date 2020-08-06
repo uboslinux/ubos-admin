@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.30
+pkgver=0.33
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -10,27 +10,12 @@ license=("PPL3")
 options=('!strip')
 depends=(
     'coreutils'
-    'openvpn'
-    'perl-www-curl'
     'ubos-admin'
-    'ubos-live-certificates'
 )
 _vendor_perl=/usr/share/perl5/vendor_perl
 install=install
 
 package() {
-# Config
-    mkdir -p -m755 ${pkgdir}/etc/openvpn
-    mkdir -p -m755 ${pkgdir}/etc/ubos-live
-
-# ubos-live user
-    install -D -m644 ${startdir}/sysusers.d/ubos-live.conf -t ${pkgdir}/usr/lib/sysusers.d/
-    mkdir -m750 ${pkgdir}/etc/sudoers.d
-    install -D -m600 ${startdir}/sudoers.d/ubos-live       -t ${pkgdir}/etc/sudoers.d/
-
-# Put obtained certificate(s) here; also, ssh keys
-    install -D -m644 ${startdir}/ssh/authorized_keys -t ${pkgdir}/usr/share/ubos-live
-
 # Systemd
     install -D -m644 ${startdir}/systemd/* -t ${pkgdir}/usr/lib/systemd/system/
 

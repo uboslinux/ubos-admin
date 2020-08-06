@@ -12,7 +12,7 @@ package UBOS::Commands::Hostid;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Terminal;
 use UBOS::Utils;
@@ -41,9 +41,9 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    my $hostid = UBOS::Host::hostId();
+    my $hostId = UBOS::HostStatus::hostId();
 
-    colPrint( "$hostid\n" );
+    colPrint( "$hostId\n" );
 
     return 1;
 }

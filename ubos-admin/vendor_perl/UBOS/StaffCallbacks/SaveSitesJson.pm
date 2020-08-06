@@ -12,6 +12,7 @@ package UBOS::StaffCallbacks::SaveSitesJson;
 
 use JSON;
 use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -56,7 +57,7 @@ sub saveSitesJson {
     my $staffRootDir = shift;
 
     my $sites   = UBOS::Host::sites();
-    my $hostId  = UBOS::Host::hostId();
+    my $hostId  = UBOS::HostStatus::hostId();
     my $infoDir = "flock/$hostId/device-info";
 
     my $sitesJson = {};

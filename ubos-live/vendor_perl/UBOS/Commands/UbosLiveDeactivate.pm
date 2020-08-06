@@ -31,8 +31,8 @@ sub run {
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'     => \$verbose,
-            'logConfig=s'  => \$logConfigFile );
+            'verbose+'    => \$verbose,
+            'logConfig=s' => \$logConfigFile );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile );
     info( 'ubos-admin', $cmd, @_ );

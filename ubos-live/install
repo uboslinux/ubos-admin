@@ -12,4 +12,3 @@ post_install() {
 post_upgrade() {
     perl -MUBOS::Live::UbosLive -e 'UBOS::Live::UbosLive::postUpgrade();'
 }
-

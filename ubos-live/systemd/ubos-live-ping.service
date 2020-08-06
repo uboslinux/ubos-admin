@@ -1,0 +1,13 @@
+[Unit]
+Description=Ping UBOS Live and report status
+
+[Service]
+ExecStartPre=/usr/share/ubos-admin/bin/ubos-service-prestart ubos-live-ping
+ExecStart=/usr/share/ubos-live/bin/ubos-live-ping
+
+# If failure, try every hour
+Restart=always
+RestartSec=1h
+
+[Install]
+WantedBy=basic.target

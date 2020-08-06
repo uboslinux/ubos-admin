@@ -12,7 +12,7 @@ use warnings;
 package UBOS::Networking::NetConfigs::Client;
 
 use JSON;
-use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Networking::NetConfigUtils;
 
 my $name       = 'client';
@@ -33,8 +33,8 @@ sub name {
 # This will also return true if this configuration is currently active.
 # return: 1 or 0
 sub isPossible {
-    my $allNics = UBOS::Host::nics();
-    
+    my $allNics = UBOS::HostStatus::nics();
+
     return ( keys %$allNics ) > 0;
 }
 
@@ -50,7 +50,7 @@ sub activate {
     if( $initOnly ) {
         @allNics = ( @etherGlobs, @wlanGlobs );
     } else {
-        @allNics = sort keys %{ UBOS::Host::nics() };
+        @allNics = sort keys %{ UBOS::HostStatus::nics() };
     }
 
     my $conf    = undef;

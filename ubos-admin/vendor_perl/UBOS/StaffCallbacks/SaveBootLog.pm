@@ -11,6 +11,7 @@ use warnings;
 package UBOS::StaffCallbacks::SaveBootLog;
 
 use UBOS::Host;
+use UBOS::HostStatus;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -54,7 +55,7 @@ sub performAtSave {
 sub saveBootLog {
     my $staffRootDir = shift;
 
-    my $hostId     = UBOS::Host::hostId();
+    my $hostId     = UBOS::HostStatus::hostId();
     my $bootLogDir = "flock/$hostId/bootlog";
 
     unless( -d "$staffRootDir/$bootLogDir" ) {

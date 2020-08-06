@@ -54,7 +54,7 @@ sub performAtSave {
 sub saveSshHostKeys {
     my $staffRootDir = shift;
 
-    my $hostId = UBOS::Host::hostId();
+    my $hostId = UBOS::HostStatus::hostId();
     my $sshDir = "flock/$hostId/ssh";
 
     unless( -d "$staffRootDir/$sshDir" ) {

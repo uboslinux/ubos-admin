@@ -1,8 +1,0 @@
-ubos-live ALL = NOPASSWD: \
-    /usr/bin/ubos-admin *, \
-    /usr/bin/journalctl *, \
-    /usr/bin/snapper *, \
-    /usr/bin/pacman *, \
-    /usr/bin/smartctl *, \
-    /usr/bin/systemctl *, \
-    /bin/bash *
