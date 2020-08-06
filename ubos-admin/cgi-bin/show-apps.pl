@@ -29,9 +29,10 @@ if( $site ) {
     }
     print $q->header( -type => 'text/html', -charset=>'utf-8' );
     print <<HTML;
-<html>
+<!DOCTYPE html>
+<html lang="en">
  <head>
-  <title>Installed Apps</title>
+  <title>$hostname: Installed Apps</title>
   <link rel="stylesheet" type="text/css" href="/_common/css/default.css" />
   <meta name="ROBOTS" content="NOINDEX, NOFOLLOW" />
  </head>
@@ -132,8 +133,8 @@ HTML
 } else {
     print $q->header( -type => 'text/html', -status => 404, -charset=>'utf-8' );
     print <<HTML;
-<html>
- <head>
+<!DOCTYPE html>
+<html lang="en">
   <title>404 Site Not Found</title>
   <link rel="stylesheet" type="text/css" href="/_common/css/default.css" />
   <meta name="ROBOTS" content="NOINDEX, NOFOLLOW" />
