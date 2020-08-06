@@ -50,7 +50,7 @@ sub performAtSave {
 sub saveDeviceInfo {
     my $staffRootDir = shift;
 
-    my $deviceJson = _deviceJson();
+    my $deviceJson = UBOS::HostStatus::allAsJson();
     my $hostId     = UBOS::HostStatus::hostId();
     my $infoDir    = "flock/$hostId/device-info";
 
@@ -60,24 +60,6 @@ sub saveDeviceInfo {
         UBOS::Utils::mkdirDashP( "$staffRootDir/$infoDir" );
     }
     UBOS::Utils::writeJsonToFile( "$staffRootDir/$infoDir/device.json", $deviceJson );
-}
-
-##
-# Helper to construct the device JSON file.
-# return: JSON
-sub _deviceJson {
-    my $ret = {};
-
-    # subset
-    $ret->{arch}        = UBOS::HostStatus::arch();
-    $ret->{channel}     = UBOS::HostStatus::channel();
-    $ret->{deviceclass} = UBOS::HostStatus::deviceClass();
-    $ret->{hostid}      = UBOS::HostStatus::hostId();
-    $ret->{hostname}    = UBOS::HostStatus::hostname();
-    $ret->{nics}        = UBOS::HostStatus::nics();
-    $ret->{publickey}   = UBOS::HostStatus::hostPublicKey();
-
-    return $ret;
 }
 
 1;
