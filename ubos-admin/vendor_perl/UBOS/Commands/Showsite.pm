@@ -85,7 +85,6 @@ sub run {
         || ( $adminUser && $nDetail )
         || ( $html && ( $idsOnly || $hostnamesOnly ))
         || ( $nDetail > 1 )
-        || ( !$siteId && !$host )
         || ( $siteId && $host )
         || @args
         || ( $verbose && $logConfigFile ))
@@ -103,12 +102,20 @@ sub run {
         unless( $site ) {
             fatal( 'Cannot find a site with hostname:', $host );
         }
-    } else {
+    } elsif( $siteId ) {
         $site = UBOS::Host::findSiteByPartialId( $siteId );
         unless( $site ) {
             fatal( $@ );
         }
+    } else {
+        my $sites = UBOS::Host::sites();
+        if( keys %$sites == 1 ) {
+            $site = $sites->{ (keys %$sites)[0] };
+        } else {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
     }
+
 
     if( $json ) {
         UBOS::Utils::writeJsonToStdout( $site->siteJson );
@@ -176,11 +183,15 @@ DDD
 SSS
     Show information about the site with the provided site id <siteid>.
 HHH
-            <<SSS => <<HHH
+            <<SSS => <<HHH,
     --hostname <hostname>
 SSS
     Show information about the site with the provided hostname
     <hostname>.
+HHH
+            <<SSS => <<HHH,
+SSS
+    No site needs to be specified if only one site is deployed on this device.
 HHH
         },
         'args' => {
