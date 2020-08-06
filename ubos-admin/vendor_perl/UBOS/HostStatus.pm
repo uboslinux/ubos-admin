@@ -484,7 +484,7 @@ sub nics {
             my @allIp = ipAddressesOnNic( $nicName );
             $nic->{ipv4address} = [ grep { UBOS::Utils::isIpv4Address( $_ ) } @allIp ];
             $nic->{ipv6address} = [ grep { UBOS::Utils::isIpv6Address( $_ ) } @allIp ];
-            $nic->{macaddress}  = UBOS::Host::macAddressOfNic( $nicName );
+            $nic->{macaddress}  = macAddressOfNic( $nicName );
         }
     }
     return $json->{nics};
