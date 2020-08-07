@@ -88,6 +88,14 @@ sub finishUpdate {
 
     if( keys %$oldSites ) {
 
+        foreach my $site ( values %$oldSites ) {
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                unless( $appConfig->checkCompleteCustomizationPointValues()) {
+                    error( $@ );
+                }
+            }
+        }
+
         info( 'Installing prerequisites' );
         my $prerequisites = {};
         foreach my $site ( values %$oldSites ) {
