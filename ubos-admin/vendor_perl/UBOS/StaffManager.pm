@@ -87,6 +87,7 @@ sub performBootActions {
         if( UBOS::HostStatus::updateOnline()) {
             last;
         }
+        info( "Waiting to come online ($count/$waitForOnline)" );
     }
 
     if( saveCurrentConfiguration( $target, $isActualStaffDevice )) {
