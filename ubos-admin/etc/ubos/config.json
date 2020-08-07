@@ -16,7 +16,8 @@
         "tmpdir"                    : "/ubos/tmp",
         "homeshepherd"              : "/var/shepherd",
         "letsencryptreissuecutoff"  : 172800,
-        "certbotflags"              : null
+        "certbotflags"              : null,
+        "waitforonline"             : 5
     },
 
     "package" : {

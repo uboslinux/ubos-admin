@@ -654,6 +654,30 @@ sub macAddressOfNic {
 }
 
 ##
+# Determine whether this device is connected to the internet.
+# return: true or false
+sub isOnline {
+    unless( exists( $json->{online} ) {
+        checkOnline();
+    }
+    return $json->{online};
+}
+
+##
+# Attempt to check (again, if needed) whether this device is connected to the internet.
+# return: true or false
+sub updateOnline {
+    my $ret;
+    if( UBOS::Utils::isOnline() ) {
+        $ret = 1;
+    } else {
+        $ret = 0;
+    }
+    $json->{online} = $ret;
+    return $ret;
+}
+
+##
 # Determine problems
 # return: array pointer
 sub problems {
