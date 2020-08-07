@@ -1831,6 +1831,10 @@ sub _checkJson {
                         $@ = "Site JSON: appconfig $i: invalid accessoryid, is: " . $accessoryId;
                         return 0;
                     }
+                    if( exists( $installables{$accessoryId} )) {
+                        $@ = "Site JSON: appconfig $i: accessory is listed more than once: " . $accessoryId;
+                        return 0;
+                    }
                     $installables{$accessoryId} = 1;
                 }
             }
