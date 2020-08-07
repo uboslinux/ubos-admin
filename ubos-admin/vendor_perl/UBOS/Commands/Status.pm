@@ -316,11 +316,11 @@ sub run {
 
                         $out .= sprintf(
                                 "        %3d | %6s | %3d | %s | %8s\n",
-                                $snapData->{number},
-                                $snapData->{type},
-                                $snapData->{'pre-number'},
-                                $snapData->{data},
-                                $snapData->{cleanup} );
+                                _orBlank( $snapData->{number} ),
+                                _orBlank( $snapData->{type} ),
+                                _orBlank( $snapData->{'pre-number'} ),
+                                _orBlank( $snapData->{data} ),
+                                _orBlank( $snapData->{cleanup} ));
                     }
                 }
 
@@ -470,6 +470,20 @@ sub _formatTimeStamp {
         }
     } else {
         return '<never>';
+    }
+}
+
+##
+# Return the value, or if undef, the empty string
+# $v: the value
+# return: the value or the empty string
+sub _orBlank {
+    my $s = shift;
+
+    if( defined( $s )) {
+        return $s;
+    } else {
+        return '';
     }
 }
 
