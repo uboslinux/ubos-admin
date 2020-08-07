@@ -408,6 +408,26 @@ sub memoryJson {
 }
 
 ##
+# Determine snapper information
+# return: JSON
+sub snapperJson {
+    unless( exists( $json->{snapper} )) {
+
+        trace( 'Checking snapper snapshots' );
+
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( 'snapper --machine-readable json list --all', undef, \$out, \$err )) {
+            $json->{snapper} = undef;
+        } else {
+            # even if snapper is not configured, this particular invocation will exit with 0 and produce an empty JSON hash
+            $json->{snapper} = UBOS::Utils::readJsonFromString( $out );
+        }
+    }
+    return $json->{snapper};
+}
+
+##
 # Determine information about failed services
 # return: pointer to array
 sub failedServices {
@@ -657,7 +677,7 @@ sub macAddressOfNic {
 # Determine whether this device is connected to the internet.
 # return: true or false
 sub isOnline {
-    unless( exists( $json->{online} ) {
+    unless( exists( $json->{online} )) {
         checkOnline();
     }
     return $json->{online};
@@ -790,6 +810,7 @@ sub allAsJson {
     problems();
     productJson();
     readySince();
+    snapperJson();
     softwareNics();
     uptimeJson();
     virtualization();
@@ -821,6 +842,7 @@ sub liveAsJson {
     problems();
     productJson();
     readySince();
+    snapperJson();
     softwareNics();
     uptimeJson();
     virtualization();

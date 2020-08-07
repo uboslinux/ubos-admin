@@ -61,6 +61,7 @@ sub run {
     my $showPublicKey   = 0;
     my $showReady       = 0;
     my $showSmart       = 0;
+    my $showSnapper     = 0;
     my $showVirt        = 0;
     my $showUptime      = 0;
 
@@ -86,6 +87,7 @@ sub run {
             'publickey'      => \$showPublicKey,
             'ready'          => \$showReady,
             'smart'          => \$showSmart,
+            'snapper'        => \$showSnapper,
             'virtualization' => \$showVirt,
             'uptime'         => \$showUptime );
 
@@ -96,8 +98,8 @@ sub run {
                      || $showDisks    || $showFailed  || $showLastUpdated
                      || $showLive     || $showMemory  || $showPacnew
                      || $showProblems || $showProduct || $showPublicKey
-                     || $showReady    || $showSmart   || $showVirt
-                     || $showUptime;
+                     || $showReady    || $showSmart   || $showSnapper
+                     || $showVirt     || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -126,6 +128,7 @@ sub run {
         $showProduct     = 1;
         $showReady       = 1;
         $showSmart       = !UBOS::HostStatus::virtualization(),
+        $showSnapper     = 1;
         $showVirt        = 1;
         $showUptime      = 1;
 
@@ -302,6 +305,30 @@ sub run {
             }
         }
 
+        if( $showSnapper ) {
+            $out .= "Snapper configurations:\n";
+            my $snapperJson = UBOS::HostStatus::snapperJson();
+            if( $snapperJson && keys %$snapperJson > 0 ) {
+                foreach my $configName ( sort keys %$snapperJson ) {
+                    $out .= "    $configName\n";
+                    foreach my $snapData ( @{$snapperJson->{$configName}} ) {
+                        # we assume they are sorted already
+
+                        $out .= sprintf(
+                                "        %3d | %6s | %3d | %s | %8s\n",
+                                $snapData->{number},
+                                $snapData->{type},
+                                $snapData->{'pre-number'},
+                                $snapData->{data},
+                                $snapData->{cleanup} );
+                    }
+                }
+
+            } else {
+                $out .= "    None\n";
+            }
+        }
+
         if( $showMemory ) {
             $out .= "Memory:             total       used        free        shared      buff/cache  available \n";
 
@@ -474,6 +501,7 @@ SSS
     * publickey:      the host's public key
     * ready:          whether the device is ready or not
     * smart:          disk health via S.M.A.R.T
+    * snapper:        snapper snapshots
     * uptime:         how long the device has been up since last boot
     * virtualization: use of virtualization
 HHH
