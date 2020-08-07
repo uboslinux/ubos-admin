@@ -88,6 +88,10 @@ sub deployOrCheck {
             $fromName = "$defaultFromDir/$fromName";
         }
         unless( $toName =~ m#^/# ) {
+            if( !$doIt && !$defaultToDir ) {
+                error( 'File::deployOrCheck: no default "to" dir in this role' );
+                $ret = 0;
+            }
             $toName = "$defaultToDir/$toName";
         }
         if( -r $fromName ) {

@@ -71,6 +71,10 @@ sub deployOrCheck {
         $fullName = $vars->replaceVariables( $fullName );
 
         unless( $fullName =~ m#^/# ) {
+            if( !$doIt && !$defaultToDir ) {
+                error( 'Directory::deployOrCheck: no default "to" dir in this role' );
+                $ret = 0;
+            }
             $fullName = "$defaultToDir/$fullName";
         }
 
