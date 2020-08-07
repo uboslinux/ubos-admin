@@ -155,10 +155,15 @@ sub checkManifestAccessoryInfo {
         if( ref( $json->{accessoryinfo}->{requires} ) ne 'ARRAY' ) {
             $self->myFatal( "accessoryinfo section: requires, if provided, must be an array" );
         }
+        my %requireds = ();
         foreach my $required ( @{$json->{accessoryinfo}->{requires}} ) {
             if( ref( $required ) || !$required ) {
-            $self->myFatal( "accessoryinfo section: entries into requires must be strings" );
+                $self->myFatal( "accessoryinfo section: entries into requires must be strings" );
             }
+            if( exists( $requireds{$required} )) {
+                $self->myFatal( "accessoryinfo section: no duplicates allowed" );
+            }
+            $requireds{$required} = 1;
         }
     }
 
