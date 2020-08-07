@@ -321,7 +321,7 @@ sub run {
                         } else {
                             $out .= ' |    ';
                         }
-                        $out .= ' | ' . $snapData->{date};
+                        $out .= sprintf( ' | %19s', $snapData->{date} );
                         if( defined( $snapData->{'cleanup'} )) {
                             $out .= sprintf( ' | %8s', $snapData->{cleanup} );
                         } else {

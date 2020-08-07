@@ -758,25 +758,25 @@ sub problems {
                     }
                 }
             }
-            if( exists( $blockDevice->{'fuse%' } )) {
-                my $fusePercent = $blockDevice->{'fuse%'};
-                if( defined( $fusePercent )) {
-                    my $numVal = $fusePercent;
+            if( exists( $blockDevice->{'fsuse%' } )) {
+                my $fsUsePercent = $blockDevice->{'fsuse%'};
+                if( defined( $fsUsePercent )) {
+                    my $numVal = $fsUsePercent;
                     $numVal =~ s!%!!;
                     if( $numVal > $PROBLEM_DISK_PERCENT ) {
-                        push @{$json->{problems}}, 'Disk ' . $blockDevice->{name} . ' is almost full: ' . $fusePercent;
+                        push @{$json->{problems}}, 'Disk ' . $blockDevice->{name} . ' is almost full: ' . $fsUsePercent;
                     }
                 }
             }
 
             foreach my $childDevice ( @{$blockDevice->{children}} ) {
-                if( exists( $childDevice->{'fuse%' } )) {
-                    my $fusePercent = $childDevice->{'fuse%'};
-                    if( defined( $fusePercent )) {
-                        my $numVal = $fusePercent;
+                if( exists( $childDevice->{'fsuse%' } )) {
+                    my $fsUsePercent = $childDevice->{'fsuse%'};
+                    if( defined( $fsUsePercent )) {
+                        my $numVal = $fsUsePercent;
                         $numVal =~ s!%!!;
                         if( $numVal > $PROBLEM_DISK_PERCENT ) {
-                            push @{$json->{problems}}, 'Disk ' . $childDevice->{name} . ' is almost full: ' . $fusePercent;
+                            push @{$json->{problems}}, 'Disk ' . $childDevice->{name} . ' is almost full: ' . $fsUsePercent;
                         }
                     }
                 }
