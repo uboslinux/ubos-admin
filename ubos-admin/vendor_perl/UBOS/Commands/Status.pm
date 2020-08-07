@@ -143,6 +143,8 @@ sub run {
         $showUptime      = 1;
     }
 
+    my $ret = 1;
+
     if( $showJson ) {
         UBOS::Utils::writeJsonToStdout( UBOS::HostStatus::allAsJson() );
 
@@ -333,6 +335,8 @@ sub run {
                 foreach my $service ( @$failedServices ) {
                     $out .= "    $service\n";
                 }
+                $ret = 0;
+
             } else {
                 $out .= "    None\n";
             }
@@ -364,6 +368,7 @@ sub run {
             $out .= "Problems:\n";
             if( @$problems ) {
                 $out .= join( "", map { "    * $_\n" } @$problems ) . "\n";
+                $ret = 0;
             } else {
                 $out .= "    None\n";
             }
@@ -372,7 +377,7 @@ sub run {
         colPrint( $out );
     }
 
-    return 1;
+    return $ret;
 }
 
 ##
