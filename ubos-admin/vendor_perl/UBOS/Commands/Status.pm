@@ -314,13 +314,20 @@ sub run {
                     foreach my $snapData ( @{$snapperJson->{$configName}} ) {
                         # we assume they are sorted already
 
-                        $out .= sprintf(
-                                "        %3d | %6s | %3d | %s | %8s\n",
-                                _orBlank( $snapData->{number} ),
-                                _orBlank( $snapData->{type} ),
-                                _orBlank( $snapData->{'pre-number'} ),
-                                _orBlank( $snapData->{data} ),
-                                _orBlank( $snapData->{cleanup} ));
+                        $out .= sprintf( '        %3d | %6s', $snapData->{number}, $snapData->{type} );
+
+                        if( defined( $snapData->{'pre-number'} )) {
+                            $out .= sprintf( ' | %3d', $snapData->{number} );
+                        } else {
+                            $out .= ' |    ';
+                        }
+                        $out .= ' | ' . $snapData->{date};
+                        if( defined( $snapData->{'cleanup'} )) {
+                            $out .= sprintf( ' | %8s', $snapData->{cleanup} );
+                        } else {
+                            $out .= ' |         ';
+                        }
+                        $out .= "\n";
                     }
                 }
 
@@ -470,20 +477,6 @@ sub _formatTimeStamp {
         }
     } else {
         return '<never>';
-    }
-}
-
-##
-# Return the value, or if undef, the empty string
-# $v: the value
-# return: the value or the empty string
-sub _orBlank {
-    my $s = shift;
-
-    if( defined( $s )) {
-        return $s;
-    } else {
-        return '';
     }
 }
 
