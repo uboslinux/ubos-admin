@@ -49,8 +49,10 @@ sub ensureRunning {
     UBOS::Utils::myexec( 'systemctl is-enabled mysqld > /dev/null || systemctl enable mysqld', undef, \$out, \$err );
     UBOS::Utils::myexec( 'systemctl is-active  mysqld > /dev/null || systemctl start  mysqld', undef, \$out, \$err );
 
-    unless( -e $rootConfiguration ) {
+    if( -e $rootConfiguration ) {
+        $running = 1;
 
+    } else {
         my $dbh = DBI->connect( "DBI:mysql:host=localhost", 'root', '' );
 
         if( defined( $dbh )) {
@@ -88,9 +90,10 @@ SQL
             if( -e $previousRootConfiguration ) {
                 UBOS::Utils::deleteFile( $previousRootConfiguration );
             }
+            $running = 1;
         }
+        # don't set $running to 1 otherwise, so we will try again
     }
-    $running = 1;
 }
 
 ##
