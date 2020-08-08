@@ -90,6 +90,9 @@ sub finishUpdate {
 
         foreach my $site ( values %$oldSites ) {
             foreach my $appConfig ( @{$site->appConfigs} ) {
+                unless( $appConfig->completeImpliedAccessories()) {
+                    error( $@ );
+                }
                 unless( $appConfig->checkCompleteCustomizationPointValues()) {
                     error( $@ );
                 }

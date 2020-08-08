@@ -266,6 +266,9 @@ sub run {
                 $contexts{$context} = $newAppConfig;
             }
 
+            unless( $newAppConfig->completeImpliedAccessories()) {
+                fatal( $@ );
+            }
             unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
                 fatal( $@ );
             }

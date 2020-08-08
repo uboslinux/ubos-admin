@@ -604,6 +604,59 @@ sub isValidContext {
 }
 
 ##
+# Update the list of accessories so it contains all accessories implied
+# (through "requires") by the ones specified already.
+# return: 1 if ok
+sub completeImpliedAccessories {
+    my $self = shift;
+
+    $self->_initialize();
+
+    my %haveAlreadyIds = ();
+    my @currentAccs    = @{$self->{accessories}};
+    my @newAccs        = (); # incremental add-on
+
+    foreach my $currentAcc ( @currentAccs ) {
+        $haveAlreadyIds{ $currentAcc->packageName() } = 1;
+    }
+
+    while( 1 ) {
+        my @accsToAdd = (); # keeps track whether we are done
+        foreach my $currentAcc ( @currentAccs ) {
+
+            my @requiresIds = $currentAcc->requires();
+            if( UBOS::Host::ensurePackages( \@requiresIds ) < 0 ) {
+                fatal( $@ );
+            }
+
+            foreach my $requiresId ( @requiresIds ) {
+                unless( exists( $haveAlreadyIds{$requiresId} )) {
+                    my $newAcc = UBOS::Accessory->new( $requiresId, $self->{skipFilesystemChecks}, $self->{manifestFileReader} );
+                    if( $newAcc ) {
+                        push @accsToAdd, $newAcc;
+                        push @newAccs,   $newAcc;
+
+                        $haveAlreadyIds{$requiresId} = 1;
+                    } else {
+                        error( $@ );
+                    }
+                }
+            }
+        }
+        unless( @accsToAdd ) {
+            last;
+        }
+        @currentAccs = @accsToAdd;
+    }
+    if( @newAccs ) {
+        $self->{accessories}          = [ @{$self->{accessories}}, @newAccs ];
+        $self->{json}->{accessoryids} = [ map { $_->packageName() } @{ $self->{accessories} } ];
+    }
+
+    return 1;
+}
+
+##
 # Check that all required customization point values have been specified
 # and fill in the values from defaults for all others
 # return: 1 if ok

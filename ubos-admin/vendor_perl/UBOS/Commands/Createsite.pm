@@ -725,6 +725,9 @@ sub run {
         }
 
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
+            unless( $newAppConfig->completeImpliedAccessories()) {
+                fatal( $@ );
+            }
             unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
                 fatal( $@ );
             }

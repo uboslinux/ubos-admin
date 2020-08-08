@@ -252,6 +252,11 @@ sub deploySiteTemplates {
                     return $errors;
                 }
             }
+            unless( $newAppConfig->completeImpliedAccessories()) {
+                error( $@ );
+                ++$errors;
+                return $errors;
+            }
             unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
                 error( $@ );
                 ++$errors;
