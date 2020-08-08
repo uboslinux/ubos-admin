@@ -554,12 +554,21 @@ sub _initialize {
     }
 
     $self->{app} = UBOS::App->new( $self->{json}->{appid}, $self->{skipFilesystemChecks}, $self->{manifestFileReader} );
+    unless( $self->{app} ) {
+        fatal( $@ );
+    }
 
     if( $self->{json}->{accessoryids} ) {
-        my @acc = map
-                  { UBOS::Accessory->new( $_, $self->{skipFilesystemChecks}, $self->{manifestFileReader} ) }
-                  @{$self->{json}->{accessoryids}};
-        $self->{accessories} = \@acc;
+        my @accs = ();
+        foreach my $accessoryId ( @{$self->{json}->{accessoryids}} ) {
+            my $acc = UBOS::Accessory->new( $accessoryId, $self->{skipFilesystemChecks}, $self->{manifestFileReader} );
+            if( $acc ) {
+                push @accs, $acc;
+            } else {
+                fatal( $@ );
+            }
+        }
+        $self->{accessories} = \@accs;
 
     } else {
         $self->{accessories} = [];

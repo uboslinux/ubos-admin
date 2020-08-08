@@ -542,6 +542,7 @@ sub run {
             my $app = UBOS::App->new( $appId );
             unless( $app ) {
                 error( 'Package exists but is not an app:', $appId );
+                next();
             }
 
             if( !$tls && $app->requiresTls() ) {

@@ -1197,11 +1197,12 @@ sub defaultManifestFileReader {
 
     my $file = vars()->getResolve( 'package.manifestdir' ) . "/$packageIdentifier.json";
 
-    my $ret = readJsonFromFile( $file );
+    my $ret = readJsonFromFile( $file, sub {}, sub {} ); # don't need error reporting here
     if( $ret ) {
         return $ret;
     } else {
-        fatal( 'Failed to read or parse manifest file:', $file );
+        $@ = 'Failed to read or parse manifest file: ' . $file;
+        return undef;
     }
 }
 

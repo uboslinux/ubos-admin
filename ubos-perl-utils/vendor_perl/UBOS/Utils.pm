@@ -44,13 +44,16 @@ sub now {
 ##
 # Read and parse JSON from a file
 # $from: file to read from
+# $cannotParseFileErrorFunc: invoke this function when an error occurs parsing the file
+# $cannotReadFileErrorFunc: invoke this function when an error occurs reading the file
 # $msg: if an error occurs, use this error message
 # return: JSON object
 sub readJsonFromFile {
     my $file = shift;
-    my $msg  = shift || sub { ( 'JSON parsing error in file', $file ) };
+    my $cannotParseFileErrorFunc = shift || sub { error( 'JSON parsing error in file', shift ); };
+    my $cannotReadFileErrorFunc  = shift || sub { error( 'Cannot read file:', shift ); };
 
-    my $fileContent = slurpFile( $file );
+    my $fileContent = slurpFile( $file, $cannotReadFileErrorFunc );
     unless( $fileContent ) {
         return undef;
     }
@@ -58,7 +61,7 @@ sub readJsonFromFile {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or error( $msg, ':', $@ );
+    } or $cannotParseFileErrorFunc->( $@ );
 
     return $json;
 }
@@ -251,9 +254,11 @@ sub myexec {
 ##
 # Slurp the content of a file
 # $filename: the name of the file to read
+# $cannotReadFileErrorFunc: invoke this function when an error occurs reading the file
 # return: the content of the file
 sub slurpFile {
-    my $filename = shift;
+    my $filename                = shift;
+    my $cannotReadFileErrorFunc = shift || sub { error( 'Cannot read file:', shift ); };
 
     trace( 'slurpFile(', $filename, ')' );
 
@@ -265,7 +270,7 @@ sub slurpFile {
         return $fileContent;
 
     } else {
-        error( 'Cannot read file', $filename );
+        $cannotReadFileErrorFunc->( $filename );
         return undef;
     }
 }

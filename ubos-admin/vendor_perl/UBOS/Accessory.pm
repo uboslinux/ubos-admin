@@ -30,7 +30,9 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $packageName, $manifestFileReader );
+    unless( $self->SUPER::new( $packageName, $manifestFileReader )) {
+        return undef;
+    }
 
     if( UBOS::Host::vars()->getResolve( 'host.checkmanifest', 1 )) {
         $self->checkManifest( 'accessory', $skipFilesystemChecks );

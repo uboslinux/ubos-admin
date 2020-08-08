@@ -222,7 +222,9 @@ sub readNetconfigConfFileFor {
     unless( -e $file ) {
         return {};
     }
-    my $ret = UBOS::Utils::readJsonFromFile( $file, sub { ( 'Error when parsing configuration for netconfig', $name, '(file', $file, ')' ) } );
+    my $ret = UBOS::Utils::readJsonFromFile(
+            $file,
+            sub { error( 'Error when parsing configuration for netconfig', $name, '(file', $file, ')' ); } );
     return $ret;
 }
 
