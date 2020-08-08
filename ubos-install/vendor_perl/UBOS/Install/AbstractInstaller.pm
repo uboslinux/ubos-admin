@@ -773,6 +773,7 @@ PRETTY_NAME="UBOS"
 HOME_URL="http://ubos.net/"
 BUILD_ID="$buildId"
 UBOS_DEVICECLASS="$deviceClass"
+DOCUMENTATION_URL="https://ubos.net/docs/"
 OSRELEASE
     if( $kernelPackage ) {
         $osRelease .= <<OSRELEASE;
