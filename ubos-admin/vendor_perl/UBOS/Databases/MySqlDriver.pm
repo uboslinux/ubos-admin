@@ -98,15 +98,17 @@ SQL
 # $database: name of the database
 # $user: database user to use
 # $pass: database password to use
+# $description: description of the database, for error reporting
 # $host: database host to connect to
 # $port: database port to connect to
 # return: database handle
 sub dbConnect {
-    my $database = shift;
-    my $user     = shift;
-    my $pass     = shift;
-    my $host     = shift || 'localhost';
-    my $port     = shift || 3306;
+    my $database    = shift;
+    my $user        = shift;
+    my $pass        = shift;
+    my $description = shift;
+    my $host        = shift || 'localhost';
+    my $port        = shift || 3306;
 
     ensureRunning();
 
@@ -122,7 +124,13 @@ sub dbConnect {
                             { AutoCommit => 1, PrintError => 0 } );
 
     if( defined( $dbh )) {
-        $dbh->{HandleError} = sub { error( 'Database error:', shift ); };
+        $dbh->{HandleError} = sub {
+            if( $description ) {
+                error( "Database error ($description):", shift );
+            } else {
+                error( 'Database error:', shift );
+            }
+        };
     } else {
         error( 'Connecting to database failed, using connection string', $connectString, 'user', $user );
     }
@@ -132,14 +140,16 @@ sub dbConnect {
 ##
 # Convenience method to connect to a database as root
 # $database: name of the database
+# $description: description of the database, for error reporting
 # return: database handle
 sub dbConnectAsRoot {
-    my $database = shift;
+    my $database    = shift;
+    my $description = shift;
 
     ensureRunning();
 
     my( $rootUser, $rootPass ) = findRootUserPass();
-    return dbConnect( $database, $rootUser, $rootPass );
+    return dbConnect( $database, $rootUser, $rootPass, $description );
 }
 
 ##
@@ -281,11 +291,11 @@ sub provisionLocalDatabase {
     my $privileges          = shift;
     my $charset             = shift || 'utf8';
     my $collate             = shift;
-    my $description         = shift; # ignored; MySQL does not know what to do with this
+    my $description         = shift;
 
     trace( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
-    my $dbh = dbConnectAsRoot( undef );
+    my $dbh = dbConnectAsRoot( undef, $description );
 
     my $sth;
 
