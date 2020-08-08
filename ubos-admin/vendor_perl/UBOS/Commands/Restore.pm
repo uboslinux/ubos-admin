@@ -402,10 +402,14 @@ sub restoreAppConfigs {
             $appConfigJsonNew->{appconfigid}  = $newAppConfigId;
             $appConfigJsonNew->{context}      = $appConfigIdToContext{$newAppConfigId};
             $appConfigJsonNew->{appid}        = _migratePackages( $appConfigJsonNew->{appid}, $migratePackages );
-            $appConfigJsonNew->{accessoryids} = _migratePackages( $appConfigJsonNew->{accessoryids}, $migratePackages );
-            unless( $appConfigJsonNew->{accessoryids} ) {
-                delete $appConfigJsonNew->{accessoryids};
+            if( exists( $appConfigJsonNew->{accessoryids} )) {
+                $appConfigJsonNew->{accessoryids} = _migratePackages( $appConfigJsonNew->{accessoryids}, $migratePackages );
             }
+            if( exists( $appConfigJsonNew->{customizationpoints} )) {
+                $appConfigJsonNew->{customizationpoints}
+                        = _migrateCustomizationPoints( $appConfigJsonNew->{customizationpoints}, $migratePackages );
+            }
+
             my $newAppConfig = UBOS::AppConfiguration->new( $appConfigJsonNew, $site );
 
             debugAndSuspend( 'Adding and deploying appconfig', $newAppConfig->appConfigId );
@@ -603,9 +607,13 @@ sub restoreSites {
                 my $appConfigJsonNew = dclone( $oldAppConfig->appConfigurationJson() );
                 $appConfigJsonNew->{appconfigid}  = $newAppConfigId;
                 $appConfigJsonNew->{appid}        = _migratePackages( $appConfigJsonNew->{appid}, $migratePackages );
-                $appConfigJsonNew->{accessoryids} = _migratePackages( $appConfigJsonNew->{accessoryids}, $migratePackages );
-                unless( $appConfigJsonNew->{accessoryids} ) {
-                    delete $appConfigJsonNew->{accessoryids};
+
+                if( exists( $appConfigJsonNew->{accessoryids} )) {
+                    $appConfigJsonNew->{accessoryids} = _migratePackages( $appConfigJsonNew->{accessoryids}, $migratePackages );
+                }
+                if( exists( $appConfigJsonNew->{customizationpoints} )) {
+                    $appConfigJsonNew->{customizationpoints}
+                            = _migrateCustomizationPoints( $appConfigJsonNew->{customizationpoints}, $migratePackages );
                 }
 
                 push @{$siteJsonNew->{appconfigs}}, $appConfigJsonNew;
@@ -783,7 +791,7 @@ sub _migratePackages {
     my $oldPackages = shift;
     my $translation = shift;
 
-    if( !defined( $oldPackages )) {
+    unless( defined( $oldPackages )) {
         return undef;
     }
     if( ref( $oldPackages ) eq '' ) {
@@ -795,6 +803,31 @@ sub _migratePackages {
 
     my @ret = map { my $p = $_; exists( $translation->{$p} ) ? $translation->{$p} : $p; } @$oldPackages;
     return \@ret;
+}
+
+##
+# Translate a customization point hash from old to new package names.
+# $oldPoints: hash of customizationpoints to be translated
+# $translation: hash of old package name to new package name; if no entry, keep old name
+# return: translated hash of customizationpoints
+sub _migrateCustomizationPoints {
+    my $oldPoints   = shift;
+    my $translation = shift;
+
+    unless( defined( $oldPoints )) {
+        return undef;
+    }
+    my $newPoints= {};
+    foreach my $oldPackage ( keys %$oldPoints ) {
+        my $newPackage;
+        if( exists( $translation->{$oldPackage} )) {
+            $newPackage = $translation->{$oldPackage};
+        } else {
+            $newPackage = $oldPackage;
+        }
+        $newPoints->{$newPackage} = $oldPoints->{$oldPackage};
+    }
+    return $newPoints;
 }
 
 ##
