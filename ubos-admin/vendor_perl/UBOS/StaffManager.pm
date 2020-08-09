@@ -82,7 +82,7 @@ sub performBootActions {
     }
 
     # if not online, try a bit longer just in case ...
-    my $waitForOnline = UBOS::Host::vars()->getResolve( 'host.waitforonline', 5 )
+    my $waitForOnline = UBOS::Host::vars()->getResolve( 'host.waitforonline', 5 );
     for( my $count = 0 ; $count < $waitForOnline ; ++$count ) {
         if( UBOS::HostStatus::updateOnline()) {
             last;
