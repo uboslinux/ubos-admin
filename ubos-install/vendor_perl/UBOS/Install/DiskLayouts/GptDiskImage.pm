@@ -42,7 +42,7 @@ sub createDisks {
     my $errors = 0;
     my $out;
     my $err;
- 
+
     # zero out the beginning -- sometimes there are strange leftovers
     if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=" . $self->{image} . "' bs=1M count=8 conv=notrunc status=none" )) {
         ++$errors;
@@ -104,13 +104,11 @@ sub createDisks {
             error( "sgdisk --new=$index:$startsector:$size " . $self->{image} . ':', $out );
             ++$errors;
         }
-        
+
         $errors += UBOS::Install::PartitionUtils::changeGptPartitionType( $data->{gptparttype}, $index, $self->{image} );
     }
 
-    if( UBOS::Utils::myexec( "partprobe " . $self->{image} )) {
-        ++$errors;
-    }
+    $errors += $self->resetDiskCaches();
 
     return $errors;
 }

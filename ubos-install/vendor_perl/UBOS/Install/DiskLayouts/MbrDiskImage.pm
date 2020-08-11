@@ -136,6 +136,8 @@ END
         ++$errors;
     }
 
+    $errors += $self->resetDiskCaches();
+
     return $errors;
 }
 

@@ -104,15 +104,12 @@ sub createDisks {
                 error( "sgdisk --new=$index:$startsector:$size " . $disk . ':', $out );
                 ++$errors;
             }
-            
+
             $errors += UBOS::Install::PartitionUtils::changeGptPartitionType( $data->{gptparttype}, $index, $disk );
         }
     }
 
-    if( UBOS::Utils::myexec( "partprobe " . join( ' ', @{$self->{disks}} ))) {
-        ++$errors;
-    }
-
+    $errors += $self->resetDiskCaches();
     $errors += $self->_augmentDeviceTableWithPartitions();
 
     return $errors;

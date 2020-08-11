@@ -388,6 +388,20 @@ sub getRootDeviceNames {
     return @ret;
 }
 
+##
+# Reset caches related to information about disks.
+# return: number of errors
+sub resetDiskCaches {
+    my $self = shift;
+
+    my $ret = 0;
+    if( UBOS::Utils::myexec( "partprobe " . join( ' ', @{$self->{disks}} ))) {
+        ++$ret;
+    }
+    $_pathFacts = {};
+    return $ret;
+}
+
 # -- statics from here
 
 ##

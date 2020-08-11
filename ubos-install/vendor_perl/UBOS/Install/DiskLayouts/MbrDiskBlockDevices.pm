@@ -125,10 +125,7 @@ END
         }
     }
 
-    if( UBOS::Utils::myexec( "partprobe " . join( ' ', @{$self->{disks}} ))) {
-        ++$errors;
-    }
-
+    $errors += $self->resetDiskCaches();
     $errors += $self->_augmentDeviceTableWithPartitions();
 
     return $errors;
