@@ -1207,7 +1207,21 @@ sub defaultManifestFileReader {
 }
 
 #####
-# Check whether the system is ready for the command
+# Check whether the system is ready. If not, do nothing.
+# return: timestamp since when ready, or undef
+sub isReady {
+
+    if( -e $READY_FILE ) {
+        my $ret = UBOS::Utils::slurpFile( $READY_FILE );
+        $ret =~ s!^\s+!!;
+        $ret =~ s!\s+$!!;
+        return $ret;
+    }
+    return undef;
+}
+
+#####
+# Check whether the system is ready for the command, and if not
 sub checkReady {
 
     if( -e $READY_FILE ) {

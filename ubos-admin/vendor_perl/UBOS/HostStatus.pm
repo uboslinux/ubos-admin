@@ -155,7 +155,7 @@ sub deviceClass {
 # return: UNIX time or undef if not ready
 sub readySince {
     unless( exists( $json->{'ubos-admin-ready'} )) {
-        $json->{'ubos-admin-ready'} = UBOS::Host::checkReady();
+        $json->{'ubos-admin-ready'} = UBOS::Host::isReady();
     }
     return $json->{'ubos-admin-ready'};
 }
