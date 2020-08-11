@@ -145,6 +145,8 @@ sub formatDisks {
             }
         }
     }
+    $errors += $self->resetDiskCaches();
+
     return $errors;
 }
 
