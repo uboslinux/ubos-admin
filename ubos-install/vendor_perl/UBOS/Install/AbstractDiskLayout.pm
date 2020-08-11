@@ -401,6 +401,7 @@ sub resetDiskCaches {
         ++$ret;
     }
     $_pathFacts = {};
+    $_lsBlk     = undef;
     return $ret;
 }
 
