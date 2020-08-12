@@ -35,6 +35,9 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    unless( $self->{hostname} ) {
+        $self->{hostname} = 'ubos-espressobin';
+    }
     $self->{kernelpackage} = 'linux-espressobin';
 
     unless( $self->{devicepackages} ) {
