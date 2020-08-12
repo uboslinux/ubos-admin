@@ -109,7 +109,7 @@ sub createDisks {
         }
     }
 
-    $errors += $self->resetDiskCaches();
+    $errors += UBOS::Install::AbstractDiskLayout::resetDiskCaches();
     $errors += $self->_augmentDeviceTableWithPartitions();
 
     return $errors;

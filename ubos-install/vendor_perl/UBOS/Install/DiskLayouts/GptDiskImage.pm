@@ -14,6 +14,7 @@ use base qw( UBOS::Install::AbstractDiskImage );
 use fields qw();
 
 use UBOS::Install::AbstractDiskImage;
+use UBOS::Install::AbstractDiskLayout;
 use UBOS::Install::PartitionUtils;
 use UBOS::Logging;
 
@@ -108,7 +109,7 @@ sub createDisks {
         $errors += UBOS::Install::PartitionUtils::changeGptPartitionType( $data->{gptparttype}, $index, $self->{image} );
     }
 
-    $errors += $self->resetDiskCaches();
+    $errors += UBOS::Install::AbstractDiskLayout::resetDiskCaches();
 
     return $errors;
 }

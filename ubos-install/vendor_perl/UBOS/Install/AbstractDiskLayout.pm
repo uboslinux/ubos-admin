@@ -145,7 +145,7 @@ sub formatDisks {
             }
         }
     }
-    $errors += $self->resetDiskCaches();
+    $errors += resetDiskCaches();
 
     return $errors;
 }
@@ -390,22 +390,21 @@ sub getRootDeviceNames {
     return @ret;
 }
 
+# -- statics from here
+
 ##
 # Reset caches related to information about disks.
 # return: number of errors
 sub resetDiskCaches {
-    my $self = shift;
 
     my $ret = 0;
-    if( UBOS::Utils::myexec( "partprobe " . join( ' ', @{$self->{disks}} ))) {
+    if( UBOS::Utils::myexec( 'partprobe' )) {
         ++$ret;
     }
     $_pathFacts = {};
     $_lsBlk     = undef;
     return $ret;
 }
-
-# -- statics from here
 
 ##
 # Helper method to determine some facts about a given path, such as whether it is a file,
