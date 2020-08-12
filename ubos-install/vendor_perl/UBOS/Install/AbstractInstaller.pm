@@ -300,15 +300,6 @@ sub install {
     if( $errors ) {
         return $errors;
     }
-#    # We redo the loop devices because of https://github.com/uboslinux/ubos-admin/issues/224
-#    $errors += $diskLayout->deleteLoopDevices();
-#    if( $errors ) {
-#        return $errors;
-#    }
-#    $errors += $diskLayout->createLoopDevices();
-#    if( $errors ) {
-#        return $errors;
-#    }
     $errors += $diskLayout->mountDisks( $self->{target} );
     $errors += $self->mountSpecial();
     $errors += $diskLayout->createSubvols( $self->{target} );
