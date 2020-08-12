@@ -38,10 +38,6 @@ sub new {
     }
     $self->{kernelpackage} = 'linux-odroid-xu3';
 
-    $self->SUPER::new( @args );
-
-    push @{$self->{devicepackages}}, 'ubos-deviceclass-odroidxu3';
-
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw(
                 ubos-networking-client
@@ -54,6 +50,8 @@ sub new {
     unless( $self->{deviceservices} ) {
         $self->{deviceservices} = [ qw( rngd.service systemd-timesyncd.service ) ];
     }
+
+    $self->SUPER::new( @args );
 
     return $self;
 }
