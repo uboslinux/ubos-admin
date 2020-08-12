@@ -1,5 +1,5 @@
 #
-# Install UBOS on an SD Card for a Raspberry Pi 2.
+# Install UBOS on an SD Card for a Raspberry Pi 4.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Armv7hRpi2;
+package UBOS::Install::Installers::Armv7hRpi4;
 
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
