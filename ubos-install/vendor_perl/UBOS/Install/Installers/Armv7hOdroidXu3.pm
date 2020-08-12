@@ -170,9 +170,35 @@ sub installBootLoader {
     my $pacmanConfigFile = shift;
     my $diskLayout       = shift;
 
-    # don't do anything here. All contained in uboot-espressobin-config
-    my $errors           = 0;
+    info( 'Installing u-boot' );
 
+    my $errors = 0;
+    my $target = $self->{target};
+
+    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
+
+    my $out;
+    my $err;
+
+    # Boot loader
+    if( $bootLoaderDevice ) {
+
+        my $chrootScript = <<'END';
+set -e
+
+cd $target/boot
+./sd_fusing.sh $bootLoaderDevice
+END
+
+        trace( 'Chroot script:', $chrootScript );
+
+        debugAndSuspend( 'Invoking bootloader script in chroot:', $target );
+
+        if( UBOS::Utils::myexec( "chroot '$target'", $chrootScript, \$out, \$err )) {
+            error( "bootloader chroot script failed:", $err, "\nwas", $chrootScript );
+            ++$errors;
+        }
+    }
     return $errors;
 }
 

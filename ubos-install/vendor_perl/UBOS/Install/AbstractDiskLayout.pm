@@ -390,6 +390,15 @@ sub getRootDeviceNames {
     return @ret;
 }
 
+##
+# Determine the boot loader device for this DiskLayout
+sub determineBootLoaderDevice {
+    my $self = shift;
+
+    # no op, may be overridden
+    return 0;
+}
+
 # -- statics from here
 
 ##
