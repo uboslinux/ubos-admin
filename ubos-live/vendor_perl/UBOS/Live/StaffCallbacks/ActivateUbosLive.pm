@@ -32,7 +32,7 @@ sub performAtLoad {
 
     if( -e "$staffRootDir/$skipFile" ) {
         info( 'Deactivating UBOS Live: user has chosen to self-administer' );
-        UBOS::Live::ubosLiveDeactivate();
+        UBOS::Live::UbosLive::ubosLiveDeactivate();
 
     } # else: do not change activation status
     return 0;
