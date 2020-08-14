@@ -103,7 +103,7 @@ sub run {
         if( $host ) {
             $site = UBOS::Host::findSiteByHostname( $host );
             unless( $site ) {
-                fatal( 'Cannot find a site with hostname:', $host );
+                fatal( $@ );
             }
         } else {
             $site = UBOS::Host::findSiteByPartialId( $siteId );

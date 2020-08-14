@@ -86,13 +86,21 @@ sub run {
     trace( 'Looking for site(s)' );
 
     my $oldSites = {};
-    if( @hosts ) {
+    if( @hosts || @siteIds ) {
         foreach my $host ( @hosts ) {
             my $site = UBOS::Host::findSiteByHostname( $host );
             if( $site ) {
                 $oldSites->{$site->siteId} = $site;
             } else {
-                fatal( "Cannot find site with hostname $host. Not undeploying any site." );
+                fatal( "$@ Not undeploying any site." );
+            }
+        }
+        foreach my $siteId ( @siteIds ) {
+            my $site = UBOS::Host::findSiteByPartialId( $siteId );
+            if( $site ) {
+                $oldSites->{$site->siteId} = $site;
+            } else {
+                fatal( "$@ Not undeploying any site." );
             }
         }
 
@@ -121,15 +129,6 @@ sub run {
                 } else {
                     @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } @$json;
                 }
-            }
-        }
-
-        foreach my $siteId ( @siteIds ) {
-            my $site = UBOS::Host::findSiteByPartialId( $siteId );
-            if( $site ) {
-                $oldSites->{$site->siteId} = $site;
-            } else {
-                fatal( "$@ Not undeploying any site." );
             }
         }
     }
