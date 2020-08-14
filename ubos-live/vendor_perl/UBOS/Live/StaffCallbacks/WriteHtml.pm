@@ -43,10 +43,6 @@ sub performAtSave {
 
     trace( 'WriteHtml::performAtSave', $staffRootDir, $isActualStaffDevice );
 
-    unless( $isActualStaffDevice ) {
-        return 0;
-    }
-
     my $devicesDir  = "$staffRootDir/flock";
     my $devicesDirs = {};
 
@@ -354,12 +350,7 @@ HTML
          <tr>
           <th>Site admin user password:</th>
           <td>
-           <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">
-HTML
-            $html .= $UBOS::Live::UbosLiveHtmlConstants::copyImage . "\n";
-            $html .= <<HTML;
-           </a>
-           <div id="site-$siteId-passwd" class="hide"></div>
+           <span id="site-$siteId-passwd" class="hide"></span>
            <span class="site-$siteId-passwd-reveal reveal">
             &diams;&diams;&diams;&diams;&diams;&diams;&diams;&diams;
             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Reveal</a>
@@ -368,6 +359,11 @@ HTML
             <span class="tt" id="site-$siteId-passwd-copy-fromhere">$siteAdminCred</span>
             <a class="sidenote" href="javascript:toggle('site-$siteId-passwd');">Hide</a>
            </span>
+           <a class="sidenote passwd-copy" href="#" id="site-$siteId-passwd-copy">
+HTML
+            $html .= $UBOS::Live::UbosLiveHtmlConstants::copyImage . "\n";
+            $html .= <<HTML;
+           </a>
           </td>
          </tr>
          <tr>
@@ -400,7 +396,8 @@ HTML
 HTML
             unless( $accessAtHost ) {
                 $html .= <<HTML;
-       <p class="note">The UBOS device was disconnected from the network when this information was saved.</p>
+       <p class="note sidenote">The UBOS device was disconnected from the network when this information was saved.
+       No network information is available.</p>
 HTML
             }
             $html .= <<HTML;
@@ -616,27 +613,6 @@ HTML
    </footer>
   </div>
   <script>
-function handlePasswdCopy( ev ) {
-    var elId = ev.target.id + "-fromhere";
-    var el   = document.getElementById( elId );
-
-    var range = document.createRange();
-    range.selectNodeContents( el );
-    var selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange( range );
-
-    var success = false;
-    try{
-        success = document.execCommand("copy");
-    } catch(e){
-        success = false;
-    }
-    if( !success ) {
-        alert( "Your browser isn't letting me copy to the clipboard. Please type the password in manually." )
-    }
-}
-
 var pwCopy = document.body.getElementsByClassName( 'passwd-copy' );
 for( i=0; i<pwCopy.length; ++i ) {
     pwCopy[i].addEventListener("click", handlePasswdCopy, false );

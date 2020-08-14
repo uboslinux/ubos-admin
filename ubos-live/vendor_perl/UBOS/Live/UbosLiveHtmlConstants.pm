@@ -186,11 +186,11 @@ a.reveal,
 a.hide {
     text-decoration: underline;
 }
+a.passwd-copy img {
+    vertical-align: middle;
+}
 .hide {
     display: none;
-}
-span.tt {
-    font-family: monospace;
 }
 
 CSS
@@ -262,11 +262,19 @@ function calculateTimeUpdated( updated, id ) {
                 + " (" + relative + "&nbsp;ago)";
     e.classList.remove( "hide" );
 }
+
+function handlePasswdCopy( ev ) {
+    var elId = ev.currentTarget.id + "-fromhere";
+    var el   = document.getElementById( elId );
+
+    navigator.clipboard.writeText( el.innerHTML );
+}
+
 JAVASCRIPT
 
 ## inlined images
 our $staffImage = '<img width=63 height=137 src="data:image/png;base64,UBOS_STAFF_IMAGE_BASE64" alt="UBOS Staff">';
 our $helpImage  = '<img width=24 height=24 src="data:image/png;base64,HELP_IMAGE_BASE64" alt="Help">';
-our $copyImage  = '<img width=24 height=24 src="data:image/png;base64,COPY_IMAGE_BASE64" alt="Copy">';
+our $copyImage  = '<img width=13 height=13 src="data:image/png;base64,COPY_IMAGE_BASE64" alt="Copy">';
 
 1;
