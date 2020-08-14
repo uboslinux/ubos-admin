@@ -488,7 +488,7 @@ sub mountDevice {
     my $targetP = shift;
 
     my $tmpDir    = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
-    $$targetP     = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
+    $$targetP     = File::Temp->newdir( DIR => $tmpDir, UNLINK => 0 ); # do not unlink; if umount fails, it would erase Staff content
     my $targetDir = $$targetP->dirname;
     my $errors    = 0;
 
@@ -513,7 +513,14 @@ sub unmountDevice {
 
     debugAndSuspend( 'Unmount', $targetDir );
     if( UBOS::Utils::myexec( "umount '$targetDir'" )) {
+        error( 'Failed to umount temporary staff directory:', $targetDir );
         ++$errors;
+    } else {
+        # umount successful; can delete $targetDir
+        if( !UBOS::Utils::rmdir( $targetDir )) {
+            error( 'Failed to remove directory:', $targetDir );
+            ++$errors;
+        }
     }
 
     return $errors;
