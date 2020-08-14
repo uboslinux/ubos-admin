@@ -411,6 +411,12 @@ sub restoreAppConfigs {
             }
 
             my $newAppConfig = UBOS::AppConfiguration->new( $appConfigJsonNew, $site );
+            unless( $newAppConfig->completeImpliedAccessories()) {
+                error( $@ );
+            }
+            unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
+                error( $@ );
+            }
 
             debugAndSuspend( 'Adding and deploying appconfig', $newAppConfig->appConfigId );
 
@@ -661,6 +667,17 @@ sub restoreSites {
     }
     if( UBOS::Host::ensurePackages( _migratePackages( $prerequisites, $migratePackages ), $quiet ) < 0 ) {
         fatal( $@ );
+    }
+
+    foreach my $newSite ( @sitesNew ) {
+        foreach my $newAppConfig ( @{$newSite->appConfigs()} ) {
+            unless( $newAppConfig->completeImpliedAccessories()) {
+                error( $@ );
+            }
+            unless( $newAppConfig->checkCompleteCustomizationPointValues()) {
+                error( $@ );
+            }
+        }
     }
 
     # May not be interrupted, bad things may happen if it is
