@@ -551,6 +551,7 @@ sub absReadlink {
 ##
 # Delete one or more directories. They must be empty first
 # @dirs: the directories to delete
+# return: 1 if no error
 sub rmdir {
     my @dirs = @_;
 
