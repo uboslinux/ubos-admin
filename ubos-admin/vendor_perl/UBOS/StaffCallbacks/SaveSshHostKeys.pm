@@ -40,11 +40,7 @@ sub performAtSave {
 
     trace( 'SaveSshHostKey::performAtSave', $staffRootDir, $isActualStaffDevice );
 
-    if( $isActualStaffDevice ) {
-        return saveSshHostKeys( $staffRootDir );
-    } else {
-        return 0;
-    }
+    return saveSshHostKeys( $staffRootDir );
 }
 
 ##

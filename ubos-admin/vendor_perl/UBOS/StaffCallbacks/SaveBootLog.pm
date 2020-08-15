@@ -41,11 +41,7 @@ sub performAtSave {
 
     trace( 'SaveBootLog::performAtSave', $staffRootDir, $isActualStaffDevice );
 
-    if( $isActualStaffDevice ) {
-        return saveBootLog( $staffRootDir );
-    } else {
-        return 0;
-    }
+    return saveBootLog( $staffRootDir );
 }
 
 ##
