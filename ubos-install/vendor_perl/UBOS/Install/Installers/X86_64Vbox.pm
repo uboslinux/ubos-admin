@@ -43,7 +43,7 @@ sub new {
     unless( $self->{devicepackages} ) {
         $self->{devicepackages} = [ qw(
                 ubos-networking-client
-                mkinitcpio virtualbox-utils
+                mkinitcpio virtualbox-guest-utils
                 ubos-deviceclass-vbox
         ) ];
     }
