@@ -362,12 +362,12 @@ sub run {
         }
 
         if( $showFailed ) {
-            my $failedServices = UBOS::HostStatus::failedServices();
+            my $failedUnits = UBOS::HostStatus::failedUnits();
 
-            $out .= "Failed system services:\n";
-            if( @$failedServices ) {
-                foreach my $service ( @$failedServices ) {
-                    $out .= "    $service\n";
+            $out .= "Failed systemd units:\n";
+            if( @$failedUnits ) {
+                foreach my $unit ( @$failedUnits ) {
+                    $out .= "    $unit\n";
                 }
                 $ret = 0;
 
@@ -396,7 +396,7 @@ sub run {
 
             unless( $showFailed ) {
                 # don't report twice
-                push @$problems, map { 'System service ' . $_ . ' has failed.' } @{UBOS::HostStatus::failedServices()};
+                push @$problems, map { 'Systemd unit ' . $_ . ' has failed.' } @{UBOS::HostStatus::failedUnits()};
             }
 
             $out .= "Problems:\n";

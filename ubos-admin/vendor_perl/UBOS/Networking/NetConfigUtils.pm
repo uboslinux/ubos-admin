@@ -810,11 +810,11 @@ END
 
     } else {
         my $out;
-        UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a --state=active', undef, \$out );
-        @runningServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+        UBOS::Utils::myexec( 'systemctl list-units --all --output=json --state=active', undef, \$out );
+        @runningServices = grep { exists( $allServices{$_} ) } map { $_->{unit} } @{ UBOS::Utils::readJsonFromString( $out ) };
 
-        UBOS::Utils::myexec( 'systemctl list-units --no-legend --no-pager -a', undef, \$out );
-        @installedServices = grep { exists( $allServices{$_} ) } map { my $s = $_; $s =~ s!\s+.*$!!; $s; } split /\n/, $out;
+        UBOS::Utils::myexec( 'systemctl list-units --all --output=json', undef, \$out );
+        @installedServices = grep { exists( $allServices{$_} ) } map { $_->{unit} } @{ UBOS::Utils::readJsonFromString( $out ) };
 
         @enabledServices   = grep { my $o; UBOS::Utils::myexec( 'systemctl is-enabled ' . $_, undef, \$o ); $o =~ m!enabled!; } @installedServices;
         %enabledServices   = ();

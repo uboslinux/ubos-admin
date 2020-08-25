@@ -428,24 +428,19 @@ sub snapperJson {
 }
 
 ##
-# Determine information about failed services
+# Determine information about failed systemd units
 # return: pointer to array
-sub failedServices {
-    unless( exists( $json->{failedservices} )) {
-        trace( 'Determinig failed system services' );
-
-        $json->{failedservices} = [];
+sub failedUnits {
+    unless( exists( $json->{failedunits} )) {
+        trace( 'Determining failed systemd units' );
 
         my $out;
-        UBOS::Utils::myexec( 'systemctl --quiet --failed --full --plain --no-legend', undef, \$out );
-        foreach my $line ( split( /\n/, $out )) {
-            if( $line =~ m!^(.+)\.service! ) {
-                my $failedService = $1;
-                push @{$json->{failedservices}}, $failedService;
-            }
-        }
+        UBOS::Utils::myexec( 'systemctl --failed --output=json', undef, \$out );
+        my $failedJson = UBOS::Utils::readJsonFromString( $out );
+
+        $json->{failedunits} = [ map { $_->{unit} } @$failedJson ];
     }
-    return $json->{failedservices};
+    return $json->{failedunits};
 }
 
 ##
@@ -797,7 +792,7 @@ sub allAsJson {
     channel();
     cpuJson();
     deviceClass();
-    failedServices();
+    failedUnits();
     hardwareNics();
     hostId();
     hostPublicKey();
@@ -829,7 +824,7 @@ sub liveAsJson {
     channel();
     cpuJson();
     deviceClass();
-    failedServices();
+    failedUnits();
     hardwareNics();
     hostId();
     hostPublicKey();
