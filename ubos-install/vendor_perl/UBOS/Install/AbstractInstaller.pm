@@ -337,6 +337,8 @@ fi
 
 systemctl set-default multi-user.target
 
+echo 'root:ubos!4vr' | chpasswd
+
 SCRIPT
         $errors += $self->addGenerateLocaleToScript( \$chrootScript );
         $errors += $self->addEnableServicesToScript( \$chrootScript );
