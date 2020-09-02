@@ -512,10 +512,11 @@ SSS
     * uptime:         how long the device has been up since last boot
     * virtualization: use of virtualization
 HHH
-            <<SSS => <<HHH
+            <<SSS => <<HHH,
     --all
 SSS
     Report on all subjects
+HHH
             <<SSS => <<HHH
     --json
 SSS
