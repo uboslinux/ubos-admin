@@ -331,10 +331,6 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/pacman *, \
     /usr/bin/pacman-key *, \
     /usr/bin/smartctl *, \
-    /usr/bin/systemctl *, \
-    /usr/bin/ubos-admin *, \
-    /usr/bin/ubos-install *, \
-    /usr/bin/umount *, \
     /usr/bin/snapper *, \
     /usr/bin/storj-gateway *, \
     /usr/bin/storj-gateway-credentials *, \
@@ -342,6 +338,11 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/storj-linksharing *, \
     /usr/bin/storj-uplink *, \
     /usr/bin/su *, \
+    /usr/bin/systemctl *, \
+    /usr/bin/ubos-admin *, \
+    /usr/bin/ubos-install *, \
+    /usr/bin/umount *, \
+    /opt/vc/bin/vcgencmd *, \
     /bin/bash *
 CONTENT
             # If you change this, also change ubos-cloud.cfg in cloud-init
