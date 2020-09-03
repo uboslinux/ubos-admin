@@ -30,10 +30,18 @@ my $HOST_CONF_FILE          = '/etc/ubos/config.json';
 
 my $SITE_JSON_DIR           = vars()->getResolve( 'host.sitejsondir' );
 my $AFTER_BOOT_FILE         = vars()->getResolve( 'host.afterbootfile' );
+my $KEYSERVER               = vars()->getResolveOrNull( 'host.keyserver', 'pool.sks-keyservers.net' );
 my $READY_FILE              = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE        = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR  = '/etc/ubos/hostname-callbacks';
 my $STATE_CALLBACKS_DIR     = '/etc/ubos/state-callbacks';
+
+my @LEFTOVER_FILES_TO_REMOVE = qw(
+    /usr/lib/libmozjs-52.so.0
+    /usr/lib/p11-kit-trust.so
+    /usr/lib32/p11-kit-trust.so
+    /usr/lib/libzn_poly-0.9.so
+);
 
 my $_hostVars               = undef; # allocated as needed
 my $_rolesOnHostInSequence  = undef; # allocated as needed
@@ -571,8 +579,12 @@ sub updateCode {
 
         info( 'Refreshing keys' );
 
-        if( myexec( 'pacman-key --refresh-keys', undef, \$out, \$out )) {
-            warning( 'Failed to refresh some expired keys' );
+        $cmd = 'pacman-key --refresh-keys';
+        if( $KEYSERVER ) {
+            $cmd .= " -- keyserver $KEYSERVER";
+        }
+        if( myexec( $cmd, undef, \$out, \$out )) {
+            warning( 'Failed to refresh some expired keys (probably harmless)' );
             trace( $out );
         }
     }
@@ -611,6 +623,14 @@ sub updateCode {
     }
 
     $cmd = 'pacman -Su --noconfirm';
+
+    # Remove unowned leftover files that might get in the way
+    foreach my $leftover ( @LEFTOVER_FILES_TO_REMOVE ) {
+        if( -e $leftover && myexec( "pacman -Qo $leftover", undef, \$out, \$out )) {
+            $cmd .= " --overwrite $leftover";
+        }
+    }
+
     debugAndSuspend( 'Execute pacman -Su' );
     if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
