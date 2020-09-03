@@ -712,14 +712,10 @@ sub problems {
             $loads{5}  = $uptimeJson->{loadavg5};
             $loads{15} = $uptimeJson->{loadavg15};
 
-            foreach my $period ( keys %loads ) {
+            foreach my $period ( sort { $a <=> $b } keys %loads ) {
                 if( $loads{$period} / $nCpu * 100 >= $PROBLEM_LOAD_PER_CPU_PERCENT ) {
                     push @{$json->{problems}},
-                            'High CPU load: '
-                            . join( ' ', map { $loads{$_} . " ($_ min)" }
-                                        sort { $a <=> $b }
-                                        keys %loads )
-                            . " with $nCpu CPUs.";
+                            'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
                 }
             }
         }
