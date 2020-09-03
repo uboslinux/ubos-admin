@@ -976,11 +976,16 @@ sub postSnapshot {
 sub _findBtrfsFilesystems() {
 
     my $out;
-    if( myexec( "findmnt --json --types btrfs", undef, \$out, \$out )) {
+    if( myexec( "findmnt --json --types btrfs", undef, \$out, undef )) {
         error( "findmnt failed:", $out );
         return undef;
     }
-    my $json = UBOS::Utils::readJsonFromString( $out );
+    my $json;
+    if( $out ) { # https://github.com/karelzak/util-linux/issues/1136
+        $json = UBOS::Utils::readJsonFromString( $out );
+    } else {
+        $json = {};
+    }
 
     # {
     #    "filesystems": [
