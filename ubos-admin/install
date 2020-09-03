@@ -38,7 +38,7 @@ pre_upgrade() {
     [[ -e /usr/lib/libmozjs-52.so.0 ]] && ! pacman -Qo /usr/lib/libmozjs-52.so.0 > /dev/null 2>&1 && rm -f /usr/lib/libmozjs-52.so.0
 
     # Fix leftover file previously not owned by a package
-    [[ -e usr/lib/p11-kit-trust.so ]] && ! pacman -Qo /usr/lib/p11-kit-trust.so > /dev/null 2>&1 && rm -f /usr/lib/p11-kit-trust.so
+    [[ -e /usr/lib/p11-kit-trust.so ]] && ! pacman -Qo /usr/lib/p11-kit-trust.so > /dev/null 2>&1 && rm -f /usr/lib/p11-kit-trust.so
 
     # Services were renamed
     systemctl stop    ubos-httpd.service > /dev/null 2>&1 || true
