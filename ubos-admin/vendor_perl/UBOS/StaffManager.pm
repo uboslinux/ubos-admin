@@ -330,6 +330,7 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/mount *, \
     /usr/bin/pacman *, \
     /usr/bin/pacman-key *, \
+    /usr/bin/rpi-eeprom-update *, \
     /usr/bin/smartctl *, \
     /usr/bin/snapper *, \
     /usr/bin/storj-gateway *, \
@@ -342,10 +343,10 @@ shepherd ALL = NOPASSWD: \
     /usr/bin/ubos-admin *, \
     /usr/bin/ubos-install *, \
     /usr/bin/umount *, \
-    /opt/vc/bin/vcgencmd *, \
     /bin/bash *
 CONTENT
             # If you change this, also change ubos-cloud.cfg in cloud-init
+            # rpi-eeprom-update is only needed on the RPi (4)
 
             return 0;
         }
