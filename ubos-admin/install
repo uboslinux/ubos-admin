@@ -6,20 +6,9 @@
 #
 
 ## arg 1: the old package version
-pre_remove() {
-    cat <<MSG;
-
-Hey hacker,
-
-Sorry to see you go.
-Hope to see you again in the future.
-
-Regards,
-    Indie Computing   indiecomputing.com
-    UBOS              ubos.net
-
-MSG
-}
+# pre_remove() {
+# Not needed any more
+# }
 
 ##
 pre_install() {

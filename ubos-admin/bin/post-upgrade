@@ -8,9 +8,6 @@
 
 # Files that aren't owned by packages so far, but will be, so remove otherwise upgrade will fail
 
-
-# [ -f /etc/ssl/certs/ca-certificates.crt ] && ( pacman -Qo /etc/ssl/certs/ca-certificates.crt > /dev/null 2>&1 || /bin/rm /etc/ssl/certs/ca-certificates.crt )
-
 LEFTOVER_FILES_TO_REMOVE="\
     /etc/ssl/certs/ca-certificates.crt \
     /usr/lib/libmozjs-52.so.0 \
@@ -19,7 +16,15 @@ LEFTOVER_FILES_TO_REMOVE="\
     /usr/lib/libzn_poly-0.9.so \
 "
 
+echo "post-upgrade: checking for leftover files to remove"
+
 for f in $LEFTOVER_FILES_TO_REMOVE; do
-    [[ -e $f ]] && ( pacman -Qo $f > /dev/null 2>&1 || echo /bin/rm $f )
+    if [[ -e $f ]]; then
+        echo "post-upgrade: file exists: $f"
+        if ! pacman -Qo $f > /dev/null 2>&1; then
+            echo "post-upgrade: file is not in package: $f"
+            /bin/rm $f
+        fi
+    fi
 done
 

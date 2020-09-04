@@ -574,7 +574,7 @@ sub updateCode {
 
         $cmd = 'pacman-key --refresh-keys';
         if( $KEYSERVER ) {
-            $cmd .= " -- keyserver $KEYSERVER";
+            $cmd .= " --keyserver $KEYSERVER";
         }
         if( myexec( $cmd, undef, \$out, \$out )) {
             warning( 'Failed to refresh some expired keys (probably harmless)' );
