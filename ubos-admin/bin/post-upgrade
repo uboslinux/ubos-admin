@@ -6,5 +6,20 @@
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
-# This file has moved into a package, so remove otherwise upgrade will fail
-[ -f /etc/ssl/certs/ca-certificates.crt ] && ( pacman -Qo /etc/ssl/certs/ca-certificates.crt > /dev/null 2>&1 || /bin/rm /etc/ssl/certs/ca-certificates.crt )
+# Files that aren't owned by packages so far, but will be, so remove otherwise upgrade will fail
+
+
+# [ -f /etc/ssl/certs/ca-certificates.crt ] && ( pacman -Qo /etc/ssl/certs/ca-certificates.crt > /dev/null 2>&1 || /bin/rm /etc/ssl/certs/ca-certificates.crt )
+
+LEFTOVER_FILES_TO_REMOVE="\
+    /etc/ssl/certs/ca-certificates.crt \
+    /usr/lib/libmozjs-52.so.0 \
+    /usr/lib/p11-kit-trust.so \
+    /usr/lib32/p11-kit-trust.so \
+    /usr/lib/libzn_poly-0.9.so \
+"
+
+for f in $LEFTOVER_FILES_TO_REMOVE; do
+    [[ -e $f ]] && ( pacman -Qo $f > /dev/null 2>&1 || echo /bin/rm $f )
+done
+

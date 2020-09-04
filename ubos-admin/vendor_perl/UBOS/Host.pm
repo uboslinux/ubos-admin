@@ -36,13 +36,6 @@ my $LAST_UPDATE_FILE        = '/etc/ubos/last-ubos-update'; # not /var, as /var 
 my $HOSTNAME_CALLBACKS_DIR  = '/etc/ubos/hostname-callbacks';
 my $STATE_CALLBACKS_DIR     = '/etc/ubos/state-callbacks';
 
-my @LEFTOVER_FILES_TO_REMOVE = qw(
-    /usr/lib/libmozjs-52.so.0
-    /usr/lib/p11-kit-trust.so
-    /usr/lib32/p11-kit-trust.so
-    /usr/lib/libzn_poly-0.9.so
-);
-
 my $_hostVars               = undef; # allocated as needed
 my $_rolesOnHostInSequence  = undef; # allocated as needed
 my $_rolesOnHost            = undef; # allocated as needed
@@ -622,17 +615,8 @@ sub updateCode {
         }
     }
 
-    $cmd = 'pacman -Su --noconfirm';
-
-    # Remove unowned leftover files that might get in the way
-    foreach my $leftover ( @LEFTOVER_FILES_TO_REMOVE ) {
-        if( -e $leftover && myexec( "pacman -Qo $leftover", undef, \$out, \$out )) {
-            $cmd .= " --overwrite $leftover";
-        }
-    }
-
     debugAndSuspend( 'Execute pacman -Su' );
-    if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
+    if( myexec( 'pacman -Su --noconfirm', undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
 
     } elsif( UBOS::Logging::isTraceActive() ) {
