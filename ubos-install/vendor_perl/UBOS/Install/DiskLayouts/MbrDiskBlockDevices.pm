@@ -40,6 +40,18 @@ sub createDisks {
 
     my $errors = 0;
 
+    trace( 'MbrDiskBlockDevices::createDisks' );
+
+    # Clear everything out
+    foreach my $disk ( @{$self->{disks}} ) {
+        # first clear out everything
+        my $out;
+        if( UBOS::Utils::myexec( "sgdisk --zap-all '$disk'", undef, \$out, \$out )) {
+            error( 'sgdisk --zap-all:', $out );
+            ++$errors;
+        }
+    }
+
     # determine disk size and how many sector are left over for the main partition
     my $remainingSectors = {};
     foreach my $disk ( @{$self->{disks}} ) {
@@ -65,13 +77,6 @@ sub createDisks {
             $remainingSectors->{$disk} = $remaining;
         } else {
             fatal( 'Cannot determine size of disk' );
-        }
-    }
-
-    # zero out the beginning -- sometimes there are strange leftovers
-    foreach my $disk ( @{$self->{disks}} ) {
-        if( UBOS::Utils::myexec( "dd 'if=/dev/zero' 'of=$disk' bs=1M count=8 status=none" )) {
-            ++$errors;
         }
     }
 
@@ -119,9 +124,11 @@ END
 
         trace( 'fdisk script for', $disk, ':', $fdiskScript );
 
-        if( UBOS::Utils::myexec( "fdisk '" . $disk . "'", $fdiskScript, \$out, \$err )) {
-            error( 'fdisk failed', $out, $err );
+        if( UBOS::Utils::myexec( "fdisk '" . $disk . "'", $fdiskScript, \$out, \$out )) {
+            error( 'fdisk failed:', $out );
             ++$errors;
+        } else {
+            trace( 'fdisk transcript:', $out );
         }
     }
 

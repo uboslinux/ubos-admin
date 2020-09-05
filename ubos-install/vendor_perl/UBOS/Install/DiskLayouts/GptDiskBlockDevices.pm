@@ -40,6 +40,18 @@ sub createDisks {
 
     my $errors = 0;
 
+    trace( 'GptDiskBlockDevices::createDisks' );
+
+    # Clear everything out
+    foreach my $disk ( @{$self->{disks}} ) {
+        # first clear out everything
+        my $out;
+        if( UBOS::Utils::myexec( "sgdisk --zap-all '$disk'", undef, \$out, \$out )) {
+            error( 'sgdisk --zap-all:', $out );
+            ++$errors;
+        }
+    }
+
     # determine disk size and how many sector are left over for the main partition
     my $remainingSectors = {};
     foreach my $disk ( @{$self->{disks}} ) {
@@ -65,16 +77,6 @@ sub createDisks {
             $remainingSectors->{$disk} = $remaining;
         } else {
             fatal( 'Cannot determine size of disk' );
-        }
-    }
-
-    # zero out the beginning does not seem to be advisable for GPT
-    foreach my $disk ( @{$self->{disks}} ) {
-        # first clear out everything
-        my $out;
-        if( UBOS::Utils::myexec( "sgdisk --zap-all '$disk'", undef, \$out, \$out )) {
-            error( 'sgdisk --zap-all:', $out );
-            ++$errors;
         }
     }
 
