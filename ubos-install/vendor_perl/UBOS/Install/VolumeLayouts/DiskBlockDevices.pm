@@ -7,30 +7,51 @@
 use strict;
 use warnings;
 
-package UBOS::Install::AbstractDiskBlockDevices;
+package UBOS::Install::VolumeLayouts::DiskBlockDevices;
 
-use base qw( UBOS::Install::AbstractDiskLayout );
-use fields qw( disks );
+use base qw( UBOS::Install::AbstractVolumeLayout );
+use fields qw( labelType devices );
 
 use UBOS::Utils;
+use UBOS::Logging;
 
 ##
 # Constructor
+# $labelType: type of partition label as parted calls them, e.g. 'msdos' or 'gpt'
 # $disksp: array of disk block devices
 # $devicetable: device data
 sub new {
     my $self        = shift;
-    my $disksp      = shift;
-    my $devicetable = shift;
+    my $labelType   = shift;
+    my $devicesP    = shift;
+    my $volumesP    = shift;
 
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( $devicetable );
+    $self->SUPER::new( $volumesP );
 
-    $self->{disks} = $disksp;
+    $self->{labelType} = $labelType;
+    $self->{devices}   = $devicesP;
 
     return $self;
+}
+
+##
+# Create the configured disks.
+sub createDisks {
+    my $self = shift;
+
+
+    error( 'FIXME createDisks' );
+}
+
+##
+# Determine the boot loader device for this VolumeLayout
+sub determineBootLoaderDevice {
+    my $self = shift;
+
+    return $self->{devices}->[0];
 }
 
 ##
@@ -42,12 +63,12 @@ sub _augmentDeviceTableWithPartitions {
     my $self = shift;
 
     my $errors = 0;
-    foreach my $disk ( @{$self->{disks}} ) {
-        my $shortDisk = $disk;
+    foreach my $dev ( @{$self->{devices}} ) {
+        my $shortDisk = $dev;
         $shortDisk =~ s!^.+/!!; # greedy
 
         my $out;
-        if( UBOS::Utils::myexec( "lsblk --json -o NAME $disk", undef, \$out )) {
+        if( UBOS::Utils::myexec( "lsblk --json -o NAME $dev", undef, \$out )) {
             ++$errors;
 
         } else {
@@ -68,7 +89,7 @@ sub _augmentDeviceTableWithPartitions {
                             $data->{devices} = [];
                         }
 
-                        push @{$data->{devices}}, "/dev/$childName"; # augment $self->{devicetable}
+                        push @{$data->{devices}}, "/dev/$childName";
                     }
                 }
             }

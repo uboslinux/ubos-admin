@@ -12,33 +12,36 @@ package UBOS::Install::Installers::Armv7hRpi2;
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
 
-use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::PartitionBlockDevices;
-use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
+use UBOS::Install::AbstractVolumeLayout;
 use UBOS::Logging;
 use UBOS::Utils;
 
+## Constructor inherited from superclass
+
 ##
-# Constructor
-sub new {
+# Check that the provided parameters are correct, and complete incomplete items from
+# default except for the disk layout.
+# return: number of errors.
+sub checkCompleteParameters {
     my $self = shift;
-    my @args = @_;
 
-    unless( ref $self ) {
-        $self = fields::new( $self );
-    }
+    # override some defaults
+
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-raspberry-pi2';
+        $self->{hostname}      = 'ubos-raspberry-pi2';
     }
-    $self->{kernelpackage} = 'linux-raspberrypi';
 
-    $self->SUPER::new( @args );
+    unless( $self->{kernelpackage} ) {
+        $self->{kernelpackage} = 'linux-raspberrypi';
+    }
 
-    push @{$self->{devicepackages}}, 'ubos-deviceclass-rpi2';
+    my $errors = $self->SUPER::checkComplete();
 
-    return $self;
+    push @{$self->{devicePackages}}, 'ubos-deviceclass-rpi2';
+
+    return $errors;
 }
+
 
 ##
 # Install the bootloader
@@ -48,7 +51,6 @@ sub new {
 sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
 
     info( 'Installing boot loader' );
 
@@ -59,7 +61,7 @@ sub installBootLoader {
         map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
     }
 
-    my $rootPartUuid = UBOS::Install::AbstractDiskLayout::determinePartUuid( $diskLayout->getRootDeviceNames() );
+    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid( $self->{diskLayout}->getRootDeviceNames() );
 
     my $cmdline = 'root=PARTUUID=' . $rootPartUuid; # 'root=/dev/mmcblk0p2';
     $cmdline .= <<CONTENT;
@@ -262,16 +264,12 @@ CONTENT
 # Returns the arch for this device.
 # return: the arch
 sub arch {
-    my $self = shift;
-
     return 'armv7h';
 }
 
 ##
 # Returns the device class
 sub deviceClass {
-    my $self = shift;
-
     return 'rpi2';
 }
 

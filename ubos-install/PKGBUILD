@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.188
+pkgver=0.189
 pkgrel=1
 pkgdesc="UBOS installation tool"
 arch=('any')
@@ -26,7 +26,7 @@ package() {
 # Code
     install -D -m755 ${startdir}/bin/ubos-install -t ${pkgdir}/usr/bin/
 
-    for d in DiskLayouts Installers; do
+    for d in Installers VolumeLayouts Volumes; do
         for f in ${startdir}/vendor_perl/UBOS/Install/${d}/*.pm; do
             install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/Install/${d}/
         done

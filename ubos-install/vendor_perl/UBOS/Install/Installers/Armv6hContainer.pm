@@ -12,37 +12,33 @@ package UBOS::Install::Installers::Armv6hContainer;
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
 
+## Constructor inherited from superclass
+
 ##
-# Constructor. Add keyring, as on arm (unlike x86), pacman does not depend on it
-sub new {
+# Check that the provided parameters are correct, and complete incomplete items from
+# default except for the disk layout.
+# return: number of errors.
+sub checkCompleteParameters {
     my $self = shift;
-    my @args = @_;
 
-    unless( ref $self ) {
-        $self = fields::new( $self );
+    my $errors = return $self->SUPER::checkComplete();
 
-    }
-    $self->SUPER::new( @args );
-
+    # Add keyring, as on arm (unlike x86), pacman does not depend on it
     push @{$self->{devicepackages}}, 'archlinuxarm-keyring';
 
-    return $self;
+    return $errors;
 }
 
 ##
 # Returns the arch for this device.
 # return: the arch
 sub arch {
-    my $self = shift;
-
     return 'armv6h';
 }
 
 ##
 # Returns the device class
 sub deviceClass {
-    my $self = shift;
-
     return 'container';
 }
 

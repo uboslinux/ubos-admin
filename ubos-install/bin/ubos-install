@@ -3,18 +3,6 @@
 # Install UBOS on one or more currently unmounted devices or disk images,
 # or in a directory.
 #
-# Examples:
-#     ubos-install /dev/sda
-#             Install on a hard drive
-#     ubos-install --hostname myserver /dev/sda /dev/sdb
-#             Install on two hard drives in raid mode. Use provided hostname
-#     ubos-install /some/file
-#             Install on an image file. File must exist.
-#     ubos-install --directory /some/directory
-#             Install in a directory, to be run in a Linux container. Directory must exist.
-#
-# Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
-#
 
 use strict;
 use warnings;
@@ -24,70 +12,105 @@ use Getopt::Long qw( :config pass_through );
 use UBOS::Logging;
 use UBOS::Utils;
 
-my $verbose             = 0;
-my $logConfigFile       = undef;
-my $debug               = undef;
-my $configFile          = undef;
-my $list                = 0;
-my $ret                 = 0;
-my $channel             = undef;
-my $hostname            = undef;
-my $archname            = undef;
-my $deviceclassname     = undef;
-my $target              = undef;
-my $repo                = undef;
-my $depotRoot           = undef;
-my %addPackages  = ();
-my %addServices  = ();
-my %addModules   = ();
-my @addKernelParameters = ();
-my %addPackageDbs       = ();
-my %removePackageDbs    = ();
-my %disablePackageDbs   = ();
-my $checkSignatures     = 'required';
-my $noswap              = 0;
-my $shepherdKeyFile     = undef;
-my $help                = 0;
+my $verbose;
+my $logConfigFile;
+my $debug;
+my $help;
+my $listDeviceClasses;
+my $deviceConfigFile;
+my $arch;
+my $deviceClass;
+my $hostname;
+my $channel;
+my $productInfoFile;
+my @additionalPackages;
+my @additionalServices;
+my @additionalKernelModules;
+my @additionalKernelParameters;
+my $installDepotRoot;
+my $runDepotRoot;
+my $installCheckSignatures;
+my $runCheckSignatures;
+my %addPackageDbs;
+my @disablePackageDbs;
+my @bootLoaderDevices;
+my @bootPartitions;
+my @rootPartitions;
+my @ubosPartitions;
+my @swapPartitions;
+my $swap;
+
 
 my $parseOk = GetOptions(
-        'verbose+'             => \$verbose,
-        'logConfig=s'          => \$logConfigFile,
-        'debug'                => \$debug,
-        'config=s'             => \$configFile,
-        'listdeviceclasses'    => \$list,
-        'channel=s'            => \$channel,
-        'hostname=s'           => \$hostname,
-        'arch=s'               => \$archname,
-        'deviceclass=s'        => \$deviceclassname,
-        'target=s'             => \$target,
-        'repository=s'         => \$repo,
-        'depotroot=s'          => \$depotRoot,
-        'addpackage=s'         => sub { _addCheck( \@_, \%addPackages ); },
-        'addservice=s'         => sub { _addCheck( \@_, \%addServices ); },
-        'addmodule=s'          => sub { _addCheck( \@_, \%addModules  ); },
-        'addkernelparameter=s' => \@addKernelParameters,
-        'addpackagedb=s'       => sub { _addCheck( \@_, \%addPackageDbs,     \%removePackageDbs, \%disablePackageDbs ); },
-        'removepackagedb=s'    => sub { _addCheck( \@_, \%removePackageDbs,  \%addPackageDbs,    \%disablePackageDbs ); },
-        'disablepackagedb=s'   => sub { _addCheck( \@_, \%disablePackageDbs, \%addPackageDbs,    \%removePackageDbs ); },
-        'checksignatures=s'    => \$checkSignatures,
-        'noswap'               => \$noswap,
-        'h|help'               => \$help );
+        'verbose+'                   => \$verbose,
+        'logConfig=s'                => \$logConfigFile,
+        'debug'                      => \$debug,
+        'h|help'                     => \$help,
+
+        'listdeviceclasses'          => \$listDeviceClasses,
+
+        'device-config=s'            => \$deviceConfigFile,
+
+        'arch=s'                     => \$arch,
+        'deviceclass=s'              => \$deviceClass,
+
+        'hostname=s'                 => \$hostname,
+        'channel=s'                  => \$channel,
+        'product-info=s'             => \$productInfoFile,
+
+        'add-package=s'              => \@additionalPackages,
+        'add-service=s'              => \@additionalServices,
+        'add-kernel-module=s'        => \@additionalKernelModules,
+        'add-kernel-parameter=s'     => \@additionalKernelParameters,
+
+        'install-depot-root=s'       => \$installDepotRoot,
+        'run-depot-root=s'           => \$runDepotRoot,
+        'install-check-signatures=s' => \$installCheckSignatures,
+        'run-check-signatures=s'     => \$runCheckSignatures,
+
+        'add-package-db=s'           => \%addPackageDbs,
+        'disable-package-db=s'       => \@disablePackageDbs,
+
+        'bootloaderdevice=s'         => \@bootLoaderDevices,
+        'bootpartition=s'            => \@bootPartitions,
+        'rootpartition=s'            => \@rootPartitions,
+        'ubospartition=s'            => \@ubosPartitions,
+        'swappartition=s'            => \@swapPartitions,
+        'swap!'                      => \$swap );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
 
-if( !$parseOk || ( $configFile && $list )) {
-    synopsisHelpQuit( 0 );
-}
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-if( $list ) {
-    listInstallersQuit();
+if( !$parseOk ) {
+    synopsisHelpQuit( 0 );
 }
 
-$checkSignatures = lc( $checkSignatures );
-if( $checkSignatures ne 'never' && $checkSignatures ne 'optional' && $checkSignatures ne 'required' ) {
+if(      $listDeviceClasses
+    && (    $deviceConfigFile
+         || $arch
+         || $deviceClass
+         || $hostname
+         || $channel
+         || $productInfoFile
+         || @additionalPackages
+         || @additionalServices
+         || @additionalKernelModules
+         || @additionalKernelParameters
+         || $installDepotRoot
+         || $runDepotRoot
+         || $installCheckSignatures
+         || $runCheckSignatures
+         || keys %addPackageDbs
+         || @disablePackageDbs
+         || $swap ))
+{
     synopsisHelpQuit( 0 );
+}
+
+if( $listDeviceClasses ) {
+    listInstallersQuit();
 }
 
 # Just invoking help doesn't trigger this check
@@ -95,186 +118,127 @@ if ( $< != 0 ) {
     fatal( "This command must be run as root" );
 }
 
-if( $target && ! -d $target ) {
-    fatal( 'Target is not a directory:', $target );
-}
-
-my $config;
-if( $configFile ) {
-    $config = UBOS::Utils::readJsonFromFile( $configFile );
-    unless( $config ) {
+my $deviceConfig;
+if( $deviceConfigFile ) {
+    $deviceConfig = UBOS::Utils::readJsonFromFile( $deviceConfigFile );
+    unless( $deviceConfig ) {
         fatal();
     }
 } else {
-    $config = {};
+    $deviceConfig = {};
 }
 
-my $arch = UBOS::Utils::arch();
-if( !$archname && exists( $config->{arch} )) {
-    $archname = $config->{arch};
-}
-if( $archname ) {
-    if( $arch ne $archname ) {
-        warning( 'Specified arch', $archname, 'is different from the system arch', $arch,
-                 '. This is unsupported and likely to fail.' );
-    }
-} else {
-    # Use current arch if not given as parameter
-    $archname = $arch;
-}
+# Merge copmmand-line arguments into $deviceConfig, overriding whatever is
+# given there. Do no checking at this time; we do this all at the same time later
 
-# Use current device class if not given as parameter
-if( !$deviceclassname && exists( $config->{deviceclass} )) {
-    $deviceclassname = $config->{deviceclass};
-}
-unless( $deviceclassname ) {
-    $deviceclassname = UBOS::Utils::deviceClass();
-}
-unless( $deviceclassname ) {
-    fatal( 'Cannot automatically determine --deviceclass. Need to specify as argument.' );
-}
-
-my $installer = findInstaller( $archname, $deviceclassname );
-unless( $installer ) {
-    fatal( 'Cannot find installer for arch', $archname, 'deviceclass', $deviceclassname );
-}
-
-if( !$target && exists( $config->{target} )) {
-    $target = $config->{target};
-}
-if( $target ) {
-    $installer->setTarget( $target );
-}
-
-if( !$hostname && exists( $config->{hostname} )) {
-    $hostname = $config->{hostname};
-}
 if( $hostname ) {
-    $installer->setHostname( $hostname );
-}
-
-if( !$channel && exists( $config->{channel} )) {
-    $channel = $config->{channel};
-}
-if( !$channel && -r '/etc/ubos/channel' ) {
-    $channel = UBOS::Utils::slurpFile( '/etc/ubos/channel' );
-    $channel =~ s!^\s+!!;
-    $channel =~ s!\s+$!!;
+    $deviceConfig->{hostname} = $hostname;
 }
 if( $channel ) {
-    $installer->setChannel( $channel );
+    $deviceConfig->{channel} = $channel;
 }
-
-if( !$repo && exists( $config->{repository} )) {
-    $repo = $config->{repository};
-}
-if( $repo ) {
-    $installer->setRepo( $repo );
-}
-
-if( !$depotRoot && exists( $config->{depotroot} )) {
-    $depotRoot = $config->{depotroot};
-}
-if( $depotRoot ) {
-    if( $depotRoot =~ m!/$! ) {
-        fatal( 'Do not give a trailing slash for depotroot:', $depotRoot );
+if( $productInfoFile ) {
+    my $productInfo = UBOS::Utils::readJsonFromFile( $productInfoFile );
+    unless( $productInfo ) {
+        fatal( $! );
     }
-    $installer->setDepotRoot( $depotRoot );
+    $deviceConfig->{productinfo} = $productInfo;
+}
+if( @additionalPackages ) {
+    $deviceConfig->{additionalpackages} = \@additionalPackages;
+}
+if( @additionalServices ) {
+    $deviceConfig->{additionalservices} = \@additionalServices;
+}
+if( @additionalKernelModules ) {
+    $deviceConfig->{additionalkernelmodules} = \@additionalKernelModules;
+}
+if( @additionalKernelParameters ) {
+    $deviceConfig->{additionalkernelparameters} = \@additionalKernelParameters;
+}
+if( $installDepotRoot ) {
+    $deviceConfig->{installdepotroot} = $installDepotRoot;
+}
+if( $runDepotRoot ) {
+    $deviceConfig->{rundepotroot} = $runDepotRoot;
+}
+if( $installCheckSignatures ) {
+    $deviceConfig->{installchecksignatures} = $installCheckSignatures;
+}
+if( $runCheckSignatures ) {
+    $deviceConfig->{runchecksignatures} = $runCheckSignatures;
+}
+if( keys %addPackageDbs ) {
+    $deviceConfig->{addpackagedbs} = \%addPackageDbs;
+}
+if( @disablePackageDbs ) {
+    $deviceConfig->{disablepackagedbs} = \@disablePackageDbs;
+}
+if( $swap ) {
+    $deviceConfig->{swap} = $swap;
+}
+if( @ARGV ) {
+    $deviceConfig->{installtargets} = \@ARGV;
 }
 
-if( exists( $config->{addpackages} )) {
-    map { $addPackages{$_} = 1; } @{$config->{addpackages}};
-} elsif( exists( $config->{addpackage} )) {
-    $addPackages{$config->{addpackage}} = 1;
-}
-if( %addPackages ) {
-    $installer->addPackages( keys %addPackages );
-}
+# Defaults for $arch and $deviceClass are determined here so we can
+# find the right Installer. All other defaults are determined by
+# the Installer itself.
 
-if( exists( $config->{addservices} )) {
-    map { $addServices{$_} = 1; } @{$config->{addservices}};
-} elsif( exists( $config->{addservice} )) {
-    $addServices{$config->{addservice}} = 1;
+my $tmp;
+unless( $arch ) {
+    $arch = UBOS::Utils::arch();
 }
-if( %addServices ) {
-    $installer->addServices( keys %addServices );
+$tmp = UBOS::Utils::isValidArch( $arch );
+unless( $tmp ) {
+    fatal( 'Invalid arch:', $arch );
 }
+$arch = $tmp;
 
-if( exists( $config->{addmodules} )) {
-    map { $addModules{$_} = 1; } @{$config->{addmodules}};
-} elsif( exists( $config->{addmodule} )) {
-    $addModules{$config->{addmodule}} = 1;
+unless( $deviceClass ) {
+    $deviceClass = UBOS::Utils::deviceClass();
 }
-if( %addModules ) {
-    $installer->addModules( keys %addModules );
+$tmp = UBOS::Utils::isValidDeviceClass( $deviceClass );
+unless( $tmp ) {
+    fatal( 'Invalid device class:', $deviceClass );
 }
+$deviceClass = $tmp;
 
-if( exists( $config->{addkernelparameters} )) {
-    @addKernelParameters = ( @{$config->{addkernelparameters}}, @addKernelParameters );
-} elsif( exists( $config->{addkernelparameter} )) {
-    push @addKernelParameters, $config->{addkernelparameter};
-}
-if( @addKernelParameters ) {
-    $installer->addKernelParameters( @addKernelParameters );
-}
+# Find installer, configure it with the deviceConfig and complete/validate
 
-if( exists( $config->{addpackagedbs} )) {
-    map { $addPackageDbs{$_} = 1; } @{$config->{addpackagedbs}};
-} elsif( exists( $config->{addpackagedb} )) {
-    $addPackageDbs{$config->{addpackagedb}} = 1;
-}
-if( %addPackageDbs ) {
-    $installer->addPackageDbs( keys %addPackageDbs );
-}
-
-if( exists( $config->{removepackagedbs} )) {
-    map { $removePackageDbs{$_} = 1; } @{$config->{removepackagedbs}};
-} elsif( exists( $config->{removepackage} )) {
-    $removePackageDbs{$config->{removepackage}} = 1;
-}
-if( %removePackageDbs ) {
-    $installer->removePackageDbs( \%removePackageDbs );
-}
-
-if( exists( $config->{disablepackagedbs} )) {
-    map { $disablePackageDbs{$_} = 1; } @{$config->{disablepackagedbs}};
-} elsif( exists( $config->{disablepackagedbs} )) {
-    $disablePackageDbs{$config->{disablepackagedbs}} = 1;
-}
-if( %disablePackageDbs ) {
-    $installer->disablePackageDbs( \%disablePackageDbs );
-}
-
-if( !defined( $checkSignatures ) && exists( $config->{checksignatures} )) {
-    $checkSignatures = $config->{checksignatures};
-}
-$installer->setCheckSignatures( $checkSignatures );
-
-if( !defined( $noswap ) && exists( $config->{noswap} )) {
-    $noswap = $config->{noswap}
-}
-
-if( exists( $config->{product} )) {
-    $installer->setProductInfo( $config->{product} );
+my $installer = findInstaller( $arch, $deviceClass );
+unless( $installer ) {
+    fatal( 'Cannot find installer for arch', $arch, 'deviceclass', $deviceClass );
 }
 
 trace( 'Using installer', ref( $installer ));
 
-my $diskLayout = $installer->createDiskLayout( $noswap, \@ARGV, $config );
-if( $diskLayout ) {
-    trace( 'Checking the network' );
-    # If we do this here, we can play with disk layout arguments without the network
-    unless( UBOS::Utils::isOnline() ) {
-        fatal( 'Cannot reach the UBOS software depot; leaving disk unchanged' );
-    }
-
-    my $errors = $installer->install( $diskLayout );
-    if( $errors ) {
-        info( 'There were', $errors, 'errors.' );
-        $ret = 1;
-    }
+my $errors = $installer->setDeviceConfig( $deviceConfig );
+if( $errors ) {
+    goto END;
 }
-exit( $ret );
+$errors = $installer->checkComplete();
+if( $errors ) {
+    goto END;
+}
+
+# Do the installation
+
+trace( 'Checking the network' );
+unless( UBOS::Utils::isOnline() ) {
+    fatal( 'Cannot reach the UBOS software depot; leaving system and disks unchanged' );
+}
+
+$errors = $installer->install();
+
+# Done
+
+END:
+if( $errors ) {
+    info( 'There were', $errors, 'errors.' );
+    exit( 1 );
+}
+exit( 0 );
 
 
 ##
@@ -347,33 +311,6 @@ sub _max {
     } else {
         return $b;
     }
-}
-
-##
-# Add a command-line argument to a hash set. If exists already, emit error.
-# Optionally, emit error if the same argument is already is one of several
-# other hash sets.
-# $nameValue: array[2] consisting of $name and $value.
-# $addHere: hash set of the values for this parameter
-# @notHere: array of hash set that cannot contain the value
-sub _addCheck {
-    my $nameValue = shift;
-    my $addHere   = shift;
-    my @notHere   = @_;
-
-    my( $name, $value ) = @$nameValue;
-
-    if( exists( $addHere->{$value} )) {
-        fatal( 'Value of parameter', $name, 'set more than once:', $value );
-    }
-    foreach my $not ( @notHere ) {
-        if( exists( $not->{$value} )) {
-            fatal( 'Value of parameter', $name, 'cannot be both added and removed:', $value );
-        }
-    }
-    $addHere->{$value} = 1;
-
-    1;
 }
 
 #####

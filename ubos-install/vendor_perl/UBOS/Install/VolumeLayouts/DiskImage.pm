@@ -1,5 +1,5 @@
 #
-# Abstract superclass for disk images.
+# A disk image volume layout. Contains at least one partition.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -7,31 +7,23 @@
 use strict;
 use warnings;
 
-package UBOS::Install::AbstractDiskImage;
+package UBOS::Install::VolumeLayouts::DiskImage;
 
-use base qw( UBOS::Install::AbstractDiskLayout );
-use fields qw( image loopDevice );
+use base qw( UBOS::Install::AbstractVolumeLayout );
+use fields qw( loopDevice );
 
-use UBOS::Install::AbstractDiskLayout;
+use UBOS::Install::AbstractVolumeLayout;
+use UBOS::Utils;
 use UBOS::Logging;
 
+## Inherited constructor
+
 ##
-# Constructor
-# $image: the disk image file to be partitioned
-# $devicetable: device data
-sub new {
-    my $self        = shift;
-    my $image       = shift;
-    my $devicetable = shift;
+# Format the configured disks.
+sub createDisks {
+    my $self = shift;
 
-    unless( ref( $self )) {
-        $self = fields::new( $self );
-    }
-    $self->SUPER::new( $devicetable );
-
-    $self->{image} = $image;
-
-    return $self;
+    error( 'FIXME createDisks' );
 }
 
 ##
@@ -45,7 +37,7 @@ sub createLoopDevices {
     my $errors = 0;
 
     my $out;
-    if( UBOS::Utils::myexec( "losetup --show --find --partscan '" . $self->{image} . "'", undef, \$out, \$out )) {
+    if( UBOS::Utils::myexec( "losetup --show --find --partscan '" . $self->{volumes}->[0] . "'", undef, \$out, \$out )) {
         error( "losetup -a error:", $out );
         ++$errors;
     }
@@ -85,11 +77,14 @@ sub deleteLoopDevices {
 }
 
 ##
-# Determine the boot loader device for this DiskLayout
+# Determine the boot loader device for this VolumeLayout
 sub determineBootLoaderDevice {
     my $self = shift;
 
-    return $self->{image};
+    return $self->{volumes}->[0];
 }
 
 1;
+
+
+

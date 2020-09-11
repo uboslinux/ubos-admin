@@ -10,26 +10,47 @@ use warnings;
 
 package UBOS::Install::AbstractInstaller;
 
-use fields qw( hostname
-               target tempTarget
-               repo
-               depotRoot
-               channel
-               kernelpackage
-               basepackages devicepackages additionalpackages
-               baseservices deviceservices additionalservices
-               basemodules  devicemodules  additionalmodules
-               additionalkernelparameters
-               checksignatures
-               partitioningscheme
-               packagedbs disablepackagedbs addpackagedbs removepackagedbs
-               productInfo );
-# basepackages: always installed, regardless
-# devicepackages: packages installed for this device class, but not necessarily all others
-# additionalpackages: packages installed because added on the command-line
-# *services: same for systemd services
-# *modules: same for kernel modules
-# partitioningscheme: { 'mbr', 'gpt' }
+use fields qw(
+        hostname channel
+        kernelPackage
+        productInfo
+        swap
+
+        basePackages         devicePackages         additionalPackages
+        baseServices         deviceServices         additionalServices
+        baseKernelModules    deviceKernelModules    additionalKernelModules
+        baseKernelParameters deviceKernelParameters additionalKernelParameters
+
+        installDepotRoot         runDepotRoot
+        installCheckSignatures   runCheckSignatures
+        installPackageDbs        runPackageDbs
+        installDisablePackageDbs runDisablePackageDbs
+        installAddPackageDbs     runAddPackageDbs
+        installRemovePackageDbs  runRemovePackageDbs
+
+        bootloaderDevices
+        bootPartitions
+        rootPartitions
+        ubosPartitions
+        swapPartitions
+        installTargets
+
+        target
+        tempMount
+        volumeLayout
+);
+
+# installXXX: settings for installation time (e.g. which software depot to use)
+# runXXX      settings for run-time when the installed devices is operated
+
+# baseXXX:       always installed/activated, regardless of device class
+# deviceXXX:     installed/activated for this device class, but not nothers
+# additionalXXX: packages installed/activated because of extra options
+
+# tempMount: where the being-installed system is mounted temporarily if it is
+#            (most VolumeLayouts but not Directory)
+# target:    the location of the being-installed system
+#            (all VolumeLayouts)
 
 use Cwd;
 use File::Spec;
@@ -46,284 +67,437 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    # set some defaults
-    unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-' . $self->arch() . '-' . $self->deviceClass();
-    }
-    unless( $self->{channel} ) {
-        $self->{channel} = 'yellow'; # FIXME once we have 'green';
-    }
-    unless( $self->{depotRoot} ) {
-        $self->{depotRoot} = 'http://depot.ubos.net';
-    }
-    unless( $self->{basepackages} ) {
-        $self->{basepackages} = [ qw( ubos-base ) ];
-    }
-    unless( $self->{baseservices} ) {
-        $self->{baseservices} = [ qw( ubos-admin.service ubos-ready.service sshd.service snapper-timeline.timer snapper-cleanup.timer ) ];
-    }
-    unless( $self->{basemodules} ) {
-        $self->{basemodules} = [];
-    }
-    unless( $self->{packagedbs} ) {
-        $self->{packagedbs} = {
-            'os'      => '$depotRoot/$channel/$arch/os',
-            'hl'      => '$depotRoot/$channel/$arch/hl',
-            'tools'   => '$depotRoot/$channel/$arch/tools',
-            'toyapps' => '$depotRoot/$channel/$arch/toyapps',
-
-            'os-experimental'    => '$depotRoot/$channel/$arch/os-experimental',
-            'hl-experimental'    => '$depotRoot/$channel/$arch/hl-experimental',
-            'tools-experimental' => '$depotRoot/$channel/$arch/tools-experimental'
-        };
-    }
-    unless( $self->{addpackagedbs} ) {
-        $self->{addpackagedbs} = {};
-    }
-    unless( $self->{removepackagedbs} ) {
-        $self->{removepackagedbs} = {};
-    }
-    unless( $self->{disablepackagedbs} ) {
-        $self->{disablepackagedbs} = {
-            'toyapps' => 1,
-
-            'os-experimental'    => 1,
-            'hl-experimental'    => 1,
-            'tools-experimental' => 1
-        };
-    }
-    unless( $self->{partitioningscheme} ) {
-        $self->{partitioningscheme} = 'mbr'; # default
-    }
-
-    push @{$self->{additionalkernelparameters}}, 'init=/usr/lib/systemd/systemd';
-    # We are not installing systemd-sysvcompat any more
+    # init happens in checkComplete()
 
     return $self;
 }
 
 ##
-# Create a DiskLayout object that goes with this Installer.
-# $noswap: if true, do not create a swap partition
-# $argvp: remaining command-line arguments
-# $config: the config JSON if a JSON file was given on the command-line
-# return: the DiskLayout object
-sub createDiskLayout {
-    my $self   = shift;
-    my $noswap = shift;
-    my $argvp  = shift;
-    my $config = shift;
-
-    fatal( 'Must override:', ref( $self ));
-}
-
-##
-# Set a different hostname
-# $hostname: the new hostname
-sub setHostname {
-    my $self     = shift;
-    my $hostname = shift;
-
-    $self->{hostname} = $hostname;
-}
-
-##
-# Set the target filesystem's mount point
-# $target: the mount point, e.g. /mnt
-sub setTarget {
-    my $self   = shift;
-    my $target = shift;
-
-    $self->{target} = $target;
-}
-
-##
-# Set the directory which contains the package databases
-# $repo: the directory, so that $repo/<arch>/os/os.db exists
-sub setRepo {
+# Obtain the target directory in which the installation takes place
+# return: target directory
+sub getTarget {
     my $self = shift;
-    my $repo = shift;
 
-    $self->{repo} = $repo;
+    return $self->{target};
 }
 
 ##
-# Set the channel
-# $channel: the channel
-sub setChannel {
-    my $self    = shift;
-    my $channel = shift;
+# Set the DeviceConfiguration from the provided hash.
+# return: number of errors
+sub setDeviceConfig {
+    my $self         = shift;
+    my $deviceConfig = shift;
 
-    $self->{channel} = $channel;
+    my $errors = 0;
+
+    trace( 'AbstractInstaller::setDeviceConfig' );
+
+    if( exists( $deviceConfig->{hostname} )) {
+        $self->{hostname} = $deviceConfig->{hostname};
+    }
+    if( exists( $deviceConfig->{channel} )) {
+        $self->{channel} = $deviceConfig->{channel};
+    }
+    if( exists( $deviceConfig->{productinfo} )) {
+        $self->{productInfo} = $deviceConfig->{productinfo};
+    }
+    if( exists( $deviceConfig->{swap} )) {
+        $self->{swap} = $deviceConfig->{swap};
+    }
+    if( exists( $deviceConfig->{additionalpackages} )) {
+        $self->{additionalPackages} = $deviceConfig->{additionalpackages};
+    }
+    if( exists( $deviceConfig->{additionalservices} )) {
+        $self->{additionalServices} = $deviceConfig->{additionalservices};
+    }
+    if( exists( $deviceConfig->{additionalkernelmodules} )) {
+        $self->{additionalKernelModules} = $deviceConfig->{additionalkernelmodules};
+    }
+    if( exists( $deviceConfig->{additionalkernelparameters} )) {
+        $self->{additionalKernelParameters} = $deviceConfig->{additionalkernelparameters};
+    }
+    if( exists( $deviceConfig->{installdepotroot} )) {
+        $self->{installDepotRoot} = $deviceConfig->{installdepotroot};
+    }
+    if( exists( $deviceConfig->{rundepotroot} )) {
+        $self->{runDepotRoot} = $deviceConfig->{rundepotroot};
+    }
+    if( exists( $deviceConfig->{installchecksignatures} )) {
+        $self->{installCheckSignatures} = $deviceConfig->{installchecksignatures};
+    }
+    if( exists( $deviceConfig->{runchecksignatures} )) {
+        $self->{runCheckSignatures} = $deviceConfig->{runchecksignatures};
+    }
+    if( exists( $deviceConfig->{addpackagedbs} )) {
+        $self->{addPackageDbs} = $deviceConfig->{addpackagedbs};
+    }
+    if( exists( $deviceConfig->{disablepackagedbs} )) {
+        $self->{disablePackageDbs} = $deviceConfig->{disablepackagedbs};
+    }
+    if( exists( $deviceConfig->{swap} )) {
+        $self->{swap} = $deviceConfig->{swap};
+    }
+    if( exists( $deviceConfig->{bootloaderdevices} )) {
+        $self->{bootloaderDevices} = $deviceConfig->{bootloaderdevices};
+    }
+    if( exists( $deviceConfig->{bootpartitions} )) {
+        $self->{bootPartitions} = $deviceConfig->{bootpartitions};
+    }
+    if( exists( $deviceConfig->{rootpartitions} )) {
+        $self->{rootPartitions} = $deviceConfig->{rootpartitions};
+    }
+    if( exists( $deviceConfig->{ubospartitions} )) {
+        $self->{ubosPartitions} = $deviceConfig->{ubospartitions};
+    }
+    if( exists( $deviceConfig->{swappartitions} )) {
+        $self->{swapPartitions} = $deviceConfig->{swappartitions};
+    }
+    if( exists( $deviceConfig->{installtargets} )) {
+        $self->{installTargets} = $deviceConfig->{installtargets};
+    }
+
+    return $errors;
 }
 
 ##
-# Set the depot root URL
-# $depotRoot: the depot root URL
-sub setDepotRoot {
-    my $self      = shift;
-    my $depotRoot = shift;
-
-    $self->{depotRoot} = $depotRoot;
-}
-
-##
-# Add packages that are to be installed in addition
-# @packages: array of package names
-sub addPackages {
-    my $self     = shift;
-    my @packages = @_;
-
-    push @{$self->{additionalpackages}}, @packages;
-}
-
-##
-# Add services that are to be enabled in addition
-# @services: array of service names
-sub addServices {
-    my $self     = shift;
-    my @services = @_;
-
-    push @{$self->{additionalservices}}, @services;
-}
-
-##
-# Add kernel modules that are to be loaded in addition
-# @modules: array of kernel module names
-sub addModules {
-    my $self    = shift;
-    my @modules = @_;
-
-    push @{$self->{additionalmodules}}, @modules;
-}
-
-##
-# Add kernel parameters for the kernel boot
-# @modules: array of parameter strings
-sub addKernelParameters {
+# Check that provided information is correct, and complete incomplete items
+# from defaults.
+# return: number of errors.
+sub checkComplete {
     my $self = shift;
-    my @pars = @_;
 
-    push @{$self->{additionalkernelparameters}}, @pars;
+    my $errors = $self->checkCompleteParameters();
+
+    $errors += $self->checkCreateVolumeLayout();
+
+    return $errors;
 }
 
 ##
-# Add non-standard package dbs
-# @packageDbs: array of key=value pairs
-sub addPackageDbs {
-    my $self       = shift;
-    my @packageDbs = shift;
+# Check that the provided parameters are correct, and complete incomplete items from
+# default except for the disk layout.
+# return: number of errors.
+sub checkCompleteParameters {
+    my $self = shift;
 
-    $self->{addpackagedbs} = {};
-    foreach my $packageDb ( @packageDbs ) {
-        if( $packageDb =~ m!^(\S+)=(\w+://\S+$)! ) {
-            $self->{addpackagedbs}->{$1} = $2;
-        } else {
-            fatal( 'Not a valid package db, must be of form name=url :', $packageDb );
+    my $errors = 0;
+
+    unless( $self->{hostname} ) {
+        $self->{hostname} = 'ubos-' . $self->arch() . '-' . $self->deviceClass();
+    }
+    $self->{hostname} = UBOS::Utils::isValidHostname( $self->{hostname} );
+    unless( $self->{hostname} ) {
+        error( $@ );
+        ++$errors;
+    }
+
+    unless( $self->{channel} ) {
+        $self->{channel} = 'green';
+    }
+    $self->{channel} = UBOS::Utils::isValidChannel( $self->{channel} );
+    unless( $self->{channel} ) {
+        error( $@ );
+        ++$errors;
+    }
+
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux';
+    }
+
+    if( $self->{productInfo} ) {
+        foreach my $entry ( qw( name vendor sky )) {
+            if( exists( $self->{productInfo}->{$entry} )) {
+                if( ref( $self->{productInfo}->{$entry} )) {
+                    error( 'Product info entry', $entry, 'must be a string' );
+                }
+            }
         }
     }
+
+    unless( $self->{basePackages} ) {
+        $self->{basePackages} = [
+            qw( ubos-base )
+        ];
+    }
+
+    unless( $self->{devicePackages} ) {
+        $self->{devicePackages} = [];
+    }
+
+    unless( $self->{additionalPackages} ) {
+        $self->{additionalPackages} = [];
+    }
+
+    unless( $self->{baseServices} ) {
+        $self->{baseServices} = [
+             qw( ubos-admin.service ubos-ready.service sshd.service snapper-timeline.timer snapper-cleanup.timer )
+        ];
+    }
+
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [];
+    }
+
+    unless( $self->{additionalServices} ) {
+        $self->{additionalServices} = [];
+    }
+
+    unless( $self->{baseKernelModules} ) {
+        $self->{baseKernelModules} = [];
+    }
+
+    unless( $self->{deviceKernelModules} ) {
+        $self->{deviceKernelModules} = [];
+    }
+
+    unless( $self->{additionalKernelModules} ) {
+        $self->{additionalKernelModules} = [];
+    }
+
+    unless( $self->{baseKernelParameters} ) {
+        $self->{baseKernelParameters} = [
+            'init=/usr/lib/systemd/systemd'
+        ];
+    }
+
+    unless( $self->{deviceKernelParameters} ) {
+        $self->{deviceKernelParameters} = [];
+    }
+
+    unless( $self->{additionalKernelParameters} ) {
+        $self->{additionalKernelParameters} = [];
+    }
+
+    unless( $self->{installDepotRoot} ) {
+        $self->{installDepotRoot} = 'http://depot.ubos.net';
+    }
+    if( $self->{installDepotRoot} !~ m!^(http|https|ftp)://! && ! -d $self->{installDepotRoot} ) {
+        error( 'Install depot root must be a URL or a directory:', $self->{installDepotRoot} );
+        ++$errors;
+    }
+
+    unless( $self->{runDepotRoot} ) {
+        $self->{runDepotRoot} = $self->{installDepotRoot};
+    }
+    if( $self->{runDepotRoot} !~ m!^(http|https|ftp)://! ) {
+        error( 'Run depot root must be a URL:', $self->{runDepotRoot} );
+        ++$errors;
+    }
+
+    # Would be nice to check that repos exist, but that's hard if
+    # they are remote
+
+    unless( $self->{installCheckSignatures} ) {
+        $self->{installCheckSignatures} = 'always';
+    }
+    if( $self->{installCheckSignatures} !~ m!^(never|optional|always)$! ) {
+        error( 'Install check signatures must be one of never, optional, always:', $self->{installCheckSignatures} );
+        ++$errors;
+    }
+
+    unless( $self->{runCheckSignatures} ) {
+        $self->{runCheckSignatures} = $self->{installCheckSignatures};
+    }
+    if( $self->{runCheckSignatures} !~ m!^(never|optional|always)$! ) {
+        error( 'Run check signatures must be one of never, optional, always:', $self->{runCheckSignatures} );
+        ++$errors;
+    }
+
+    unless( $self->{runCheckSignatures} ) {
+        $self->{installPackageDbs} = {
+                'os'      => '$depotRoot/$channel/$arch/os',
+                'hl'      => '$depotRoot/$channel/$arch/hl',
+                'tools'   => '$depotRoot/$channel/$arch/tools',
+                'toyapps' => '$depotRoot/$channel/$arch/toyapps',
+
+                'os-experimental'    => '$depotRoot/$channel/$arch/os-experimental',
+                'hl-experimental'    => '$depotRoot/$channel/$arch/hl-experimental',
+                'tools-experimental' => '$depotRoot/$channel/$arch/tools-experimental'
+        }; # These constants get replaced later
+    }
+
+    unless( $self->{runPackageDbs} ) {
+        $self->{runPackageDbs} = $self->{installPackageDbs};
+    }
+
+    unless( $self->{installDisablePackageDbs} ) {
+        $self->{installDisablePackageDbs} = {
+                'toyapps' => 1,
+
+                'os-experimental'    => 1,
+                'hl-experimental'    => 1,
+                'tools-experimental' => 1
+        };
+    }
+
+    unless( $self->{runDisablePackageDbs} ) {
+        $self->{runDisablePackageDbs} = $self->{installDisablePackageDbs};
+    }
+
+    unless( $self->{installAddPackageDbs} ) {
+        $self->{installAddPackageDbs} = {};
+    }
+
+    unless( $self->{runAddPackageDbs} ) {
+        $self->{runAddPackageDbs} = $self->{installAddPackageDbs};
+    }
+
+    unless( $self->{installRemovePackageDbs} ) {
+        $self->{installRemovePackageDbs} = {};
+    }
+
+    unless( $self->{runRemovePackageDbs} ) {
+        $self->{runRemovePackageDbs} = $self->{installRemovePackageDbs};
+    }
+
+    unless( $self->{bootloaderDevices} ) {
+        $self->{bootloaderDevices} = [];
+    }
+
+    unless( $self->{bootPartitions} ) {
+        $self->{bootPartitions} = [];
+    }
+
+    unless( $self->{rootPartitions} ) {
+        $self->{rootPartitions} = [];
+    }
+
+    unless( $self->{ubosPartitions} ) {
+        $self->{ubosPartitions} = [];
+    }
+
+    unless( $self->{swapPartitions} ) {
+        $self->{swapPartitions} = [];
+    }
+
+    unless( $self->{installTargets} ) {
+        $self->{installTargets} = [];
+    }
+
+    return $errors;
 }
 
 ##
-# Remove standard package dbs
-# $packageDbs: hash of names to 1
-sub removePackageDbs {
-    my $self       = shift;
-    my $packageDbs = shift;
+# Check the VolumeLayout parameters, and create a VolumeLayout member.
+# return: number of errors
+sub checkCreateVolumeLayout {
+    my $self = shift;
 
-    $self->{removepackagedbs} = $packageDbs;
-}
+    error( 'checkCreateVolumeLayout Must be overridden' );
 
-## Disable standard package dbs
-# $packageDbs: hash of names to 1
-sub disablePackageDbs {
-    my $self       = shift;
-    my $packageDbs = shift;
-
-    $self->{disablepackagedbs} = $packageDbs;
-}
-
-##
-# Set whether package signatures should be checked. This applies to install
-# time and to run-time.
-# $check: never, optional or required
-sub setCheckSignatures {
-    my $self  = shift;
-    my $check = shift;
-
-    $self->{checksignatures} = $check;
-}
-
-##
-# Set product info, as a hash.
-# $productInfo: hash containing product info
-sub setProductInfo {
-    my $self        = shift;
-    my $productInfo = shift;
-
-    $self->{productInfo} = $productInfo;
+    return 1;
 }
 
 ##
 # Install UBOS
 # $diskLayout: the disk layout to use
 sub install {
-    my $self       = shift;
-    my $diskLayout = shift;
+    my $self = shift;
 
     info( 'Installing UBOS with hostname', $self->{hostname} );
 
     unless( $self->{target} ) {
         my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
-        $self->{tempTarget} = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
-        $self->{target}     = $self->{tempTarget}->dirname;
+        $self->{tempMount} = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
+        $self->{target}    = $self->{tempMount}->dirname;
     }
 
-    $self->check( $diskLayout ); # will exit if not valid
-
-    my $pacmanConfigInstall = $self->generatePacmanConfigTarget(
-            $self->{packagedbs},
-            $self->{addpackagedbs},
-            $self->{removepackagedbs},
-            $self->{disablepackagedbs} );
     my $errors = 0;
 
-    $errors += $diskLayout->createDisks();
-    if( $errors ) {
-        return $errors;
+    my $pacmanConfigInstallContent = $self->generateInstallPacmanConfig();
+
+    my $pacmanConfigInstall = File::Temp->new( UNLINK => 1 );
+    if( $pacmanConfigInstall ) {
+        print $pacmanConfigInstall $pacmanConfigInstall;
+        close $pacmanConfigInstall;
+
+    } else {
+        error( 'Failed to create temporary pacman config file' );
+        ++$errors;
     }
-    $errors += $diskLayout->createLoopDevices();
     if( $errors ) {
-        return $errors;
+        goto DONE;
     }
-    $errors += $diskLayout->formatDisks();
+
+    $errors += $self->{diskLayout}->createDisks();
     if( $errors ) {
-        return $errors;
+        goto DONE;
     }
-    $errors += $diskLayout->mountDisks( $self->{target} );
+    $errors += $self->{diskLayout}->createLoopDevices();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->{diskLayout}->formatDisks();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->{diskLayout}->mountDisks( $self );
+    if( $errors ) {
+        goto DONE;
+    }
     $errors += $self->mountSpecial();
-    $errors += $diskLayout->createSubvols( $self->{target} );
-    $errors += $self->installPackages( $pacmanConfigInstall->filename );
-    unless( $errors ) {
-        $errors += $self->savePacmanConfigProduction(
-                $self->{packagedbs},
-                $self->{addpackagedbs},
-                $self->{removepackagedbs},
-                $self->{disablepackagedbs} );
-        $errors += $self->saveHostname();
-        $errors += $self->saveChannel();
-        $errors += $diskLayout->saveFstab( $self->{target} );
-        $errors += $self->saveModules();
-        $errors += $self->saveSecuretty();
-        $errors += $self->saveOther();
-        $errors += $self->configureOs();
-        $errors += $self->configureNetworkd();
-        $errors += $self->doUpstreamFixes();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->{diskLayout}->createSubvols( $self );
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->installPackages( $pacmanConfigInstallContent );
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->saveRunPacmanConfig();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->saveHostname();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->saveChannel();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->{diskLayout}->saveFstab( $self );
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->saveModules();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->saveSecuretty();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->saveOther();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->configureOs();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->configureNetworkd();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->doUpstreamFixes();
+    if( $errors ) {
+        goto DONE;
+    }
 
-        $errors += $self->installRamdisk( $diskLayout );
-        $errors += $self->installBootLoader( $pacmanConfigInstall->filename, $diskLayout );
+    $errors += $self->installRamdisk();
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->installBootLoader( $pacmanConfigInstall );
+    if( $errors ) {
+        goto DONE;
+    }
 
-        my $chrootScript = <<'SCRIPT';
+    my $chrootScript = <<'SCRIPT';
 #!/bin/bash
 # Script to be run in chroot
 set -e
@@ -340,72 +514,50 @@ systemctl set-default multi-user.target
 echo 'root:ubos!4vr' | chpasswd
 
 SCRIPT
-        $errors += $self->addGenerateLocaleToScript( \$chrootScript );
-        $errors += $self->addEnableServicesToScript( \$chrootScript );
-        $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
-        $errors += $self->addConfigureSnapperToScript( \$chrootScript, $diskLayout );
-
-        trace( "chroot script:\n" . $chrootScript );
-        my $out;
-        my $err;
-        if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
-            error( "chroot script failed", $err );
-            ++$errors;
-            debugAndSuspend( 'Check what went wrong?' );
-        }
-
-        $errors += $self->cleanup();
+    $errors += $self->addGenerateLocaleToScript( \$chrootScript );
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->addEnableServicesToScript( \$chrootScript );
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
+    if( $errors ) {
+        goto DONE;
+    }
+    $errors += $self->addConfigureSnapperToScript( \$chrootScript );
+    if( $errors ) {
+        goto DONE;
     }
 
+    trace( "chroot script:\n" . $chrootScript );
+
+    my $out;
+    my $err;
+    if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
+        error( "chroot script failed", $err );
+        ++$errors;
+        debugAndSuspend( 'Check what went wrong?' );
+        if( $errors ) {
+            goto DONE;
+        }
+    }
+
+    $errors += $self->cleanup();
+    if( $errors ) {
+        goto DONE;
+    }
+
+    DONE:
+
+    # No GOTO from here, we are trying to clean up
     $errors += $self->umountSpecial();
-    $errors += $diskLayout->umountDisks( $self->{target} );
+    $errors += $self->{diskLayout}->umountDisks( $self );
 
-    $errors += $diskLayout->deleteLoopDevices();
-
-    unlink( $pacmanConfigInstall->filename );
+    $errors += $self->{diskLayout}->deleteLoopDevices();
 
     return $errors;
-}
-
-##
-# Check that provided parameters are correct. Exit if not.
-sub check {
-    my $self       = shift;
-    my $diskLayout = shift;
-
-    unless( $self->{hostname} ) {
-        fatal( 'Hostname must not be empty' );
-    }
-
-    unless( $self->{target} ) {
-        fatal( 'No target given' );
-    }
-    if( $self->{target} =~ m!/$! ) {
-        fatal( 'Target must not have a trailing slash:', $self->{target} );
-    }
-    unless( -d $self->{target} ) {
-        fatal( 'Target is not a directory:', $self->{target} );
-    }
-
-    $self->{channel} = UBOS::Utils::isValidChannel( $self->{channel} );
-    unless( $self->{channel} ) {
-        fatal( 'No valid channel given' );
-    }
-
-    if( $self->{repo} ) {
-        # if not given, use default depot.ubos.net
-        unless( -d $self->{repo} ) {
-            fatal( 'Repo must be an existing directory, is not:', $self->{repo} );
-        }
-        my $archRepo = $self->{repo} . '/' . $self->{channel} . '/' . $self->arch;
-        my $osDb     = $archRepo . '/os/os.db';
-        unless( -l $osDb ) {
-            fatal( 'Not a valid repo, cannot find:', $osDb );
-        }
-    }
-
-    # Would be nice to check that packages actually exist, but that's hard if
-    # they are remote
 }
 
 ##
@@ -464,34 +616,21 @@ END
 }
 
 ##
-# Generate pacman config file for installation into target
+# Generate the content of the install-time pacman config file
 # $dbs: array of package database names
 # return: File object of the generated temp file
-sub generatePacmanConfigTarget {
-    my $self       = shift;
-    my $dbs        = shift;
-    my $addDbs     = shift;
-    my $removeDbs  = shift;
-    my $disableDbs = shift;
+sub generateInstallPacmanConfig {
+    my $self = shift;
 
-    trace( "Executing generatePacmanConfigTarget" );
+    trace( "Executing generateInstallPacmanConfig" );
 
-    my $repo    = $self->{repo};
-    my $channel = $self->{channel};
-    my $arch    = $self->arch;
-    my $depotRoot;
-    if( $repo ) {
-        $depotRoot = "file://$repo";
-    } else {
-        $depotRoot = 'http://depot.ubos.net'; # No trailing slash
-    }
+    my $repo        = $self->{repo};
+    my $channel     = $self->{channel};
+    my $arch        = $self->arch;
+    my $depotRoot   = $self->{installDepotRoot};
+    my $levelString = $self->getPacmanSigLevelString();
 
-    my $levelString = $self->getSigLevelString();
-
-    # Generate pacman config file for creating the image
-    my $tmpDir = UBOS::Host::vars->get( 'host.tmp', '/tmp' );
-    my $file = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
-    print $file <<END;
+    my $ret  = <<END;
 #
 # Pacman config file for installing packages
 #
@@ -504,9 +643,9 @@ LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
 END
 
-    my %bothDbs = ( %$dbs, %$addDbs );
+    my %bothDbs = ( %{ $self->{installPackageDbs} }, %{ $self->{installAddPackageDbs} } );
     foreach my $dbKey ( sort keys %bothDbs ) {
-        if( exists( $removeDbs->{$dbKey} )) {
+        if( exists( $self->{installRemovePackageDbs}->{$dbKey} )) {
             next;
         }
 
@@ -515,25 +654,24 @@ END
         $dbValue =~ s!\$channel!$channel!g;
 
         my $prefix = '';
-        if( $disableDbs->{$dbKey} ) {
+        if( $self->{installDisablePackageDbs}->{$dbKey} ) {
             $prefix = '# ';
         }
         my $dbFile  = $prefix . "[$dbKey]\n";
         $dbFile    .= $prefix . "Server = $dbValue\n";
 
-        print $file $dbFile;
+        $ret += $dbFile;
     }
-    close $file;
-    return $file;
+    return $ret;
 }
 
 ##
 # Install the packages that need to be installed
-# $pacmanConfigFile: pacman config file to use
+# $installPacmanConfig: content of the pacman config file to use
 #
 sub installPackages {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
+    my $self                = shift;
+    my $installPacmanConfig = shift;
 
     info( "Installing packages" );
 
@@ -541,36 +679,38 @@ sub installPackages {
     my $errors = 0;
 
     my @allPackages = ();
-    if( $self->{kernelpackage} ) {
-        push @allPackages, $self->{kernelpackage};
+    if( $self->{kernelPackage} ) {
+        push @allPackages, $self->{kernelPackage};
     }
-    push @allPackages, @{$self->{basepackages}};
-    if( defined( $self->{devicepackages} )) {
-        push @allPackages, @{$self->{devicepackages}};
+    push @allPackages, @{$self->{basePackages}};
+    if( defined( $self->{devicePackages} )) {
+        push @allPackages, @{$self->{devicePackages}};
     }
-    if( defined( $self->{additionalpackages} )) {
-        push @allPackages, @{$self->{additionalpackages}};
+    if( defined( $self->{additionalPackages} )) {
+        push @allPackages, @{$self->{additionalPackages}};
     }
 
-# This isn't working yet (upstream), so we need to deal with the
-# deprecation warning
     # pacman now chroot's into $target, so we need to temporarily
     # copy the config file into $target/tmp
 
-#    my $tmpConfigFile = File::Temp->new( DIR => "$target/tmp", UNLINK => 1 );
-#    print $tmpConfigFile UBOS::Utils::slurpFile( $pacmanConfigFile );
-#    close $tmpConfigFile;
+    my $tmpConfigFile = File::Temp->new( DIR => "$target/tmp", UNLINK => 1 );
+    if( $tmpConfigFile ) {
+        print $tmpConfigFile $installPacmanConfig;
+        close $tmpConfigFile;
 
-#    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target ));
+    } else {
+        error( 'Failed to create temporary pacman config file in dir', "$target/tmp" );
+        ++$errors;
+        return $errors;
+    }
+
+    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target ));
 
     my $cmd = "pacman"
-#            . " --sysroot '$target'"
-            . " --root '$target'"
+            . " --sysroot '$target'"
             . " -Sy"
-#            . " '--config=$tmpConfigFileInside'"
-            . " '--config=$pacmanConfigFile'"
-#            . " --cachedir '/var/cache/pacman/pkg'"
-            . " --cachedir '$target/var/cache/pacman/pkg'"
+            . " '--config=$tmpConfigFileInside'"
+            . " --cachedir '/var/cache/pacman/pkg'"
             . " --noconfirm"
             . ' ' . join( ' ', @allPackages );
 
@@ -579,7 +719,7 @@ sub installPackages {
     my $out;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
         error( "pacman failed:", $out );
-        trace( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfigFile ) } );
+        trace( "pacman configuration was:\n", $installPacmanConfig );
         ++$errors;
     }
 
@@ -587,13 +727,9 @@ sub installPackages {
 }
 
 ##
-# Generate and save the pacman config file for production
-sub savePacmanConfigProduction {
-    my $self       = shift;
-    my $dbs        = shift;
-    my $addDbs     = shift;
-    my $removeDbs  = shift;
-    my $disableDbs = shift;
+# Generate and save the pacman config file for the device run-time
+sub saveRunPacmanConfig {
+    my $self = shift;
 
     trace( "Executing savePacmanConfigProduction" );
 
@@ -601,10 +737,10 @@ sub savePacmanConfigProduction {
     my $arch        = $self->arch;
     my $channel     = $self->{channel};
     my $target      = $self->{target};
-    my $depotRoot   = $self->{depotRoot};
-    my $levelString = $self->getSigLevelString();
+    my $depotRoot   = $self->{runDepotRoot};
+    my $levelString = $self->getPacmanSigLevelString();
 
-    my $pacmanConfigProduction = <<END;
+    my $runPacmanConfig = <<END;
 #
 # Pacman config file for UBOS
 #
@@ -618,17 +754,19 @@ LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
 
 END
-    unless( UBOS::Utils::saveFile( "$target/etc/pacman.conf", $pacmanConfigProduction, 0644 )) {
+    unless( UBOS::Utils::saveFile( "$target/etc/pacman.conf", $runPacmanConfig, 0644 )) {
         ++$errors;
     }
 
     unless( -d "$target/etc/pacman.d/repositories.d" ) {
-        UBOS::Utils::mkdir( "$target/etc/pacman.d/repositories.d" );
+        unless( UBOS::Utils::mkdir( "$target/etc/pacman.d/repositories.d" )) {
+            ++$errors;
+        }
     }
 
-    my %bothDbs = ( %$dbs, %$addDbs );
+    my %bothDbs = ( %{ $self->{runPackageDbs} }, %{ $self->{runAddPackageDbs} } );
     foreach my $dbKey ( sort keys %bothDbs ) {
-        if( exists( $removeDbs->{$dbKey} )) {
+        if( exists( $self->{runRemovePackageDbs}->{$dbKey} )) {
             next;
         }
 
@@ -637,7 +775,7 @@ END
 
         my $prefix = '';
         my $dbFile = '';
-        if( $disableDbs->{$dbKey} ) {
+        if( $self->{runDisablePackageDbs}->{$dbKey} ) {
             $prefix = '# ';
             $dbFile .= $prefix . "Remove the # from the next two lines and run `ubos-admin update' to enable package db $dbKey\n";
         }
@@ -649,7 +787,9 @@ END
         }
     }
 
-    UBOS::Utils::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d", $channel );
+    unless( UBOS::Utils::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d", $channel )) {
+        ++$errors;
+    }
     return $errors;
 }
 
@@ -660,17 +800,15 @@ sub saveHostname {
 
     trace( "Executing saveHostname" );
 
-    # hostname
-    if( UBOS::Utils::saveFile(
+    my $errors = 0;
+
+    unless( UBOS::Utils::saveFile(
             $self->{target}   . '/etc/hostname',
             $self->{hostname} . "\n",
             0644, 'root', 'root' )) {
-
-        return 0;
-
-    } else {
-        return 1;
+        ++$errors;
     }
+    return $errors;
 }
 
 ##
@@ -680,23 +818,21 @@ sub saveChannel {
 
     trace( "Executing saveChannel" );
 
-    # hostname
-    if( UBOS::Utils::saveFile(
+    my $errors = 0;
+
+    unless( UBOS::Utils::saveFile(
             $self->{target}   . '/etc/ubos/channel',
             $self->{channel} . "\n",
             0644, 'root', 'root' )) {
-
-        return 0;
-
-    } else {
-        return 1;
+        ++$errors;
     }
+    return $errors;
 }
 
 ##
 # Generate and save kernel module load files if needed
 sub saveModules {
-    my $self  = shift;
+    my $self = shift;
 
     my $target = $self->{target};
     my $errors = 0;
@@ -751,12 +887,17 @@ sub configureOs {
 
     # Limit size of system journal
     trace( "System journal" );
-    UBOS::Utils::myexec( "perl -pi -e 's/^\\s*(#\\s*)?SystemMaxUse=.*\$/SystemMaxUse=50M/' '$target/etc/systemd/journald.conf'" );
+    if( UBOS::Utils::myexec( "perl -pi -e 's/^\\s*(#\\s*)?SystemMaxUse=.*\$/SystemMaxUse=50M/' '$target/etc/systemd/journald.conf'" )) {
+        error( 'Failed to limit size of system journal' );
+        ++$errors;
+    }
 
     # version
     trace( "OS version info" );
 
-    UBOS::Utils::regenerateEtcIssue( $deviceClass, $channel, $target );
+    unless( UBOS::Utils::regenerateEtcIssue( $deviceClass, $channel, $target )) {
+        ++$errors;
+    }
 
     my $osRelease = <<OSRELEASE;
 NAME="UBOS"
@@ -773,10 +914,14 @@ OSRELEASE
 UBOS_KERNELPACKAGE="$kernelPackage"
 OSRELEASE
     }
-    UBOS::Utils::saveFile( $target . '/etc/os-release', $osRelease, 0644, 'root', 'root' );
+    unless( UBOS::Utils::saveFile( $target . '/etc/os-release', $osRelease, 0644, 'root', 'root' )) {
+        ++$errors;
+    }
 
     if( $productInfo ) {
-        UBOS::Utils::writeJsonToFile( $target . '/etc/ubos/product.json', $productInfo, 0644, 'root', 'root' );
+        unless( UBOS::Utils::writeJsonToFile( $target . '/etc/ubos/product.json', $productInfo, 0644, 'root', 'root' )) {
+            ++$errors;
+        }
     }
     return 0;
 }
@@ -787,21 +932,43 @@ OSRELEASE
 sub configureNetworkd {
     my $self = shift;
 
+    my $errors = 0;
     my $target = $self->{target};
 
-    UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' );
-    UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' );
+    if( -e ( $target . '/etc/resolv.conf' ) && !UBOS::Utils::deleteFile( $target . '/etc/resolv.conf' )) {
+        error( 'Failed to delete file', $target . '/etc/resolv.conf' );
+        ++$errors;
+    }
+    unless( UBOS::Utils::symlink( '/run/systemd/resolve/resolv.conf', $target . '/etc/resolv.conf' )) {
+        error( 'Failed to symlink', $target . '/etc/resolv.conf' );
+        ++$errors;
+    }
 
     # remove [!UNAVAIL=return]
     my $nsswitch = UBOS::Utils::slurpFile( $target . '/etc/nsswitch.conf' );
-    $nsswitch =~ s/\[!UNAVAIL=return\] *//;
-    UBOS::Utils::saveFile( $target . '/etc/nsswitch.conf', $nsswitch );
+    if( $nsswitch ) {
+        $nsswitch =~ s/\[!UNAVAIL=return\] *//;
+        unless( UBOS::Utils::saveFile( $target . '/etc/nsswitch.conf', $nsswitch )) {
+            error( 'Failed to save file', $target . '/etc/nsswitch.conf' );
+            ++$errors;
+        }
+    } else {
+        ++$errors;
+    }
 
     # Set DNSSec=no
     my $conf = UBOS::Utils::slurpFile( $target . '/etc/systemd/resolved.conf' );
-    $conf =~ s!^#*DNSSEC.*$!DNSSEC=No!m;
-    UBOS::Utils::saveFile( $target . '/etc/systemd/resolved.conf', $conf );
-    return 0;
+    if( $conf ) {
+        $conf =~ s!^#*DNSSEC.*$!DNSSEC=No!m;
+        unless( UBOS::Utils::saveFile( $target . '/etc/systemd/resolved.conf', $conf )) {
+            error( 'Failed to save file', $target . '/etc/systemd/resolved.conf' );
+            ++$errors;
+        }
+    } else {
+        ++$errors;
+    }
+
+    return $errors;
 }
 
 ##
@@ -814,11 +981,9 @@ sub doUpstreamFixes {
 
 ##
 # Install a Ram disk
-# $diskLayout: the disk layout
 # return: number of errors
 sub installRamdisk {
     my $self       = shift;
-    my $diskLayout = shift;
 
     # by default, do nothing
 
@@ -828,12 +993,10 @@ sub installRamdisk {
 ##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
-# $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
 
     error( 'Method installBootLoader() must be overridden for', ref( $self ));
 
@@ -869,7 +1032,6 @@ CONTENT
 
     return 0;
 }
-
 
 ##
 # Add commands to the provided script, to be run in a chroot, that generates the locale
@@ -936,14 +1098,13 @@ sub addConfigureNetworkingToScript {
 sub addConfigureSnapperToScript {
     my $self          = shift;
     my $chrootScriptP = shift;
-    my $diskLayout    = shift;
 
     trace( "Executing addConfigureSnapperToScript" );
 
     my $target = $self->{target};
 
     my $errors = 0;
-    my @mountPoints = $diskLayout->snapperBtrfsMountPoints();
+    my @mountPoints = $self->{diskLayout}->snapperBtrfsMountPoints();
     foreach my $mountPoint ( @mountPoints ) {
         my $configName = $mountPoint;
         $configName =~ s!/!!g;
@@ -969,7 +1130,7 @@ sub cleanup {
     trace( "Executing cleanup" );
 
     my $target = $self->{target};
-    my $ret    = 0;
+    my $errors = 0;
 
     # don't need installation history
     if( -e "$target/root/.bash_history" ) {
@@ -977,32 +1138,41 @@ sub cleanup {
     }
 
     # Removing content of /var/cache makes image smaller
-    opendir(DIR, "$target/var/cache" ) or return $ret;
     my @dirs = ();
-    while( my $file = readdir(DIR) ) {
-        if( $file eq '.' || $file eq '..' ) {
-            next;
+    if( opendir(DIR, "$target/var/cache" )) {
+        while( my $file = readdir(DIR) ) {
+            if( $file eq '.' || $file eq '..' ) {
+                next;
+            }
+            my $d = "$target/var/cache/$file";
+            if( -d $d ) {
+                push @dirs, $d;
+            }
         }
-        my $d = "$target/var/cache/$file";
-        if( -d $d ) {
-            push @dirs, $d;
-        }
+        closedir(DIR);
+    } else {
+        ++$errors;
     }
-    closedir(DIR);
 
     if( @dirs ) {
         unless( UBOS::Utils::deleteRecursively( @dirs )) {
-            $ret = 1;
+            ++$errors;
         }
     }
     # create /var/cache/pacman/pkg or there will be an unnecessary warning
-    UBOS::Utils::mkdirDashP( "$target/var/cache/pacman/pkg", 0755 );
+    unless( UBOS::Utils::mkdirDashP( "$target/var/cache/pacman/pkg", 0755 )) {
+        error( 'Failed to create directory', "$target/var/cache/pacman/pkg" );
+        ++$errors;
+    }
 
     # /etc/machine-id must be unique, but file cannot be missing as /etc
     # might be mounted as read-only during boot
-    UBOS::Utils::saveFile( "$target/etc/machine-id", '' );
+    unless( UBOS::Utils::saveFile( "$target/etc/machine-id", '' )) {
+        error( 'Failed to create file', "$target/etc/machine-id" );
+        ++$errors;
+    }
 
-    return $ret;
+    return $errors;
 }
 
 ##
@@ -1026,7 +1196,7 @@ sub deviceClass {
 # Convert the checksignatures field into a string that can be added to
 # a pacman.conf file.
 # return: string, such as "Optional TrustAll"
-sub getSigLevelString {
+sub getPacmanSigLevelString {
     my $self = shift;
 
     my $ret;
@@ -1060,6 +1230,41 @@ sub replaceDevSymlinks {
         }
     }
     return 1;
+}
+
+##
+# Convenience method to check that no volume-specific parameters is provided other than a single
+# installTarget. Used by a bunch of installers and factored out here for convenience.
+
+sub _checkSingleInstallTargetOnly {
+    my $self = shift;
+
+    my $errors = 0;
+    if( @{$self->{bootloaderDevices}} ) {
+        error( 'No boot loader devices must be specified for this device class:', @{$self->{bootloaderDevices}} );
+        ++$errors;
+    }
+    if( @{$self->{bootPartitions}} ) {
+        error( 'No boot partitions must be specified for this device class:', @{$self->{bootPartitions}} );
+        ++$errors;
+    }
+    if( @{$self->{rootPartitions}} ) {
+        error( 'No root partitions must be specified for this device class:', @{$self->{rootPartitions}} );
+        ++$errors;
+    }
+    if( @{$self->{ubosPartitions}} ) {
+        error( 'No ubos partitions must be specified for this device class:', @{$self->{ubosPartitions}} );
+        ++$errors;
+    }
+    if( @{$self->{swapPartitions}} ) {
+        error( 'No swap partitions must be specified for this device class:', @{$self->{swapPartitions}} );
+        ++$errors;
+    }
+    if( @{$self->{installTargets}} != 1 ) {
+        error( 'A single install target must be specified for this device class:'. @{$self->{installTargets}} );
+        ++$errors;
+    }
+    return $errors;
 }
 
 1;

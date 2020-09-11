@@ -1,18 +1,17 @@
 #
 # A directory into which to install.
-# 
+#
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
 
 use strict;
 use warnings;
 
-package UBOS::Install::DiskLayouts::Directory;
+package UBOS::Install::VolumeLayouts::Directory;
 
-use base qw( UBOS::Install::AbstractDiskLayout );
+use base qw( UBOS::Install::AbstractVolumeLayout );
 use fields qw( directory );
 
-use UBOS::Install::AbstractDiskLayout;
 use UBOS::Logging;
 
 ##
@@ -25,20 +24,11 @@ sub new {
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->SUPER::new( {} );
-    
+    $self->SUPER::new();
+
     $self->{directory} = $directory;
 
     return $self;
-}
-
-##
-# Format the configured disks.
-sub createDisks {
-    my $self = shift;
-
-    # noop
-    return 0;
 }
 
 ##
@@ -51,14 +41,6 @@ sub umountDisks {
 
     # noop
     return 0;
-}
-
-##
-# Determine the boot loader device for this DiskLayout
-sub determineBootLoaderDevice {
-    my $self = shift;
-
-    return undef;
 }
 
 1;

@@ -1,5 +1,5 @@
 #
-# Install UBOS for EspressoBIN
+# Install UBOS for ESPRESSObin
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -15,33 +15,36 @@ package UBOS::Install::Installers::Aarch64Espressobin;
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
-use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Install::AbstractDiskImage;
-use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::Directory;
-use UBOS::Install::DiskLayouts::MbrDiskBlockDevices;
-use UBOS::Install::DiskLayouts::MbrDiskImage;
-use UBOS::Install::DiskLayouts::PartitionBlockDevices;
-use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
+use UBOS::Install::AbstractVolumeLayout;
+use UBOS::Install::VolumeLayouts::DiskImage;
+use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+use UBOS::Install::Volumes::BootVolume;
+use UBOS::Install::Volumes::RootVolume;
+use UBOS::Install::Volumes::SwapVolume;
 use UBOS::Logging;
 use UBOS::Utils;
 
+## Constructor inherited from superclass
+
 ##
-# Constructor
-sub new {
+# Check that the provided parameters are correct, and complete incomplete items from
+# default except for the disk layout.
+# return: number of errors.
+sub checkCompleteParameters {
     my $self = shift;
-    my @args = @_;
 
-    unless( ref $self ) {
-        $self = fields::new( $self );
-    }
+    # override some defaults
+
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-espressobin';
+        $self->{hostname}      = 'ubos-espressobin';
     }
-    $self->{kernelpackage} = 'linux-espressobin';
 
-    unless( $self->{devicepackages} ) {
-        $self->{devicepackages} = [ qw(
+    unless( $self->{kernelpackage} ) {
+        $self->{kernelpackage} = 'linux-espressobin';
+    }
+
+    unless( $self->{devicePackages} ) {
+        $self->{devicePackages} = [ qw(
                 ubos-networking-client ubos-networking-espressobin ubos-networking-standalone
                 archlinuxarm-keyring
                 uboot-tools espressobin-uboot-config espressobin-ubos-state
@@ -50,185 +53,102 @@ sub new {
                 ubos-deviceclass-espressobin
         ) ];
     }
+
     unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw( haveged.service systemd-timesyncd.service ) ];
+        $self->{deviceservices} = [ qw(
+                haveged.service systemd-timesyncd.service
+        ) ];
     }
 
-    $self->SUPER::new( @args );
-
-    return $self;
+    return $self->SUPER::checkComplete();
 }
 
 ##
-# Create a DiskLayout object that goes with this Installer.
-# $noswap: if true, do not create a swap partition
-# $argvp: remaining command-line arguments
-# $config: the config JSON if a JSON file was given on the command-line
-# return: the DiskLayout object
-sub createDiskLayout {
-    my $self   = shift;
-    my $noswap = shift;
-    my $argvp  = shift;
-    my $config = shift;
+# Check the VolumeLayout parameters, and create a VolumeLayout member.
+# return: number of errors
+sub checkCreateVolumeLayout {
+    my $self = shift;
 
-    # Option 1: a single image file
-    # ubos-install ... image.img
+    # We can install to:
+    # * a single file
+    # * a single disk device
 
-    # Option 2: a single disk device
-    # ubos-install ... /dev/sda
-
-    # Option 3: a directory (invalid)
-
-    my $bootloaderdevice;
-    my @rootpartitions;
-    my @ubospartitions;
-    my $directory;
-
-    my $parseOk = GetOptionsFromArray(
-            $argvp,
-            'bootloaderdevice=s' => \$bootloaderdevice,
-            'rootpartition=s'    => \@rootpartitions,
-            'ubospartition=s'    => \@ubospartitions,
-            'directory=s'        => \$directory );
-    if( !$parseOk ) {
-        error( 'Invalid invocation.' );
-        return undef;
+    my $errors = $self->_checkSingleInstallTargetOnly();
+    if( $errors ) {
+        return $errors;
     }
 
-    if( !$bootloaderdevice && exists( $config->{bootloaderdevice} )) {
-        $bootloaderdevice = $config->{bootloaderdevice};
-    }
-    if( !@rootpartitions ) {
-        if( exists( $config->{rootpartitions} )) {
-            @rootpartitions = @{$config->{rootpartitions}};
-        } elsif( exists( $config->{rootpartition} )) {
-            @rootpartitions = ( $config->{rootpartition} );
+    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume( {
+            'fs'        => 'ext4',
+            'size'      => 128 * 1024 * 1024, # 128M
+            'mkfsflags' => '-O ^metadata_csum,^64bit',
+            'mbrboot'   => 1
+    } );
+
+    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume(); # defaults
+
+    my $defaultSwapVolume = UBOS::Install::Volumes::SwapVolume( {
+            'size'      => 4 * 1024 * 1024 * 1024, # 4G
+    } );
+
+    # No separate /ubos volume
+
+    my $installTarget = $self->{installTargets}->[0];
+    if( UBOS::Install::AbstractVolumeLayout::isFile( $installTarget )) {
+        # install to file
+        my @volumes = (
+            $defaultBootVolume,
+            $defaultRootVolume
+        );
+        if( $self->{swap} == 1 ) { # defaults to no swap
+            push @volumes, $defaultSwapVolume;
         }
-    }
-    if( !@ubospartitions ) {
-        if( exists( $config->{ubospartitions} )) {
-            @ubospartitions = @{$config->{ubospartitions}};
-        } elsif( exists( $config->{ubospartition} )) {
-            @ubospartitions = ( $config->{ubospartition} );
-        }
-    }
-    if( !$directory && exists( $config->{directory} )) {
-        $directory = $config->{directory};
-    }
-    if( !@$argvp ) {
-        if( exists( $config->{devices} )) {
-            @$argvp = @{$config->{devices}};
-        } elsif( exists( $config->{device} )) {
-            @$argvp = ( $config->{device} );
-        }
-    }
-    unless( $self->replaceDevSymlinks( $argvp )) {
-        error( $@ );
-        return undef;
-    }
 
-    my $ret = 1; # set to something, so undef can mean error
-    if( $directory ) {
-        # Option 3
-        error( 'Invalid invocation: --directory cannot be used with this device class. Did you mean to install for a container?' );
-        $ret = undef;
+        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
+                'msdos',
+                $installTarget,
+                \@volumes );
+
+
+    } elsif( UBOS::Install::AbstractVolumeLayout::isDisk( $installTarget )) {
+        # install to disk block device
+        if( UBOS::Install::AbstractVolumeLayout::isMountedOrChildMounted( $installTarget )) {
+            error( 'Cannot install to mounted disk:', $installTarget );
+            ++$errors;
+
+        } else {
+            my @volumes = (
+                $defaultBootVolume,
+                $defaultRootVolume
+            );
+            if( $self->{swap} != -1 ) { # defaults to swap
+                push @volumes, $defaultSwapVolume;
+            }
+
+            $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
+                    'msdos',
+                    [ $installTarget ],
+                    \@volumes );
+        }
 
     } else {
-        # Option 1 or 2
-        if( @$argvp == 1 ) {
-            my $rootDiskOrImage = $argvp->[0];
-            if( UBOS::Install::AbstractDiskLayout::isFile( $rootDiskOrImage )) {
-                # Option 1
-                if( $noswap ) {
-                    error( 'Invalid invocation: --noswap cannot be used if installing to a file' );
-                    $ret = undef;
-                } else {
-                    $ret = UBOS::Install::DiskLayouts::MbrDiskImage->new(
-                            $rootDiskOrImage,
-                            {   '/boot' => {
-                                    'index'     => 1,
-                                    'fs'        => 'ext4',
-                                    'size'      => 200 * 1024, # 100M at 512/sector
-                                    'mkfsflags' => '-O ^metadata_csum,^64bit',
-                                    'mbrboot'   => 1
-                                    # default partition type
-                                },
-                                '/' => {
-                                    'index' => 2,
-                                    'fs'    => 'btrfs'
-                                    # default partition type
-                                },
-                            } );
-                }
-            } elsif( UBOS::Install::AbstractDiskLayout::isDisk( $rootDiskOrImage )) {
-                # Option 2
-                if( UBOS::Install::AbstractDiskLayout::isMountedOrChildMounted( $rootDiskOrImage )) {
-                    error( 'Cannot install to mounted disk:', $rootDiskOrImage );
-                    $ret = undef;
-                } else {
-                    my $deviceTable = {
-                        '/boot' => {
-                            'index'     => 1,
-                            'fs'        => 'ext4',
-                            'size'      => 200 * 1024, # 100M at 512/sector
-                            'mkfsflags' => '-O ^metadata_csum,^64bit',
-                            'mbrboot'   => 1,
-                            'label'       => 'UBOS_boot'
-                            # default partition type
-                        },
-                        '/' => {
-                            'index' => 2,
-                            'fs'    => 'btrfs',
-                            'label' => 'UBOS_root'
-                            # default partition type
-                        }
-                    };
-                    unless( $noswap ) {
-                        $deviceTable->{swap} = {
-                            'index'       => 3,
-                            'fs'          => 'swap',
-                            'size'        => 8192 * 1024, # 4G at 512/sector
-                            'mbrparttype' => '82',
-                            'gptparttype' => '8200',
-                            'label'       => 'swap'
-                        };
-                    }
-                    $ret = UBOS::Install::DiskLayouts::MbrDiskBlockDevices->new(
-                            [ $rootDiskOrImage ],
-                            $deviceTable );
-                }
-            } else {
-                error( 'Must be file or disk:', $rootDiskOrImage );
-                $ret = undef;
-            }
-        } elsif( @$argvp > 1 ) {
-            # Don't do RAID here
-            error( 'Do not specify more than one file or image for deviceclass=' . $self->deviceClass() );
-            $ret = undef;
-        } else {
-            # Need at least one disk
-            error( 'Must specify at least one file or image for deviceclass=' . $self->deviceClass() );
-            $ret = undef;
-        }
+        error( 'Install target must be a file or a disk block device for this device class:', $installTarget );
+        ++$errors;
     }
 
-    return $ret;
+    return $errors;
 }
 
 ##
 # Install the bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
-# $diskLayout: the disk layout
 # return: number of errors
 sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
 
     # don't do anything here. All contained in uboot-espressobin-config
-    my $errors           = 0;
-
-    return $errors;
+    return 0;
 }
 
 ##
@@ -247,26 +167,21 @@ sub addConfigureNetworkingToScript {
 }
 
 ##
-# Returns the arch for this device.
-# return: the arch
+# return: the arch for this device
 sub arch {
-    my $self = shift;
-
     return 'aarch64';
 }
 
 ##
-# Returns the device class
+# return: the device class
 sub deviceClass {
-    my $self = shift;
-
     return 'espressobin';
 }
 
 ##
 # Help text
 sub help {
-    return 'Boot disk for EspressoBIN';
+    return 'Boot disk for ESPRESSObin';
 }
 
 1;

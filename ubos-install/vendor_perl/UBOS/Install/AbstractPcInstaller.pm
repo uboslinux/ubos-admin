@@ -15,17 +15,14 @@ package UBOS::Install::AbstractPcInstaller;
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
-use UBOS::Logging;
-use UBOS::Utils;
+
 
 ##
 # Install a Ram disk
-# $diskLayout: the disk layout
 # $kernelPostfix: allows us to add -ec2 to EC2 kernels
 # return: number of errors
 sub installRamdisk {
     my $self          = shift;
-    my $diskLayout    = shift;
     my $kernelPostfix = shift || '';
 
     my $errors = 0;
@@ -73,7 +70,6 @@ END
 sub installGrub {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
     my $args             = shift;
 
     info( 'Installing grub boot loader' );
@@ -81,7 +77,7 @@ sub installGrub {
     my $errors = 0;
     my $target = $self->{target};
 
-    my $bootLoaderDevice = $diskLayout->determineBootLoaderDevice();
+    my $bootLoaderDevice = $self->{diskLayout}->determineBootLoaderDevice();
 
     my $out;
     my $err;
@@ -122,9 +118,9 @@ set -e
 perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
 END
 
-        if( defined( $self->{additionalkernelparameters} ) && @{$self->{additionalkernelparameters}} ) {
+        if( defined( $self->{additionalKernelParameters} ) && @{$self->{additionalKernelParameters}} ) {
             my $addParString = '';
-            map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
+            map { $addParString .= ' ' . $_ } @{$self->{additionalKernelParameters}};
             $addParString =~ s!(["'])!\\$1!g; # escape quotes
 
             $chrootScript .= <<END;
@@ -152,12 +148,10 @@ END
 ##
 # Install the systemd-boot bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
-# $diskLayout: the disk layout
 # return: number of errors
 sub installSystemdBoot {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
 
     info( 'Installing systemd-boot boot loader' );
 
@@ -178,11 +172,11 @@ timer 4
 default ubos
 CONTENT
 
-    my $rootPartUuid = UBOS::Install::AbstractDiskLayout::determinePartUuid( $diskLayout->getRootDeviceNames() );
+    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid( $self->{diskLayout}->getRootDeviceNames() );
     my $addParString = '';
 
-    if( defined( $self->{additionalkernelparameters} ) && @{$self->{additionalkernelparameters}} ) {
-        map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
+    if( defined( $self->{additionalKernelParameters} ) && @{$self->{additionalKernelParameters}} ) {
+        map { $addParString .= ' ' . $_ } @{$self->{additionalKernelParameters}};
     }
 
     UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT );
@@ -196,4 +190,3 @@ CONTENT
 }
 
 1;
-

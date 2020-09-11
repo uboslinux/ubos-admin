@@ -1,5 +1,5 @@
 #
-# Abstract superclass for disk layouts for an installation.
+# Abstract superclass for volume layouts for an installation.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -7,9 +7,9 @@
 use strict;
 use warnings;
 
-package UBOS::Install::AbstractDiskLayout;
+package UBOS::Install::AbstractVolumeLayout;
 
-use fields qw( devicetable );
+use fields qw( volumes );
 
 use Cwd 'abs_path';
 use UBOS::Logging;
@@ -19,25 +19,21 @@ my $_pathFacts = {}; # cache of facts about particular paths, hash of <string,ha
 my $_lsBlk     = undef; # cache of lsblk output
 
 ##
-# Constructor for subclasses only
-# $devicetable: information about the layout
+# Constructor
 sub new {
-    my $self        = shift;
-    my $devicetable = shift;
+    my $self    = shift;
+    my $volumes = shift;
 
-    unless( ref( $self )) {
+    unless( ref $self ) {
         $self = fields::new( $self );
     }
-
-    $self->{devicetable} = $devicetable;
-
-    trace( 'Using disk layout', ref( $self ));
+    $self->{volumes} = $volumes;
 
     return $self;
 }
 
 ##
-# Format the configured disks.
+# Create the configured volumes.
 sub createDisks {
     my $self = shift;
 
@@ -46,107 +42,31 @@ sub createDisks {
 }
 
 ##
-# Format the configured disks.
-sub formatDisks {
+# Format the configured volumes.
+# return: number of errors
+sub formatVolumes {
     my $self = shift;
 
     my $errors = 0;
 
     trace( 'Checking that none of the devices are currently mounted' );
 
-    my $lsblk;
-    my %mounted;
-    UBOS::Utils::myexec( 'lsblk -P', undef, \$lsblk );
-    foreach my $line ( split /\n/, $lsblk ) {
-        if( $line =~ m!NAME="([^"]+)".*MOUNTPOINT="([^"]+)"! ) {
-            $mounted{"/dev/$1"} = $2;
-        }
-    }
-    foreach my $mountPath ( keys %{$self->{devicetable}} ) {
-        my $data = $self->{devicetable}->{$mountPath};
-        foreach my $dev ( @{$data->{devices}} ) {
-            if( $mounted{$dev} ) {
-                fatal( 'Cannot install to mounted device:', $dev );
-            }
+    foreach my $vol ( @{ $self->{volumes}} ) {
+        if( UBOS::Install::AbstractVolume::isMountedOrChildMounted( $vol )) {
+            error( 'Cannot install to mounted device:', $vol );
+            ++$errors;
         }
     }
 
     trace( 'Formatting file systems' );
 
-    foreach my $mountPath ( keys %{$self->{devicetable}} ) {
-        my $data = $self->{devicetable}->{$mountPath};
-        my $fs   = $data->{fs};
-
-        if( !$fs ) {
-            # do not format
-            next;
-        }
-
-        debugAndSuspend( 'Format file system', $mountPath, 'with', $fs );
-        if( 'btrfs' eq $fs ) {
-            my $cmd = 'mkfs.btrfs -f';
-            if( @{$data->{devices}} > 1 ) {
-                $cmd .= ' -m raid1 -d raid1';
-            }
-            if( exists( $data->{mkfsflags} )) {
-                $cmd .= ' ' . $data->{mkfsflags};
-            }
-            if( exists( $data->{label} )) {
-                $cmd .= " --label '" . $data->{label} . "'";
-            }
-            $cmd .= ' ' . join( ' ', @{$data->{devices}} );
-
-            my $out;
-            my $err;
-            if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
-                error( "$cmd error:", $err );
-                ++$errors;
-            }
-
-        } elsif( 'swap' eq $fs ) {
-            foreach my $dev ( @{$data->{devices}} ) {
-                my $out;
-                my $err;
-                my $cmd = "mkswap '$dev'";
-
-                if( exists( $data->{label} )) {
-                    $cmd .= " --label '" . $data->{label} . "'";
-                }
-
-                if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
-                    error( "$cmd error:", $err );
-                    ++$errors;
-                }
-            }
-
-        } else {
-            foreach my $device ( @{$data->{devices}} ) {
-                my $cmd = "mkfs.$fs";
-                if( exists( $data->{mkfsflags} )) {
-                    $cmd .= ' ' . $data->{mkfsflags};
-                }
-                if( exists( $data->{label} )) {
-                    if( $fs eq 'vfat' ) {
-                        $cmd .= " -n '" . $data->{label} . "'";
-                    } elsif( $fs eq 'ext4' ) {
-                        $cmd .= " -L '" . $data->{label} . "'";
-                    } else {
-                        warning( "Don't know how to label filesystem of type:", $fs );
-                    }
-                }
-                $cmd .= " '$device'";
-
-                my $out;
-                my $err;
-                if( UBOS::Utils::myexec( $cmd, undef, \$out, \$err )) {
-                    error( "$cmd error:", $err );
-                    ++$errors;
-                }
-            }
-        }
+    foreach my $vol ( $self->getVolumesByMountPath()) {
+        $errors += $vol->formatVolume();
     }
+
     $errors += resetDiskCaches();
 
+    DONE:
     return $errors;
 }
 
@@ -170,30 +90,26 @@ sub deleteLoopDevices {
 
 ##
 # Mount this disk layout at the specified target directory
-# $target: the target directory
+# $installer: the Installer
 # return: number of errors
 sub mountDisks {
-    my $self   = shift;
-    my $target = shift;
+    my $self      = shift;
+    my $installer = shift;
 
     trace( 'Mounting disks' );
 
+    my $target = $installer->getTarget();
     my $errors = 0;
-    # shortest first
-    foreach my $mountPoint ( sort { length( $a ) <=> length( $b ) } keys %{$self->{devicetable}} ) {
-        my $entry   = $self->{devicetable}->{$mountPoint};
-        my $fs      = $entry->{fs};
-        my @devices = @{$entry->{devices}};
 
-        unless( $fs ) {
+    # longest first
+    foreach my $vol ( $self->getVolumesByMountPath() ) {
+
+        unless( $vol->hasFs() ) {
             # no need to mount
             next;
         }
-        unless( @devices ) {
-            error( 'No device known for', $mountPoint );
-            ++$errors;
-            next;
-        }
+
+        my $mountPoint = $vol->getMountPoint();
 
         # don't swapon swap devices during install
         if( $mountPoint =~ m!^/! ) { # don't mount devices that don't start with /
@@ -202,7 +118,8 @@ sub mountDisks {
                 UBOS::Utils::mkdir( "$target$mountPoint" );
             }
 
-            my $firstDevice = $devices[0];
+            my $firstDevice = ( $vol->getDeviceNames() )[0];
+            my $fs          = $vol->getFs();
 
             debugAndSuspend( 'Mount device', $firstDevice, 'at', "$target$mountPoint", 'with', $fs );
             if( UBOS::Utils::myexec( "mount -t $fs '$firstDevice' '$target$mountPoint'" )) {
@@ -215,22 +132,26 @@ sub mountDisks {
 
 ##
 # Unmount the previous mounts
-# $target: the target directory
+# $installer: the Installer
+# return: number of errors
 sub umountDisks {
-    my $self   = shift;
-    my $target = shift;
+    my $self      = shift;
+    my $installer = shift;
 
     trace( 'Unmounting disks' );
 
+    my $target = $installer->getTarget();
     my $errors = 0;
-    # longest first
-    foreach my $mountPoint ( sort { length( $b ) <=> length( $a ) } keys %{$self->{devicetable}} ) {
-        my $entry  = $self->{devicetable}->{$mountPoint};
-        my $fs     = $entry->{fs};
 
-        unless( $fs ) {
+    # longest first
+    foreach my $vol ( reverse $self->getVolumesByMountPath() ) {
+
+        unless( $vol->hasFs() ) {
+            # no need to mount
             next;
         }
+
+        my $mountPoint = $vol->getMountPoint();
 
         if( $mountPoint =~ m!^/! ) { # don't umount devices that don't start with /
             debugAndSuspend( 'Umount ', $mountPoint );
@@ -244,20 +165,21 @@ sub umountDisks {
 
 ##
 # Create btrfs subvolumes if needed
-# $target: the path where the bootimage has been mounted
+# $installer: the Installer
 # return: number of errors
 sub createSubvols {
-    my $self   = shift;
-    my $target = shift;
+    my $self      = shift;
+    my $installer = shift;
 
+    my $target = $installer->getTarget();
     my $errors = 0;
 
-    my $deviceTable = $self->{devicetable}->{'/'};
-    if( defined( $deviceTable->{fs} ) && 'btrfs' eq $deviceTable->{fs} ) {
+    my $rootVolume = $self->getRootVolume();
+
+    if( $rootVolume->isBtrfs() ) {
         # create separate subvol for /var/log, so snapper does not roll back the logs
         unless( -d "$target/var" ) {
             UBOS::Utils::mkdirDashP( "$target/var" );
-
         }
 
         debugAndSuspend( 'Create subvol ', "$target/var/log" );
@@ -275,13 +197,13 @@ sub createSubvols {
 
 ##
 # Generate and save /etc/fstab
-# $@mountPathSequence: the sequence of paths to mount
-# %$partitions: map of paths to devices
-# $target: the path where the bootimage has been mounted
+# $installer: the Installer
 # return: number of errors
 sub saveFstab {
-    my $self   = shift;
-    my $target = shift;
+    my $self      = shift;
+    my $installer = shift;
+
+    my $target = $installer->getTarget();
 
     my $fsTab = <<FSTAB;
 #
@@ -291,67 +213,67 @@ sub saveFstab {
 
 FSTAB
 
-    if( defined( $self->{devicetable} )) {
-        my $i=0;
+    my $i=0;
 
-        # shortest first
-        foreach my $mountPoint ( sort { length( $a ) <=> length( $b ) } keys %{$self->{devicetable}} ) {
-            my $deviceTable = $self->{devicetable}->{$mountPoint};
-            my $fs          = $deviceTable->{fs};
+    # shortest first
+    foreach my $vol ( $self->getVolumesByMountPath() ) {
 
-            unless( $fs ) {
-                next;
-            }
-
-            if( 'btrfs' eq $fs ) {
-                my @devices = @{$deviceTable->{devices}};
-
-                # Take blkid from first device
-                my $uuid;
-                UBOS::Utils::myexec( "blkid -s UUID -o value '" . $devices[0] . "'", undef, \$uuid );
-                $uuid =~ s!^\s+!!g;
-                $uuid =~ s!\s+$!!g;
-
-                trace( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
-
-                my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
-
-                $fsTab .= "UUID=$uuid $mountPoint btrfs rw,relatime";
-                # This may not be needed, if 'btrfs device scan' is done during boot
-                # and if it is needed, this won't work, because @devices contains /dev/mapper/loopXpY or such
-                # $fsTab .= join( '', map { ",device=$_" } @devices );
-                $fsTab .= " $i $passno\n";
-
-            } elsif( 'swap' eq $fs ) {
-                my @devices = @{$deviceTable->{devices}};
-
-                foreach my $device ( @devices ) {
-                    my $uuid;
-                    UBOS::Utils::myexec( "blkid -s UUID -o value '" . $device . "'", undef, \$uuid );
-                    $uuid =~ s!^\s+!!g;
-                    $uuid =~ s!\s+$!!g;
-
-                    trace( 'uuid of swap device', $device, 'is', $uuid );
-
-                    $fsTab .= "UUID=$uuid none swap defaults 0 0\n";
-                }
-
-            } else {
-                my $device = $deviceTable->{devices}->[0];
-
-                my $uuid;
-                UBOS::Utils::myexec( "blkid -s UUID -o value '$device'", undef, \$uuid );
-                $uuid =~ s!^\s+!!g;
-                $uuid =~ s!\s+$!!g;
-
-                trace( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
-
-                my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
-
-                $fsTab .= "UUID=$uuid $mountPoint $fs rw,relatime $i $passno\n";
-            }
-            ++$i;
+        unless( $vol->hasFs() ) {
+            # no need to mount
+            next;
         }
+
+        my $mountPoint = $vol->getMountPoint();
+        my $fs         = $vol->getFs();
+
+        if( 'btrfs' eq $fs ) {
+            my @devices = $vol->getDeviceNames();
+
+            # Take blkid from first device
+            my $uuid;
+            UBOS::Utils::myexec( "blkid -s UUID -o value '" . $devices[0] . "'", undef, \$uuid );
+            $uuid =~ s!^\s+!!g;
+            $uuid =~ s!\s+$!!g;
+
+            trace( 'uuid of btrfs device', $devices[0], 'to be mounted at', $mountPoint, 'is', $uuid );
+
+            my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
+
+            $fsTab .= "UUID=$uuid $mountPoint btrfs rw,relatime";
+            # This may not be needed, if 'btrfs device scan' is done during boot
+            # and if it is needed, this won't work, because @devices contains /dev/mapper/loopXpY or such
+            # $fsTab .= join( '', map { ",device=$_" } @devices );
+            $fsTab .= " $i $passno\n";
+
+        } elsif( 'swap' eq $fs ) {
+            my @devices = $vol->getDeviceNames();
+
+            foreach my $device ( @devices ) {
+                my $uuid;
+                UBOS::Utils::myexec( "blkid -s UUID -o value '" . $device . "'", undef, \$uuid );
+                $uuid =~ s!^\s+!!g;
+                $uuid =~ s!\s+$!!g;
+
+                trace( 'uuid of swap device', $device, 'is', $uuid );
+
+                $fsTab .= "UUID=$uuid none swap defaults 0 0\n";
+            }
+
+        } else {
+            my $device = ( $vol->getDeviceNames() )[0];
+
+            my $uuid;
+            UBOS::Utils::myexec( "blkid -s UUID -o value '$device'", undef, \$uuid );
+            $uuid =~ s!^\s+!!g;
+            $uuid =~ s!\s+$!!g;
+
+            trace( 'uuid of other device', $device, 'to be mounted at', $mountPoint, 'is', $uuid );
+
+            my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
+
+            $fsTab .= "UUID=$uuid $mountPoint $fs rw,relatime $i $passno\n";
+        }
+        ++$i;
     }
     debugAndSuspend( 'Saving ', "$target/etc/fstab", ":\n$fsTab" );
 
@@ -360,6 +282,7 @@ FSTAB
     return 0;
 }
 
+
 ##
 # Obtain the btrfs device mount points that snapper should manage.
 # return: list of mount points
@@ -367,36 +290,50 @@ sub snapperBtrfsMountPoints {
     my $self = shift;
 
     my @ret;
-    if( defined( $self->{devicetable} )) {
-        foreach my $mountPoint ( keys %{$self->{devicetable}} ) {
-            my $deviceTable = $self->{devicetable}->{$mountPoint};
-            my $fs          = $deviceTable->{fs};
-
-            if( defined( $fs ) && 'btrfs' eq $fs ) {
-                push @ret, $mountPoint;
-            }
+    foreach my $vol ( @{$self->{volumes}} ) {
+        if( defined( $vol->isBtrfs() )) {
+            push @ret, $vol->getMountPoint();
         }
     }
     return @ret;
 }
 
 ##
-# Helper method to determine the names of the root device
-# return: the device name(s)
-sub getRootDeviceNames {
+# Helper method to determine the root volume
+# return: the root volume
+sub getRootVoume {
     my $self = shift;
 
-    my @ret = @{$self->{devicetable}->{'/'}->{devices}};
-    return @ret;
+    my @ret;
+    foreach my $vol ( @{$self->{volumes}} ) {
+        if( $vol->isRoot() ) {
+            return $vol;
+        }
+    }
+    return undef;
 }
 
 ##
-# Determine the boot loader device for this DiskLayout
+# Determine the boot loader device for this VolumeLayout
 sub determineBootLoaderDevice {
     my $self = shift;
 
     # no op, may be overridden
     return 0;
+}
+
+##
+# Helper method to return the instances of Volume ordered by the length of
+# the mount path, from shortest to longest
+# return: array
+sub getVolumesByMountPath {
+    my $self = shift;
+
+    my @ret = sort {
+        length( $a->getMountPoint() ) <=> length( $b->getMountPoint() )
+    } @{$self->{volumes}};
+
+    return @ret;
 }
 
 # -- statics from here
@@ -507,6 +444,16 @@ sub isFile {
 
     my $type = _determineDeviceFact( $path, 'devicetype' );
     return $type eq 'file';
+}
+
+##
+# Helper method to determine whether a given path points to a directory
+# $path: the path
+sub isDirectory {
+    my $path = shift;
+
+    my $type = _determineDeviceFact( $path, 'devicetype' );
+    return $type eq 'directory';
 }
 
 ##

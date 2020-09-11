@@ -1,5 +1,5 @@
 #
-# Install UBOS on an SD Card for a Raspberry Pi 4.
+# Install UBOS on an SD Card or disk for a Raspberry Pi 4.
 #
 # Copyright (C) 2014 and later, Indie Computing Corp. All rights reserved. License: see package.
 #
@@ -12,32 +12,34 @@ package UBOS::Install::Installers::Armv7hRpi4;
 use base qw( UBOS::Install::AbstractRpiInstaller );
 use fields;
 
-use Getopt::Long qw( GetOptionsFromArray );
-use UBOS::Install::AbstractDiskLayout;
-use UBOS::Install::DiskLayouts::PartitionBlockDevices;
-use UBOS::Install::DiskLayouts::PartitionBlockDevicesWithBootSector;
+use UBOS::Install::AbstractVolumeLayout;
 use UBOS::Logging;
 use UBOS::Utils;
 
+## Constructor inherited from superclass
+
 ##
-# Constructor
-sub new {
+# Check that the provided parameters are correct, and complete incomplete items from
+# default except for the disk layout.
+# return: number of errors.
+sub checkCompleteParameters {
     my $self = shift;
-    my @args = @_;
 
-    unless( ref $self ) {
-        $self = fields::new( $self );
-    }
+    # override some defaults
+
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-raspberry-pi4';
+        $self->{hostname}      = 'ubos-raspberry-pi4';
     }
-    $self->{kernelpackage} = 'linux-raspberrypi4';
 
-    $self->SUPER::new( @args );
+    unless( $self->{kernelpackage} ) {
+        $self->{kernelpackage} = 'linux-raspberrypi4';
+    }
 
-    push @{$self->{devicepackages}}, 'ubos-deviceclass-rpi4';
+    my $errors = $self->SUPER::checkComplete();
 
-    return $self;
+    push @{$self->{devicePackages}}, 'ubos-deviceclass-rpi4';
+
+    return $errors;
 }
 
 ##
@@ -48,7 +50,6 @@ sub new {
 sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
-    my $diskLayout       = shift;
 
     info( 'Installing boot loader' );
 
@@ -59,7 +60,7 @@ sub installBootLoader {
         map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
     }
 
-    my $rootPartUuid = UBOS::Install::AbstractDiskLayout::determinePartUuid( $diskLayout->getRootDeviceNames() );
+    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid( $self->{diskLayout}->getRootDeviceNames() );
 
     my $cmdline = 'root=PARTUUID=' . $rootPartUuid; # 'root=/dev/mmcblk0p2';
     $cmdline .= <<CONTENT;
@@ -83,16 +84,12 @@ CONTENT
 # Returns the arch for this device.
 # return: the arch
 sub arch {
-    my $self = shift;
-
     return 'armv7h';
 }
 
 ##
 # Returns the device class
 sub deviceClass {
-    my $self = shift;
-
     return 'rpi4';
 }
 
