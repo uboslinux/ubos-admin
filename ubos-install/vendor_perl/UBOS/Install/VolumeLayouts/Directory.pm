@@ -35,12 +35,12 @@ sub new {
 # Unmount the previous mounts. Override because we need to take care of the
 # loopback devices.
 # $target: the target directory
-sub umountDisks {
-    my $self   = shift;
-    my $target = shift;
+#sub umountVolumes {
+#    my $self   = shift;
+#    my $target = shift;
 
-    # noop
-    return 0;
-}
+#    # noop
+#    return 0;
+#}
 
 1;

@@ -12,17 +12,17 @@ use warnings;
 
 package UBOS::Install::Installers::X86_64Pc;
 
-use base qw( UBOS::Install::AbstractInstaller );
-use fields;
-
 use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
 use UBOS::Install::VolumeLayouts::DiskBlockDevices;
 use UBOS::Install::Volumes::BootVolume;
+use UBOS::Install::Volumes::MbrVolume;
 use UBOS::Install::Volumes::RootVolume;
 use UBOS::Install::Volumes::SwapVolume;
 use UBOS::Logging;
 use UBOS::Utils;
+
+use base qw( UBOS::Install::AbstractPcInstaller );
+use fields qw( partitioningScheme );
 
 ## Constructor inherited from superclass
 
@@ -36,30 +36,35 @@ sub checkCompleteParameters {
     # override some defaults
 
     unless( $self->{hostname} ) {
-        $self->{hostname}      = 'ubos-[c';
+        $self->{hostname}      = 'ubos-pc';
     }
 
-    unless( $self->{kernelpackage} ) {
-        $self->{kernelpackage} = 'linux';
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux';
     }
 
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client ubos-networking-gateway ubos-networking-standalone
-                rng-tools mkinitcpio linux-firmware
+                grub mkinitcpio
+                rng-tools linux-firmware
                 smartmontools
                 wpa_supplicant crda
                 ubos-deviceclass-pc
         ) ];
     }
 
-    unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw(
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [ qw(
                 haveged.service systemd-timesyncd.service smartd.service
         ) ];
     }
 
-    return $self->SUPER::checkComplete();
+    unless( $self->{partitioningScheme} ) {
+        $self->{partitioningScheme} =  'gpt';
+    }
+
+    return $self->SUPER::checkCompleteParameters();
 }
 
 ##
@@ -67,6 +72,8 @@ sub checkCompleteParameters {
 # return: number of errors
 sub checkCreateVolumeLayout {
     my $self = shift;
+
+    trace( 'X86_64::checkCreateVolumeLayout' );
 
     # We can install to:
     # * an enumeration of block devices for the various roles (e.g. boot, root, ubos, swap)
@@ -166,19 +173,19 @@ sub checkCreateVolumeLayout {
         my $installTarget = $self->{installTargets}->[0];
 
         my @volumes = ();
-        if( 'gpt' eq $self->{partitioningscheme} ) {
+        if( 'gpt' eq $self->{partitioningScheme} ) {
             push @volumes, UBOS::Install::Volumes::MbrVolume->new()
         }
 
         push @volumes, UBOS::Install::Volumes::BootVolume->new();
         push @volumes, UBOS::Install::Volumes::RootVolume->new( @{$self->{rootPartitions}} );
 
-        if( $self->{swap} == 1 ) { # defaults to no swap
+        if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, UBOS::Install::Volumes::SwapVolume->new();
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                $self->{partitioningscheme},
+                $self->{partitioningScheme},
                 $installTarget,
                 \@volumes );
 
@@ -207,19 +214,19 @@ sub checkCreateVolumeLayout {
         }
 
         my @volumes = ();
-        if( 'gpt' eq $self->{partitioningscheme} ) {
+        if( 'gpt' eq $self->{partitioningScheme} ) {
             push @volumes, UBOS::Install::Volumes::MbrVolume->new()
         }
 
         push @volumes, UBOS::Install::Volumes::BootVolume->new();
         push @volumes, UBOS::Install::Volumes::RootVolume->new( @{$self->{rootPartitions}} );
 
-        if( $self->{swap} == 1 ) { # defaults to no swap
+        if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, UBOS::Install::Volumes::SwapVolume->new();
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
-                $self->{partitioningscheme},
+                $self->{partitioningScheme},
                 $self->{installTargets},
                 \@volumes );
     }
@@ -245,8 +252,9 @@ sub installBootLoader {
                 'boot-directory' => $self->{target} . '/boot'
             } );
 
-    $errors += $self->installSystemdBoot(
-            $pacmanConfigFile );
+    if( 'gpt' eq $self->{partitioningScheme} ) {
+        $errors += $self->installSystemdBoot( $pacmanConfigFile );
+    }
 
     return $errors;
 }

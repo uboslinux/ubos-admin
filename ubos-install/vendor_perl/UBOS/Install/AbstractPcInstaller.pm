@@ -12,10 +12,13 @@ use warnings;
 
 package UBOS::Install::AbstractPcInstaller;
 
+use UBOS::Logging;
+use UBOS::Utils;
+
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
-
+## Constructor inherited from superclass
 
 ##
 # Install a Ram disk
@@ -77,32 +80,15 @@ sub installGrub {
     my $errors = 0;
     my $target = $self->{target};
 
-    my $bootLoaderDevice = $self->{diskLayout}->determineBootLoaderDevice();
+    my $bootLoaderDevice = $self->{volumeLayout}->determineBootLoaderDevice();
 
     my $out;
     my $err;
 
     # Boot loader
     if( $bootLoaderDevice ) {
-        # install grub package
-        my $cmd = "pacman"
-                . " --root '$target'" # Wait for ARM to catch up " --sysroot '$target'"
-                . " -Sy"
-                . " '--config=$pacmanConfigFile'"
-                . " --cachedir '$target/var/cache/pacman/pkg'"
-                . " --noconfirm"
-                . ' grub';
-
-        debugAndSuspend( 'Installing package grub' );
-
-        if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
-            error( "pacman failed:", $out );
-            trace( "pacman configuration was:\n", sub { UBOS::Utils::slurpFile( $pacmanConfigFile ) } );
-            ++$errors;
-        }
-
         # invoke grub-install
-        $cmd = 'grub-install';
+        my $cmd = 'grub-install';
         if( $args ) {
             $cmd .= ' ' . join( ' ', map { "--$_=" . $args->{$_} } keys %$args );
         }
@@ -118,13 +104,12 @@ set -e
 perl -pi -e 's/GRUB_DISTRIBUTOR=".*"/GRUB_DISTRIBUTOR="UBOS"/' /etc/default/grub
 END
 
-        if( defined( $self->{additionalKernelParameters} ) && @{$self->{additionalKernelParameters}} ) {
-            my $addParString = '';
-            map { $addParString .= ' ' . $_ } @{$self->{additionalKernelParameters}};
-            $addParString =~ s!(["'])!\\$1!g; # escape quotes
+        my $kernelPars = $self->getAllKernelParameters();
+        if( $kernelPars ) {
+            $kernelPars =~ s!(["'])!\\$1!g; # escape quotes
 
             $chrootScript .= <<END;
-perl -pi -e 's|GRUB_CMDLINE_LINUX_DEFAULT="(.*)"|GRUB_CMDLINE_LINUX_DEFAULT="$addParString"|' /etc/default/grub
+perl -pi -e 's|GRUB_CMDLINE_LINUX_DEFAULT="(.*)"|GRUB_CMDLINE_LINUX_DEFAULT="$kernelPars"|' /etc/default/grub
 END
             # watch out for the s|||, the command-line contains / and maybe ,
         }
@@ -172,18 +157,16 @@ timer 4
 default ubos
 CONTENT
 
-    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid( $self->{diskLayout}->getRootDeviceNames() );
-    my $addParString = '';
+    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
+            $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
 
-    if( defined( $self->{additionalKernelParameters} ) && @{$self->{additionalKernelParameters}} ) {
-        map { $addParString .= ' ' . $_ } @{$self->{additionalKernelParameters}};
-    }
+    my $kernelPars = $self->getAllKernelParameters();
 
     UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT );
 title UBOS
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
-options root=PARTUUID=$rootPartUuid rw $addParString
+options root=PARTUUID=$rootPartUuid rw $kernelPars
 CONTENT
 
     return 0;

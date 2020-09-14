@@ -21,7 +21,7 @@ use fields;
 sub checkCompleteParameters {
     my $self = shift;
 
-    my $errors = return $self->SUPER::checkComplete();
+    my $errors = return $self->SUPER::checkCompleteParameters();
 
     # Add keyring, as on arm (unlike x86), pacman does not depend on it
     push @{$self->{devicepackages}}, 'archlinuxarm-keyring';

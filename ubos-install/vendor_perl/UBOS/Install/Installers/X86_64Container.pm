@@ -14,7 +14,6 @@ use UBOS::Install::AbstractContainerInstaller;
 use base qw( UBOS::Install::AbstractContainerInstaller );
 use fields;
 
-
 ## Constructor inherited from superclass
 
 ##

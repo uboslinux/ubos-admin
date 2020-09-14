@@ -57,8 +57,6 @@ sub checkCreateVolumeLayout {
 
     # We can install to:
     # * a single directory
-    # * a single file
-    # * a single disk device
 
     my $errors = $self->_checkSingleInstallTargetOnly();
     if( $errors ) {
@@ -77,26 +75,8 @@ sub checkCreateVolumeLayout {
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::Directory->new( $installTarget );
         $self->{target} = $installTarget;
 
-    } elsif( UBOS::Install::AbstractVolumeLayout::isFile( $installTarget )) {
-
-        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'msdos',
-                $installTarget,
-                [
-                    UBOS::Install::Volumes::RootVolume->new() # defaults
-                ] );
-
-    } elsif( UBOS::Install::AbstractVolumeLayout::isBlockDevice( $installTarget )) {
-
-        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::MbrDiskBlockDevices->new(
-                'msdos',
-                $installTarget,
-                [
-                    UBOS::Install::Volumes::RootVolume->new() # defaults
-                ] );
-
     } else {
-        error( 'Install target must be a directory, file or a disk block device for this device class:', $installTarget );
+        error( 'Install target must be a directory for this device class:', $installTarget );
         ++$errors;
     }
 

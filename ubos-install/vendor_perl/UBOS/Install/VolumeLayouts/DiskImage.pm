@@ -10,20 +10,48 @@ use warnings;
 package UBOS::Install::VolumeLayouts::DiskImage;
 
 use base qw( UBOS::Install::AbstractVolumeLayout );
-use fields qw( loopDevice );
+use fields qw( partitioningScheme image startOffset alignment loopDevice );
 
 use UBOS::Install::AbstractVolumeLayout;
 use UBOS::Utils;
 use UBOS::Logging;
 
-## Inherited constructor
+##
+# Constructor
+sub new {
+    my $self               = shift;
+    my $partitioningScheme = shift;
+    my $image              = shift;
+    my $volumesP           = shift;
+    my $startOffset        = shift || 2048 * 512;
+    my $alignment          = shift || 'minimal';
+
+    if( $partitioningScheme ne 'gpt' && $partitioningScheme ne 'msdos' ) {
+        fatal( 'Invalid partitioning scheme:', $partitioningScheme );
+    }
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+    $self->SUPER::new( $volumesP );
+
+    $self->{partitioningScheme} = $partitioningScheme;
+    $self->{image}              = $image;
+    $self->{startOffset}        = $startOffset;
+    $self->{alignment}          = $alignment;
+
+    return $self;
+}
 
 ##
-# Format the configured disks.
-sub createDisks {
+# Create the configured volumes.
+sub createVolumes {
     my $self = shift;
 
-    error( 'FIXME createDisks' );
+    trace( 'DiskImage::createVolumes' );
+
+    my $errors = $self->formatSingleDisk( $self->{image}, $self->{partitoningScheme}, $self->{startOffset}, $self->{alignment} );
+    return $errors;
 }
 
 ##
@@ -37,7 +65,7 @@ sub createLoopDevices {
     my $errors = 0;
 
     my $out;
-    if( UBOS::Utils::myexec( "losetup --show --find --partscan '" . $self->{volumes}->[0] . "'", undef, \$out, \$out )) {
+    if( UBOS::Utils::myexec( "losetup --show --find --partscan '" . $self->{image} . "'", undef, \$out, \$out )) {
         error( "losetup -a error:", $out );
         ++$errors;
     }
@@ -46,12 +74,11 @@ sub createLoopDevices {
     $self->{loopDevice} = $out;
     my $partitionLoopDeviceRoot = $self->{loopDevice};
 
-    # in sequence of index
-    my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
-    foreach my $mountPath ( @mountPathIndexSequence ) {
-        my $data = $self->{devicetable}->{$mountPath};
-
-        $data->{devices} = [ $partitionLoopDeviceRoot . 'p' . $data->{index} ]; # augment $self->{devicetable}
+    # insert them into the $self->{volumes}
+    my $index = 1; # starts counting at 1
+    foreach my $vol ( @{$self->{volumes}} ) {
+        $vol->setDevice( $partitionLoopDeviceRoot . 'p' . $index );
+        ++$index;
     }
 
     return $errors;

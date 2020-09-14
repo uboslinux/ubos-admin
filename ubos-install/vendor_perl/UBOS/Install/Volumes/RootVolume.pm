@@ -25,9 +25,12 @@ sub new {
         $self = fields::new( $self );
     }
     # set defaults for this class here
-    $self->{fs}       = 'btrfs';
-    $self->{partedFs} = 'btrfs';
-    $self->{size}     = 16 * 1024 * 1024 * 1024; # 16 GB
+    $self->{label}      = 'root';
+    $self->{mountPoint} = '/';
+    $self->{fs}         = 'btrfs';
+    $self->{partedFs}   = 'btrfs';
+    $self->{size}       = ''; # set but no value, so it takes up the remaining space
+    $self->{mkfsFlags}  = '';
 
     $self->SUPER::new( %pars );
 

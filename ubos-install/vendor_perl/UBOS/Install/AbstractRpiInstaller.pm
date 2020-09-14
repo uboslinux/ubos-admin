@@ -18,14 +18,14 @@ package UBOS::Install::AbstractRpiInstaller;
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
-use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
-use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-use UBOS::Install::Volumes::BootVolume;
-use UBOS::Install::Volumes::RootVolume;
-use UBOS::Install::Volumes::SwapVolume;
-use UBOS::Logging;
-use UBOS::Utils;
+#use UBOS::Install::AbstractVolumeLayout;
+#use UBOS::Install::VolumeLayouts::DiskImage;
+#use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+#use UBOS::Install::Volumes::BootVolume;
+#use UBOS::Install::Volumes::RootVolume;
+#use UBOS::Install::Volumes::SwapVolume;
+#use UBOS::Logging;
+#use UBOS::Utils;
 
 ## Constructor inherited from superclass
 
@@ -56,7 +56,7 @@ sub checkCompleteParameters {
         $self->{devicemodules} = [ qw( snd-bcm2835 ) ];
     }
 
-    return $self->SUPER::checkComplete();
+    return $self->SUPER::checkCompleteParameters();
 }
 
 ##
@@ -77,8 +77,8 @@ sub checkCreateVolumeLayout {
     my $defaultBootVolume = UBOS::Install::Volumes::BootVolume( {
             'fs'        => 'vfat',
             'size'      => 128 * 1024 * 1024, # 128M
-            'mkfsflags' => '-F32',
-            'mbrboot'   => 1,
+            'mkfsFlags' => '-F32',
+            'mbrBoot'   => 1,
             'mbrparttype' => 'c'
             # default partition type for gpt
     } );
@@ -98,7 +98,7 @@ sub checkCreateVolumeLayout {
             $defaultBootVolume,
             $defaultRootVolume
         );
-        if( $self->{swap} == 1 ) { # defaults to no swap
+        if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, $defaultSwapVolume;
         }
 
@@ -119,7 +119,7 @@ sub checkCreateVolumeLayout {
                 $defaultBootVolume,
                 $defaultRootVolume
             );
-            if( $self->{swap} != -1 ) { # defaults to swap
+            if( defined( $self->{swap} ) && $self->{swap} != -1 ) { # defaults to swap
                 push @volumes, $defaultSwapVolume;
             }
 

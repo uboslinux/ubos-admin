@@ -14,20 +14,17 @@ use warnings;
 
 package UBOS::Install::Installers::X86_64Vbox;
 
-use base qw( UBOS::Install::AbstractPcInstaller );
-use fields;
-
-use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
-use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-use UBOS::Install::Volumes::BootVolume;
-use UBOS::Install::Volumes::RootVolume;
-use UBOS::Install::Volumes::SwapVolume;
+#use UBOS::Install::AbstractVolumeLayout;
+#use UBOS::Install::VolumeLayouts::DiskImage;
+#use UBOS::Install::Volumes::RootVolume;
+#use UBOS::Install::Volumes::SwapVolume;
 use UBOS::Logging;
 use UBOS::Utils;
 
-## Constructor inherited from superclass
+use base qw( UBOS::Install::AbstractPcInstaller );
+use fields;
 
+## Constructor inherited from superclass
 
 ##
 # Check that the provided parameters are correct, and complete incomplete items from
@@ -45,7 +42,8 @@ sub checkCompleteParameters {
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client
-                mkinitcpio virtualbox-guest-utils
+                grub mkinitcpio
+                virtualbox-guest-utils
                 ubos-deviceclass-vbox
         ) ];
     }
@@ -58,7 +56,7 @@ sub checkCompleteParameters {
 
     $self->{packagedbs}->{'virt'} = '$depotRoot/$channel/$arch/virt';
 
-    return $self->SUPER::checkComplete();
+    return $self->SUPER::checkCompleteParameters();
 }
 
 ##
@@ -76,7 +74,7 @@ sub checkCreateVolumeLayout {
     }
 
     if( $self->{swap} ) {
-        error( 'Cannot use swap flag with this device class' );
+        error( 'Cannot use --swap with this device class' );
         return 1;
     }
 
@@ -92,7 +90,7 @@ sub checkCreateVolumeLayout {
                 ] );
 
     } else {
-        error( 'Install target must be a file or a disk block device for this device class:', $installTarget );
+        error( 'Install target must be a file for this device class:', $installTarget );
         ++$errors;
     }
 

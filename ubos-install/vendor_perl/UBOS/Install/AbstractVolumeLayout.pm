@@ -34,11 +34,167 @@ sub new {
 
 ##
 # Create the configured volumes.
-sub createDisks {
+sub createVolumes {
     my $self = shift;
 
     # no op, may be overridden
     return 0;
+}
+
+##
+# Helper method to format a single disk device or image file.
+# $dev: the disk device (e.g. /dev/sdc) or disk (e.g. /tmp/diskfile)
+# $partitioningScheme: the partitioning scheme to use (msdos or gpt)
+# $startOffset: the starting offset for the first partition
+# $alignment: the gparted alignment to use
+# return: number of errors
+sub formatSingleDisk {
+    my $self               = shift;
+    my $dev                = shift;
+    my $partitioningScheme = shift;
+    my $startOffset        = shift;
+    my $alignment          = shift;
+
+    my $errors = 0;
+
+    my $out;
+    my $err;
+
+    trace( 'AbstractVolumeLayout::formatSingleDisk', $dev, $partitioningScheme );
+
+    # Clear everything out
+    if( UBOS::Utils::myexec( "sgdisk --zap-all '" . $dev . "'", undef, \$out, \$out )) {
+        error( 'sgdisk --zap-all:', $out );
+        ++$errors;
+    }
+
+    my $script  = 'mklabel'; # note there are no \n or any other separators between commands
+    $script    .= ' ' . $partitioningScheme;
+
+    my $partType = '';
+    if( $partitioningScheme eq 'msdos' ) {
+        if( @{$self->{volumes}} <= 4 ) {
+            $partType = 'primary';
+        } else {
+            $partType = 'logical';
+        }
+    }
+
+    my $currentStart = $startOffset;
+    my $currentEnd   = -512; # last sector, expressed in bytes
+
+    # traverse forward in vol's until we find a partition with unspecified size
+    # then traverse backward from the end until we find a partition with unspecified size
+    # then create the unspecified partition in the middle
+
+    my $indexFromFront = 0; # index into $self->{volumes}, so we know where we are
+    foreach my $vol ( @{$self->{volumes}} ) {
+
+        my $partSize = $vol->getSize();
+        unless( $partSize ) {
+            last;
+        }
+
+        my $partLabel = $vol->getLabel();
+        my $partFs    = $vol->getPartedFs();
+        my $nextStart = $currentStart + $partSize;
+
+        # mkpart [part-type name fs-type] start end
+        $script .= " mkpart";
+
+        if( $partType ) {
+            $script .= " $partType";
+        }
+        if( $partitioningScheme ne 'msdos' && $partLabel ) {
+            $script .= " \"$partLabel\"";
+        }
+        if( $partFs ) {
+            $script .= " $partFs";
+        }
+
+        $script .= ' ' . $currentStart . 'B';
+        $script .= ' ' . $nextStart . 'B';
+
+        $currentStart = $nextStart + 512; # next sector
+        ++$indexFromFront;
+    }
+
+    my $indexFromBack = @{$self->{volumes}} - 1;
+    my $scriptTrailer = ''; # will be appended at the end; otherwise partitions out of sequence
+    foreach my $vol ( reverse @{$self->{volumes}} ) {
+
+        if( $indexFromBack < $indexFromFront ) {
+            last; # no part had unspecified size
+        }
+
+        my $partSize = $vol->getSize();
+        unless( $partSize ) {
+            last;
+        }
+
+        my $partLabel = $vol->getLabel();
+        my $partFs    = $vol->getPartedFs();
+        my $nextEnd   = $currentEnd - $partSize;
+
+        # mkpart [part-type name fs-type] start end
+        $scriptTrailer .= " mkpart";
+
+        if( $partType ) {
+            $scriptTrailer .= " $partType";
+        }
+        if( $partitioningScheme ne 'msdos' && $partLabel ) {
+            $scriptTrailer .= " \"$partLabel\"";
+        }
+        if( $partFs ) {
+            $scriptTrailer .= " $partFs";
+        }
+
+        $scriptTrailer .= ' ' . $nextEnd . 'B';
+        $scriptTrailer .= ' ' . $currentEnd . 'B';
+
+        $currentEnd = $nextEnd - 512; # previous sector
+        --$indexFromBack;
+    }
+    if( $indexFromFront < $indexFromBack ) {
+        fatal( 'More than one partition has unspecified size, cannot continue' );
+    }
+    if( $indexFromFront == $indexFromBack ) {
+        # exactly one has unspecified size
+
+        my $vol       = $self->{volumes}->[$indexFromFront];
+        my $partLabel = $vol->getLabel();
+        my $partFs    = $vol->getPartedFs();
+
+        # mkpart [part-type name fs-type] start end
+        $script .= " mkpart";
+
+        if( $partType ) {
+            $script .= " $partType";
+        }
+        if( $partitioningScheme ne 'msdos' && $partLabel ) {
+            $script .= " \"$partLabel\"";
+        }
+        if( $partFs ) {
+            $script .= " $partFs";
+        }
+        $script .= ' ' . $currentStart . 'B';
+        $script .= ' ' . $currentEnd . 'B';
+    }
+    $script .= $scriptTrailer;
+
+    my $cmd  = 'parted';
+    $cmd    .= " --align '" . $alignment . "'";
+    $cmd    .= " --script";
+    $cmd    .= " '" . $dev . "'";
+    $cmd    .= " -- " . $script;
+
+    if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
+        error( 'parted failed:', $out );
+        ++$errors;
+    }
+    $errors += resetDiskCaches();
+
+    return $errors;
 }
 
 ##
@@ -52,7 +208,7 @@ sub formatVolumes {
     trace( 'Checking that none of the devices are currently mounted' );
 
     foreach my $vol ( @{ $self->{volumes}} ) {
-        if( UBOS::Install::AbstractVolume::isMountedOrChildMounted( $vol )) {
+        if( isMountedOrChildMounted( $vol )) {
             error( 'Cannot install to mounted device:', $vol );
             ++$errors;
         }
@@ -89,14 +245,14 @@ sub deleteLoopDevices {
 }
 
 ##
-# Mount this disk layout at the specified target directory
+# Mount this volume layout at the specified target directory
 # $installer: the Installer
 # return: number of errors
-sub mountDisks {
+sub mountVolumes{
     my $self      = shift;
     my $installer = shift;
 
-    trace( 'Mounting disks' );
+    trace( 'Mounting volumes' );
 
     my $target = $installer->getTarget();
     my $errors = 0;
@@ -112,7 +268,7 @@ sub mountDisks {
         my $mountPoint = $vol->getMountPoint();
 
         # don't swapon swap devices during install
-        if( $mountPoint =~ m!^/! ) { # don't mount devices that don't start with /
+        if( $mountPoint ) {
 
             unless( -d "$target$mountPoint" ) {
                 UBOS::Utils::mkdir( "$target$mountPoint" );
@@ -134,11 +290,11 @@ sub mountDisks {
 # Unmount the previous mounts
 # $installer: the Installer
 # return: number of errors
-sub umountDisks {
+sub umountVolumes {
     my $self      = shift;
     my $installer = shift;
 
-    trace( 'Unmounting disks' );
+    trace( 'Unmounting volumes' );
 
     my $target = $installer->getTarget();
     my $errors = 0;
@@ -153,7 +309,7 @@ sub umountDisks {
 
         my $mountPoint = $vol->getMountPoint();
 
-        if( $mountPoint =~ m!^/! ) { # don't umount devices that don't start with /
+        if( $mountPoint ) {
             debugAndSuspend( 'Umount ', $mountPoint );
             if( UBOS::Utils::myexec( "umount '$target$mountPoint'" )) {
                 ++$errors;
@@ -291,7 +447,7 @@ sub snapperBtrfsMountPoints {
 
     my @ret;
     foreach my $vol ( @{$self->{volumes}} ) {
-        if( defined( $vol->isBtrfs() )) {
+        if( $vol->isBtrfs()) {
             push @ret, $vol->getMountPoint();
         }
     }
@@ -301,7 +457,7 @@ sub snapperBtrfsMountPoints {
 ##
 # Helper method to determine the root volume
 # return: the root volume
-sub getRootVoume {
+sub getRootVolume {
     my $self = shift;
 
     my @ret;
@@ -324,7 +480,8 @@ sub determineBootLoaderDevice {
 
 ##
 # Helper method to return the instances of Volume ordered by the length of
-# the mount path, from shortest to longest
+# the mount path, from shortest to longest. This will return not-to-be-mounted
+# devices (like swap) first as their mount path is ''.
 # return: array
 sub getVolumesByMountPath {
     my $self = shift;

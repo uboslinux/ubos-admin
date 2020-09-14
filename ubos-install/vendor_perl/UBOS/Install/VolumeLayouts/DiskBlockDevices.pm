@@ -10,40 +10,53 @@ use warnings;
 package UBOS::Install::VolumeLayouts::DiskBlockDevices;
 
 use base qw( UBOS::Install::AbstractVolumeLayout );
-use fields qw( labelType devices );
+use fields qw( partitioningScheme devices startOffset alignment );
 
 use UBOS::Utils;
 use UBOS::Logging;
 
 ##
 # Constructor
-# $labelType: type of partition label as parted calls them, e.g. 'msdos' or 'gpt'
-# $disksp: array of disk block devices
-# $devicetable: device data
 sub new {
-    my $self        = shift;
-    my $labelType   = shift;
-    my $devicesP    = shift;
-    my $volumesP    = shift;
+    my $self               = shift;
+    my $partitioningScheme = shift;
+    my $devicesP           = shift;
+    my $volumesP           = shift;
+    my $startOffset        = shift || 2048 * 512;
+    my $alignment          = shift || 'minimal';
+
+    if( $partitioningScheme ne 'gpt' && $partitioningScheme ne 'msdos' ) {
+        fatal( 'Invalid partitioning scheme:', $partitioningScheme );
+    }
 
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $volumesP );
 
-    $self->{labelType} = $labelType;
-    $self->{devices}   = $devicesP;
+    $self->{partitioningScheme} = $partitioningScheme;
+    $self->{devices}            = $devicesP;
+    $self->{startOffset}        = $startOffset;
+    $self->{alignment}          = $alignment;
 
     return $self;
 }
 
 ##
-# Create the configured disks.
-sub createDisks {
+# Create the configured volumes.
+sub createVolumes {
     my $self = shift;
 
+    my $errors = 0;
 
-    error( 'FIXME createDisks' );
+    trace( 'DiskBlockDevices::createVolumes' );
+
+    foreach my $dev ( @{$self->{devices}} ) {
+        $errors += $self->formatSingleDisk( $dev, $self->{partitioningScheme}, $self->{startOffset}, $self->{alignment} );
+    }
+    $errors += $self->_augmentDeviceTableWithPartitions();
+
+    return $errors;
 }
 
 ##
@@ -63,6 +76,8 @@ sub _augmentDeviceTableWithPartitions {
     my $self = shift;
 
     my $errors = 0;
+
+    my $isFirstDevice = 1;
     foreach my $dev ( @{$self->{devices}} ) {
         my $shortDisk = $dev;
         $shortDisk =~ s!^.+/!!; # greedy
@@ -77,23 +92,22 @@ sub _augmentDeviceTableWithPartitions {
             foreach my $child ( @{$json->{blockdevices}->[0]->{children}} ) {
                 my $childName = $child->{name};
 
-                # in sequence of index
-                my @mountPathIndexSequence = sort { $self->{devicetable}->{$a}->{index} <=> $self->{devicetable}->{$b}->{index} } keys %{$self->{devicetable}};
-                foreach my $mountPath ( @mountPathIndexSequence ) {
-                    my $data  = $self->{devicetable}->{$mountPath};
-                    my $index = $data->{index};
+                my $index = 1; # starts with 1
+                foreach my $vol( @{$self->{volumes}} ) {
 
                     my $regex = $shortDisk . 'p?' . $index;
                     if( $childName =~ m!^$regex$! ) {
-                        unless( exists( $data->{devices} )) {
-                            $data->{devices} = [];
+                        if( $isFirstDevice ) {
+                            $vol->setDevice( "/dev/$childName" );
+                        } else {
+                            $vol->addDevice( "/dev/$childName" );
                         }
-
-                        push @{$data->{devices}}, "/dev/$childName";
                     }
+                    ++$index;
                 }
             }
         }
+        $isFirstDevice = 0;
     }
 
     return $errors;

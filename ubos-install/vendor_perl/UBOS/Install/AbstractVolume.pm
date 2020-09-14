@@ -9,19 +9,20 @@ use warnings;
 
 package UBOS::Install::AbstractVolume;
 
-use fields qw( name deviceNames mountPoint fs partedFs size mkfsflags );
+use fields qw( label deviceNames mountPoint fs partedFs size mkfsFlags );
+# See same list below in new() except for deviceNames, change both
 
 use UBOS::Logging;
 
 ##
 # Constructor for subclasses only
-# $name: name of the volume to set as partition label if possible
+# $label: name of the volume to set as partition label if possible
 # $fs: filesystem type, for mkfs
 # $partedFs: filesystem type, for parted
 # $size: size in bytes, or undef
 
 sub new {
-    my $self     = shift;
+    my $self = shift;
     my %pars = @_;
 
     unless( ref( $self )) {
@@ -32,15 +33,22 @@ sub new {
         $self->{$key} = $pars{$key}; # will produce errors if not exists
     }
 
-    foreach my $key ( keys %$self ) {
-        unless( $self->{$key} ) {
+    foreach my $key ( qw( label mountPoint fs partedFs size mkfsFlags ) ) {
+        unless( defined( $self->{$key} )) {
             error( 'Value not set for', ref( $self ), ':', $key );
         }
     }
 
-    trace( 'Created volume', ref( $self ));
-
     return $self;
+}
+
+##
+# Obtain the label of this volume
+# return: the label, if any
+sub getLabel {
+    my $self = shift;
+
+    return $self->{label};
 }
 
 ##
@@ -50,6 +58,30 @@ sub getDeviceNames {
     my $self = shift;
 
     return @{$self->{deviceNames}};
+}
+
+##
+# Set a device which allows access to this volume in lieu
+# of having had one ready at time of construction.
+# $dev: the device to set
+sub setDevice {
+    my $self = shift;
+    my $dev  = shift;
+
+    if( defined( $self->{deviceNames} ) && @{$self->{deviceNames}} ) {
+        error( 'Already have device names when trying to add device:', $self->{deviceNames}. 'vs', $dev );
+    }
+    $self->{deviceNames} = [ $dev ];
+}
+
+##
+# Add another device which allows access to this volume. For the RAID case.
+# $dev: the device to add
+sub addDevice {
+    my $self = shift;
+    my $dev  = shift;
+
+    push @{$self->{deviceNames}}, $dev;
 }
 
 ##
@@ -76,7 +108,7 @@ sub getFs {
 sub hasFs {
     my $self = shift;
 
-    return 'none' eq $self->{fs};
+    return 'none' ne $self->{fs};
 }
 
 ##
@@ -85,10 +117,19 @@ sub hasFs {
 sub isBtrfs {
     my $self = shift;
 
-    if( defined( $self->{fs} ) && 'btrfs' eq $self->{btrfs} ) {
+    if( defined( $self->{fs} ) && 'btrfs' eq $self->{fs} ) {
         return 1;
     }
     return 0;
+}
+
+##
+# Obtain the name of the filesystem the way parted wants it, if any
+# return: name of the file system, if any
+sub getPartedFs {
+    my $self = shift;
+
+    return $self->{partedFs};
 }
 
 ##
@@ -98,6 +139,15 @@ sub isRoot {
     my $self = shift;
 
     return 0; # override in subclasses
+}
+
+##
+# Obtain the size of the volume, or Undef if "remaining space"
+# return: size in bytes
+sub getSize {
+    my $self = shift;
+
+    return $self->{size};
 }
 
 ##
@@ -113,6 +163,7 @@ sub formatVolume {
     my $fs     = $self->getFs();
     my $errors = 0;
 
+    trace( 'Format file system for', @{$self->{deviceNames}}, 'with', $fs );
     debugAndSuspend( 'Format file system for', @{$self->{deviceNames}}, 'with', $fs );
 
     if( $self->isBtrfs() ) {
@@ -120,13 +171,13 @@ sub formatVolume {
         if( @{$self->{deviceNames}} > 1 ) {
             $cmd .= ' -m raid1 -d raid1';
         }
-        if( exists( $self->{mkfsflags} )) {
-            $cmd .= ' ' . $self->{mkfsflags};
+        if( $self->{mkfsFlags} ) {
+            $cmd .= ' ' . $self->{mkfsFlags};
         }
-        if( exists( $self->{label} )) {
+        if( $self->{label} ) {
             $cmd .= " --label '" . $self->{label} . "'";
         }
-        $cmd .= ' ' . join( ' ', @{$self->{devices}} );
+        $cmd .= ' ' . join( ' ', @{$self->{deviceNames}} );
 
         my $out;
         my $err;
@@ -141,7 +192,7 @@ sub formatVolume {
             my $err;
             my $cmd = "mkswap '$dev'";
 
-            if( exists( $self->{label} )) {
+            if( $self->{label} ) {
                 $cmd .= " --label '" . $self->{label} . "'";
             }
 
@@ -154,10 +205,10 @@ sub formatVolume {
     } else {
         foreach my $dev ( @{$self->{deviceNames}} ) {
             my $cmd = "mkfs.$fs";
-            if( exists( $self->{mkfsflags} )) {
-                $cmd .= ' ' . $self->{mkfsflags};
+            if( exists( $self->{mkfsFlags} )) {
+                $cmd .= ' ' . $self->{mkfsFlags};
             }
-            if( exists( $self->{label} )) {
+            if( $self->{label} ) {
                 if( $fs eq 'vfat' ) {
                     $cmd .= " -n '" . $self->{label} . "'";
                 } elsif( $fs eq 'ext4' ) {

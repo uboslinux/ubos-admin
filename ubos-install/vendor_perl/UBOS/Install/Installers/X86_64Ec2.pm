@@ -15,17 +15,17 @@ use warnings;
 
 package UBOS::Install::Installers::X86_64Ec2;
 
+#use UBOS::Install::AbstractVolumeLayout;
+#use UBOS::Install::VolumeLayouts::DiskImage;
+#use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+#use UBOS::Install::Volumes::BootVolume;
+#use UBOS::Install::Volumes::RootVolume;
+#use UBOS::Install::Volumes::SwapVolume;
+#use UBOS::Logging;
+#use UBOS::Utils;
+
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
-
-use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
-use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-use UBOS::Install::Volumes::BootVolume;
-use UBOS::Install::Volumes::RootVolume;
-use UBOS::Install::Volumes::SwapVolume;
-use UBOS::Logging;
-use UBOS::Utils;
 
 ## Constructor inherited from superclass
 
@@ -50,7 +50,7 @@ sub checkCompleteParameters {
         $self->{devicePackages} = [ qw(
                 ubos-networking-cloud
                 ec2-keyring
-                mkinitcpio
+                grub mkinitcpio
                 ubos-deviceclass-ec2
         ) ];
     }
@@ -61,7 +61,7 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    return $self->SUPER::checkComplete();
+    return $self->SUPER::checkCompleteParameters();
 }
 
 ##
@@ -85,7 +85,7 @@ sub checkCreateVolumeLayout {
         my @volumes = (
             UBOS::Install::Volumes::RootVolume->new()
         );
-        if( $self->{swap} != -1 ) { # defaults to swap
+        if( defined( $self->{swap} ) && $self->{swap} != -1 ) { # defaults to swap
             push @volumes, UBOS::Install::Volumes::SwapVolume( 4 * 1024 * 1024 * 1024 ); # 4G
         }
 

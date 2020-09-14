@@ -10,6 +10,13 @@ use warnings;
 
 package UBOS::Install::AbstractInstaller;
 
+use Cwd;
+use File::Spec;
+use File::Temp;
+use UBOS::Host;
+use UBOS::Logging;
+use UBOS::Utils;
+
 use fields qw(
         hostname channel
         kernelPackage
@@ -52,13 +59,6 @@ use fields qw(
 # target:    the location of the being-installed system
 #            (all VolumeLayouts)
 
-use Cwd;
-use File::Spec;
-use File::Temp;
-use UBOS::Host;
-use UBOS::Logging;
-use UBOS::Utils;
-
 ##
 # Constructor
 sub new {
@@ -100,9 +100,6 @@ sub setDeviceConfig {
     }
     if( exists( $deviceConfig->{productinfo} )) {
         $self->{productInfo} = $deviceConfig->{productinfo};
-    }
-    if( exists( $deviceConfig->{swap} )) {
-        $self->{swap} = $deviceConfig->{swap};
     }
     if( exists( $deviceConfig->{additionalpackages} )) {
         $self->{additionalPackages} = $deviceConfig->{additionalpackages};
@@ -205,7 +202,7 @@ sub checkCompleteParameters {
     }
 
     if( $self->{productInfo} ) {
-        foreach my $entry ( qw( name vendor sky )) {
+        foreach my $entry ( qw( name vendor sku )) {
             if( exists( $self->{productInfo}->{$entry} )) {
                 if( ref( $self->{productInfo}->{$entry} )) {
                     error( 'Product info entry', $entry, 'must be a string' );
@@ -303,7 +300,7 @@ sub checkCompleteParameters {
         ++$errors;
     }
 
-    unless( $self->{runCheckSignatures} ) {
+    unless( $self->{installPackageDbs} ) {
         $self->{installPackageDbs} = {
                 'os'      => '$depotRoot/$channel/$arch/os',
                 'hl'      => '$depotRoot/$channel/$arch/hl',
@@ -331,7 +328,7 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{runDisablePackageDbs} ) {
-        $self->{runDisablePackageDbs} = $self->{installDisablePackageDbs};
+        $self->{runDisablePackageDbs} = $self->{installDisablePackageDbs}; # same
     }
 
     unless( $self->{installAddPackageDbs} ) {
@@ -408,7 +405,7 @@ sub install {
 
     my $pacmanConfigInstall = File::Temp->new( UNLINK => 1 );
     if( $pacmanConfigInstall ) {
-        print $pacmanConfigInstall $pacmanConfigInstall;
+        print $pacmanConfigInstall $pacmanConfigInstallContent;
         close $pacmanConfigInstall;
 
     } else {
@@ -419,85 +416,86 @@ sub install {
         goto DONE;
     }
 
-    $errors += $self->{diskLayout}->createDisks();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->{diskLayout}->createLoopDevices();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->{diskLayout}->formatDisks();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->{diskLayout}->mountDisks( $self );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->mountSpecial();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->{diskLayout}->createSubvols( $self );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->installPackages( $pacmanConfigInstallContent );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->saveRunPacmanConfig();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->saveHostname();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->saveChannel();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->{diskLayout}->saveFstab( $self );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->saveModules();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->saveSecuretty();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->saveOther();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->configureOs();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->configureNetworkd();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->doUpstreamFixes();
-    if( $errors ) {
-        goto DONE;
-    }
+    my $evalResult = eval {
+        $errors += $self->{volumeLayout}->createVolumes();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->{volumeLayout}->createLoopDevices();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->{volumeLayout}->formatVolumes();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->{volumeLayout}->mountVolumes( $self );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->mountSpecial();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->{volumeLayout}->createSubvols( $self );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->installPackages( $pacmanConfigInstall );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->saveRunPacmanConfig();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->saveHostname();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->saveChannel();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->{volumeLayout}->saveFstab( $self );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->saveModules();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->saveSecuretty();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->saveOther();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->configureOs();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->configureNetworkd();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->doUpstreamFixes();
+        if( $errors ) {
+            goto DONE;
+        }
 
-    $errors += $self->installRamdisk();
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->installBootLoader( $pacmanConfigInstall );
-    if( $errors ) {
-        goto DONE;
-    }
+        $errors += $self->installRamdisk();
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->installBootLoader( $pacmanConfigInstall );
+        if( $errors ) {
+            goto DONE;
+        }
 
-    my $chrootScript = <<'SCRIPT';
+        my $chrootScript = <<'SCRIPT';
 #!/bin/bash
 # Script to be run in chroot
 set -e
@@ -514,48 +512,54 @@ systemctl set-default multi-user.target
 echo 'root:ubos!4vr' | chpasswd
 
 SCRIPT
-    $errors += $self->addGenerateLocaleToScript( \$chrootScript );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->addEnableServicesToScript( \$chrootScript );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
-    if( $errors ) {
-        goto DONE;
-    }
-    $errors += $self->addConfigureSnapperToScript( \$chrootScript );
-    if( $errors ) {
-        goto DONE;
-    }
-
-    trace( "chroot script:\n" . $chrootScript );
-
-    my $out;
-    my $err;
-    if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
-        error( "chroot script failed", $err );
-        ++$errors;
-        debugAndSuspend( 'Check what went wrong?' );
+        $errors += $self->addGenerateLocaleToScript( \$chrootScript );
         if( $errors ) {
             goto DONE;
         }
-    }
+        $errors += $self->addEnableServicesToScript( \$chrootScript );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->addConfigureNetworkingToScript( \$chrootScript );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->addConfigureSnapperToScript( \$chrootScript );
+        if( $errors ) {
+            goto DONE;
+        }
 
-    $errors += $self->cleanup();
-    if( $errors ) {
-        goto DONE;
+        trace( "chroot script:\n" . $chrootScript );
+
+        my $out;
+        my $err;
+        if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
+            error( "chroot script failed", $err );
+            ++$errors;
+            debugAndSuspend( 'Check what went wrong?' );
+            if( $errors ) {
+                goto DONE;
+            }
+        }
+
+        $errors += $self->cleanup();
+        if( $errors ) {
+            goto DONE;
+        }
+        1;
+    };
+    unless( $evalResult ) {
+        error( 'An unexpected error occurred:', $@ );
+        ++$errors;
     }
 
     DONE:
 
-    # No GOTO from here, we are trying to clean up
+    # No GOTO from here in case of errors, we are trying to clean up
     $errors += $self->umountSpecial();
-    $errors += $self->{diskLayout}->umountDisks( $self );
+    $errors += $self->{volumeLayout}->umountVolumes( $self );
 
-    $errors += $self->{diskLayout}->deleteLoopDevices();
+    $errors += $self->{volumeLayout}->deleteLoopDevices();
 
     return $errors;
 }
@@ -609,9 +613,12 @@ umount $target/dev
 umount $target/sys
 umount $target/proc
 END
-    if( UBOS::Utils::myexec( $s )) {
-        ++$errors;
-    }
+
+    # If something went wrong earlier, these may not be mounted, so we ignore errors.
+    my $out;
+    UBOS::Utils::myexec( $s, undef, \$out, \$out );
+    trace( 'Unmounting result:', $out );
+
     return $errors;
 }
 
@@ -624,11 +631,10 @@ sub generateInstallPacmanConfig {
 
     trace( "Executing generateInstallPacmanConfig" );
 
-    my $repo        = $self->{repo};
+    my $depotRoot   = $self->{installDepotRoot};
     my $channel     = $self->{channel};
     my $arch        = $self->arch;
-    my $depotRoot   = $self->{installDepotRoot};
-    my $levelString = $self->getPacmanSigLevelString();
+    my $levelString = $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} );
 
     my $ret  = <<END;
 #
@@ -660,14 +666,14 @@ END
         my $dbFile  = $prefix . "[$dbKey]\n";
         $dbFile    .= $prefix . "Server = $dbValue\n";
 
-        $ret += $dbFile;
+        $ret .= "\n" . $dbFile;
     }
     return $ret;
 }
 
 ##
 # Install the packages that need to be installed
-# $installPacmanConfig: content of the pacman config file to use
+# $installPacmanConfig: the pacman config file to use
 #
 sub installPackages {
     my $self                = shift;
@@ -690,26 +696,10 @@ sub installPackages {
         push @allPackages, @{$self->{additionalPackages}};
     }
 
-    # pacman now chroot's into $target, so we need to temporarily
-    # copy the config file into $target/tmp
-
-    my $tmpConfigFile = File::Temp->new( DIR => "$target/tmp", UNLINK => 1 );
-    if( $tmpConfigFile ) {
-        print $tmpConfigFile $installPacmanConfig;
-        close $tmpConfigFile;
-
-    } else {
-        error( 'Failed to create temporary pacman config file in dir', "$target/tmp" );
-        ++$errors;
-        return $errors;
-    }
-
-    my $tmpConfigFileInside = substr( $tmpConfigFile, length( $target ));
-
     my $cmd = "pacman"
-            . " --sysroot '$target'"
+            . " --root '$target'"
             . " -Sy"
-            . " '--config=$tmpConfigFileInside'"
+            . " '--config=$installPacmanConfig'"
             . " --cachedir '/var/cache/pacman/pkg'"
             . " --noconfirm"
             . ' ' . join( ' ', @allPackages );
@@ -719,7 +709,7 @@ sub installPackages {
     my $out;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
         error( "pacman failed:", $out );
-        trace( "pacman configuration was:\n", $installPacmanConfig );
+        trace( "pacman configuration was:\n", UBOS::Utils::slurpFile( $installPacmanConfig ));
         ++$errors;
     }
 
@@ -738,7 +728,7 @@ sub saveRunPacmanConfig {
     my $channel     = $self->{channel};
     my $target      = $self->{target};
     my $depotRoot   = $self->{runDepotRoot};
-    my $levelString = $self->getPacmanSigLevelString();
+    my $levelString = $self->getPacmanSigLevelStringFor( $self->{runCheckSignatures} );
 
     my $runPacmanConfig = <<END;
 #
@@ -837,7 +827,7 @@ sub saveModules {
     my $target = $self->{target};
     my $errors = 0;
 
-    foreach my $t ( qw( basemodules devicemodules additionalmodules )) {
+    foreach my $t ( qw( baseKernelModules deviceKernelModules additionalKernelModules )) {
         if( defined( $self->{$t} ) && @{$self->{$t}} ) {
             unless( UBOS::Utils::saveFile( "$target/etc/modules-load.d/$t.conf", join( "\n", @{$self->{$t}} ) . "\n" )) {
                 error( 'Failed to save modules load file for', $t );
@@ -881,7 +871,7 @@ sub configureOs {
     my $channel       = $self->{channel};
     my $buildId       = UBOS::Utils::time2string( time() );
     my $deviceClass   = $self->deviceClass();
-    my $kernelPackage = $self->{kernelpackage};
+    my $kernelPackage = $self->{kernelPackage};
     my $productInfo   = $self->{productInfo};
     my $errors        = 0;
 
@@ -1061,14 +1051,14 @@ sub addEnableServicesToScript {
 
     my @allServices = ();
 
-    if( defined( $self->{baseservices} )) {
-        push @allServices, @{$self->{baseservices}};
+    if( defined( $self->{baseServices} )) {
+        push @allServices, @{$self->{baseServices}};
     }
-    if( defined( $self->{deviceservices} )) {
-        push @allServices, @{$self->{deviceservices}};
+    if( defined( $self->{deviceServices} )) {
+        push @allServices, @{$self->{deviceServices}};
     }
-    if( defined( $self->{additionalservices} )) {
-        push @allServices, @{$self->{additionalservices}};
+    if( defined( $self->{additionalServices} )) {
+        push @allServices, @{$self->{additionalServices}};
     }
     if( @allServices ) {
         $$chrootScriptP .= 'systemctl enable ' . join( ' ', @allServices ) . "\n\n";
@@ -1104,7 +1094,7 @@ sub addConfigureSnapperToScript {
     my $target = $self->{target};
 
     my $errors = 0;
-    my @mountPoints = $self->{diskLayout}->snapperBtrfsMountPoints();
+    my @mountPoints = $self->{volumeLayout}->snapperBtrfsMountPoints();
     foreach my $mountPoint ( @mountPoints ) {
         my $configName = $mountPoint;
         $configName =~ s!/!!g;
@@ -1193,21 +1183,33 @@ sub deviceClass {
 }
 
 ##
-# Convert the checksignatures field into a string that can be added to
+# Convert the value of a xxxCheckSignatures field into a string that can be added to
 # a pacman.conf file.
+# $value: the value provided, such as 'optional'
 # return: string, such as "Optional TrustAll"
-sub getPacmanSigLevelString {
+sub getPacmanSigLevelStringFor {
     my $self = shift;
+    my $value = shift;
 
     my $ret;
-    # ubos-install makde sure it is all lowercase
-    if( 'never' eq $self->{checksignatures} ) {
+    # ubos-install makes sure it is all lowercase
+    if( 'never' eq $value ) {
         $ret = 'Never';
-    } elsif( 'optional' eq $self->{checksignatures} ) {
+    } elsif( 'optional' eq $value ) {
         $ret = 'Optional TrustAll';
     } else { # can't be anything else
         $ret = 'Required TrustedOnly';
     }
+    return $ret;
+}
+
+##
+# Concatenate all kernel parameters
+# return: string
+sub getAllKernelParameters {
+    my $self = shift;
+
+    my $ret = join( ' ', ( @{$self->{baseKernelParameters}}, @{$self->{deviceKernelParameters}}, @{$self->{additionalKernelParameters}} ));
     return $ret;
 }
 

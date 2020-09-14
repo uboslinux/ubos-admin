@@ -25,9 +25,11 @@ sub new {
         $self = fields::new( $self );
     }
     # set defaults for this class here
-    $self->{fs}       = 'mbr';
-    $self->{partedFs} = 'mbr';
-    $self->{size}     = 4 * 1024 * 1024; # 4 MB
+    $self->{label}      = 'mbr';
+    $self->{mountPoint} = '';
+    $self->{fs}         = '';
+    $self->{partedFs}   = 'fat32';
+    $self->{size}       = 4 * 1024 * 1024; # 4 MB
     # 'gptparttype' => 'EF02',
 
     $self->SUPER::new( %pars );

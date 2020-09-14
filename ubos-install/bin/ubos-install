@@ -32,6 +32,7 @@ my $runDepotRoot;
 my $installCheckSignatures;
 my $runCheckSignatures;
 my %addPackageDbs;
+my @removePackageDbs;
 my @disablePackageDbs;
 my @bootLoaderDevices;
 my @bootPartitions;
@@ -39,7 +40,6 @@ my @rootPartitions;
 my @ubosPartitions;
 my @swapPartitions;
 my $swap;
-
 
 my $parseOk = GetOptions(
         'verbose+'                   => \$verbose,
@@ -69,6 +69,7 @@ my $parseOk = GetOptions(
         'run-check-signatures=s'     => \$runCheckSignatures,
 
         'add-package-db=s'           => \%addPackageDbs,
+        'remove-package-db=s'        => \@removePackageDbs,
         'disable-package-db=s'       => \@disablePackageDbs,
 
         'bootloaderdevice=s'         => \@bootLoaderDevices,
@@ -103,6 +104,7 @@ if(      $listDeviceClasses
          || $installCheckSignatures
          || $runCheckSignatures
          || keys %addPackageDbs
+         || @removePackageDbs
          || @disablePackageDbs
          || $swap ))
 {
@@ -171,6 +173,9 @@ if( $runCheckSignatures ) {
 if( keys %addPackageDbs ) {
     $deviceConfig->{addpackagedbs} = \%addPackageDbs;
 }
+if( @removePackageDbs ) {
+    $deviceConfig->{removepackagedbs} = \@removePackageDbs;
+}
 if( @disablePackageDbs ) {
     $deviceConfig->{disablepackagedbs} = \@disablePackageDbs;
 }
@@ -229,6 +234,7 @@ unless( UBOS::Utils::isOnline() ) {
     fatal( 'Cannot reach the UBOS software depot; leaving system and disks unchanged' );
 }
 
+trace( 'Running the installation' );
 $errors = $installer->install();
 
 # Done
@@ -331,9 +337,11 @@ END
     print "    $0 <device> ...\n";
     if( $long ) {
         print <<END;
-        Install UBOS on <device>. <device> must be a disk device, or a pre-allocated disk image,
+        Install UBOS on <device>. <device> must be a disk device, a pre-allocated disk image,
         or an empty directory.
         If more than one <device> is given, mirror across at least two disks (RAID1).
+        Details on what devices are allowed in what configuration depend on the deviceclass
+        and arch for which the installation is being performed.
         WARNING: THIS WILL FORMAT <device>. ALL YOUR DATA ON IT WILL BE LOST.
 END
     }
@@ -343,23 +351,16 @@ END
         print <<END;
         Install UBOS on root partition <part>. <part> must be a partition such as /dev/sda3.
         If more than one root partition is given, mirror across at least two partitions (RAID1).
-        WARNING: THIS WILL OVERWRITE all partitions you specify. ALL YOUR DATA ON THEM WILL BE LOST.
-        However, it will not change the partition table, nor will it touch other partitions.
-END
-    }
-    print "    $0 --config <file>\n";
-    if( $long ) {
-        print <<END;
-        Use the information provided in the JSON file <file> to install UBOS.
-        Any optional arguments override the information in the JSON file, except
-        for the --addXXX arguments, which will be added together, and the --removeXXX
-        arguments, which also will be added together.
+        WARNING: THIS WILL OVERWRITE all partitions you specify with --rootpartition and any
+        other optional partition parameters you may be specifying. ALL YOUR DATA ON THEM WILL
+        BE LOST. However, it will not change the partition table or touch other partitions.
 END
     }
     print "    $0 --listdeviceclasses\n";
     if( $long ) {
         print <<END;
-        Show the device classes that can be specified.
+        Show the device classes that can be specified to install for. No other options are
+        permitted when specifying this option.
 END
     }
     print "    $0 --help\n";
@@ -374,79 +375,94 @@ END
         print <<END;
 Optional arguments:
     --verbose
-          Increase amount of status output.
+          Display extra output. May be repeated for even more output.
     --logConfFile <log4perlconf>
-          Alternate logging configuration file (not common).
-    --channel <channel>
-          The UBOS release channel; defaults to the release channel of the system on which
-          the command is run.
-    --hostname <hostname>
-          The hostname to set; defaults to a deviceclass-specific name.
-    --repository <path>
-          Use this local UBOS repository for installation instead of http://depot.ubos.net/
-    --depotroot <url>
-          Use this URL for the root of the update repository instead of
-          http://depot.ubos.net/<channel> where <channel> is the release channel
-    --target <path>
-          The directory to which the new system will be mounted temporarily during assembly.
-          Defaults to a temp directoy in the current working directory. Make sure there
-          is enough disk space for the entire system
+          Use an alternate log configuration file for this command.
+    --device-config <file>
+          Read options from the provided file <file>. If additional options are provided
+          on the command-line, the command-line overwrites the options provided in the file.
     --arch <arch>
-          The computer architecture, e.g. x86_64 or aarch. The architecture of the host on
-          which $0 is run and the specified march must be the same, or results will be
+          The computer architecture, e.g. x86_64 or aarch64. The architecture of the host on
+          which $0 is run and the specified arch should be the same, or results will be
           unpredictable.
     --deviceclass <class>
-          The device class, e.g. rpi (Raspberry Pi), pc (x86_64 PC). The deviceclass must
+          The device class, e.g. rpi (Raspberry Pi) or pc (x86_64 PC). The deviceclass must
           exist for the arch.
-    --checksignatures <never|optional|required>
-          Should package signatures be checked. Same as in pacman.conf(5). Defaults to required.
+    --hostname <hostname>
+          The hostname to set; defaults to a deviceclass-specific name.
+    --channel <channel>
+          The UBOS release channel; defaults to the 'green' release channel.
+    --productfile <file>
+          Read information about the product this installation is for from <file>.
+    --add-package <package>
+          Name of an additional package to install beyond the default packages for
+          the device class
+    --add-service <service>
+          Name of an additional systemd service to enable beyond the default systemd
+          services for the device class
+    --add-kernel-module <module>
+          Name of an additional kernel module to load beyond the default kernel modules
+          for the device class
+    --add-kernel-parameter <parameter>
+          Verbatim string to be appended to the kernel boot command-line. This currently
+          only works on some device classes.
+    --install-depot-root <url>
+          Use this URL for the root of the code repository from where to download the
+          to-be installed packages. Defaults to http://depot.ubos.net
+    --run-depot-root <url>
+          Use this URL for the root of the code repository from where to download any
+          additional or upgraded packages the user wishes to install when the system is
+          running. Defaults to http://depot.ubos.net
+    --install-check-signatures <never|optional|required>
+          Should package signatures be checked during installation. Same as in
+          pacman.conf(5). Defaults to required.
+    --run-check-signatures <never|optional|required>
+          Should package signatures be checked when the system is running. Same as in
+          pacman.conf(5). Defaults to required.
+    --add-package-db <name=server>
+          Add an additional pacman repository, where <name> is the section name for the
+          pacman configuration, and <server> is the URL where the packages can be found.
+          This will be used in conjunction with the applicable url (specified with
+          --install-depot-root for installation time, and --run-depot-root for run time).
+    --remove-package-db <name>
+          Do not add one of the default UBOS repositories, where <name> is the section name.
+    --disable-package-db <name>
+          Disable one of the otherwise added repositories, where <name> is the section name.
+    --bootloaderdevice <dev>
+          Install the boot loader on this block device. This is only used by some device
+          classes (e.g. PC) where boot loaders are written to a special place on the hard
+          disk.
+          This can only be used when ubos-install is invoked in the --rootpartition style.
     --bootpartition <part>
           Use this block device as boot partition. If not provided, there will be no
           separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
           boot from a btrfs filesystem, and thus require that you specify a separate
           boot partition that can be formatted as vfat.
-    --bootloaderdevice <dev>
-          Install the boot loader on this block device. This is only required for
-          some systems (e.g. PC) where boot loaders are written to a special place
-          on the hard disk.
+          This can only be used when ubos-install is invoked in the --rootpartition style.
     --ubospartition <part>
           Use a separate /ubos partition. If more than one /ubos partition is given, mirror
           across at least two partitions (RAID1).
+          This can only be used when ubos-install is invoked in the --rootpartition style.
     --swappartion <part>
           Create a swap partition, or several if more than one is given.
-    --addpackage <package>
-          Name of an additional package to install beyond the default of the device class
-    --addservice <service>
-          Name of an additional systemd service to enable beyond the default of the device class
-    --addmodule <module>
-          Name of an additional kernel module to load beyond the default of the device class
-    --addkernelparameter <parameter>
-          Verbatim string to be appended to the kernel boot parameter. This currently only
-          works on some device classes.
-    --addpackagedb <name=server>
-          Add an additional pacman repository, where <name> is the section name for the
-          pacman configuration, and <server> is the URL where the packages can be found.
-    --removepackagedb <name>
-          Do not add one of the default UBOS repositories, where <name> is the section name
-          for the default UBOS repository.
-    --disablepackagedb <name>
-          Disable one of the default UBOS repositories, where <name> is the section name
-          for the default UBOS repository.
-    --noswap
-          Do not create a swap partition.
-    --productfile <file>
-          Use <file> as the JSON file from where to read production information.
+          This can only be used when ubos-install is invoked in the --rootpartition style.
+    --[no]swap
+          Deviate from the defaults of the device class by definitely creating a swap
+          partition, or not creating a swap partition.
 END
     } else {
         print <<END;
 Optional arguments:
     [--verbose][--logConfFile <log4perlconf>]
-    [--channel <channel>][--hostname <hostname>][--repository <path>][--depotroot <url>][--target <path>]
-    [--arch <arch>][--deviceclass <class>][--checksignatures <never|optional|required>]
-    [--bootpartition <part>][--bootloaderdevice <dev>][--ubospartition <part>][--swappartition <part>]
-    [--addpackage <package>][--addservice <service>][--addmodule <module>][--addkernelparameter <parameter>]
-    [--addpackagedb <name=server>][--removepackagedb <name>][--disablepackagedb <name>][--noswap]
-    [--productfile <file>]
+    [--device-config <file>]
+    [--arch <arch>][--deviceclass <class>]
+    [--hostname <hostname>][--channel <channel>][--productfile <file>]
+    [--add-package <package>][--add-service <service>][--add-kernel-module <module>][--add-kernel-parameter <parameter>]
+    [--install-depot-root <url>][--run-depot-root <url>]
+    [--install-check-signatures <never|optional|required>][--run-check-signatures <never|optional|required>]
+    [--add-package-db <name=server>][--remove-package-db <name>][--disable-package-db <name>]
+    [--bootloaderdevice <dev>][--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>]
+    [--swap | --noswap ]
 END
     }
     exit 1;

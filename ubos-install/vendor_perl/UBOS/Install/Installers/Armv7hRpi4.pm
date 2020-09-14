@@ -9,12 +9,13 @@ use warnings;
 
 package UBOS::Install::Installers::Armv7hRpi4;
 
-use base qw( UBOS::Install::AbstractRpiInstaller );
-use fields;
-
+use UBOS::Install::AbstractRpiInstaller;
 use UBOS::Install::AbstractVolumeLayout;
 use UBOS::Logging;
 use UBOS::Utils;
+
+use base qw( UBOS::Install::AbstractRpiInstaller );
+use fields;
 
 ## Constructor inherited from superclass
 
@@ -35,7 +36,7 @@ sub checkCompleteParameters {
         $self->{kernelpackage} = 'linux-raspberrypi4';
     }
 
-    my $errors = $self->SUPER::checkComplete();
+    my $errors = $self->SUPER::checkCompleteParameters();
 
     push @{$self->{devicePackages}}, 'ubos-deviceclass-rpi4';
 
@@ -55,16 +56,14 @@ sub installBootLoader {
 
     # Copied from the ArchLinuxARM Raspberry Pi 4 image
 
-    my $addParString = '';
-    if( defined( $self->{additionalkernelparameters} )) {
-        map { $addParString .= ' ' . $_ } @{$self->{additionalkernelparameters}};
-    }
+    my $kernelPars = $self->getAllKernelParameters();
 
-    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid( $self->{diskLayout}->getRootDeviceNames() );
+    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
+            $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
 
     my $cmdline = 'root=PARTUUID=' . $rootPartUuid; # 'root=/dev/mmcblk0p2';
     $cmdline .= <<CONTENT;
- rw rootwait rootfstype=btrfs console=ttyAMA0,115200 console=tty1 kgdboc=ttyAMA0,115200 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 elevator=noop$addParString
+ rw rootwait rootfstype=btrfs console=ttyAMA0,115200 console=tty1 kgdboc=ttyAMA0,115200 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 elevator=noop $kernelPars
 CONTENT
 
     UBOS::Utils::saveFile( $self->{target} . '/boot/cmdline.txt', $cmdline, 0644, 'root', 'root' );

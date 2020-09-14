@@ -9,17 +9,17 @@ use warnings;
 
 package UBOS::Install::Installers::Armv7hOdroidXu3;
 
-use base qw( UBOS::Install::AbstractInstaller );
-use fields;
-
-use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
-use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-use UBOS::Install::Volumes::BootVolume;
-use UBOS::Install::Volumes::RootVolume;
-use UBOS::Install::Volumes::SwapVolume;
+#use UBOS::Install::AbstractVolumeLayout;
+#use UBOS::Install::VolumeLayouts::DiskImage;
+#use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+#use UBOS::Install::Volumes::BootVolume;
+#use UBOS::Install::Volumes::RootVolume;
+#use UBOS::Install::Volumes::SwapVolume;
 use UBOS::Logging;
 use UBOS::Utils;
+
+use base qw( UBOS::Install::AbstractInstaller );
+use fields;
 
 ## Constructor inherited from superclass
 
@@ -57,7 +57,7 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    return $self->SUPER::checkComplete();
+    return $self->SUPER::checkCompleteParameters();
 }
 
 ##
@@ -78,7 +78,7 @@ sub checkCreateVolumeLayout {
 #    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume( {
 #            'fs'        => 'ext4',
 #            'size'      => 128 * 1024 * 1024, # 128M
-#            'mbrboot'   => 1
+#            'mbrBoot'   => 1
 #    } );
 
     my $defaultRootVolume = UBOS::Install::Volumes::RootVolume(
@@ -98,7 +98,7 @@ sub checkCreateVolumeLayout {
 #            $defaultBootVolume,
             $defaultRootVolume
         );
-        if( $self->{swap} == 1 ) { # defaults to no swap
+        if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, $defaultSwapVolume;
         }
 
@@ -119,7 +119,7 @@ sub checkCreateVolumeLayout {
 #                $defaultBootVolume,
                 $defaultRootVolume
             );
-            if( $self->{swap} != -1 ) { # defaults to swap
+            if( defined( $self->{swap} ) && $self->{swap} != -1 ) { # defaults to swap
                 push @volumes, $defaultSwapVolume;
             }
 
