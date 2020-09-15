@@ -56,7 +56,7 @@ sub parseLocation {
     }
     if( @resolve ) {
         foreach my $resolve ( @resolve ) {
-            if( $resolve !~ m!^(.+):(\d+):(.+)$! || !UBOS::Host::isValidHostname( $1 ) || !UBOS::Host::isValidHostname( $3 )) {
+            if( $resolve !~ m!^(.+):(\d+):(.+)$! || !UBOS::Utils::isValidHostname( $1 ) || !UBOS::Utils::isValidHostname( $3 )) {
                 fatal( 'Invalid --resolve specification:', $resolve );
             }
         }

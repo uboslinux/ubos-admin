@@ -16,15 +16,14 @@ LEFTOVER_FILES_TO_REMOVE="\
     /usr/lib/libzn_poly-0.9.so \
 "
 
-echo "post-upgrade: checking for leftover files to remove"
-
 for f in $LEFTOVER_FILES_TO_REMOVE; do
     if [[ -e $f ]]; then
-        echo "post-upgrade: file exists: $f"
         if ! pacman -Qo $f > /dev/null 2>&1; then
-            echo "post-upgrade: file is not in package: $f"
+            echo "post-upgrade: file is not in package, removing: $f"
             /bin/rm $f
         fi
     fi
 done
 
+# running pacman itself may recreate that file
+pacman -S nss --noconfirm --overwrite /usr/lib/p11-kit-trust.so

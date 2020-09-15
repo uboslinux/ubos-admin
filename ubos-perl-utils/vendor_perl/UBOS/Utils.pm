@@ -25,10 +25,12 @@ our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
                   myexec saveFile slurpFile );
 my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
-my $PACMAN_CONF_SEP = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
-my $CHANNEL_FILE    = '/etc/ubos/channel';
-my $SKU_FILE        = '/etc/ubos/product';
-my @VALID_CHANNELS  = qw( dev red yellow green );
+my $PACMAN_CONF_SEP      = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
+my $CHANNEL_FILE         = '/etc/ubos/channel';
+my $SKU_FILE             = '/etc/ubos/product';
+my @VALID_CHANNELS       = qw( dev red yellow green );
+my @VALID_ARCHS          = qw( x86_64 armv6h armv7h aarch64 );
+my @VALID_DEVICE_CLASSES = qw( pc vbox ec2 rpi rpi2 rpi4 espressobin odroid-xu3 container );
 
 my $_now           = time(); # Time the script(s) started running, use now() to access
 my $_deviceClass   = undef;  # Allocated as needed
@@ -1151,11 +1153,13 @@ sub regeneratePacmanConf {
 # $deviceClass: the device class
 # $channel: the channel
 # $target: root directory of the file system
+# return: number of errors
 sub regenerateEtcIssue {
     my $deviceClass = shift || deviceClass();
     my $channel     = shift || channel();
     my $target      = shift || '';
 
+    my $errors = 0;
     my $issue = <<ISSUE;
 
 +--------------------------------------------------------------------------+
@@ -1176,8 +1180,13 @@ Note: run 'sudo ubos-admin update' to get the latest version.
       and: frequent backups with 'sudo ubos-admin backup' are recommended.
 
 ADVICE
-    UBOS::Utils::saveFile( $target . '/etc/issue',     $issue . $advice, 0644, 'root', 'root' );
-    UBOS::Utils::saveFile( $target . '/etc/issue.net', $issue,           0644, 'root', 'root' );
+    unless( UBOS::Utils::saveFile( $target . '/etc/issue',     $issue . $advice, 0644, 'root', 'root' )) {
+        ++$errors;
+    }
+    unless( UBOS::Utils::saveFile( $target . '/etc/issue.net', $issue,           0644, 'root', 'root' )) {
+        ++$errors;
+    }
+    return $errors;
 }
 
 ##
@@ -1212,6 +1221,72 @@ sub arch {
     $ret =~ s!(armv[67])l!$1h!;
 
     return $ret;
+}
+
+##
+# Determine whether a candidate arch name is a valid arch.
+# If so, return the canonical name of the valid arch.
+# $archCandidate: the candidate name for the arch
+# return: arch name, or undef
+sub isValidArch {
+    my $archCandidate = shift;
+
+    unless( $archCandidate ) {
+        return undef;
+    }
+
+    my $cand = lc( $archCandidate );
+    foreach my $arch ( @VALID_ARCHS ) {
+        if( $arch eq $cand ) {
+            return $arch;
+        }
+    }
+
+    $@ = 'Not a valid arch: ' + $archCandidate;
+    return undef;
+}
+
+##
+# Determine whether a candidate device class name is a valid device class.
+# If so, return the canonical name of the valid device class.
+# $deviceClassCandidate: the candidate name for the device class
+# return: device class name, or undef
+sub isValidDeviceClass {
+    my $deviceClassCandidate = shift;
+
+    unless( $deviceClassCandidate ) {
+        return undef;
+    }
+
+    my $cand = lc( $deviceClassCandidate );
+    foreach my $deviceClass ( @VALID_DEVICE_CLASSES ) {
+        if( $deviceClass eq $cand ) {
+            return $deviceClass;
+        }
+    }
+
+    $@ = 'Not a valid device class: ' + $deviceClassCandidate;
+    return undef;
+}
+
+##
+# Determine whether this is a valid hostname
+# $hostname: the hostname
+# return: hostname, or undef
+sub isValidHostname {
+    my $hostname = shift;
+
+    if( ref( $hostname )) {
+        error( 'Supposed hostname is not a string:', ref( $hostname ));
+        return undef;
+    }
+
+    unless( $hostname =~ m!^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$|^\*$! ) {
+        # regex originally from http://stackoverflow.com/a/1420225/200304
+        $@ = 'Not a valid hostname: ' + $hostname;
+        return undef;
+    }
+    return $hostname;
 }
 
 ##

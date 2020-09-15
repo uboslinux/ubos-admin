@@ -75,8 +75,13 @@ sub checkCompleteParameters {
         error( 'Cannot specifiy an MBR boot loader device with gpt partitioning scheme' );
         ++$errors;
     }
-    if( $self->{partitioningScheme} ne 'mbr' && @{$self->{bootPartitions}} == 0 ) {
-        error( 'Must specify a boot partition for gpt or gpt+mbr partitioning scheme' );
+    if(    $self->{partitioningScheme} ne 'mbr'
+        && (    @{$self->{rootPartitions}}
+             || @{$self->{ubosPartitions}}
+             || @{$self->{swapPartitions}} )
+        && @{$self->{bootPartitions}} == 0 )
+    {
+        error( 'Must provide a boot partition for gpt or gpt+mbr partitioning scheme when specifying partitions' );
         ++$errors;
     }
 

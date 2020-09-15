@@ -349,7 +349,7 @@ sub createSubvols {
 
     my $rootVolume = $self->getRootVolume();
 
-    if( 'btrfs' eq $rootVolume->getFs() ) {
+    if( $rootVolume && 'btrfs' eq $rootVolume->getFs() ) {
         # create separate subvol for /var/log, so snapper does not roll back the logs
         unless( -d "$target/var" ) {
             UBOS::Utils::mkdirDashP( "$target/var" );

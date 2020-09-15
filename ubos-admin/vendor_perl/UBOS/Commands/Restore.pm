@@ -158,7 +158,7 @@ sub run {
     }
     if( @resolve ) {
         foreach my $resolve ( @resolve ) {
-            if( $resolve !~ m!^(.+):(\d+):(.+)$! || !UBOS::Host::isValidHostname( $1 ) || !UBOS::Host::isValidHostname( $3 )) {
+            if( $resolve !~ m!^(.+):(\d+):(.+)$! || !UBOS::Utils::isValidHostname( $1 ) || !UBOS::Utils::isValidHostname( $3 )) {
                 fatal( 'Invalid --resolve specification:', $resolve );
             }
         }
@@ -297,7 +297,7 @@ sub restoreAppConfigs {
         push @toSites, $toSite;
     }
     foreach my $toHostname ( @toHostnames ) {
-        unless( UBOS::Host::isValidHostname( $toHostname )) {
+        unless( UBOS::Utils::isValidHostname( $toHostname )) {
             fatal( 'Not a valid hostname:', $toHostname );
         }
         my $toSite = UBOS::Host::findSiteByHostname( $toHostname );
@@ -787,7 +787,7 @@ sub _findSitesInBackupFromHostnames {
 
     my @ret = ();
     foreach my $hostname ( @$hostnames ) {
-        unless( UBOS::Host::isValidHostname( $hostname )) {
+        unless( UBOS::Utils::isValidHostname( $hostname )) {
             fatal( 'Not a valid hostname:', $hostname );
         }
         my $site = $backup->findSiteByHostname( $hostname );

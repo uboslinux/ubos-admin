@@ -16,11 +16,7 @@ use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
-use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-use UBOS::Install::Volumes::BootVolume;
-use UBOS::Install::Volumes::RootVolume;
-use UBOS::Install::Volumes::SwapVolume;
+use UBOS::Install::VolumeLayouts::Directory;
 use UBOS::Logging;
 use UBOS::Utils;
 

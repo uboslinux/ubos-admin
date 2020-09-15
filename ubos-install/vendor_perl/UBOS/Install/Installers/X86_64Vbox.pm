@@ -39,6 +39,10 @@ sub checkCompleteParameters {
         $self->{hostname} = 'ubos-vbox-pc';
     }
 
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux';
+    }
+
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client

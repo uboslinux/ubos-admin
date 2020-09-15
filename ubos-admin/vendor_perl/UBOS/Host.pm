@@ -421,25 +421,6 @@ sub createNewAppConfigId {
 }
 
 ##
-# Determine whether this is a valid hostname
-# $hostname: the hostname
-# return: 1 or 0
-sub isValidHostname {
-    my $hostname = shift;
-
-    if( ref( $hostname )) {
-        error( 'Supposed hostname is not a string:', ref( $hostname ));
-        return 0;
-    }
-
-    unless( $hostname =~ m!^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$|^\*$! ) {
-        # regex originally from http://stackoverflow.com/a/1420225/200304
-        return 0;
-    }
-    return 1;
-}
-
-##
 # Determine whether this is a syntactically valid Site id
 # $siteId: the Site id
 # return: 1 or 0

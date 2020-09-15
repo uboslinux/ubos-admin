@@ -208,10 +208,6 @@ sub checkCompleteParameters {
         ++$errors;
     }
 
-    unless( $self->{kernelPackage} ) {
-        $self->{kernelPackage} = 'linux';
-    }
-
     if( $self->{productInfo} ) {
         foreach my $entry ( qw( name vendor sku )) {
             if( exists( $self->{productInfo}->{$entry} )) {

@@ -1570,7 +1570,7 @@ sub _checkJson {
             $@ = 'Site JSON: missing hostname';
             return 0;
         }
-        unless( UBOS::Host::isValidHostname( $json->{hostname} )) {
+        unless( UBOS::Utils::isValidHostname( $json->{hostname} )) {
             $@ = 'Site JSON: invalid hostname, is: ' . $json->{hostname};
             return 0;
         }
