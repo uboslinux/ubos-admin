@@ -25,12 +25,13 @@ sub new {
         $self = fields::new( $self );
     }
     # set defaults for this class here
-    $self->{label}      = 'mbr';
-    $self->{mountPoint} = '';
-    $self->{fs}         = '';
-    $self->{partedFs}   = 'fat32';
-    $self->{size}       = 4 * 1024 * 1024; # 4 MB
-    # 'gptparttype' => 'EF02',
+    $self->{label}       = 'mbr';
+    $self->{mountPoint}  = '';
+    $self->{fs}          = '';
+    $self->{mkfsFlags}   = '';
+    $self->{partedFs}    = '';
+    $self->{partedFlags} = [ qw( bios_grub ) ];
+    $self->{size}        = 4 * 1024 * 1024; # 4 MB
 
     $self->SUPER::new( %pars );
 

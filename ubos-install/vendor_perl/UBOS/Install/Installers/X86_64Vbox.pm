@@ -83,7 +83,7 @@ sub checkCreateVolumeLayout {
         # install to file
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'msdos',
+                $self->{partitioningScheme},
                 $installTarget,
                 [
                     UBOS::Install::Volumes::RootVolume->new() # defaults

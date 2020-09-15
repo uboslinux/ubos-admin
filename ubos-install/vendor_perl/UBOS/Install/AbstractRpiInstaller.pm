@@ -36,6 +36,13 @@ use fields;
 sub checkCompleteParameters {
     my $self = shift;
 
+    my $errors = 0;
+
+    if( $self->{partitioningScheme} ) {
+        error( 'Cannot specify a partitioning scheme with this device class' );
+        ++$errors;
+    }
+
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client
@@ -56,7 +63,8 @@ sub checkCompleteParameters {
         $self->{devicemodules} = [ qw( snd-bcm2835 ) ];
     }
 
-    return $self->SUPER::checkCompleteParameters();
+    $errors += $self->SUPER::checkCompleteParameters();
+    return $errors;
 }
 
 ##

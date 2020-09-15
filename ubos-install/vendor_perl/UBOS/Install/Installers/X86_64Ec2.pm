@@ -90,7 +90,7 @@ sub checkCreateVolumeLayout {
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
-                'msdos',
+                $self->{partitioningScheme},
                 $installTarget,
                 \@volumes );
 

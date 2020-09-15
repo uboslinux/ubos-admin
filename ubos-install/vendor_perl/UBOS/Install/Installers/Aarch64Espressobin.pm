@@ -36,6 +36,13 @@ sub checkCompleteParameters {
 
     # override some defaults
 
+    my $errors = 0;
+
+    if( $self->{partitioningScheme} ) {
+        error( 'Cannot specify a partitioning scheme with this device class' );
+        ++$errors;
+    }
+
     unless( $self->{hostname} ) {
         $self->{hostname}      = 'ubos-espressobin';
     }
@@ -61,7 +68,8 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    return $self->SUPER::checkCompleteParameters();
+    $errors += $self->SUPER::checkCompleteParameters();
+    return $errors;
 }
 
 ##

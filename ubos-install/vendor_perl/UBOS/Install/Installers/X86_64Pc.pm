@@ -14,6 +14,7 @@ package UBOS::Install::Installers::X86_64Pc;
 
 use UBOS::Install::AbstractVolumeLayout;
 use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+use UBOS::Install::VolumeLayouts::DiskImage;
 use UBOS::Install::Volumes::BootVolume;
 use UBOS::Install::Volumes::MbrVolume;
 use UBOS::Install::Volumes::RootVolume;
@@ -22,7 +23,7 @@ use UBOS::Logging;
 use UBOS::Utils;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
-use fields qw( partitioningScheme );
+use fields;
 
 ## Constructor inherited from superclass
 
@@ -61,7 +62,7 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{partitioningScheme} ) {
-        $self->{partitioningScheme} =  'gpt';
+        $self->{partitioningScheme} = 'gpt';
     }
 
     return $self->SUPER::checkCompleteParameters();
@@ -178,7 +179,7 @@ sub checkCreateVolumeLayout {
         }
 
         push @volumes, UBOS::Install::Volumes::BootVolume->new();
-        push @volumes, UBOS::Install::Volumes::RootVolume->new( @{$self->{rootPartitions}} );
+        push @volumes, UBOS::Install::Volumes::RootVolume->new();
 
         if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, UBOS::Install::Volumes::SwapVolume->new();
@@ -217,9 +218,8 @@ sub checkCreateVolumeLayout {
         if( 'gpt' eq $self->{partitioningScheme} ) {
             push @volumes, UBOS::Install::Volumes::MbrVolume->new()
         }
-
         push @volumes, UBOS::Install::Volumes::BootVolume->new();
-        push @volumes, UBOS::Install::Volumes::RootVolume->new( @{$self->{rootPartitions}} );
+        push @volumes, UBOS::Install::Volumes::RootVolume->new();
 
         if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, UBOS::Install::Volumes::SwapVolume->new();

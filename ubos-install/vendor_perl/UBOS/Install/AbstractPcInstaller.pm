@@ -152,24 +152,28 @@ sub installSystemdBoot {
         UBOS::Utils::mkdirDashP( $self->{target} . '/boot/loader/entries' );
     }
 
-    UBOS::Utils::saveFile( $self->{target} . '/boot/loader/loader.conf', <<CONTENT );
+    unless( UBOS::Utils::saveFile( $self->{target} . '/boot/loader/loader.conf', <<CONTENT )) {
 timer 4
 default ubos
 CONTENT
+        ++$errors;
+    }
 
     my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
             $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
 
     my $kernelPars = $self->getAllKernelParameters();
 
-    UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT );
+    unless( UBOS::Utils::saveFile( $self->{target} . '/boot/loader/entries/ubos.conf', <<CONTENT )) {
 title UBOS
 linux /vmlinuz-linux
 initrd /initramfs-linux.img
 options root=PARTUUID=$rootPartUuid rw $kernelPars
 CONTENT
+        ++$errors;
+    }
 
-    return 0;
+    return $errors;
 }
 
 1;

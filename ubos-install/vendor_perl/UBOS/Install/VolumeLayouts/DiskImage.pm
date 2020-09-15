@@ -50,7 +50,7 @@ sub createVolumes {
 
     trace( 'DiskImage::createVolumes' );
 
-    my $errors = $self->formatSingleDisk( $self->{image}, $self->{partitoningScheme}, $self->{startOffset}, $self->{alignment} );
+    my $errors = $self->formatSingleDisk( $self->{image}, $self->{partitioningScheme}, $self->{startOffset}, $self->{alignment} );
     return $errors;
 }
 
@@ -108,7 +108,8 @@ sub deleteLoopDevices {
 sub determineBootLoaderDevice {
     my $self = shift;
 
-    return $self->{volumes}->[0];
+#    return ( $self->{volumes}->[0]->getDeviceNames()) [0];
+    return $self->{image};
 }
 
 1;

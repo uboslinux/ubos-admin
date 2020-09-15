@@ -9,7 +9,7 @@ use warnings;
 
 package UBOS::Install::AbstractVolume;
 
-use fields qw( label deviceNames mountPoint fs partedFs size mkfsFlags );
+use fields qw( deviceNames label mountPoint fs mkfsFlags partedFs partedFlags size );
 # See same list below in new() except for deviceNames, change both
 
 use UBOS::Logging;
@@ -33,7 +33,7 @@ sub new {
         $self->{$key} = $pars{$key}; # will produce errors if not exists
     }
 
-    foreach my $key ( qw( label mountPoint fs partedFs size mkfsFlags ) ) {
+    foreach my $key ( qw( label mountPoint fs mkfsFlags partedFs partedFlags size ) ) {
         unless( defined( $self->{$key} )) {
             error( 'Value not set for', ref( $self ), ':', $key );
         }
@@ -103,33 +103,22 @@ sub getFs {
 }
 
 ##
-# Determine whether this volume has a filesystem.
-# return: 1 or 0
-sub hasFs {
-    my $self = shift;
-
-    return 'none' ne $self->{fs};
-}
-
-##
-# Is this a btrfs volume?
-# return: 1 or 0
-sub isBtrfs {
-    my $self = shift;
-
-    if( defined( $self->{fs} ) && 'btrfs' eq $self->{fs} ) {
-        return 1;
-    }
-    return 0;
-}
-
-##
 # Obtain the name of the filesystem the way parted wants it, if any
 # return: name of the file system, if any
 sub getPartedFs {
     my $self = shift;
 
     return $self->{partedFs};
+}
+
+
+##
+# Obtain the flags to be set by parted.
+# return: array, may be empty
+sub getPartedFlags {
+    my $self = shift;
+
+    return @{$self->{partedFlags}};
 }
 
 ##
@@ -156,17 +145,17 @@ sub getSize {
 sub formatVolume {
     my $self = shift;
 
-    unless( $self->hasFs() ) {
+    my $fs = $self->getFs();
+    unless( $fs ) {
         return 0;
     }
 
-    my $fs     = $self->getFs();
     my $errors = 0;
 
     trace( 'Format file system for', @{$self->{deviceNames}}, 'with', $fs );
     debugAndSuspend( 'Format file system for', @{$self->{deviceNames}}, 'with', $fs );
 
-    if( $self->isBtrfs() ) {
+    if( 'btrfs' eq $fs ) {
         my $cmd = 'mkfs.btrfs -f';
         if( @{$self->{deviceNames}} > 1 ) {
             $cmd .= ' -m raid1 -d raid1';

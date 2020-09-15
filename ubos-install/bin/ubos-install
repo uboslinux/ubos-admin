@@ -40,6 +40,8 @@ my @rootPartitions;
 my @ubosPartitions;
 my @swapPartitions;
 my $swap;
+my $gpt;
+my $msdos;
 
 my $parseOk = GetOptions(
         'verbose+'                   => \$verbose,
@@ -77,7 +79,9 @@ my $parseOk = GetOptions(
         'rootpartition=s'            => \@rootPartitions,
         'ubospartition=s'            => \@ubosPartitions,
         'swappartition=s'            => \@swapPartitions,
-        'swap!'                      => \$swap );
+        'swap!'                      => \$swap,
+        'gpt'                        => \$gpt,
+        'msdos'                      => \$msdos );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
 
@@ -182,6 +186,15 @@ if( @disablePackageDbs ) {
 if( $swap ) {
     $deviceConfig->{swap} = $swap;
 }
+if( $gpt ) {
+    if( $msdos ) {
+        fatal( 'Cannot specify both --gpt and --msdos' );
+    }
+    $deviceConfig->{partitioningscheme} = 'gpt';
+} elsif( $msdos ) {
+    $deviceConfig->{partitioningscheme} = 'msdos';
+}
+
 if( @ARGV ) {
     $deviceConfig->{installtargets} = \@ARGV;
 }
@@ -449,6 +462,10 @@ Optional arguments:
     --[no]swap
           Deviate from the defaults of the device class by definitely creating a swap
           partition, or not creating a swap partition.
+    --gpt
+          Deviate from the defaults of the device class by creating a GPT partition table.
+    --msdos
+          Deviate from the defaults of the device class by creating a MSDOS/MBR partition table.
 END
     } else {
         print <<END;
@@ -462,7 +479,7 @@ Optional arguments:
     [--install-check-signatures <never|optional|required>][--run-check-signatures <never|optional|required>]
     [--add-package-db <name=server>][--remove-package-db <name>][--disable-package-db <name>]
     [--bootloaderdevice <dev>][--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>]
-    [--swap | --noswap ]
+    [--swap | --noswap ][--gpt][--msdos]
 END
     }
     exit 1;

@@ -10,7 +10,7 @@ use warnings;
 package UBOS::Install::Volumes::BootVolume;
 
 use base qw( UBOS::Install::AbstractVolume );
-use fields qw( mbrBoot );
+use fields;
 
 use UBOS::Logging;
 
@@ -25,13 +25,13 @@ sub new {
         $self = fields::new( $self );
     }
     # set defaults for this class here
-    $self->{label}      = 'boot';
-    $self->{mountPoint} = '/boot';
-    $self->{fs}         = 'ext4';
-    $self->{partedFs}   = 'ext4';
-    $self->{size}       = 128 * 1024 * 1024; # 128 M
-    $self->{mkfsFlags}  = '';
-    $self->{mbrBoot}    = 1;
+    $self->{label}       = 'boot';
+    $self->{mountPoint}  = '/boot';
+    $self->{fs}          = 'vfat';
+    $self->{mkfsFlags}   = '-F32';
+    $self->{partedFs}    = 'fat32';
+    $self->{partedFlags} = [ qw( boot ) ];
+    $self->{size}        = 128 * 1024 * 1024; # 128 M
 
     $self->SUPER::new( %pars );
 

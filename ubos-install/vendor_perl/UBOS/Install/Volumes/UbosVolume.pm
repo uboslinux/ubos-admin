@@ -26,12 +26,13 @@ sub new {
         $self = fields::new( $self );
     }
     # set defaults for this class here
-    $self->{label}      = 'ubos';
-    $self->{mountPoint} = '/ubos';
-    $self->{fs}         = 'btrfs';
-    $self->{partedFs}   = 'btrfs';
-    $self->{size}       = ''; # set but no value, so it takes up the remaining space
-    $self->{mkfsFlags}  = '';
+    $self->{label}       = 'ubos';
+    $self->{mountPoint}  = '/ubos';
+    $self->{fs}          = 'btrfs';
+    $self->{mkfsFlags}   = '';
+    $self->{partedFs}    = 'btrfs';
+    $self->{partedFlags} = [];
+    $self->{size}        = ''; # set but no value, so it takes up the remaining space
 
     $self->SUPER::new( %pars );
 

@@ -81,7 +81,7 @@ sub formatSingleDisk {
     }
 
     my $currentStart = $startOffset;
-    my $currentEnd   = -512; # last sector, expressed in bytes
+    my $currentEnd   = -1024 * 1024; # keep a bit of space, some disks don't like -512B = last sector
 
     # traverse forward in vol's until we find a partition with unspecified size
     # then traverse backward from the end until we find a partition with unspecified size
@@ -106,7 +106,7 @@ sub formatSingleDisk {
             $script .= " $partType";
         }
         if( $partitioningScheme ne 'msdos' && $partLabel ) {
-            $script .= " \"$partLabel\"";
+            $script .= " $partLabel";
         }
         if( $partFs ) {
             $script .= " $partFs";
@@ -143,7 +143,7 @@ sub formatSingleDisk {
             $scriptTrailer .= " $partType";
         }
         if( $partitioningScheme ne 'msdos' && $partLabel ) {
-            $scriptTrailer .= " \"$partLabel\"";
+            $scriptTrailer .= " $partLabel";
         }
         if( $partFs ) {
             $scriptTrailer .= " $partFs";
@@ -172,7 +172,7 @@ sub formatSingleDisk {
             $script .= " $partType";
         }
         if( $partitioningScheme ne 'msdos' && $partLabel ) {
-            $script .= " \"$partLabel\"";
+            $script .= " $partLabel";
         }
         if( $partFs ) {
             $script .= " $partFs";
@@ -182,6 +182,17 @@ sub formatSingleDisk {
     }
     $script .= $scriptTrailer;
 
+    # Set flags
+    for( my $i=0 ; $i < @{$self->{volumes}} ; ++$i ) {
+        my $vol    = $self->{volumes}->[$i];
+        my $number = $i+1;
+
+        my @flags = $vol->getPartedFlags();
+        foreach my $flag ( @flags ) {
+            $script .= " set $number $flag on";
+        }
+    }
+
     my $cmd  = 'parted';
     $cmd    .= " --align '" . $alignment . "'";
     $cmd    .= " --script";
@@ -189,9 +200,10 @@ sub formatSingleDisk {
     $cmd    .= " -- " . $script;
 
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
-        error( 'parted failed:', $out );
-        ++$errors;
+       error( 'parted failed:', $out );
+       ++$errors;
     }
+
     $errors += resetDiskCaches();
 
     return $errors;
@@ -260,7 +272,8 @@ sub mountVolumes{
     # longest first
     foreach my $vol ( $self->getVolumesByMountPath() ) {
 
-        unless( $vol->hasFs() ) {
+        my $fs = $vol->getFs();
+        unless( $fs ) {
             # no need to mount
             next;
         }
@@ -275,7 +288,6 @@ sub mountVolumes{
             }
 
             my $firstDevice = ( $vol->getDeviceNames() )[0];
-            my $fs          = $vol->getFs();
 
             debugAndSuspend( 'Mount device', $firstDevice, 'at', "$target$mountPoint", 'with', $fs );
             if( UBOS::Utils::myexec( "mount -t $fs '$firstDevice' '$target$mountPoint'" )) {
@@ -302,7 +314,8 @@ sub umountVolumes {
     # longest first
     foreach my $vol ( reverse $self->getVolumesByMountPath() ) {
 
-        unless( $vol->hasFs() ) {
+        my $fs = $vol->getFs();
+        unless( $fs ) {
             # no need to mount
             next;
         }
@@ -332,7 +345,7 @@ sub createSubvols {
 
     my $rootVolume = $self->getRootVolume();
 
-    if( $rootVolume->isBtrfs() ) {
+    if( 'btrfs' eq $rootVolume->getFs() ) {
         # create separate subvol for /var/log, so snapper does not roll back the logs
         unless( -d "$target/var" ) {
             UBOS::Utils::mkdirDashP( "$target/var" );
@@ -374,13 +387,13 @@ FSTAB
     # shortest first
     foreach my $vol ( $self->getVolumesByMountPath() ) {
 
-        unless( $vol->hasFs() ) {
+        my $fs = $vol->getFs();
+        unless( $fs ) {
             # no need to mount
             next;
         }
 
         my $mountPoint = $vol->getMountPoint();
-        my $fs         = $vol->getFs();
 
         if( 'btrfs' eq $fs ) {
             my @devices = $vol->getDeviceNames();
@@ -447,7 +460,7 @@ sub snapperBtrfsMountPoints {
 
     my @ret;
     foreach my $vol ( @{$self->{volumes}} ) {
-        if( $vol->isBtrfs()) {
+        if( 'btrfs' eq $vol->getFs()) {
             push @ret, $vol->getMountPoint();
         }
     }
@@ -475,7 +488,7 @@ sub determineBootLoaderDevice {
     my $self = shift;
 
     # no op, may be overridden
-    return 0;
+    return undef;
 }
 
 ##
@@ -500,13 +513,18 @@ sub getVolumesByMountPath {
 # return: number of errors
 sub resetDiskCaches {
 
-    my $ret = 0;
-    if( UBOS::Utils::myexec( 'partprobe' )) {
-        ++$ret;
+    my $errors = 0;
+    my $out;
+    if( UBOS::Utils::myexec( 'partprobe', undef, \$out, \$out )) {
+        # swallow output. It sometimes says things such as:
+        # Warning: Not all of the space available to /dev/xxx appears to be used, you can fix ...
+        ++$errors;
     }
+    trace( 'partprobe:', $out );
+
     $_pathFacts = {};
     $_lsBlk     = undef;
-    return $ret;
+    return $errors;
 }
 
 ##

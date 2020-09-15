@@ -22,6 +22,7 @@ use fields qw(
         kernelPackage
         productInfo
         swap
+        partitioningScheme
 
         basePackages         devicePackages         additionalPackages
         baseServices         deviceServices         additionalServices
@@ -134,6 +135,9 @@ sub setDeviceConfig {
     if( exists( $deviceConfig->{swap} )) {
         $self->{swap} = $deviceConfig->{swap};
     }
+    if( exists( $deviceConfig->{partitioningscheme} )) {
+        $self->{partitioningScheme} = $deviceConfig->{partitioningscheme};
+    }
     if( exists( $deviceConfig->{bootloaderdevices} )) {
         $self->{bootloaderDevices} = $deviceConfig->{bootloaderdevices};
     }
@@ -178,6 +182,13 @@ sub checkCompleteParameters {
     my $self = shift;
 
     my $errors = 0;
+
+    if( $self->{partitioningScheme} ) {
+        if( 'msdos' ne $self->{partitioningScheme} && 'gpt' ne $self->{partitioningScheme} ) {
+            error( 'Partitioning scheme must either be msdos or gpt, not:', $self->{partitioningScheme} );
+            ++$errors;
+        }
+    }
 
     unless( $self->{hostname} ) {
         $self->{hostname} = 'ubos-' . $self->arch() . '-' . $self->deviceClass();

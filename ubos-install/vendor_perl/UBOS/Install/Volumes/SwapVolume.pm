@@ -25,12 +25,13 @@ sub new {
         $self = fields::new( $self );
     }
     # set defaults for this class here
-    $self->{label}      = 'swap';
-    $self->{mountPoint} = '';
-    $self->{fs}         = 'swap';
-    $self->{partedFs}   = 'linux-swap';
-    $self->{size}       = 4 * 1024 * 1024 * 1024; # 4 GB
-    $self->{mkfsFlags}  = '';
+    $self->{label}       = 'swap';
+    $self->{mountPoint}  = '';
+    $self->{fs}          = 'swap';
+    $self->{mkfsFlags}   = '';
+    $self->{partedFs}    = 'linux-swap';
+    $self->{partedFlags} = [];
+    $self->{size}        = 4 * 1024 * 1024 * 1024; # 4 GB
 
     $self->SUPER::new( %pars );
 
