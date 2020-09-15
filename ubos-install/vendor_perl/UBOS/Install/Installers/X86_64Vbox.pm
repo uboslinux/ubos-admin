@@ -98,27 +98,6 @@ sub checkCreateVolumeLayout {
 }
 
 ##
-# Install the bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
-# $diskLayout: the disk layout
-# return: number of errors
-sub installBootLoader {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-
-    my $errors = 0;
-
-    $errors += $self->installGrub(
-            $pacmanConfigFile,
-            {
-                'target'         => 'i386-pc',
-                'boot-directory' => $self->{target} . '/boot'
-            } );
-
-    return $errors;
-}
-
-##
 # Add commands to the provided script, to be run in a chroot, that configures
 # networking in the default configuration for this deviceclass
 # $chrootScriptP: pointer to script

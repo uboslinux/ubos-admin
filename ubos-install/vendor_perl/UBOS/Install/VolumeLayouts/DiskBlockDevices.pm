@@ -25,7 +25,7 @@ sub new {
     my $startOffset        = shift || 2048 * 512;
     my $alignment          = shift || 'minimal';
 
-    if( $partitioningScheme ne 'gpt' && $partitioningScheme ne 'msdos' ) {
+    if( $partitioningScheme ne 'gpt' && $partitioningScheme ne 'mbr' && $partitioningScheme ne 'gpt+mbr' ) {
         fatal( 'Invalid partitioning scheme:', $partitioningScheme );
     }
 

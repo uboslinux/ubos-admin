@@ -36,7 +36,7 @@ use fields qw(
         installAddPackageDbs     runAddPackageDbs
         installRemovePackageDbs  runRemovePackageDbs
 
-        bootloaderDevices
+        mbrBootloaderDevices
         bootPartitions
         rootPartitions
         ubosPartitions
@@ -138,8 +138,8 @@ sub setDeviceConfig {
     if( exists( $deviceConfig->{partitioningscheme} )) {
         $self->{partitioningScheme} = $deviceConfig->{partitioningscheme};
     }
-    if( exists( $deviceConfig->{bootloaderdevices} )) {
-        $self->{bootloaderDevices} = $deviceConfig->{bootloaderdevices};
+    if( exists( $deviceConfig->{mbrbootloaderdevices} )) {
+        $self->{mbrBootloaderDevices} = $deviceConfig->{mbrbootloaderdevices};
     }
     if( exists( $deviceConfig->{bootpartitions} )) {
         $self->{bootPartitions} = $deviceConfig->{bootpartitions};
@@ -184,8 +184,8 @@ sub checkCompleteParameters {
     my $errors = 0;
 
     if( $self->{partitioningScheme} ) {
-        if( 'msdos' ne $self->{partitioningScheme} && 'gpt' ne $self->{partitioningScheme} ) {
-            error( 'Partitioning scheme must either be msdos or gpt, not:', $self->{partitioningScheme} );
+        if( $self->{partitioningScheme} ne 'gpt' && $self->{partitioningScheme} ne 'mbr' && $self->{partitioningScheme} ne 'gpt+mbr' ) {
+            error( 'Partitioning scheme must be one of gpt, mbr or gpt+mbr, not:', $self->{partitioningScheme} );
             ++$errors;
         }
     }
@@ -358,8 +358,8 @@ sub checkCompleteParameters {
         $self->{runRemovePackageDbs} = $self->{installRemovePackageDbs};
     }
 
-    unless( $self->{bootloaderDevices} ) {
-        $self->{bootloaderDevices} = [];
+    unless( $self->{mbrBootloaderDevices} ) {
+        $self->{mbrBootloaderDevices} = [];
     }
 
     unless( $self->{bootPartitions} ) {
@@ -1253,8 +1253,8 @@ sub _checkSingleInstallTargetOnly {
     my $self = shift;
 
     my $errors = 0;
-    if( @{$self->{bootloaderDevices}} ) {
-        error( 'No boot loader devices must be specified for this device class:', @{$self->{bootloaderDevices}} );
+    if( @{$self->{mbrBootloaderDevices}} ) {
+        error( 'No MBR boot loader devices must be specified for this device class:', @{$self->{mbrBootloaderDevices}} );
         ++$errors;
     }
     if( @{$self->{bootPartitions}} ) {

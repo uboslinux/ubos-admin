@@ -65,6 +65,32 @@ END
 }
 
 ##
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# return: number of errors
+sub installBootLoader {
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+
+    my $errors = 0;
+
+    if( 'mbr' eq $self->{partitioningScheme} || 'gpt+mbr' eq $self->{partitioningScheme} ) {
+        $errors += $self->installGrub(
+                $pacmanConfigFile,
+                {
+                    'target'         => 'i386-pc',
+                    'boot-directory' => $self->{target} . '/boot'
+                } );
+    }
+
+    if( 'gpt' eq $self->{partitioningScheme} || 'gpt+mbr' eq $self->{partitioningScheme} ) {
+        $errors += $self->installSystemdBoot( $pacmanConfigFile );
+    }
+
+    return $errors;
+}
+
+##
 # Install the grub bootloader
 # $pacmanConfigFile: the Pacman config file to be used to install packages
 # $diskLayout: the disk layout
@@ -126,6 +152,9 @@ END
             error( "bootloader chroot script failed:", $err, "\nwas", $chrootScript );
             ++$errors;
         }
+    } else {
+        error( 'Attempting to install grub without having a boot loader device' );
+        ++$errors;
     }
     return $errors;
 }

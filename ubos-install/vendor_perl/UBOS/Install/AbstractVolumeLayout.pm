@@ -44,7 +44,7 @@ sub createVolumes {
 ##
 # Helper method to format a single disk device or image file.
 # $dev: the disk device (e.g. /dev/sdc) or disk (e.g. /tmp/diskfile)
-# $partitioningScheme: the partitioning scheme to use (msdos or gpt)
+# $partitioningScheme: the partitioning scheme to use
 # $startOffset: the starting offset for the first partition
 # $alignment: the gparted alignment to use
 # return: number of errors
@@ -69,10 +69,14 @@ sub formatSingleDisk {
     }
 
     my $script  = 'mklabel'; # note there are no \n or any other separators between commands
-    $script    .= ' ' . $partitioningScheme;
+    if( $partitioningScheme eq 'mbr' ) {
+        $script .= ' msdos';
+    } else {
+        $script .= ' gpt';
+    }
 
     my $partType = '';
-    if( $partitioningScheme eq 'msdos' ) {
+    if( $partitioningScheme eq 'mbr' ) {
         if( @{$self->{volumes}} <= 4 ) {
             $partType = 'primary';
         } else {
@@ -105,7 +109,7 @@ sub formatSingleDisk {
         if( $partType ) {
             $script .= " $partType";
         }
-        if( $partitioningScheme ne 'msdos' && $partLabel ) {
+        if( $partitioningScheme ne 'mbr' && $partLabel ) {
             $script .= " $partLabel";
         }
         if( $partFs ) {
@@ -142,7 +146,7 @@ sub formatSingleDisk {
         if( $partType ) {
             $scriptTrailer .= " $partType";
         }
-        if( $partitioningScheme ne 'msdos' && $partLabel ) {
+        if( $partitioningScheme ne 'mbr' && $partLabel ) {
             $scriptTrailer .= " $partLabel";
         }
         if( $partFs ) {
@@ -171,7 +175,7 @@ sub formatSingleDisk {
         if( $partType ) {
             $script .= " $partType";
         }
-        if( $partitioningScheme ne 'msdos' && $partLabel ) {
+        if( $partitioningScheme ne 'mbr' && $partLabel ) {
             $script .= " $partLabel";
         }
         if( $partFs ) {

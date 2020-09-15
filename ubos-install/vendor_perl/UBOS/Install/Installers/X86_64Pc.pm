@@ -15,10 +15,12 @@ package UBOS::Install::Installers::X86_64Pc;
 use UBOS::Install::AbstractVolumeLayout;
 use UBOS::Install::VolumeLayouts::DiskBlockDevices;
 use UBOS::Install::VolumeLayouts::DiskImage;
+use UBOS::Install::VolumeLayouts::PartitionBlockDevicesWithMbrBootSector;
 use UBOS::Install::Volumes::BootVolume;
 use UBOS::Install::Volumes::MbrVolume;
 use UBOS::Install::Volumes::RootVolume;
 use UBOS::Install::Volumes::SwapVolume;
+use UBOS::Install::Volumes::UbosVolume;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -35,6 +37,8 @@ sub checkCompleteParameters {
     my $self = shift;
 
     # override some defaults
+
+    my $errors = 0;
 
     unless( $self->{hostname} ) {
         $self->{hostname}      = 'ubos-pc';
@@ -62,10 +66,21 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{partitioningScheme} ) {
-        $self->{partitioningScheme} = 'gpt';
+        $self->{partitioningScheme} = 'gpt+mbr';
     }
 
-    return $self->SUPER::checkCompleteParameters();
+    $errors += $self->SUPER::checkCompleteParameters();
+
+    if( @{$self->{mbrBootloaderDevices}} && $self->{partitioningScheme} eq 'gpt' ) {
+        error( 'Cannot specifiy an MBR boot loader device with gpt partitioning scheme' );
+        ++$errors;
+    }
+    if( $self->{partitioningScheme} ne 'mbr' && @{$self->{bootPartitions}} == 0 ) {
+        error( 'Must specify a boot partition for gpt or gpt+mbr partitioning scheme' );
+        ++$errors;
+    }
+
+    return $errors;
 }
 
 ##
@@ -73,8 +88,6 @@ sub checkCompleteParameters {
 # return: number of errors
 sub checkCreateVolumeLayout {
     my $self = shift;
-
-    trace( 'X86_64::checkCreateVolumeLayout' );
 
     # We can install to:
     # * an enumeration of block devices for the various roles (e.g. boot, root, ubos, swap)
@@ -84,13 +97,15 @@ sub checkCreateVolumeLayout {
 
     my $errors = 0;
 
-    if(    @{$self->{bootloaderDevices}}
+
+    if(    @{$self->{mbrBootloaderDevices}}
         || @{$self->{bootPartitions}}
         || @{$self->{rootPartitions}}
         || @{$self->{ubosPartitions}}
         || @{$self->{swapPartitions}} )
     {
     # enumeration of block devices for the various roles
+        trace( 'X86_64::checkCreateVolumeLayout -- case enumeration of block devices' );
 
         if( $self->{swap} ) { # defaults to no swap
             error( 'Invalid invocation: --noswap cannot be used if specifying partitions' );
@@ -100,20 +115,27 @@ sub checkCreateVolumeLayout {
             error( 'Invalid invocation: either specify entire disks, or specific devices for partitions; do not mix' );
             ++$errors;
         }
-        if( @{$self->{bootloaderDevices}} != 1 ) {
-            error( 'Invalid invocation: Exactly one --bootloaderdevice must be provided when specifying partitions' );
-            ++$errors;
+        if( $self->{partitioningScheme} eq 'gpt' ) {
+            if( @{$self->{mbrBootloaderDevices}} != 0 ) {
+                error( 'Invalid invocation: No --mbrbootloaderdevice must be provided when specifying partitions and GPT' );
+                ++$errors;
+            }
+        } else {
+            if( @{$self->{mbrBootloaderDevices}} != 1 ) {
+                error( 'Invalid invocation: Exactly one --mbrbootloaderdevice must be provided when specifying partitions and MBR' );
+                ++$errors;
+            }
         }
 
         unless( @{$self->{rootPartitions}} ) {
             error( 'Invalid invocation: A --rootpartition must be provided when specifying partitions' );
             ++$errors;
         }
-        foreach my $device ( @{$self->{bootloaderDevices}} ) {
+        foreach my $device ( @{$self->{mbrBootloaderDevices}} ) {
             if(    !UBOS::Install::AbstractVolumeLayout::isDisk( $device )
                 && !UBOS::Install::AbstractVolumeLayout::isLoopDevice( $device ))
             {
-                error( 'Provided bootloaderdevice is not a disk:', $device );
+                error( 'Provided MBR bootloaderdevice is not a disk:', $device );
                 ++$errors;
             }
         }
@@ -150,20 +172,20 @@ sub checkCreateVolumeLayout {
         my @volumes = ();
 
         if( @{$self->{bootPartitions}} ) {
-            push @volumes, UBOS::Install::Volumes::BootVolume->new( $self->{bootPartitions} );
+            push @volumes, UBOS::Install::Volumes::BootVolume->new( 'deviceNames' => $self->{bootPartitions} );
         }
 
-        push @volumes, UBOS::Install::Volumes::RootVolume->new( @{$self->{rootPartitions}} );
+        push @volumes, UBOS::Install::Volumes::RootVolume->new( 'deviceNames' => $self->{rootPartitions} );
 
         if( @{$self->{ubosPartitions}} ) {
-            push @volumes, UBOS::Install::Volumes::UbosVolume->new( $self->{ubosPartitions} );
+            push @volumes, UBOS::Install::Volumes::UbosVolume->new( 'deviceNames' => $self->{ubosPartitions} );
         }
         if( @{$self->{swapPartitions}} ) {
-            push @volumes, UBOS::Install::Volumes::SwapVolume->new( $self->{swapPartitions} );
+            push @volumes, UBOS::Install::Volumes::SwapVolume->new( 'deviceNames' => $self->{swapPartitions} );
         }
 
-        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::PartitionBlockDevicesWithBootSector->new(
-                    $self->{bootLoaderDevice},
+        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::PartitionBlockDevicesWithMbrBootSector->new(
+                    $self->{mbrBootloaderDevices}->[0],
                     \@volumes );
 
 
@@ -171,10 +193,12 @@ sub checkCreateVolumeLayout {
              && UBOS::Install::AbstractVolumeLayout::isFile( $self->{installTargets}->[0] ))
     {
     # a single image file
+        trace( 'X86_64::checkCreateVolumeLayout -- case single image file' );
+
         my $installTarget = $self->{installTargets}->[0];
 
         my @volumes = ();
-        if( 'gpt' eq $self->{partitioningScheme} ) {
+        if( 'gpt+mbr' eq $self->{partitioningScheme} ) {
             push @volumes, UBOS::Install::Volumes::MbrVolume->new()
         }
 
@@ -190,8 +214,9 @@ sub checkCreateVolumeLayout {
                 $installTarget,
                 \@volumes );
 
-    } else {
+    } elsif( @{$self->{installTargets}} ) {
     # one or more disk devices (raid mode)
+        trace( 'X86_64::checkCreateVolumeLayout -- case one or more disk devices' );
 
         my %haveAlready = ();
         foreach my $device ( @{$self->{installTargets}} ) {
@@ -215,7 +240,7 @@ sub checkCreateVolumeLayout {
         }
 
         my @volumes = ();
-        if( 'gpt' eq $self->{partitioningScheme} ) {
+        if( 'gpt+mbr' eq $self->{partitioningScheme} ) {
             push @volumes, UBOS::Install::Volumes::MbrVolume->new()
         }
         push @volumes, UBOS::Install::Volumes::BootVolume->new();
@@ -229,33 +254,13 @@ sub checkCreateVolumeLayout {
                 $self->{partitioningScheme},
                 $self->{installTargets},
                 \@volumes );
+    } else {
+    # something else
+        error( 'Invalid options: invoke with --help' );
+        ++$errors;
     }
 
     DONE:
-    return $errors;
-}
-
-##
-# Install the bootloader
-# $pacmanConfigFile: the Pacman config file to be used to install packages
-# return: number of errors
-sub installBootLoader {
-    my $self             = shift;
-    my $pacmanConfigFile = shift;
-
-    my $errors = 0;
-
-    $errors += $self->installGrub(
-            $pacmanConfigFile,
-            {
-                'target'         => 'i386-pc',
-                'boot-directory' => $self->{target} . '/boot'
-            } );
-
-    if( 'gpt' eq $self->{partitioningScheme} ) {
-        $errors += $self->installSystemdBoot( $pacmanConfigFile );
-    }
-
     return $errors;
 }
 
