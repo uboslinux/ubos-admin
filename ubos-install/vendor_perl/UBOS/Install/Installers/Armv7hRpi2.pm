@@ -31,8 +31,8 @@ sub checkCompleteParameters {
         $self->{hostname}      = 'ubos-raspberry-pi2';
     }
 
-    unless( $self->{kernelpackage} ) {
-        $self->{kernelpackage} = 'linux-raspberrypi';
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux-raspberrypi';
     }
 
     my $errors = $self->SUPER::checkCompleteParameters();

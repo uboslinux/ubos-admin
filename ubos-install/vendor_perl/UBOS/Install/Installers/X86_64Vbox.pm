@@ -52,8 +52,8 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw(
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [ qw(
                 haveged.service vboxservice.service  systemd-timesyncd.service
         ) ];
     }

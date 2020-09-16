@@ -102,7 +102,6 @@ sub checkCreateVolumeLayout {
 
     my $errors = 0;
 
-
     if(    @{$self->{mbrBootloaderDevices}}
         || @{$self->{bootPartitions}}
         || @{$self->{rootPartitions}}

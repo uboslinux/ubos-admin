@@ -24,7 +24,7 @@ sub checkCompleteParameters {
     my $errors = return $self->SUPER::checkCompleteParameters();
 
     # Add keyring, as on arm (unlike x86), pacman does not depend on it
-    push @{$self->{devicepackages}}, 'archlinuxarm-keyring';
+    push @{$self->{devicePackages}}, 'archlinuxarm-keyring';
 
     return $errors;
 }

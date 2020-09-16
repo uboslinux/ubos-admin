@@ -18,14 +18,14 @@ package UBOS::Install::AbstractRpiInstaller;
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
-#use UBOS::Install::AbstractVolumeLayout;
-#use UBOS::Install::VolumeLayouts::DiskImage;
-#use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-#use UBOS::Install::Volumes::BootVolume;
-#use UBOS::Install::Volumes::RootVolume;
-#use UBOS::Install::Volumes::SwapVolume;
-#use UBOS::Logging;
-#use UBOS::Utils;
+use UBOS::Install::AbstractVolumeLayout;
+use UBOS::Install::VolumeLayouts::DiskImage;
+use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+use UBOS::Install::Volumes::BootVolume;
+use UBOS::Install::Volumes::RootVolume;
+use UBOS::Install::Volumes::SwapVolume;
+use UBOS::Logging;
+use UBOS::Utils;
 
 ## Constructor inherited from superclass
 
@@ -53,14 +53,14 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw(
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [ qw(
                 rngd.service systemd-timesyncd.service
         ) ];
     }
 
-    unless( $self->{devicemodules} ) {
-        $self->{devicemodules} = [ qw( snd-bcm2835 ) ];
+    unless( $self->{deviceKernelModules} ) {
+        $self->{deviceKernelModules} = [ qw( snd-bcm2835 ) ];
     }
 
     $errors += $self->SUPER::checkCompleteParameters();
@@ -82,20 +82,18 @@ sub checkCreateVolumeLayout {
         return $errors;
     }
 
-    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume( {
-            'fs'        => 'vfat',
-            'size'      => 128 * 1024 * 1024, # 128M
-            'mkfsFlags' => '-F32',
-            'mbrBoot'   => 1,
-            'mbrparttype' => 'c'
-            # default partition type for gpt
-    } );
+    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume->new(
+            'fs'          => 'vfat',
+            'mkfsFlags'   => '-F32',
+            'partedFs'    => 'fat32',
+            'partedFlags' => [ qw( boot ) ]
+    );
 
-    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume(); # defaults
+    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume->new(); # defaults
 
-    my $defaultSwapVolume = UBOS::Install::Volumes::SwapVolume( {
+    my $defaultSwapVolume = UBOS::Install::Volumes::SwapVolume->new(
             'size'      => 1 * 1024 * 1024 * 1024, # 1G
-    } );
+    );
 
     # No separate /ubos volume
 
@@ -111,7 +109,7 @@ sub checkCreateVolumeLayout {
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'msdos',
+                'mbr',
                 $installTarget,
                 \@volumes );
 
@@ -132,7 +130,7 @@ sub checkCreateVolumeLayout {
             }
 
             $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
-                    'msdos',
+                    'mbr',
                     [ $installTarget ],
                     \@volumes );
         }

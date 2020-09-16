@@ -42,8 +42,8 @@ sub checkCompleteParameters {
         $self->{hostname} = 'ubos-es2';
     }
 
-    unless( $self->{kernelpackage} ) {
-        $self->{kernelpackage} = 'linux-ec2';
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux-ec2';
     }
 
     unless( $self->{devicePackages} ) {
@@ -55,8 +55,8 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw(
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [ qw(
                 haveged.service systemd-timesyncd.service
         ) ];
     }

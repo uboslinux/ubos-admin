@@ -43,8 +43,8 @@ sub checkCompleteParameters {
         $self->{hostname}      = 'linux-odroid-xu3';
     }
 
-    unless( $self->{kernelpackage} ) {
-        $self->{kernelpackage} = 'linux-odroid-xu3';
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux-odroid-xu3';
     }
 
     unless( $self->{devicePackages} ) {
@@ -58,8 +58,8 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw(
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [ qw(
                 systemd-timesyncd.service
         ) ];
     }
@@ -111,7 +111,7 @@ sub checkCreateVolumeLayout {
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'msdos',
+                'mbr',
                 $installTarget,
                 \@volumes );
 
@@ -132,7 +132,7 @@ sub checkCreateVolumeLayout {
             }
 
             $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
-                    'msdos',
+                    'mbr',
                     [ $installTarget ],
                     \@volumes );
         }

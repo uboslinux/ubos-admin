@@ -47,8 +47,8 @@ sub checkCompleteParameters {
         $self->{hostname}      = 'ubos-espressobin';
     }
 
-    unless( $self->{kernelpackage} ) {
-        $self->{kernelpackage} = 'linux-espressobin';
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux-espressobin';
     }
 
     unless( $self->{devicePackages} ) {
@@ -62,8 +62,8 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    unless( $self->{deviceservices} ) {
-        $self->{deviceservices} = [ qw(
+    unless( $self->{deviceServices} ) {
+        $self->{deviceServices} = [ qw(
                 haveged.service systemd-timesyncd.service
         ) ];
     }
@@ -114,7 +114,7 @@ sub checkCreateVolumeLayout {
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'msdos',
+                'mbr',
                 $installTarget,
                 \@volumes );
 
@@ -135,7 +135,7 @@ sub checkCreateVolumeLayout {
             }
 
             $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
-                    'msdos',
+                    'mbr',
                     [ $installTarget ],
                     \@volumes );
         }
