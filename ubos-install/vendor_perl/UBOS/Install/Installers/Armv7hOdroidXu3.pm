@@ -156,9 +156,38 @@ sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
 
-    error( 'FIXME' );
+    my $errors        = 0;
+    my $target        = $self->{target};
+    my $installTarget = $self->{installTargets}->[0];
 
-    return 0;
+    trace( "Installing bootloader" );
+
+    my $kernelPars = $self->getAllKernelParameters();
+    my $bootTxt    = UBOS::Utils::slurpFile( "$target/boot/boot.txt" );
+    if( $bootTxt ) {
+        # setenv bootargs "console=tty1 console=ttySAC2,115200n8 root=PARTUUID=${uuid} rw rootwait smsc95xx.macaddr=${macaddr} ${videoconfig}"
+
+        unless( $bootTxt =~ s!setenv bootargs "(.*)"$!setenv bootargs "$1 $kernelPars"!m ) {
+            error( 'Failed to add kernel parameters' );
+            ++$errors;
+        }
+        unless( UBOS::Utils::saveFile( "$target/boot/boot.txt", $bootTxt, 0644, 'root', 'root' )) {
+            ++$errors;
+        }
+    } else {
+        ++$errors;
+    }
+
+    if( UBOS::Utils::myexec( "cd $target && $target/mkscr" )) {
+        ++$errors;
+    }
+
+    if( UBOS::Utils::myexec( "cd $target && $target/sd_fusing.sh $installTarget" )) {
+        ++$errors;
+    }
+
+
+    return $errors;
 }
 
 ##
