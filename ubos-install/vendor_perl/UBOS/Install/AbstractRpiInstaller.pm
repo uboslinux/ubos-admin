@@ -36,6 +36,8 @@ use UBOS::Utils;
 sub checkCompleteParameters {
     my $self = shift;
 
+    # override some defaults
+
     my $errors = 0;
 
     if( $self->{partitioningScheme} ) {

@@ -12,14 +12,14 @@ use warnings;
 
 package UBOS::Install::Installers::Aarch64Espressobin;
 
-#use UBOS::Install::AbstractVolumeLayout;
-#use UBOS::Install::VolumeLayouts::DiskImage;
-#use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-#use UBOS::Install::Volumes::BootVolume;
-#use UBOS::Install::Volumes::RootVolume;
-#use UBOS::Install::Volumes::SwapVolume;
-#use UBOS::Logging;
-#use UBOS::Utils;
+use UBOS::Install::AbstractVolumeLayout;
+use UBOS::Install::VolumeLayouts::DiskImage;
+use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+use UBOS::Install::Volumes::BootVolume;
+use UBOS::Install::Volumes::RootVolume;
+use UBOS::Install::Volumes::SwapVolume;
+use UBOS::Logging;
+use UBOS::Utils;
 
 use base qw( UBOS::Install::AbstractInstaller );
 use fields;
@@ -87,18 +87,18 @@ sub checkCreateVolumeLayout {
         return $errors;
     }
 
-    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume( {
-            'fs'        => 'ext4',
-            'size'      => 128 * 1024 * 1024, # 128M
-            'mkfsFlags' => '-O ^metadata_csum,^64bit',
-            'mbrBoot'   => 1
-    } );
+    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume->new(
+            'fs'          => 'ext4',
+            'mkfsFlags'   => '-O ^metadata_csum,^64bit',
+            'partedFs'    => 'ext4',
+            'partedFlags' => [ qw( boot ) ]
+    );
 
-    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume(); # defaults
+    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume->new(); # defaults
 
-    my $defaultSwapVolume = UBOS::Install::Volumes::SwapVolume( {
-            'size'      => 4 * 1024 * 1024 * 1024, # 4G
-    } );
+    my $defaultSwapVolume = UBOS::Install::Volumes::SwapVolume->new(
+            'size'      => 1 * 1024 * 1024 * 1024, # 1G
+    );
 
     # No separate /ubos volume
 
