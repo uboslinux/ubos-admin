@@ -178,11 +178,12 @@ sub installBootLoader {
         ++$errors;
     }
 
-    if( UBOS::Utils::myexec( "cd $target && $target/mkscr" )) {
+    # invoke mkscr, but mkscr is just a brief shell script invoking this, but with the wrong path ($target)
+    if( UBOS::Utils::myexec( "cd $target/boot && $target/mkimage -A arm -O linux -T script -C none -n \"U-Boot boot script\" -d boot.txt boot.scr" )) {
         ++$errors;
     }
 
-    if( UBOS::Utils::myexec( "cd $target && $target/sd_fusing.sh $installTarget" )) {
+    if( UBOS::Utils::myexec( "cd $target/boot && $target/boot/sd_fusing.sh $installTarget" )) {
         ++$errors;
     }
 
