@@ -86,6 +86,7 @@ sub checkCreateVolumeLayout {
 
     my $defaultBootVolume = UBOS::Install::Volumes::BootVolume->new(
             'fs'          => 'ext4',
+            'mkfsFlags'   => '',
             'partedFs'    => 'ext4',
             'partedFlags' => [ qw( boot ) ]
     );
