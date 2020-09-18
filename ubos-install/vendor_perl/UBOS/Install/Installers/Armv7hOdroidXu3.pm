@@ -164,24 +164,23 @@ sub installBootLoader {
     my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
             $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
 
-    my $cmdline = 'root=PARTUUID=' . $rootPartUuid; # 'root=/dev/mmcblk0p2';
+    # From ArchlinuxARM, but modified for separate root partition
+    # The paths are not /boot/ but /, because uboot does not know that the fs will be mounted at /boot
+    my $bootTxt = <<END;
+part uuid \${devtype} \${devnum}:\${bootpart} uuid
+setenv bootargs "console=tty1 console=ttySAC2,115200n8 rootfstype=btrfs root=PARTUUID=$rootPartUuid rw rootwait smsc95xx.macaddr=\${macaddr} \${videoconfig} $kernelPars"
 
-    my $bootTxt    = UBOS::Utils::slurpFile( "$target/boot/boot.txt" );
-    if( $bootTxt ) {
-        # setenv bootargs "console=tty1 console=ttySAC2,115200n8 root=PARTUUID=${uuid} rw rootwait smsc95xx.macaddr=${macaddr} ${videoconfig}"
-
-        unless( $bootTxt =~ s!setenv bootargs "(.*)"$!setenv bootargs "$1 $kernelPars"!m ) {
-            error( 'Failed to add kernel parameters' );
-            ++$errors;
-        }
-        unless( $bootTxt =~ s!${uuid}!$rootPartUuid! ) {
-            error( 'Failed to change root partition uuid' );
-            ++$errors;
-        }
-        unless( UBOS::Utils::saveFile( "$target/boot/boot.txt", $bootTxt, 0644, 'root', 'root' )) {
-            ++$errors;
-        }
-    } else {
+if load \${devtype} \${devnum}:\${bootpart} \${kernel_addr_r} /zImage; then
+  if load \${devtype} \${devnum}:\${bootpart} \${fdt_addr_r} /dtbs/\${fdtfile}; then
+    if load \${devtype} \${devnum}:\${bootpart} \${ramdisk_addr_r} /initramfs-linux.img; then
+      bootz \${kernel_addr_r} \${ramdisk_addr_r}:\${filesize} \${fdt_addr_r};
+    else
+      bootz \${kernel_addr_r} - \${fdt_addr_r};
+    fi;
+  fi;
+fi
+END
+    unless( UBOS::Utils::saveFile( "$target/boot/boot.txt", $bootTxt, 0644, 'root', 'root' )) {
         ++$errors;
     }
 
