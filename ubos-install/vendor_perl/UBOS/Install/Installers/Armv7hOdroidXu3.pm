@@ -41,7 +41,7 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{hostname} ) {
-        $self->{hostname}      = 'linux-odroid-xu3';
+        $self->{hostname}      = 'ubos-odroid-xu3';
     }
 
     unless( $self->{kernelPackage} ) {
