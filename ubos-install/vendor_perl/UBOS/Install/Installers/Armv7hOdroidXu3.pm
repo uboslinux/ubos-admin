@@ -84,20 +84,15 @@ sub checkCreateVolumeLayout {
         return $errors;
     }
 
-    # my $defaultBootVolume = UBOS::Install::Volumes::BootVolume->new(
-    #         'fs'          => 'ext4',
-    #         'mkfsFlags'   => '-O ^metadata_csum,^64bit',
-    #         'partedFs'    => 'ext4',
-    #         'partedFlags' => [ qw( boot ) ]
-    # );
-
-    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume->new(
+    my $defaultBootVolume = UBOS::Install::Volumes::BootVolume->new(
             'fs'          => 'ext4',
-            'partedFs'    => 'ext4'
+            'partedFs'    => 'ext4',
+            'partedFlags' => [ qw( boot ) ]
     );
 
+    my $defaultRootVolume = UBOS::Install::Volumes::RootVolume->new();
     my $defaultSwapVolume = UBOS::Install::Volumes::SwapVolume->new(
-            'size'      => 1 * 1024 * 1024 * 1024, # 1G
+            'size'        => 1 * 1024 * 1024 * 1024, # 1G
     );
 
     # No separate /ubos volume
@@ -106,7 +101,7 @@ sub checkCreateVolumeLayout {
     if( UBOS::Install::AbstractVolumeLayout::isFile( $installTarget )) {
         # install to file
         my @volumes = (
-#            $defaultBootVolume,
+            $defaultBootVolume,
             $defaultRootVolume
         );
         if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
@@ -127,7 +122,7 @@ sub checkCreateVolumeLayout {
 
         } else {
             my @volumes = (
-#                $defaultBootVolume,
+                $defaultBootVolume,
                 $defaultRootVolume
             );
             if( defined( $self->{swap} ) && $self->{swap} != -1 ) { # defaults to swap
