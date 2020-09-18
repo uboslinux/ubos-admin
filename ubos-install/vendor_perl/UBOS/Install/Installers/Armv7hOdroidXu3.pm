@@ -179,7 +179,7 @@ sub installBootLoader {
     }
 
     # invoke mkscr, but mkscr is just a brief shell script invoking this, but with the wrong path ($target)
-    if( UBOS::Utils::myexec( "cd $target/boot && $target/mkimage -A arm -O linux -T script -C none -n \"U-Boot boot script\" -d boot.txt boot.scr" )) {
+    if( UBOS::Utils::myexec( "cd $target/boot && $target/usr/bin/mkimage -A arm -O linux -T script -C none -n \"U-Boot boot script\" -d boot.txt boot.scr" )) {
         ++$errors;
     }
 
