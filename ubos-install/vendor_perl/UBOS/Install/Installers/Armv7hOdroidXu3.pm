@@ -111,7 +111,8 @@ sub checkCreateVolumeLayout {
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
                 'mbr',
                 $installTarget,
-                \@volumes );
+                \@volumes,
+                4096 * 512 ); # needs larger empty space at beginning
 
 
     } elsif( UBOS::Install::AbstractVolumeLayout::isDisk( $installTarget )) {
@@ -132,7 +133,8 @@ sub checkCreateVolumeLayout {
             $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
                     'mbr',
                     [ $installTarget ],
-                    \@volumes );
+                    \@volumes,
+                    4096 * 512 ); # needs larger empty space at beginning
         }
 
     } else {
