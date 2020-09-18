@@ -160,13 +160,22 @@ sub installBootLoader {
 
     trace( "Installing bootloader" );
 
-    my $kernelPars = $self->getAllKernelParameters();
+    my $kernelPars   = $self->getAllKernelParameters();
+    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
+            $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
+
+    my $cmdline = 'root=PARTUUID=' . $rootPartUuid; # 'root=/dev/mmcblk0p2';
+
     my $bootTxt    = UBOS::Utils::slurpFile( "$target/boot/boot.txt" );
     if( $bootTxt ) {
         # setenv bootargs "console=tty1 console=ttySAC2,115200n8 root=PARTUUID=${uuid} rw rootwait smsc95xx.macaddr=${macaddr} ${videoconfig}"
 
         unless( $bootTxt =~ s!setenv bootargs "(.*)"$!setenv bootargs "$1 $kernelPars"!m ) {
             error( 'Failed to add kernel parameters' );
+            ++$errors;
+        }
+        unless( $bootTxt =~ s!${uuid}!$rootPartUuid! ) {
+            error( 'Failed to change root partition uuid' );
             ++$errors;
         }
         unless( UBOS::Utils::saveFile( "$target/boot/boot.txt", $bootTxt, 0644, 'root', 'root' )) {
