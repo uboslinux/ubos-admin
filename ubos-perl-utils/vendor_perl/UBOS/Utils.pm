@@ -1242,7 +1242,7 @@ sub isValidArch {
         }
     }
 
-    $@ = 'Not a valid arch: ' + $archCandidate;
+    $@ = 'Not a valid arch: ' . $archCandidate;
     return undef;
 }
 
@@ -1265,7 +1265,7 @@ sub isValidDeviceClass {
         }
     }
 
-    $@ = 'Not a valid device class: ' + $deviceClassCandidate;
+    $@ = 'Not a valid device class: ' . $deviceClassCandidate;
     return undef;
 }
 
@@ -1283,7 +1283,7 @@ sub isValidHostname {
 
     unless( $hostname =~ m!^(?=.{1,255}$)[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|-){0,61}[0-9A-Za-z])?)*\.?$|^\*$! ) {
         # regex originally from http://stackoverflow.com/a/1420225/200304
-        $@ = 'Not a valid hostname: ' + $hostname;
+        $@ = 'Not a valid hostname: ' . $hostname;
         return undef;
     }
     return $hostname;
