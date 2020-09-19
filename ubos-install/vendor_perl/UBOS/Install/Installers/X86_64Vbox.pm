@@ -14,10 +14,10 @@ use warnings;
 
 package UBOS::Install::Installers::X86_64Vbox;
 
-#use UBOS::Install::AbstractVolumeLayout;
-#use UBOS::Install::VolumeLayouts::DiskImage;
-#use UBOS::Install::Volumes::RootVolume;
-#use UBOS::Install::Volumes::SwapVolume;
+use UBOS::Install::AbstractVolumeLayout;
+use UBOS::Install::VolumeLayouts::DiskImage;
+use UBOS::Install::Volumes::RootVolume;
+use UBOS::Install::Volumes::SwapVolume;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -58,7 +58,12 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    $self->{runAddPackageDbs}->{virt} = '$depotRoot/$channel/$arch/virt';
+    unless( $self->{partitioningScheme} ) {
+        $self->{partitioningScheme} = 'mbr';
+    }
+
+    $self->{installAddPackageDbs}->{virt} = '$depotRoot/$channel/$arch/virt';
+    $self->{runAddPackageDbs}->{virt}     = '$depotRoot/$channel/$arch/virt';
 
     return $self->SUPER::checkCompleteParameters();
 }

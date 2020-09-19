@@ -730,7 +730,7 @@ sub installPackages {
     my $out;
     if( UBOS::Utils::myexec( $cmd, undef, \$out, \$out )) {
         error( "pacman failed:", $out );
-        trace( "pacman configuration was:\n", UBOS::Utils::slurpFile( $installPacmanConfig ));
+        trace( "pacman configuration was:\n" . UBOS::Utils::slurpFile( $installPacmanConfig ));
         ++$errors;
     }
 
