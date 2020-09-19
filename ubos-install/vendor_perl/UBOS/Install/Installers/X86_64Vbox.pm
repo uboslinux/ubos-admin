@@ -58,7 +58,7 @@ sub checkCompleteParameters {
         ) ];
     }
 
-    $self->{packagedbs}->{'virt'} = '$depotRoot/$channel/$arch/virt';
+    $self->{runAddPackageDbs}->{virt} = '$depotRoot/$channel/$arch/virt';
 
     return $self->SUPER::checkCompleteParameters();
 }
