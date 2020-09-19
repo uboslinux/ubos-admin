@@ -126,12 +126,26 @@ sub setDeviceConfig {
     if( exists( $deviceConfig->{runchecksignatures} )) {
         $self->{runCheckSignatures} = $deviceConfig->{runchecksignatures};
     }
-    if( exists( $deviceConfig->{addpackagedbs} )) {
-        $self->{addPackageDbs} = $deviceConfig->{addpackagedbs};
+
+    if( exists( $deviceConfig->{installaddpackagedbs} )) {
+        $self->{installAddPackageDbs} = $deviceConfig->{installaddpackagedbs};
     }
-    if( exists( $deviceConfig->{disablepackagedbs} )) {
-        $self->{disablePackageDbs} = $deviceConfig->{disablepackagedbs};
+    if( exists( $deviceConfig->{runaddpackagedbs} )) {
+        $self->{runAddPackageDbs} = $deviceConfig->{runaddpackagedbs};
     }
+    if( exists( $deviceConfig->{installdisablepackagedbs} )) {
+        $self->{installDisablePackageDbs} = $deviceConfig->{installdisablepackagedbs};
+    }
+    if( exists( $deviceConfig->{rundisablepackagedbs} )) {
+        $self->{runDisablePackageDbs} = $deviceConfig->{rundisablepackagedbs};
+    }
+    if( exists( $deviceConfig->{installremovepackagedbs} )) {
+        $self->{installRemovePackageDbs} = $deviceConfig->{installremovepackagedbs};
+    }
+    if( exists( $deviceConfig->{runremovepackagedbs} )) {
+        $self->{runRemovePackageDbs} = $deviceConfig->{runremovepackagedbs};
+    }
+
     if( exists( $deviceConfig->{swap} )) {
         $self->{swap} = $deviceConfig->{swap};
     }
