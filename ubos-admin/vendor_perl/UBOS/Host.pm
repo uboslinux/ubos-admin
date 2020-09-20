@@ -596,6 +596,13 @@ sub updateCode {
         }
     }
 
+    if( -x '/usr/share/ubos-admin/bin/perform-fixes' ) {
+        debugAndSuspend( 'Execute perform-fixes' );
+        if( myexec( '/usr/share/ubos-admin/bin/perform-fixes', undef, \$out, \$out )) {
+            error( 'Running perform-fixes failed:', $out );
+        }
+    }
+
     debugAndSuspend( 'Execute pacman -Su' );
     if( myexec( 'pacman -Su --noconfirm', undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
