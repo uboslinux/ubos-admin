@@ -25,5 +25,8 @@ for f in $LEFTOVER_FILES_TO_REMOVE; do
     fi
 done
 
-# running pacman itself may recreate that file
+# Running pacman itself may recreate that file
+# But we are in a pacman transaction, so we need this hack
+mv /var/lib/pacman/db.lck /var/lib/pacman/db.lck.moved
 pacman -S nss --noconfirm --overwrite /usr/lib/p11-kit-trust.so
+mv /var/lib/pacman/db.lck.moved /var/lib/pacman/db.lck
