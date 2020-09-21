@@ -681,7 +681,7 @@ END
         $dbValue =~ s!\$channel!$channel!g;
 
         my $prefix = '';
-        if( grep /$dbKey/, @{$self->{installDisablePackageDbs}} ) {
+        if( $self->{installDisablePackageDbs}->{$dbKey} ) {
             $prefix = '# ';
         }
         my $dbFile  = $prefix . "[$dbKey]\n";
@@ -786,7 +786,7 @@ END
 
         my $prefix = '';
         my $dbFile = '';
-        if( grep /$dbKey/, @{$self->{runDisablePackageDbs}} ) {
+        if( $self->{runDisablePackageDbs}->{$dbKey} ) {
             $prefix = '# ';
             $dbFile .= $prefix . "Remove the # from the next two lines and run `ubos-admin update' to enable package db $dbKey\n";
         }
