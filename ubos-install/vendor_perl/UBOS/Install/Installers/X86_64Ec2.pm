@@ -49,7 +49,7 @@ sub checkCompleteParameters {
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-cloud
-                ec2-keyring
+                archlinux-keyring ec2-keyring
                 grub mkinitcpio
                 ubos-deviceclass-ec2
         ) ];

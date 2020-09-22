@@ -51,6 +51,7 @@ sub checkCompleteParameters {
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client ubos-networking-gateway ubos-networking-standalone
+                archlinux-keyring
                 grub mkinitcpio
                 rng-tools linux-firmware
                 smartmontools

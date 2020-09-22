@@ -45,6 +45,7 @@ sub checkCompleteParameters {
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-container
+                archlinux-keyring
                 ubos-deviceclass-container
         ) ];
     }

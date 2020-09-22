@@ -46,6 +46,7 @@ sub checkCompleteParameters {
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client
+                archlinux-keyring
                 grub mkinitcpio
                 virtualbox-guest-utils
                 ubos-deviceclass-vbox

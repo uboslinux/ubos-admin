@@ -54,7 +54,7 @@ sub checkCompleteParameters {
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client ubos-networking-espressobin ubos-networking-standalone
-                archlinuxarm-keyring
+                archlinux-keyring archlinuxarm-keyring
                 uboot-tools espressobin-uboot-config espressobin-ubos-state
                 smartmontools
                 wpa_supplicant crda
