@@ -387,7 +387,7 @@ sub checkCompleteParameters {
 
     if( $self->{installTargets} ) {
         $self->replaceDevSymlinks( $self->{installTargets} );
-    } else P
+    } else {
         $self->{installTargets} = [];
     }
 
