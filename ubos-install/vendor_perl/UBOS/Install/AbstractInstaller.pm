@@ -91,8 +91,6 @@ sub setDeviceConfig {
 
     my $errors = 0;
 
-    trace( 'AbstractInstaller::setDeviceConfig' );
-
     if( exists( $deviceConfig->{hostname} )) {
         $self->{hostname} = $deviceConfig->{hostname};
     }
