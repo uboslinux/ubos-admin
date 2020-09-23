@@ -519,10 +519,13 @@ sub resetDiskCaches {
 
     my $errors = 0;
     my $out;
+    # swallow output. It sometimes says things such as:
+    # Warning: Not all of the space available to /dev/xxx appears to be used, you can fix ...
     if( UBOS::Utils::myexec( 'partprobe', undef, \$out, \$out )) {
-        # swallow output. It sometimes says things such as:
-        # Warning: Not all of the space available to /dev/xxx appears to be used, you can fix ...
-        ++$errors;
+        warning( 'Partprobe produced an error; continuing: ', $out );
+        # current on ESPRESSObin it produces an error message that makes very little
+        # sense: https://superuser.com/questions/1587718/partprobe-error-right-after-reboot
+        # so we ignore it
     }
     trace( 'partprobe:', $out );
 
