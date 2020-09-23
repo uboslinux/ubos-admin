@@ -10,6 +10,7 @@ use warnings;
 
 package UBOS::Utils;
 
+use Cwd qw( abs_path );
 use Exporter qw( import );
 use File::Spec;
 use File::Temp;
@@ -547,6 +548,7 @@ sub absReadlink {
     } else {
         $ret = File::Spec->rel2abs( $path );
     }
+    $ret = abs_path( $ret );
     return $ret;
 }
 
