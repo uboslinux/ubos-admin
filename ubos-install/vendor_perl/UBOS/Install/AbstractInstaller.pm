@@ -388,7 +388,9 @@ sub checkCompleteParameters {
         $self->{swapPartitions} = [];
     }
 
-    unless( $self->{installTargets} ) {
+    if( $self->{installTargets} ) {
+        $self->replaceDevSymlinks( $self->{installTargets} );
+    } else P
         $self->{installTargets} = [];
     }
 
@@ -1240,15 +1242,15 @@ sub getAllKernelParameters {
 # @$devices: device file names (modified in place)
 # return: success or failure
 sub replaceDevSymlinks {
-    my $self  = shift;
-    my $argvp = shift;
+    my $self    = shift;
+    my $devices = shift;
 
-    for( my $i=0 ; $i<@$argvp ; ++$i ) {
-        my $resolved = UBOS::Utils::absReadlink( $argvp->[$i] );
+    for( my $i=0 ; $i<@$devices ; ++$i ) {
+        my $resolved = UBOS::Utils::absReadlink( $devices->[$i] );
         if( -b $resolved || -f $resolved ) {
-            $argvp->[$i] = $resolved;
+            $devices->[$i] = $resolved;
         } else {
-            $@ = 'Cannot find device: ' . $argvp->[$i];
+            $@ = 'Cannot find device: ' . $devices->[$i];
             return 0;
         }
     }
