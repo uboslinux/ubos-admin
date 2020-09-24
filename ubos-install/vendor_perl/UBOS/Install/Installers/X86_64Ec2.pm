@@ -39,7 +39,7 @@ sub checkCompleteParameters {
     # override some defaults
 
     unless( $self->{hostname} ) {
-        $self->{hostname} = 'ubos-es2';
+        $self->{hostname} = 'ubos-ec2';
     }
 
     unless( $self->{kernelPackage} ) {
