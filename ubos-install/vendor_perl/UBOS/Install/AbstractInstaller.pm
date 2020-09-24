@@ -1283,7 +1283,7 @@ sub _checkSingleInstallTargetOnly {
         ++$errors;
     }
     if( @{$self->{installTargets}} != 1 ) {
-        error( 'A single install target must be specified for this device class:'. @{$self->{installTargets}} );
+        error( 'A single install target must be specified for this device class:', @{$self->{installTargets}} );
         ++$errors;
     }
     return $errors;
