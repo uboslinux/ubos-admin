@@ -95,7 +95,7 @@ sub checkCreateVolumeLayout {
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
                 $self->{partitioningScheme},
-                $installTarget,
+                $self->{installTargets},
                 \@volumes );
 
     } else {
