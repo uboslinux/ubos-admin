@@ -15,14 +15,14 @@ use warnings;
 
 package UBOS::Install::Installers::X86_64Ec2;
 
-#use UBOS::Install::AbstractVolumeLayout;
-#use UBOS::Install::VolumeLayouts::DiskImage;
-#use UBOS::Install::VolumeLayouts::DiskBlockDevices;
-#use UBOS::Install::Volumes::BootVolume;
-#use UBOS::Install::Volumes::RootVolume;
-#use UBOS::Install::Volumes::SwapVolume;
-#use UBOS::Logging;
-#use UBOS::Utils;
+use UBOS::Install::AbstractVolumeLayout;
+use UBOS::Install::VolumeLayouts::DiskImage;
+use UBOS::Install::VolumeLayouts::DiskBlockDevices;
+use UBOS::Install::Volumes::BootVolume;
+use UBOS::Install::Volumes::RootVolume;
+use UBOS::Install::Volumes::SwapVolume;
+use UBOS::Logging;
+use UBOS::Utils;
 
 use base qw( UBOS::Install::AbstractPcInstaller );
 use fields;
@@ -61,6 +61,10 @@ sub checkCompleteParameters {
         ) ];
     }
 
+    unless( $self->{partitioningScheme} ) {
+        $self->{partitioningScheme} = 'mbr';
+    }
+
     return $self->SUPER::checkCompleteParameters();
 }
 
@@ -86,7 +90,7 @@ sub checkCreateVolumeLayout {
             UBOS::Install::Volumes::RootVolume->new()
         );
         if( defined( $self->{swap} ) && $self->{swap} != -1 ) { # defaults to swap
-            push @volumes, UBOS::Install::Volumes::SwapVolume( 4 * 1024 * 1024 * 1024 ); # 4G
+            push @volumes, UBOS::Install::Volumes::SwapVolume->new( 4 * 1024 * 1024 * 1024 ); # 4G
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
