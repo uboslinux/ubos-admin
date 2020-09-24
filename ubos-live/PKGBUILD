@@ -2,7 +2,7 @@ developer=http://indiecomputing.com/
 url=${developer}
 maintainer=http://indiecomputing.com/
 pkgname=$(basename $(pwd))
-pkgver=0.36
+pkgver=0.37
 pkgrel=1
 pkgdesc="Device-side functionality of UBOS Live"
 arch=('any')
@@ -11,6 +11,7 @@ options=('!strip')
 depends=(
     'coreutils'
     'ubos-admin'
+    'perl-lwp-protocol-https'
 )
 _vendor_perl=/usr/share/perl5/vendor_perl
 install=install

@@ -107,10 +107,12 @@ sub statusPing {
 
 ##
 # Activate UBOS Live.
+# $channel: use this channel instead of the defailt (if any)
 # return: 1 if successful
 sub ubosLiveActivate {
+    my $channel = shift;
 
-    return _activateIfNeeded();
+    return _activateIfNeeded( $channel );
 }
 
 ##
@@ -134,13 +136,21 @@ sub isUbosLiveActive {
 
 ##
 # If not already active, activate UBOS Live
+# $channel: use this channel instead of the defailt (if any)
+# return: true or false
 sub _activateIfNeeded() {
-    trace( 'UbosLive::_activateIfNeeded' );
+    my $channel = shift;
+
+    trace( 'UbosLive::_activateIfNeeded', $channel );
 
     if( isUbosLiveActive()) {
         $@ = 'UBOS Live is active already';
         return 0;
     }
+
+    my $confJson = _getConf( $channel );
+    $confJson->{active} = JSON::true;
+    _saveConf();
 
     my $errors = 0;
     my $out;
@@ -150,10 +160,6 @@ sub _activateIfNeeded() {
         warning( 'systemctl enable --now', $STATUS_TIMER, ':', $out );
         ++$errors;
     }
-
-    my $confJson = _getConf();
-    $confJson->{active} = JSON::true;
-    _saveConf();
 
     if( $errors ) {
         $@ = "There were $errors errors.";
@@ -195,8 +201,10 @@ sub _deactivateIfNeeded() {
 
 ##
 # Get the current configuration as saved locally, or defaults
+# $channel: use this channel instead of the defailt (if any)
 # return: status JSON, or undef
 sub _getConf {
+    my $channel = shift;
 
     unless( $_conf ) {
         if( -e $CONF ) {
@@ -214,6 +222,9 @@ sub _getConf {
         unless( exists( $CHANNELS->{$_conf->{channel}} )) {
             fatal( 'Unsupported release channel:', $_conf->{channel} );
         }
+    }
+    if( $channel ) {
+        $_conf->{channel} = $channel;
     }
 
     return $_conf;

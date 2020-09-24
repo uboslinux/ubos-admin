@@ -27,11 +27,13 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
+    my $channel         = undef;
     my $verbose         = 0;
     my $logConfigFile   = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
+            'channel=s'   => \$channel,
             'verbose+'    => \$verbose,
             'logConfig=s' => \$logConfigFile );
 
@@ -45,7 +47,7 @@ sub run {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
     }
 
-    if( UBOS::Live::UbosLive::ubosLiveActivate()) {
+    if( UBOS::Live::UbosLive::ubosLiveActivate( $channel )) {
         return 0;
 
     } else {
