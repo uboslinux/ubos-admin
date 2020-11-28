@@ -93,7 +93,7 @@ sub run {
             if( ref( $json ) eq 'ARRAY' ) {
                 # Several site JSONs in an array
                 push @jsons, @$json;
-            } elsif( exists( $json->{hostname} )) {
+            } elsif( exists( $json->{hostname} ) || exists( $json->{tor} )) {
                 # Single site JSON
                 push @jsons, $json;
             } else {
