@@ -37,6 +37,7 @@ use fields qw(
         installRemovePackageDbs  runRemovePackageDbs
 
         mbrBootloaderDevices
+        rootDevice
         bootPartitions
         rootPartitions
         ubosPartitions
@@ -152,6 +153,9 @@ sub setDeviceConfig {
     }
     if( exists( $deviceConfig->{mbrbootloaderdevices} )) {
         $self->{mbrBootloaderDevices} = $deviceConfig->{mbrbootloaderdevices};
+    }
+    if( exists( $deviceConfig->{rootdevice} )) {
+        $self->{rootDevice} = $deviceConfig->{rootdevice};
     }
     if( exists( $deviceConfig->{bootpartitions} )) {
         $self->{bootPartitions} = $deviceConfig->{bootpartitions};

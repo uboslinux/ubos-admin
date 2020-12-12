@@ -161,14 +161,20 @@ sub installBootLoader {
     trace( "Installing bootloader" );
 
     my $kernelPars   = $self->getAllKernelParameters();
-    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
-            $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
+    my $rootDevice;
+    if( $self->{rootDevice} ) {
+        $rootDevice = $self->{rootDevice};
+
+    } else {
+        $rootDevice = 'PARTUUID=' . UBOS::Install::AbstractVolumeLayout::determinePartUuid(
+                $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
+    }
 
     # From ArchlinuxARM, but modified for separate root partition
     # The paths are not /boot/ but /, because uboot does not know that the fs will be mounted at /boot
     my $bootTxt = <<END;
 part uuid \${devtype} \${devnum}:\${bootpart} uuid
-setenv bootargs "console=tty1 console=ttySAC2,115200n8 rootfstype=btrfs root=PARTUUID=$rootPartUuid rw rootwait smsc95xx.macaddr=\${macaddr} \${videoconfig} $kernelPars"
+setenv bootargs "console=tty1 console=ttySAC2,115200n8 rootfstype=btrfs root=$rootDevice rw rootwait smsc95xx.macaddr=\${macaddr} \${videoconfig} $kernelPars"
 
 if load \${devtype} \${devnum}:\${bootpart} \${kernel_addr_r} /zImage; then
   if load \${devtype} \${devnum}:\${bootpart} \${fdt_addr_r} /dtbs/\${fdtfile}; then

@@ -38,6 +38,7 @@ my @runRemovePackageDbs;
 my @installDisablePackageDbs;
 my @runDisablePackageDbs;
 my @mbrBootLoaderDevices;
+my $rootDevice;
 my @bootPartitions;
 my @rootPartitions;
 my @ubosPartitions;
@@ -81,6 +82,7 @@ my $parseOk = GetOptions(
         'run-disable-package-db=s'     => \@runDisablePackageDbs,
 
         'mbrbootloaderdevice=s'        => \@mbrBootLoaderDevices,
+        'rootdevice=s'                 => \$rootDevice,
         'bootpartition=s'              => \@bootPartitions,
         'rootpartition=s'              => \@rootPartitions,
         'ubospartition=s'              => \@ubosPartitions,
@@ -120,6 +122,12 @@ if(      $listDeviceClasses
          || @runRemovePackageDbs
          || @installDisablePackageDbs
          || @runDisablePackageDbs
+         || @mbrBootLoaderDevices
+         || $rootDevice
+         || @bootPartitions
+         || @rootPartitions
+         || @ubosPartitions
+         || @swapPartitions
          || $swap
          || $gpt
          || $mbr ))
@@ -206,6 +214,9 @@ if( @runDisablePackageDbs ) {
 }
 if( @mbrBootLoaderDevices ) {
     $deviceConfig->{mbrbootloaderdevices} = \@mbrBootLoaderDevices;
+}
+if( $rootDevice ) {
+    $deviceConfig->{rootdevice} = $rootDevice;
 }
 if( @bootPartitions ) {
     $deviceConfig->{bootpartitions} = \@bootPartitions;
@@ -494,6 +505,9 @@ Optional arguments:
           classes (e.g. PC) where boot loaders are written to a special place on the hard
           disk.
           This can only be used when ubos-install is invoked in the --rootpartition style.
+    --rootdevice <dev>
+          Override the root device passed to the kernel command-line in spite of other
+          parameters. Cannot be used on some device classes (e.g. PC).
     --bootpartition <part>
           Use this block device as boot partition. If not provided, there will be no
           separate boot partition. Note that some systems (e.g. Raspberry Pi) cannot
@@ -527,8 +541,9 @@ Optional arguments:
     [--install-check-signatures <never|optional|required>][--run-check-signatures <never|optional|required>]
     [--install-add-package-db <name=server>][--install-remove-package-db <name>][--install-disable-package-db <name>]
     [--run-add-package-db <name=server>][--run-remove-package-db <name>][--run-disable-package-db <name>]
-    [--mbrbootloaderdevice <dev>][--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>]
-    [--swap | --noswap ][--gpt][--mbr
+    [--mbrbootloaderdevice <dev>][--rootdevice <dev>]
+    [--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>]
+    [--swap | --noswap ][--gpt][--mbr]
 END
     }
     exit 1;

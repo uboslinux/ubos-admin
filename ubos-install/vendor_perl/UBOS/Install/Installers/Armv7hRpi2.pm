@@ -58,12 +58,17 @@ sub installBootLoader {
 
     my $kernelPars = $self->getAllKernelParameters();
 
-    my $rootPartUuid = UBOS::Install::AbstractVolumeLayout::determinePartUuid(
-            $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
+    my $rootDevice;
+    if( $self->{rootDevice} ) {
+        $rootDevice = $self->{rootDevice};
 
-    my $cmdline = 'root=PARTUUID=' . $rootPartUuid; # 'root=/dev/mmcblk0p2';
-    $cmdline .= <<CONTENT;
- rw rootwait rootfstype=btrfs console=ttyAMA0,115200 console=tty1 kgdboc=ttyAMA0,115200 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 elevator=noop $kernelPars
+    } else {
+        $rootDevice = 'PARTUUID=' . UBOS::Install::AbstractVolumeLayout::determinePartUuid(
+                $self->{volumeLayout}->getRootVolume()->getDeviceNames() );
+    }
+
+    my $cmdline = <<CONTENT;
+root=$rootDevice rw rootwait rootfstype=btrfs console=ttyAMA0,115200 console=tty1 kgdboc=ttyAMA0,115200 selinux=0 plymouth.enable=0 smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0 elevator=noop $kernelPars
 CONTENT
 
     UBOS::Utils::saveFile( $self->{target} . '/boot/cmdline.txt', $cmdline, 0644, 'root', 'root' );

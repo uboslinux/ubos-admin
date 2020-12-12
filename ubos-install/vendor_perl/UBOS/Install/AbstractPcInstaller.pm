@@ -21,6 +21,23 @@ use fields;
 ## Constructor inherited from superclass
 
 ##
+# Check that the provided parameters are correct, and complete incomplete items from
+# default except for the disk layout.
+# return: number of errors.
+sub checkCompleteParameters {
+    my $self = shift;
+
+    my $errors = $self->SUPER::checkCompleteParameters();
+
+    if( $self->{rootDevice} ) {
+        error( 'Cannot specify alternate root device on PC device classes' );
+        ++$errors;
+    }
+
+    return $errors;
+}
+
+##
 # Install a Ram disk
 # $kernelPostfix: allows us to add -ec2 to EC2 kernels
 # return: number of errors
