@@ -45,9 +45,7 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{kernelPackage} ) {
-        unless( $self->{noBoot} ) {
-            $self->{kernelPackage} = 'linux-odroid-xu3';
-        }
+        $self->{kernelPackage} = 'linux-odroid-xu3';
     }
 
     unless( $self->{devicePackages} ) {
