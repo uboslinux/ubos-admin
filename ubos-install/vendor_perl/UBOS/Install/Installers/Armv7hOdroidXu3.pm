@@ -111,7 +111,6 @@ sub checkCreateVolumeLayout {
         }
         push @volumes, $defaultRootVolume;
 
-        );
         if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, $defaultSwapVolume;
         }
