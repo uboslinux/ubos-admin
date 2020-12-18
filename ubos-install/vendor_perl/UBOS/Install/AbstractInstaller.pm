@@ -44,6 +44,7 @@ use fields qw(
         swapPartitions
 
         additionalMounts
+        noBoot
 
         installTargets
 
@@ -177,6 +178,9 @@ sub setDeviceConfig {
     }
     if( exists( $deviceConfig->{additionalmounts} )) {
         $self->{additionalMounts} = $deviceConfig->{additionalmounts};
+    }
+    if( exists( $deviceConfig->{noboot} )) {
+        $self->{noBoot} = $deviceConfig->{noboot};
     }
 
     return $errors;
@@ -404,6 +408,9 @@ sub checkCompleteParameters {
     unless( $self->{additionalMounts} ) {
         $self->{additionalMounts} = [];
     }
+    unless( $self->{noBoot} ) {
+        $self->{noBoot} = 0;
+    }
 
     return $errors;
 }
@@ -524,9 +531,11 @@ sub install {
         if( $errors ) {
             goto DONE;
         }
-        $errors += $self->installBootLoader( $pacmanConfigInstall );
-        if( $errors ) {
-            goto DONE;
+        unless( $self->{noBoot} ) {
+            $errors += $self->installBootLoader( $pacmanConfigInstall );
+            if( $errors ) {
+                goto DONE;
+            }
         }
 
         my $chrootScript = <<'SCRIPT';

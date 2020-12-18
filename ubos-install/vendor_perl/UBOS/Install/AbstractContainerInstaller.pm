@@ -50,6 +50,10 @@ sub checkCompleteParameters {
         ) ];
     }
 
+    if( $self->{noBoot} ) {
+        error( 'Cannot specify --noboot with this device class' );
+    }
+
     $errors += $self->SUPER::checkCompleteParameters();
     return $errors;
 }

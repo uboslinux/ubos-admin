@@ -45,18 +45,23 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{kernelPackage} ) {
-        $self->{kernelPackage} = 'linux-odroid-xu3';
+        unless( $self->{noBoot} ) {
+            $self->{kernelPackage} = 'linux-odroid-xu3';
+        }
     }
 
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client ubos-networking-standalone
                 archlinux-keyring archlinuxarm-keyring
-                uboot-odroid-xu3 uboot-tools
                 smartmontools
                 wpa_supplicant crda
                 ubos-deviceclass-odroidxu3
         ) ];
+        unless( $self->{noBoot} ) {
+            push @{$self->{devicePackages}}, 'uboot-odroid-xu3';
+            push @{$self->{devicePackages}}, 'uboot-tools';
+        }
     }
 
     unless( $self->{deviceServices} ) {
@@ -101,9 +106,13 @@ sub checkCreateVolumeLayout {
     my $installTarget = $self->{installTargets}->[0];
     if( UBOS::Install::AbstractVolumeLayout::isFile( $installTarget )) {
         # install to file
-        my @volumes = (
-            $defaultBootVolume,
-            $defaultRootVolume
+
+        my @volumes = ();
+        unless( $self->{noBoot} ) {
+            push @volumes, $defaultBootVolume;
+        }
+        push @volumes, $defaultRootVolume;
+
         );
         if( defined( $self->{swap} ) && $self->{swap} == 1 ) { # defaults to no swap
             push @volumes, $defaultSwapVolume;
@@ -123,10 +132,12 @@ sub checkCreateVolumeLayout {
             ++$errors;
 
         } else {
-            my @volumes = (
-                $defaultBootVolume,
-                $defaultRootVolume
-            );
+            my @volumes = ();
+            unless( $self->{noBoot} ) {
+                push @volumes, $defaultBootVolume;
+            }
+            push @volumes, $defaultRootVolume;
+
             if( defined( $self->{swap} ) && $self->{swap} != -1 ) { # defaults to swap
                 push @volumes, $defaultSwapVolume;
             }

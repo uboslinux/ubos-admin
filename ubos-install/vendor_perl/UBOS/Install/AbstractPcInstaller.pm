@@ -34,6 +34,10 @@ sub checkCompleteParameters {
         ++$errors;
     }
 
+    if( $self->{noBoot} ) {
+        error( 'Cannot specify --noboot with this device class' );
+    }
+
     return $errors;
 }
 
