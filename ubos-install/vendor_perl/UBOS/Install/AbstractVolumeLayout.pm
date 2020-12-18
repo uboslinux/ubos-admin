@@ -386,8 +386,6 @@ sub saveFstab {
 
 FSTAB
 
-    my $i=0;
-
     # shortest first
     foreach my $vol ( $self->getVolumesByMountPath() ) {
 
@@ -416,7 +414,7 @@ FSTAB
             # This may not be needed, if 'btrfs device scan' is done during boot
             # and if it is needed, this won't work, because @devices contains /dev/mapper/loopXpY or such
             # $fsTab .= join( '', map { ",device=$_" } @devices );
-            $fsTab .= " $i $passno\n";
+            $fsTab .= " 0 $passno\n";
 
         } elsif( 'swap' eq $fs ) {
             my @devices = $vol->getDeviceNames();
@@ -444,10 +442,16 @@ FSTAB
 
             my $passno = ( $mountPoint eq '/' ) ? 1 : 2;
 
-            $fsTab .= "UUID=$uuid $mountPoint $fs rw,relatime $i $passno\n";
+            $fsTab .= "UUID=$uuid $mountPoint $fs rw,relatime 0 $passno\n";
         }
-        ++$i;
     }
+
+    if( $installer->{additionalMounts} ) {
+        for my $entry ( @{$installer->{additionalMounts}} ) {
+            $fsTab .= "$entry\n";
+        }
+    }
+
     debugAndSuspend( 'Saving ', "$target/etc/fstab", ":\n$fsTab" );
 
     UBOS::Utils::saveFile( "$target/etc/fstab", $fsTab, 0644, 'root', 'root' );

@@ -43,6 +43,7 @@ my @bootPartitions;
 my @rootPartitions;
 my @ubosPartitions;
 my @swapPartitions;
+my @addMounts;
 my $swap;
 my $gpt;
 my $mbr;
@@ -87,6 +88,8 @@ my $parseOk = GetOptions(
         'rootpartition=s'              => \@rootPartitions,
         'ubospartition=s'              => \@ubosPartitions,
         'swappartition=s'              => \@swapPartitions,
+
+        'add-mount=s'                  => \@addMounts,
 
         'swap!'                        => \$swap,
         'gpt'                          => \$gpt,
@@ -230,6 +233,10 @@ if( @ubosPartitions ) {
 if( @swapPartitions ) {
     $deviceConfig->{swappartitions} = \@swapPartitions;
 }
+if( @addMounts ) {
+    $deviceConfig->{additionalmounts} = \@addMounts;
+}
+
 if( $swap ) {
     $deviceConfig->{swap} = $swap;
 }
@@ -521,6 +528,8 @@ Optional arguments:
     --swappartion <part>
           Create a swap partition, or several if more than one is given.
           This can only be used when ubos-install is invoked in the --rootpartition style.
+    --add-mount <fstabentry>
+          Add an entry at the end of /etc/fstab.
     --[no]swap
           Deviate from the defaults of the device class by definitely creating a swap
           partition, or not creating a swap partition.
@@ -542,7 +551,7 @@ Optional arguments:
     [--install-add-package-db <name=server>][--install-remove-package-db <name>][--install-disable-package-db <name>]
     [--run-add-package-db <name=server>][--run-remove-package-db <name>][--run-disable-package-db <name>]
     [--mbrbootloaderdevice <dev>][--rootdevice <dev>]
-    [--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>]
+    [--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>][--add-mount <fstabentry>]
     [--swap | --noswap ][--gpt][--mbr]
 END
     }

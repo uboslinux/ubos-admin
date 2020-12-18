@@ -42,6 +42,9 @@ use fields qw(
         rootPartitions
         ubosPartitions
         swapPartitions
+
+        additionalMounts
+
         installTargets
 
         target
@@ -171,6 +174,9 @@ sub setDeviceConfig {
     }
     if( exists( $deviceConfig->{installtargets} )) {
         $self->{installTargets} = $deviceConfig->{installtargets};
+    }
+    if( exists( $deviceConfig->{additionalmounts} )) {
+        $self->{additionalMounts} = $deviceConfig->{additionalmounts};
     }
 
     return $errors;
@@ -393,6 +399,10 @@ sub checkCompleteParameters {
         $self->replaceDevSymlinks( $self->{installTargets} );
     } else {
         $self->{installTargets} = [];
+    }
+
+    unless( $self->{additionalMounts} ) {
+        $self->{additionalMounts} = [];
     }
 
     return $errors;
