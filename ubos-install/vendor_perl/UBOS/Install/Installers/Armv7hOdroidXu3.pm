@@ -64,7 +64,7 @@ sub checkCompleteParameters {
 
     unless( $self->{deviceServices} ) {
         $self->{deviceServices} = [ qw(
-                systemd-timesyncd.service
+                haveged.service systemd-timesyncd.service smartd.service
         ) ];
     }
 
