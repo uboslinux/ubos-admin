@@ -35,9 +35,8 @@ sub checkCompleteParameters {
 
     my $errors = 0;
 
-    if( $self->{partitioningScheme} ) {
-        error( 'Cannot specify a partitioning scheme with this device class' );
-        ++$errors;
+    unless( $self->{partitioningScheme} ) {
+        $self->{partitioningScheme} = 'mbr';
     }
 
     unless( $self->{hostname} ) {
@@ -116,7 +115,7 @@ sub checkCreateVolumeLayout {
         }
 
         $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'mbr',
+                $self->{partitioningScheme},
                 $installTarget,
                 \@volumes,
                 4096 * 512 ); # needs larger empty space at beginning
@@ -140,7 +139,7 @@ sub checkCreateVolumeLayout {
             }
 
             $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskBlockDevices->new(
-                    'mbr',
+                    $self->{partitioningScheme},
                     [ $installTarget ],
                     \@volumes,
                     4096 * 512 ); # needs larger empty space at beginning
