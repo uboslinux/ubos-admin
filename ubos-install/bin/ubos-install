@@ -530,7 +530,7 @@ Optional arguments:
           Use a separate /ubos partition. If more than one /ubos partition is given, mirror
           across at least two partitions (RAID1).
           This can only be used when ubos-install is invoked in the --rootpartition style.
-    --swappartion <part>
+    --swappartition <part>
           Create a swap partition, or several if more than one is given.
           This can only be used when ubos-install is invoked in the --rootpartition style.
     --add-mount <fstabentry>
