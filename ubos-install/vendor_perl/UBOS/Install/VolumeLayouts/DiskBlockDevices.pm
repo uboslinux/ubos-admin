@@ -49,7 +49,7 @@ sub createVolumes {
 
     my $errors = 0;
 
-    trace( 'DiskBlockDevices::createVolumes', $self->{devices} );
+    trace( 'DiskBlockDevices::createVolumes', @{$self->{devices}} );
 
     foreach my $dev ( @{$self->{devices}} ) {
         $errors += $self->formatSingleDisk( $dev, $self->{partitioningScheme}, $self->{startOffset}, $self->{alignment} );

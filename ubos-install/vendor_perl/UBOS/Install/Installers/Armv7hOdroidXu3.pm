@@ -161,9 +161,9 @@ sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
 
-    my $errors        = 0;
-    my $target        = $self->{target};
-    my $installTarget = $self->{installTargets}->[0];
+    my $errors           = 0;
+    my $target           = $self->{target};
+    my $bootLoaderDevice = $self->{volumeLayout}->determineBootLoaderDevice();
 
     trace( "Installing bootloader" );
 
@@ -205,7 +205,7 @@ END
         ++$errors;
     }
 
-    if( UBOS::Utils::myexec( "cd $target/boot && $target/boot/sd_fusing.sh $installTarget", undef, \$out, \$out )) {
+    if( UBOS::Utils::myexec( "cd $target/boot && $target/boot/sd_fusing.sh $bootLoaderDevice", undef, \$out, \$out )) {
         error( 'sd_fusing.sh:', $out );
         ++$errors;
     }

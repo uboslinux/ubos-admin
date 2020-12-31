@@ -48,7 +48,7 @@ sub new {
 sub createVolumes {
     my $self = shift;
 
-    trace( 'DiskImage::createVolumes' );
+    trace( 'DiskImage::createVolumes', $self->{image} );
 
     my $errors = $self->formatSingleDisk( $self->{image}, $self->{partitioningScheme}, $self->{startOffset}, $self->{alignment} );
     return $errors;
@@ -108,7 +108,7 @@ sub deleteLoopDevices {
 sub determineBootLoaderDevice {
     my $self = shift;
 
-    return $self->{image};
+    return $self->{loopDevice};
 }
 
 1;

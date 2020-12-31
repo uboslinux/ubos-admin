@@ -575,9 +575,8 @@ SCRIPT
         trace( "chroot script:\n" . $chrootScript );
 
         my $out;
-        my $err;
-        if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$err )) {
-            error( "chroot script failed", $err );
+        if( UBOS::Utils::myexec( "chroot '" . $self->{target} . "'", $chrootScript, \$out, \$out )) {
+            error( "chroot script failed", $out );
             ++$errors;
             debugAndSuspend( 'Check what went wrong?' );
             if( $errors ) {
