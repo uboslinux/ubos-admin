@@ -538,6 +538,7 @@ END
     $iptablesContent .= <<END;
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
+-A INPUT -p ipv6-icmp -j ACCEPT
 END
     # always accept loopback
     $iptablesContent .= <<END;
