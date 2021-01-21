@@ -493,6 +493,13 @@ END
     my $iptablesContent = <<END;
 #
 # UBOS iptables configuration
+END
+
+    my $ip6tablesContent = <<END;
+#
+# UBOS ip6tables configuration
+END
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 # Do not edit, your changes will be mercilessly overwritten as soon
 # as somebody invokes 'ubos-admin setnetconfig'.
 #
@@ -500,18 +507,19 @@ END
 *filter
 :INPUT DROP [0:0]
 END
+
     if( $isForwarding ) {
-        $iptablesContent .= <<END;
+        _append( <<END, \$iptablesContent, \$ip6tablesContent );
 :FORWARD ACCEPT [0:0]
 END
     } else {
-        $iptablesContent .= <<END;
+        _append( <<END, \$iptablesContent, \$ip6tablesContent );
 :FORWARD DROP [0:0]
 END
     }
 
     # our chains can't have a default policy specified here, so -
-    $iptablesContent .= <<END;
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 :OUTPUT - [0:0]
 :OPEN-PORTS - [0:0]
 END
@@ -523,11 +531,11 @@ END
         if(    exists( $config->{$nic}->{state} )
             && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' ))
         {
-            $iptablesContent .= <<END;
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
 :NIC-$noWildNic - [0:0]
 END
         } else {
-            $iptablesContent .= <<END;
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
 :NIC-$noWildNic-TCP - [0:0]
 :NIC-$noWildNic-UDP - [0:0]
 END
@@ -535,17 +543,22 @@ END
     }
 
     # applies to all nics
-    $iptablesContent .= <<END;
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
+END
+
+    # accept icmp on ipv6
+    _append( <<END, \$ip6tablesContent );
 -A INPUT -p ipv6-icmp -j ACCEPT
 END
+
     # always accept loopback
-    $iptablesContent .= <<END;
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A INPUT -i lo -j ACCEPT
 END
     # always accept traffic from containers (+ is wildcard)
-    $iptablesContent .= <<END;
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A INPUT -i ve-+ -j ACCEPT
 END
 
@@ -559,12 +572,12 @@ END
             $noWildNic =~ s!\*!!g;
             $wildNic   =~ s!\*!+!g; # iptables uses + instead of *
 
-            $iptablesContent .= <<END;
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A INPUT -i $wildNic -j NIC-$noWildNic
 END
         }
     }
-    $iptablesContent .= <<END;
+    _append( <<END, \$iptablesContent );
 -A INPUT -p icmp -m icmp --icmp-type 8 -m conntrack --ctstate NEW -j ACCEPT
 END
 
@@ -579,16 +592,24 @@ END
             $noWildNic =~ s!\*!!g;
             $wildNic   =~ s!\*!+!g; # iptables uses + instead of *
 
-            $iptablesContent .= <<END;
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A INPUT -i $wildNic -p udp -m conntrack --ctstate NEW -j NIC-$noWildNic-UDP
 -A INPUT -i $wildNic -p tcp --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j NIC-$noWildNic-TCP
 END
         }
     }
-    $iptablesContent .= <<END;
--A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
+
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
+END
+
+    _append( <<END, \$iptablesContent );
+-A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
 -A INPUT -j REJECT --reject-with icmp-proto-unreachable
+END
+    _append( <<END, \$ip6tablesContent );
+-A INPUT -p udp -j REJECT --reject-with icmp6-adm-prohibited
+-A INPUT -j REJECT --reject-with icmp6-adm-prohibited
 END
 
     foreach my $nic ( sort keys %$config ) {
@@ -600,40 +621,54 @@ END
             $noWildNic =~ s!\*!!g;
 
             if( exists( $config->{$nic}->{dhcp} ) && $config->{$nic}->{dhcp} ) {
-                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport bootpc -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport bootpc -j ACCEPT\n";
+                _append( <<END, \$iptablesContent );
+-A NIC-$noWildNic-UDP -p udp --dport bootpc -j ACCEPT
+-A NIC-$noWildNic-TCP -p tcp --dport bootpc -j ACCEPT
+END
             }
             if( exists( $config->{$nic}->{dhcpserver} ) && $config->{$nic}->{dhcpserver} ) {
-                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport bootps -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport bootps -j ACCEPT\n";
+                _append( <<END, \$iptablesContent );
+-A NIC-$noWildNic-UDP -p udp --dport bootps -j ACCEPT
+-A NIC-$noWildNic-TCP -p tcp --dport bootps -j ACCEPT
+END
             }
             if( exists( $config->{$nic}->{dns} ) && $config->{$nic}->{dns} ) {
-                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport domain -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport domain -j ACCEPT\n";
+                _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A NIC-$noWildNic-UDP -p udp --dport domain -j ACCEPT
+-A NIC-$noWildNic-TCP -p tcp --dport domain -j ACCEPT
+END
             }
             if( exists( $config->{$nic}->{mdns} ) && $config->{$nic}->{mdns} ) {
-                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp --dport mdns -j ACCEPT\n";
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport mdns -j ACCEPT\n";
+                _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A NIC-$noWildNic-UDP -p udp --dport mdns -j ACCEPT
+-A NIC-$noWildNic-TCP -p tcp --dport mdns -j ACCEPT
+END
             }
             if( exists( $config->{$nic}->{ssh} ) && $config->{$nic}->{ssh} ) {
                 if( exists( $config->{$nic}->{sshratelimit} ) && $config->{$nic}->{sshratelimit} ) {
-                    $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --set\n";
-                    $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update"
-                                        . " --seconds "
-                                            . ( exists( $config->{$nic}->{sshratelimitseconds} )
-                                            ? $config->{$nic}->{sshratelimitseconds}
-                                            : $DEFAULT_SSHRATELIMITSECONDS )
-                                        . " --hitcount "
-                                            . ( exists( $config->{$nic}->{sshratelimitcount}   )
-                                            ? $config->{$nic}->{sshratelimitcount}
-                                            : $DEFAULT_SSHRATELIMITCOUNT )
-                                        . " -j DROP\n";
+                    my $sshParams = " --seconds "
+                                        . ( exists( $config->{$nic}->{sshratelimitseconds} )
+                                        ? $config->{$nic}->{sshratelimitseconds}
+                                        : $DEFAULT_SSHRATELIMITSECONDS )
+                                    . " --hitcount "
+                                        . ( exists( $config->{$nic}->{sshratelimitcount}   )
+                                        ? $config->{$nic}->{sshratelimitcount}
+                                        : $DEFAULT_SSHRATELIMITCOUNT );
+
+                    _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --set
+-A NIC-$noWildNic-TCP -p tcp --dport ssh -m state --state NEW -m recent --update $sshParams -j DROP
+END
                 }
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT\n";
+                _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT
+END
             }
             if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {
-                $iptablesContent .= "-A NIC-$noWildNic-UDP -p udp -j OPEN-PORTS\n";
-                $iptablesContent .= "-A NIC-$noWildNic-TCP -p tcp -j OPEN-PORTS\n";
+                _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A NIC-$noWildNic-UDP -p udp -j OPEN-PORTS
+-A NIC-$noWildNic-TCP -p tcp -j OPEN-PORTS
+END
             }
         }
     }
@@ -643,16 +678,20 @@ END
     my @openPorts = _determineOpenPorts();
     foreach my $portSpec ( @openPorts ) {
         if( $portSpec =~ m!(.+)/tcp! ) {
-            $iptablesContent .= "-A OPEN-PORTS -p tcp --dport $1 -j ACCEPT\n";
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A OPEN-PORTS -p tcp --dport $1 -j ACCEPT
+END
         } elsif( $portSpec =~ m!(.+)/udp! ) {
-            $iptablesContent .= "-A OPEN-PORTS -p udp --dport $1 -j ACCEPT\n";
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A OPEN-PORTS -p udp --dport $1 -j ACCEPT
+END
         } else {
             error( 'Unknown open ports spec:', $portSpec );
         }
     }
 
     if( $isForwarding ) {
-        $iptablesContent .= <<END;
+        _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 END
     }
@@ -667,12 +706,12 @@ END
                 my $wildNic = $nic;
                 $wildNic=~ s!\*!+!g; # iptables uses + instead of *
 
-                $iptablesContent .= <<END;
+                _append( <<END, \$iptablesContent );
 -A FORWARD -i $wildNic -j ACCEPT
 END
             }
         }
-        $iptablesContent .= <<END;
+        _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A FORWARD -i ve-+ -j ACCEPT
 -A FORWARD -j REJECT --reject-with icmp-host-unreachable
 END
@@ -685,25 +724,31 @@ END
         if(    exists( $config->{$nic}->{state} )
             && ( $config->{$nic}->{state} eq 'off' || $config->{$nic}->{state} eq 'switch' ))
         {
-            $iptablesContent .= <<END;
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A NIC-$noWildNic -j DROP
 END
         } else {
-            $iptablesContent .= <<END;
+            _append( <<END, \$iptablesContent );
 -A NIC-$noWildNic-UDP -j REJECT --reject-with icmp-host-unreachable
+END
+            _append( <<END, \$ip6tablesContent );
+-A NIC-$noWildNic-UDP -j REJECT --reject-with icmp6-addr-unreachable
+END
+            _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A NIC-$noWildNic-TCP -p tcp -j REJECT --reject-with tcp-reset
 END
+
             # this -p tcp is redundant, but iptables doesn't know that, and refuses
             # to accept the line without it
         }
     }
 
-    $iptablesContent .= <<END;
+    _append( <<END, \$iptablesContent, \$ip6tablesContent );
 COMMIT
 END
 
     if( $isMasquerading ) {
-        $iptablesContent .= <<END;
+        _append( <<END, \$iptablesContent );
 *nat
 :PREROUTING ACCEPT [0:0]
 :INPUT ACCEPT [0:0]
@@ -716,40 +761,18 @@ END
                 $wildNic=~ s!\*!+!g; # iptables uses + instead of *
 
                 foreach my $lan ( sort @lans ) {
-                    $iptablesContent .= <<END;
+                    _append( <<END, \$iptablesContent );
 -A POSTROUTING -s $lan -o $wildNic -j MASQUERADE
 END
                 }
             }
         }
-        $iptablesContent .= <<END;
+        _append( <<END, \$iptablesContent, \$ip6tablesContent );
 COMMIT
 END
     }
 
-    UBOS::Utils::saveFile( $iptablesConfigFile, $iptablesContent );
-
-    my $ip6tablesContent = <<END;
-#
-# UBOS ip6tables configuration
-# Do not edit, your changes will be mercilessly overwritten as soon
-# as somebody invokes 'ubos-admin setnetconfig'.
-#
-
-*filter
-:INPUT DROP [0:0]
-:FORWARD DROP [0:0]
-:OUTPUT - [0:0]
--A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
--A INPUT -m conntrack --ctstate INVALID -j DROP
--A INPUT -i lo -j ACCEPT
--A INPUT -i ve-+ -j ACCEPT
--A INPUT -p udp -j REJECT
--A INPUT -p tcp -j REJECT --reject-with tcp-reset
--A INPUT -j REJECT
-COMMIT
-END
-
+    UBOS::Utils::saveFile( $iptablesConfigFile,  $iptablesContent );
     UBOS::Utils::saveFile( $ip6tablesConfigFile, $ip6tablesContent );
 
     # cloud-init
@@ -1086,6 +1109,19 @@ sub _determineOpenPorts {
         split /\n/, $all;
 
     return sort keys %ret;
+}
+
+##
+# Helper method to append a string to the one or two provided strings.
+# $data: the string to append
+# @dest: the set of pointers to string, to which $data is to be appended
+sub _append {
+    my $data = shift;
+    my @dest = @_;
+
+    foreach my $dP ( @dest ) {
+        $$dP .= $data;
+    }
 }
 
 1;
