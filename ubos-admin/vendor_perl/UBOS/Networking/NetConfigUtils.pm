@@ -713,7 +713,12 @@ END
         }
         _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A FORWARD -i ve-+ -j ACCEPT
+END
+        _append( <<END, \$iptablesContent );
 -A FORWARD -j REJECT --reject-with icmp-host-unreachable
+END
+        _append( <<END, \$ip6tablesContent );
+-A FORWARD -j REJECT --reject-with icmp6-addr-unreachable
 END
             # always forward from containers
     }
