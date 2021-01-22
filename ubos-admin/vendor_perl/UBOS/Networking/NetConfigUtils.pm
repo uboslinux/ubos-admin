@@ -772,7 +772,7 @@ END
                 }
             }
         }
-        _append( <<END, \$iptablesContent, \$ip6tablesContent );
+        _append( <<END, \$iptablesContent );
 COMMIT
 END
     }
