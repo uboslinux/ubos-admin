@@ -394,7 +394,7 @@ sub run {
         }
 
         if( $showProblems ) {
-            my $problems = UBOS::HostStatus::problems();
+            my ( $problems, $warnings ) = UBOS::HostStatus::problems();
 
             unless( $showFailed ) {
                 # don't report twice
@@ -407,6 +407,11 @@ sub run {
                 $ret = 0;
             } else {
                 $out .= "    None\n";
+            }
+            if( $warnings && @$warnings ) {
+                $out .= "Warnings:\n";
+                $out .= join( "", map { "    * $_\n" } @$warnings ) . "\n";
+                # Don't change the exit code
             }
         }
 

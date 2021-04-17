@@ -15,9 +15,13 @@ use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
-# above these thresholds we report problems
-my $PROBLEM_DISK_PERCENT         = 70;
-my $PROBLEM_LOAD_PER_CPU_PERCENT = 70;
+# above these thresholds we report errors
+my $ERROR_DISK_PERCENT         = 90;
+my $ERROR_LOAD_PER_CPU_PERCENT = 90;
+
+# above these thresholds we report warnings
+my $WARNING_DISK_PERCENT         = 70;
+my $WARNING_LOAD_PER_CPU_PERCENT = 70;
 
 # files where to get info from
 my $PRODUCT_FILE                 = '/etc/ubos/product.json';
@@ -693,12 +697,13 @@ sub updateOnline {
 }
 
 ##
-# Determine problems
-# return: array pointer
+# Determine problems and warnings
+# return: two array pointers: first is errors, second is warnings
 sub problems {
     unless( exists( $json->{problems} )) {
 
         $json->{problems} = [];
+        $json->{warnings} = [];
 
         # CPU load
         my $cpuJson    = cpuJson();
@@ -713,8 +718,12 @@ sub problems {
             $loads{15} = $uptimeJson->{loadavg15};
 
             foreach my $period ( sort { $a <=> $b } keys %loads ) {
-                if( $loads{$period} / $nCpu * 100 >= $PROBLEM_LOAD_PER_CPU_PERCENT ) {
+                if( $loads{$period} / $nCpu * 100 >= $ERROR_LOAD_PER_CPU_PERCENT ) {
                     push @{$json->{problems}},
+                            'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
+
+                } elsif( $loads{$period} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
+                    push @{$json->{warnings}},
                             'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
                 }
             }
@@ -754,8 +763,11 @@ sub problems {
                 if( defined( $fsUsePercent )) {
                     my $numVal = $fsUsePercent;
                     $numVal =~ s!%!!;
-                    if( $numVal > $PROBLEM_DISK_PERCENT ) {
+                    if( $numVal > $ERROR_DISK_PERCENT ) {
                         push @{$json->{problems}}, 'Disk ' . $blockDevice->{name} . ' is almost full: ' . $fsUsePercent;
+
+                    } elsif( $numVal > $WARNING_DISK_PERCENT ) {
+                        push @{$json->{warnings}}, 'Disk ' . $blockDevice->{name} . ' is getting full: ' . $fsUsePercent;
                     }
                 }
             }
@@ -766,8 +778,11 @@ sub problems {
                     if( defined( $fsUsePercent )) {
                         my $numVal = $fsUsePercent;
                         $numVal =~ s!%!!;
-                        if( $numVal > $PROBLEM_DISK_PERCENT ) {
+                        if( $numVal > $ERROR_DISK_PERCENT ) {
                             push @{$json->{problems}}, 'Disk ' . $childDevice->{name} . ' is almost full: ' . $fsUsePercent;
+
+                        } elsif( $numVal > $WARNING_DISK_PERCENT ) {
+                            push @{$json->{warnings}}, 'Disk ' . $childDevice->{name} . ' is getting full: ' . $fsUsePercent;
                         }
                     }
                 }
@@ -775,7 +790,7 @@ sub problems {
         }
     }
 
-    return $json->{problems};
+    return ( $json->{problems}, $json->{warnings} );
 }
 
 ##
