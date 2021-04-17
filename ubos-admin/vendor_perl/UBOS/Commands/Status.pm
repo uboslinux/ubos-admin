@@ -57,6 +57,7 @@ sub run {
     my $showLastUpdated = 0;
     my $showLive        = 0;
     my $showMemory      = 0;
+    my $showNics        = 0;
     my $showPacnew      = 0;
     my $showProblems    = 0;
     my $showProduct     = 0;
@@ -85,6 +86,7 @@ sub run {
             'live'           => \$showLive,
             'lastupdated'    => \$showLastUpdated,
             'memory'         => \$showMemory,
+            'nics'           => \$showNics,
             'pacnew'         => \$showPacnew,
             'problems'       => \$showProblems,
             'product'        => \$showProduct,
@@ -101,10 +103,10 @@ sub run {
     my $showAspect =    $showArch        || $showChannel     || $showCpu
                      || $showDeviceclass || $showDisks       || $showFailed
                      || $showHostid      || $showLastUpdated || $showLive
-                     || $showMemory      || $showPacnew      || $showProblems
-                     || $showProduct     || $showPublicKey   || $showReady
-                     || $showSmart       || $showSnapper     || $showVirt
-                     || $showUptime;
+                     || $showMemory      || $showNics        || $showPacnew
+                     || $showProblems    || $showProduct     || $showPublicKey
+                     || $showReady       || $showSmart       || $showSnapper
+                     || $showVirt        || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -130,6 +132,7 @@ sub run {
         $showLastUpdated = 1;
         $showLive        = 1;
         $showMemory      = 1;
+        $showNics        = 1;
         $showPacnew      = 1;
         $showProblems    = 1;
         $showProduct     = 1;
@@ -363,6 +366,24 @@ sub run {
             }
         }
 
+        if( $showNics ) {
+            my $nicsJson         = UBOS::HostStatus::nics();
+            my $wlanNicsJson     = UBOS::HostStatus::wlanNics();
+            my $softwareNicsJson = UBOS::HostStatus::softwareNics();
+
+            $out .= "Network interfaces:\n";
+            foreach my $nic ( sort grep { !$softwareNicsJson->{$_} } keys %$nicsJson ) {
+                my $nicData = $nicsJson->{$nic};
+                $out .= '    ' . $nic . ( $wlanNicsJson->{$nic} ? '(WLAN)' : '' ) . "\n";
+                if( $nicData->{ipv4address} && @{$nicData->{ipv4address}} ) {
+                    $out .= '        IPv4: ' . join( ', ', @{$nicData->{ipv4address}} ) . "\n";
+                }
+                if( $nicData->{ipv6address} && @{$nicData->{ipv6address}} ) {
+                    $out .= '        IPv4: ' . join( ', ', @{$nicData->{ipv6address}} ) . "\n";
+                }
+            }
+        }
+
         if( $showFailed ) {
             my $failedUnits = UBOS::HostStatus::failedUnits();
 
@@ -497,19 +518,21 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--arch] [--channel] [--cpu] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--uptime] [--virtualization]
+    [--arch] [--channel] [--cpu] [--deviceclass] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--nic] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--uptime] [--virtualization]
 SSS
     If any of the optional arguments are given report on the specified
     subjects, otherwise just report on potential problems:
-    * arch:           arch and device class
+    * arch:           arch
     * channel:        UBOS release channel used by this device
     * cpu:            CPUs available
+    * deviceclass:    device class
     * disks:          attached disks and their usage
     * failed:         daemons that have failed
     * hostid:         hostid of this device
     * lastupdated:    when the device was last updated
     * live:           UBOS Live status
     * memory:         how much RAM and swap memory is being used
+    * nics:           network interfaces and configuration
     * pacnew:         manually modified configuration files
     * problems:       any detected problems
     * product:        product identifier
