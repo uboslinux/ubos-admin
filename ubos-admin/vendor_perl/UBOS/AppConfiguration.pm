@@ -324,7 +324,12 @@ sub deployOrCheck {
 
         # if TLS is required, make sure we have it
         if( $installable->requiresTls() && !$self->site()->isTls()) {
-            error( 'Cannot deploy', $installable->packageName, 'to non-TLS site' );
+            error( 'Cannot deploy', $packageName, 'to non-TLS site' );
+            $ret = 0;
+        }
+        # If a non-wildcard host is required, make sure we have it
+        if( !$installable->allowsWildcardHostname && $self->site()->hostname eq '*' ) {
+            error( 'Cannot deploy', $packageName, 'to site with a wildcard hostname' );
             $ret = 0;
         }
 

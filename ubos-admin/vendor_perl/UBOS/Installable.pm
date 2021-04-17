@@ -359,6 +359,19 @@ sub requiresTls {
     }
 }
 
+##
+# Determine whether this Installable allows a site to have a wildcard hostname
+# return: true or false
+sub allowsWildcardHostname {
+    my $self = shift;
+
+    # default is true
+    if( exists( $self->{json}->{allowswildcardhostname} ) && !$self->{json}->{allowswildcardhostname} ) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
 
 ##
 # Helper method to find a localized attribute in the info section
