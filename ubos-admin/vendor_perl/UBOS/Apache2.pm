@@ -22,7 +22,20 @@ my $phpModulesConfDir = '/etc/php/conf.d';
 
 my $logFile  = '/var/log/httpd/error_log';
 
-my @minimumApacheModules = qw( alias authz_core authz_host cgi deflate dir env log_config mime mpm_prefork rewrite setenvif unixd ); # always need those
+my @minimumApacheModules = qw(
+        alias
+        authz_core
+        authz_host
+        cgi
+        deflate
+        dir
+        env
+        http2
+        log_config
+        mime mpm_prefork
+        rewrite
+        setenvif
+        unixd ); # always need those
 
 ##
 # Reload configuration
