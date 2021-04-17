@@ -142,6 +142,8 @@ sub provisionCertificate {
         $@ = "Obtaining certificate from LetsEncrypt$flags failed:\n$out";
         debugAndSuspend( 'Certbot certonly failed' );
         return 0;
+    } else {
+        info( "Success obtaining LetsEncrypt certificate, continuing with deploy" );
     }
     return 1;
 }
