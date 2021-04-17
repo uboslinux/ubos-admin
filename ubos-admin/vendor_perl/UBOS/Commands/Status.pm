@@ -48,6 +48,7 @@ sub run {
     my $showAll         = 0;
     my $showArch        = 0;
     my $showDetail      = 0;
+    my $showDeviceclass = 0;
     my $showChannel     = 0;
     my $showCpu         = 0;
     my $showDisks       = 0;
@@ -74,6 +75,7 @@ sub run {
             'all'            => \$showAll,
             'arch'           => \$showArch,
             'detail'         => \$showDetail,
+            'deviceclass'    => \$showDeviceclass,
             'channel'        => \$showChannel,
             'cpu'            => \$showCpu,
             'disks'          => \$showDisks,
@@ -94,12 +96,12 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    my $showAspect =    $showArch     || $showChannel || $showCpu
-                     || $showDisks    || $showFailed  || $showLastUpdated
-                     || $showLive     || $showMemory  || $showPacnew
-                     || $showProblems || $showProduct || $showPublicKey
-                     || $showReady    || $showSmart   || $showSnapper
-                     || $showVirt     || $showUptime;
+    my $showAspect =    $showArch        || $showChannel  || $showCpu
+                     || $showDeviceclass || $showDisks    || $showFailed
+                     || $showLastUpdated || $showLive     || $showMemory
+                     || $showPacnew      || $showProblems || $showProduct
+                     || $showPublicKey   || $showReady    || $showSmart
+                     || $showSnapper     || $showVirt     || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -118,6 +120,7 @@ sub run {
         $showArch        = 1;
         $showChannel     = 1;
         $showCpu         = 1;
+        $showDeviceclass = 1;
         $showDisks       = 1;
         $showFailed      = 1;
         $showLastUpdated = 1;
@@ -135,6 +138,7 @@ sub run {
     } elsif( !$showAspect ) {
         # default
         $showChannel     = 1;
+        $showDeviceclass = 1;
         $showDisks       = 1;
         $showLastUpdated = 1;
         $showLive        = 1;
@@ -192,11 +196,13 @@ sub run {
             }
         }
         if( $showArch ) {
-            my $arch        = UBOS::HostStatus::arch();
-            my $deviceClass = UBOS::HostStatus::deviceClass();
+            my $arch = UBOS::HostStatus::arch();
             if( $arch ) {
                 $out .= 'Arch:               ' . $arch . "\n";
             }
+        }
+        if( $showDeviceclass ) {
+            my $deviceClass = UBOS::HostStatus::deviceClass();
             if( $deviceClass ) {
                 $out .= 'Device class:       ' . $deviceClass . "\n";
             }
