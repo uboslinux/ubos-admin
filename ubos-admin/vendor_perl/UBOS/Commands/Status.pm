@@ -53,6 +53,7 @@ sub run {
     my $showCpu         = 0;
     my $showDisks       = 0;
     my $showFailed      = 0;
+    my $showHostid      = 0;
     my $showLastUpdated = 0;
     my $showLive        = 0;
     my $showMemory      = 0;
@@ -80,6 +81,7 @@ sub run {
             'cpu'            => \$showCpu,
             'disks'          => \$showDisks,
             'failed'         => \$showFailed,
+            'hostid'         => \$showHostid,
             'live'           => \$showLive,
             'lastupdated'    => \$showLastUpdated,
             'memory'         => \$showMemory,
@@ -96,12 +98,13 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    my $showAspect =    $showArch        || $showChannel  || $showCpu
-                     || $showDeviceclass || $showDisks    || $showFailed
-                     || $showLastUpdated || $showLive     || $showMemory
-                     || $showPacnew      || $showProblems || $showProduct
-                     || $showPublicKey   || $showReady    || $showSmart
-                     || $showSnapper     || $showVirt     || $showUptime;
+    my $showAspect =    $showArch        || $showChannel     || $showCpu
+                     || $showDeviceclass || $showDisks       || $showFailed
+                     || $showHostid      || $showLastUpdated || $showLive
+                     || $showMemory      || $showPacnew      || $showProblems
+                     || $showProduct     || $showPublicKey   || $showReady
+                     || $showSmart       || $showSnapper     || $showVirt
+                     || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -123,6 +126,7 @@ sub run {
         $showDeviceclass = 1;
         $showDisks       = 1;
         $showFailed      = 1;
+        $showHostid      = 1;
         $showLastUpdated = 1;
         $showLive        = 1;
         $showMemory      = 1;
@@ -137,17 +141,7 @@ sub run {
 
     } elsif( !$showAspect ) {
         # default
-        $showChannel     = 1;
-        $showDeviceclass = 1;
-        $showDisks       = 1;
-        $showLastUpdated = 1;
-        $showLive        = 1;
-        $showMemory      = 1;
         $showProblems    = 1;
-        $showProduct     = 1;
-        $showReady       = 1;
-        $showSmart       = !UBOS::HostStatus::virtualization();
-        $showUptime      = 1;
     }
 
     my $ret = 1;
@@ -157,12 +151,14 @@ sub run {
 
     } else {
         # will print to console
-        my $out  = 'Host: ' . UBOS::HostStatus::hostId() . "\n";
-        $out .= '=' x ( length( $out )-1 ) . "\n";
+        if( $showHostid ) {
+            my $out  = 'Host: ' . UBOS::HostStatus::hostId() . "\n";
+            $out .= '=' x ( length( $out )-1 ) . "\n";
 
-        colPrint( $out );
+            colPrint( $out );
+        }
 
-        $out = ''; # reset $out
+        my $out = ''; # reset $out
 
         if( $showProduct ) {
             my $productJson = UBOS::HostStatus::productJson();
@@ -498,13 +494,14 @@ SSS
             <<SSS => <<HHH,
     [--arch] [--channel] [--cpu] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--uptime] [--virtualization]
 SSS
-    If any of the optional arguments are given, only report on the
-    specified subjects:
+    If any of the optional arguments are given report on the specified
+    subjects, otherwise just report on potential problems:
     * arch:           arch and device class
     * channel:        UBOS release channel used by this device
     * cpu:            CPUs available
     * disks:          attached disks and their usage
     * failed:         daemons that have failed
+    * hostid:         hostid of this device
     * lastupdated:    when the device was last updated
     * live:           UBOS Live status
     * memory:         how much RAM and swap memory is being used
