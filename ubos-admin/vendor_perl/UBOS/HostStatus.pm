@@ -26,6 +26,9 @@ my $WARNING_LOAD_PER_CPU_PERCENT = 70;
 # files where to get info from
 my $PRODUCT_FILE                 = '/etc/ubos/product.json';
 
+# Location of the update backups
+my $updateBackupDir = '/ubos/backups/update';
+
 # cached data -- inserted as needed
 my $json = {};
 
@@ -704,6 +707,11 @@ sub problems {
 
         $json->{problems} = [];
         $json->{warnings} = [];
+
+        # Something in the backup folder
+        unless( UBOS::Utils::isDirEmpty( $updateBackupDir )) {
+            push @{$json->{problems}}, "Update backup directory is not empty: $updateBackupDir";
+        }
 
         # CPU load
         my $cpuJson    = cpuJson();
