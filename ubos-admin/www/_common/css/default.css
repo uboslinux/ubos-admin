@@ -27,6 +27,7 @@ h1 {
     font-weight: normal;
     margin: 0 0 40px 0;
     border-bottom: 1px solid #b0b0b0;
+    overflow-x: auto;
 }
 a {
     text-decoration: none;
