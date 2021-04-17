@@ -77,7 +77,8 @@ sub run {
     my $siteTemplates = {}; # filename without extension => Site template JSON
 
     if( $shepherdKey && $shepherdKey !~ m!^ssh-\S+ ! ) {
-        fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $shepherdKey );
+        fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes? Invalid key starts with:',
+               length( $shepherdKey ) > 8 ? ( substr( $shepherdKey, 0, 8 ) . '...' ) : $shepherdKey );
     }
     foreach my $siteTemplateFile ( @siteTemplateFiles ) {
         # make sure they exist and are valid
