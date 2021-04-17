@@ -317,6 +317,7 @@ if( $errors ) {
     info( 'There were', $errors, 'errors.' );
     exit( 1 );
 }
+UBOS::Utils::myexec( "sync" );
 exit( 0 );
 
 
