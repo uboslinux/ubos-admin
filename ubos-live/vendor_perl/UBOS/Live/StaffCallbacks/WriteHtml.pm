@@ -396,7 +396,7 @@ HTML
 HTML
             unless( $accessAtHost ) {
                 $html .= <<HTML;
-       <p class="note sidenote">The UBOS device was disconnected from the network when this information was saved.
+       <p class="warn">The UBOS device was disconnected from the network when this information was saved.
        No network information is available.</p>
 HTML
             }

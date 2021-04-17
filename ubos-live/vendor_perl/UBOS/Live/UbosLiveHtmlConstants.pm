@@ -150,6 +150,9 @@ span.warn {
     vertical-align: middle;
     font-weight: normal;
 }
+.warn {
+    color: red;
+}
 
 div.keys,
 div.wifi,
