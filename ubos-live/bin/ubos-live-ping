@@ -15,11 +15,13 @@ use UBOS::Logging;
 
 my $verbose       = 0;
 my $logConfigFile = undef;
+my $channel       = undef;
 my $dryRun        = 0;
 
 my $parseOk = GetOptions(
         'verbose+'    => \$verbose,
         'logConfig=s' => \$logConfigFile,
+        'channel=s'   => \$channel,
         'dry-run|n'   => \$dryRun );
 
 UBOS::Logging::initialize(
@@ -37,7 +39,7 @@ if(    !$parseOk
     fatal( 'Invalid invocation:', @ARGV );
 }
 
-my $exit = UBOS::Live::UbosLive::statusPing( $dryRun );
+my $exit = UBOS::Live::UbosLive::statusPing( $channel, $dryRun );
 
 exit( $exit );
 

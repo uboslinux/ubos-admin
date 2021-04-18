@@ -42,17 +42,19 @@ my $_conf = undef; # content of the $CONF file; cached
 ##
 # Contact live.ubos.net, report status, and do the right thing based on the results.
 #
-# #dryRun: if tri
+# $channelOverride: if specified, use this release channel instead of the one in the config file
+# $dryRun: only print what it would do, don't do it
 # return: desired exit code
 sub statusPing {
-    my $dryRun = shift;
+    my $channelOverride = shift;
+    my $dryRun          = shift;
 
-    trace( 'UbosLive::statusPing', $dryRun );
+    trace( 'UbosLive::statusPing', $channelOverride, $dryRun );
 
     UBOS::Lock::acquire();
 
     my $confJson = _getConf();
-    my $channel  = $confJson->{channel};
+    my $channel  = $channelOverride || $confJson->{channel};
 
     if( !exists( $CHANNELS->{$channel} ) || !exists( $CHANNELS->{$channel}->{pingendpoint} )) {
         fatal( 'UBOS Live is not available on release channel', $channel );
