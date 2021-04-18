@@ -1304,7 +1304,10 @@ sub _checkSingleInstallTargetOnly {
         error( 'No swap partitions must be specified for this device class:', @{$self->{swapPartitions}} );
         ++$errors;
     }
-    if( @{$self->{installTargets}} != 1 ) {
+    if( @{$self->{installTargets}} == 0 ) {
+        error( 'An install target must be specified for this device class.' );
+        ++$errors;
+    } elsif( @{$self->{installTargets}} > 1 ) {
         error( 'A single install target must be specified for this device class:', @{$self->{installTargets}} );
         ++$errors;
     }

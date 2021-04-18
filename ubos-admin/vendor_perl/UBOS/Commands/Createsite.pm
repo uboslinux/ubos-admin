@@ -448,6 +448,9 @@ sub run {
             if( !$tls && $app->requiresTls() ) {
                 fatal( 'App requires TLS:', $appId );
             }
+            if( $hostname eq '*' && !$app->allowsWildcardHostname() ) {
+                fatal( 'App cannot run at a site with the wildcard hostname:', $appId );
+            }
 
             my $custPointValues = {};
             my %accs            = (); # map name->Accessory
@@ -484,6 +487,9 @@ sub run {
                 }
                 if( !$acc->canBeUsedWithApp( $appId ) ) {
                     fatal( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+                }
+                if( $hostname eq '*' && !$acc->allowsWildcardHostname() ) {
+                    fatal( 'Accessory cannot run at a site with the wildcard hostname:', $acc->packageName() );
                 }
             }
             _askForCustomizationPoints(
@@ -549,6 +555,9 @@ sub run {
                 error( 'App requires TLS:', $appId );
                 next();
             }
+            if( $hostname eq '*' && !$app->allowsWildcardHostname() ) {
+                fatal( 'App cannot run at a site with the wildcard hostname:', $appId );
+            }
 
             my $context         = undef;
             my $custPointValues = {};
@@ -600,15 +609,22 @@ sub run {
                             my $acc = UBOS::Accessory->new( $currentAccId );
                             unless( $acc ) {
                                 error( 'Package exists but it not an accessory. Please re-enter:', $currentAccId );
+                                $askUserAgain = 1;
                                 last ACCS;
                             }
                             if( !$acc->canBeUsedWithApp( $appId ) ) {
                                 error( 'Accessory', $acc->packageName(), 'cannot be used here as it does not belong to app', $appId );
+                                $askUserAgain = 1;
                                 last ACCS;
                             }
-
                             if( !$tls && $acc->requiresTls() ) {
                                 error( 'Accessory requires TLS. Please re-enter:', $currentAccId );
+                                $askUserAgain = 1;
+                                last ACCS;
+                            }
+                            if( $hostname eq '*' && !$acc->allowsWildcardHostname() ) {
+                                error( 'Accessory cannot run at a site with the wildcard hostname:', $currentAccId );
+                                $askUserAgain = 1;
                                 last ACCS;
                             }
 

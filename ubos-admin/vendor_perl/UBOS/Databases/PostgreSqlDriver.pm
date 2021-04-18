@@ -113,7 +113,7 @@ sub executeCmdAsAdmin {
     my $escapedCmd = $cmd;
     # $escapedCmd =~ s!'!'"'"'!g;
 
-    my $fullCmd = "sudo -u postgres $escapedCmd";
+    my $fullCmd = "cd /ubos/lib/postgres && sudo -u postgres $escapedCmd";
     if( $outputFile ) {
         $fullCmd .= " > '$outputFile'";
     }

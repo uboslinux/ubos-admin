@@ -292,8 +292,8 @@ sub provisionLocalDatabase {
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
-    my $charset             = shift || 'utf8';
-    my $collate             = shift;
+    my $charset             = shift || 'utf8mb4';
+    my $collate             = shift || 'utf8mb4_general_ci';
     my $description         = shift;
 
     trace( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );

@@ -42,6 +42,8 @@ sub run {
     my $add           = 0;
     my $force         = 0;
 
+    $SIG{__WARN__} = sub {}; # Suppress built-in error message when private key is submitted, as it will be interpreted as an option
+
     my $parseOk = GetOptionsFromArray(
             \@args,
             'verbose+'    => \$verbose,
@@ -50,6 +52,8 @@ sub run {
             'file=s'      => \$file,
             'add-key'     => \$add,
             'force'       => \$force );
+
+    $SIG{__WARN__} = undef;
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
@@ -60,7 +64,7 @@ sub run {
         || ( $add && $force )
         || ( $verbose && $logConfigFile ))
     {
-        fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        fatal( 'Invalid invocation:', $cmd, '(add --help for help)' );
     }
 
     my $key;
@@ -76,9 +80,11 @@ sub run {
 
     if( $key && $key !~ m!^ssh-\S+ ! ) {
         if( $file ) {
-            fatal( 'This does not look like a valid ssh public key:', $key );
+            fatal( 'This does not look like a valid ssh public key. Invalid key starts with:',
+                   length( $key ) > 8 ? ( substr( $key, 0, 8 ) . '...' ) : $key );
         } else {
-            fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes?:', $key );
+            fatal( 'This does not look like a valid ssh public key. Perhaps you need to put it in quotes? Invalid key starts with:',
+                   length( $key ) > 8 ? ( substr( $key, 0, 8 ) . '...' ) : $key );
         }
     }
 

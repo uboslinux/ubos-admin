@@ -263,30 +263,37 @@ if( @ARGV ) {
 # find the right Installer. All other defaults are determined by
 # the Installer itself.
 
-my $tmp;
-unless( $arch ) {
-    $arch = UBOS::Utils::arch();
+if( $arch ) {
+    $deviceConfig->{arch} = $arch;
 }
-$tmp = UBOS::Utils::isValidArch( $arch );
-unless( $tmp ) {
-    fatal( 'Invalid arch:', $arch );
+if( $deviceClass ) {
+    $deviceConfig->{deviceclass} = $deviceClass;
 }
-$arch = $tmp;
 
-unless( $deviceClass ) {
-    $deviceClass = UBOS::Utils::deviceClass();
+my $tmp;
+unless( $deviceConfig->{arch} ) {
+    $deviceConfig->{arch} = UBOS::Utils::arch();
 }
-$tmp = UBOS::Utils::isValidDeviceClass( $deviceClass );
+$tmp = UBOS::Utils::isValidArch( $deviceConfig->{arch} );
 unless( $tmp ) {
-    fatal( 'Invalid device class:', $deviceClass );
+    fatal( 'Invalid arch:', $deviceConfig->{arch} );
 }
-$deviceClass = $tmp;
+$deviceConfig->{arch} = $tmp;
+
+unless( $deviceConfig->{deviceclass} ) {
+    $deviceConfig->{deviceclass} = UBOS::Utils::deviceClass();
+}
+$tmp = UBOS::Utils::isValidDeviceClass( $deviceConfig->{deviceclass} );
+unless( $tmp ) {
+    fatal( 'Invalid device class:', $deviceConfig->{deviceclass} );
+}
+$deviceConfig->{deviceclass} = $tmp;
 
 # Find installer, configure it with the deviceConfig and complete/validate
 
-my $installer = findInstaller( $arch, $deviceClass );
+my $installer = findInstaller( $deviceConfig->{arch}, $deviceConfig->{deviceclass} );
 unless( $installer ) {
-    fatal( 'Cannot find installer for arch', $arch, 'deviceclass', $deviceClass );
+    fatal( 'Cannot find installer for arch', $deviceConfig->{arch}, 'deviceclass', $deviceConfig->{deviceclass} );
 }
 
 trace( 'Using installer', ref( $installer ));
@@ -304,7 +311,7 @@ if( $errors ) {
 
 trace( 'Checking the network' );
 unless( UBOS::Utils::isOnline() ) {
-    fatal( 'Cannot reach the UBOS software depot; leaving system and disks unchanged' );
+    fatal( 'Cannot connect to the UBOS software depot; leaving system and disks unchanged' );
 }
 
 trace( 'Running the installation' );
@@ -317,6 +324,7 @@ if( $errors ) {
     info( 'There were', $errors, 'errors.' );
     exit( 1 );
 }
+UBOS::Utils::myexec( "sync" );
 exit( 0 );
 
 

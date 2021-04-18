@@ -1144,8 +1144,6 @@ sub regeneratePacmanConf {
     }
 
     unless( $pacmanConf eq $oldPacmanConf ) {
-        info( 'Updating pacman.conf' );
-
         UBOS::Utils::saveFile( $pacmanConfFile, $pacmanConf );
     }
 }
