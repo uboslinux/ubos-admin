@@ -548,15 +548,16 @@ sub run {
             my $app = UBOS::App->new( $appId );
             unless( $app ) {
                 error( 'Package exists but is not an app:', $appId );
-                next();
+                next;
             }
 
             if( !$tls && $app->requiresTls() ) {
                 error( 'App requires TLS:', $appId );
-                next();
+                next;
             }
             if( $hostname && $hostname eq '*' && !$app->allowsWildcardHostname() ) {
-                fatal( 'App cannot run at a site with the wildcard hostname:', $appId );
+                error( 'App cannot run at a site with the wildcard hostname:', $appId );
+                next;
             }
 
             my $context         = undef;
