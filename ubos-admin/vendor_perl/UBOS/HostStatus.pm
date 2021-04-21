@@ -709,7 +709,7 @@ sub problems {
         $json->{warnings} = [];
 
         # Something in the backup folder
-        unless( UBOS::Utils::isDirEmpty( $updateBackupDir )) {
+        if( -d $updateBackupDir && !UBOS::Utils::isDirEmpty( $updateBackupDir )) {
             push @{$json->{problems}}, "Update backup directory is not empty: $updateBackupDir";
         }
 
