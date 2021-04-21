@@ -379,7 +379,7 @@ sub run {
                     $out .= '        IPv4: ' . join( ', ', @{$nicData->{ipv4address}} ) . "\n";
                 }
                 if( $nicData->{ipv6address} && @{$nicData->{ipv6address}} ) {
-                    $out .= '        IPv4: ' . join( ', ', @{$nicData->{ipv6address}} ) . "\n";
+                    $out .= '        IPv6: ' . join( ', ', @{$nicData->{ipv6address}} ) . "\n";
                 }
             }
         }
