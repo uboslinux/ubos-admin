@@ -555,7 +555,7 @@ sub run {
                 error( 'App requires TLS:', $appId );
                 next();
             }
-            if( $hostname eq '*' && !$app->allowsWildcardHostname() ) {
+            if( $hostname && $hostname eq '*' && !$app->allowsWildcardHostname() ) {
                 fatal( 'App cannot run at a site with the wildcard hostname:', $appId );
             }
 
