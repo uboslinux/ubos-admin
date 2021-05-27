@@ -709,7 +709,7 @@ sub problems {
         $json->{warnings} = [];
 
         # Something in the backup folder
-        unless( UBOS::Utils::isDirEmpty( $updateBackupDir )) {
+        if( -d $updateBackupDir && !UBOS::Utils::isDirEmpty( $updateBackupDir )) {
             push @{$json->{problems}}, "Update backup directory is not empty: $updateBackupDir";
         }
 
@@ -725,12 +725,18 @@ sub problems {
             $loads{5}  = $uptimeJson->{loadavg5};
             $loads{15} = $uptimeJson->{loadavg15};
 
-            foreach my $period ( sort { $a <=> $b } keys %loads ) {
-                if( $loads{$period} / $nCpu * 100 >= $ERROR_LOAD_PER_CPU_PERCENT ) {
-                    push @{$json->{problems}},
-                            'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
+            # only the 1min can produce an error, the rest are warnings
+            if( $loads{1} / $nCpu * 100 >= $ERROR_LOAD_PER_CPU_PERCENT ) {
+                push @{$json->{problems}},
+                        'High CPU load: ' . $loads{1} . " (1 min) with $nCpu CPUs.";
 
-                } elsif( $loads{$period} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
+            } elsif( $loads{1} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
+                push @{$json->{warnings}},
+                        'High CPU load: ' . $loads{1} . " (1 min) with $nCpu CPUs.";
+            }
+
+            foreach my $period ( 5, 15 ) {
+                if( $loads{$period} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
                     push @{$json->{warnings}},
                             'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
                 }
