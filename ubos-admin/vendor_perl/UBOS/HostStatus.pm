@@ -472,7 +472,7 @@ sub pacnewFiles {
 }
 
 ##
-# Determine all network interfaces of this host and their properties.
+# Determine all network interfaces of this host and their properties, except for the loopback.
 # return: JSON
 sub nics {
     unless( exists( $json->{nics} )) {
@@ -489,14 +489,15 @@ sub nics {
             if( $line =~ /^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$/ ) {
                 my( $index, $link, $type, $operational, $setup ) = ( $1, $2, $3, $4, $5 );
 
-                my $n = {};
+                if( 'loopback' ne $type ) {
+                    my $n = {};
+                    $n->{index}       = $index;
+                    $n->{type}        = $type;
+                    $n->{operational} = $operational;
+                    $n->{setup}       = $setup;
 
-                $n->{index}       = $index;
-                $n->{type}        = $type;
-                $n->{operational} = $operational;
-                $n->{setup}       = $setup;
-
-                $json->{nics}->{$link} = $n;
+                    $json->{nics}->{$link} = $n;
+                }
             }
         }
 
