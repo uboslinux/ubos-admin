@@ -536,7 +536,8 @@ sub updateCode {
 
     trace( 'Host::updateCode', $syncFirst, $showPackages );
 
-    my $ret = 0;
+    my $ret     = 0;
+    my $success = 1;
     my $cmd;
     if( -x '/usr/bin/pacman-db-upgrade' ) {
         $cmd = 'pacman-db-upgrade';
@@ -570,6 +571,7 @@ sub updateCode {
         debugAndSuspend( 'Execute pacman -Sy' );
         if( myexec( $cmd, undef, \$out, \$out ) != 0 ) {
             error( 'Command failed:', $cmd, "\n$out" );
+            $success = 0;
 
         } elsif( UBOS::Logging::isTraceActive() ) {
             colPrint( $out );
@@ -582,6 +584,8 @@ sub updateCode {
         debugAndSuspend( 'Execute pacman -S ', $pack );
         if( myexec( "pacman -Q $pack 2> /dev/null && pacman -S $pack --noconfirm || true", undef, \$out, \$out ) != 0 ) {
             error( 'Checking/upgrading package failed:', $pack, "\n$out" );
+            $success = 0;
+
         } elsif( UBOS::Logging::isTraceActive() ) {
             colPrint( $out );
         }
@@ -591,6 +595,7 @@ sub updateCode {
             } elsif( $out =~ m!conflict.*Remove!i ) {
                 if( myexec( "yes y | pacman -S $pack || true", undef, \$out, \$out ) != 0 ) {
                     error( 'Checking/upgrading package with conflict failed:', $pack, "\n$out" );
+                    $success = 0;
                 }
             }
         }
@@ -600,12 +605,14 @@ sub updateCode {
         debugAndSuspend( 'Execute perform-fixes' );
         if( myexec( '/usr/share/ubos-admin/bin/perform-fixes', undef, \$out, \$out )) {
             error( 'Running perform-fixes failed:', $out );
+            $success = 0;
         }
     }
 
     debugAndSuspend( 'Execute pacman -Su' );
     if( myexec( 'pacman -Su --noconfirm', undef, \$out, \$out ) != 0 ) {
         error( 'Command failed:', $cmd, "\n$out" );
+        $success = 0;
 
     } elsif( UBOS::Logging::isTraceActive() ) {
         colPrint( $out );
@@ -636,7 +643,9 @@ sub updateCode {
         myexec( $cmd );
     }
 
-    UBOS::Utils::saveFile( $LAST_UPDATE_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
+    if( $success ) {
+        UBOS::Utils::saveFile( $LAST_UPDATE_FILE, UBOS::Utils::time2string( time() ) . "\n", 0644, 'root', 'root' );
+    }
 
     # if installed kernel package is now different from running kernel: signal to reboot
     my $kernelPackageName = UBOS::Utils::kernelPackageName(); # e.g. 4.20.arch1-1
