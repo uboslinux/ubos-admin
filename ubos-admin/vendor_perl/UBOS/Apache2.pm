@@ -30,12 +30,12 @@ my @minimumApacheModules = qw(
         deflate
         dir
         env
-        http2
         log_config
         mime mpm_prefork
         rewrite
         setenvif
         unixd ); # always need those
+# http2 conflicts with prefork
 
 ##
 # Reload configuration
