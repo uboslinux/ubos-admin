@@ -52,6 +52,7 @@ sub run {
     my $noSync            = 0;
     my $noPackageUpgrade  = 0;
     my $noSnap            = 0;
+    my $noKeyRefresh      = 0;
     my $showPackages      = 0;
     my $stage1Only        = 0;
     my $pacmanConfOnly    = 0;
@@ -66,6 +67,7 @@ sub run {
             'noreboot'                        => \$noReboot,
             'nosynchronize'                   => \$noSync,
             'nosnapshot'                      => \$noSnap,
+            'nokeyrefresh'                    => \$noKeyRefresh,
             'showpackages'                    => \$showPackages,
             'nopackageupgrade'                => \$noPackageUpgrade, # This option is not public, but helpful for development
             'stage1Only'                      => \$stage1Only,       # This option is not public
@@ -235,7 +237,7 @@ sub run {
         } elsif( @packageFiles ) {
             UBOS::Host::installPackageFiles( \@packageFiles, $showPackages );
         } else {
-            if( UBOS::Host::updateCode( $noSync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive() ) == -1 ) {
+            if( UBOS::Host::updateCode( $noSync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive(), $noKeyRefresh ) == -1 ) {
                 $rebootHeuristics = 1;
             }
         }
@@ -363,6 +365,9 @@ HHH
 HHH
             '--nosnapshot' => <<HHH,
     Do not create filesystem shapshots before and after the upgrade.
+HHH
+            '--nokeyrefresh' => <<HHH,
+    Do not attempt to update packager keys.
 HHH
             '--showpackages' => <<HHH,
     Print the names of the packages that were upgraded.
