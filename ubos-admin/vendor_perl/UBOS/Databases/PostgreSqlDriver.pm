@@ -41,7 +41,7 @@ sub ensureRunning {
         UBOS::Utils::mkdirDashP( $dataDir, 0700, 'postgres', 'postgres', 0755, 'root', 'root' );
 
     }
-    UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
+    UBOS::Utils::myexec( "chattr +C $dataDir 2> /dev/null" ); # nocow on btrfs, swallow error on different fs
 
     $running = 1; # need to set this here, so executeCmdAsAdmin can be done
 
