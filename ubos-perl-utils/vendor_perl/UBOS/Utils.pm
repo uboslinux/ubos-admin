@@ -31,7 +31,7 @@ my $CHANNEL_FILE         = '/etc/ubos/channel';
 my $SKU_FILE             = '/etc/ubos/product';
 my @VALID_CHANNELS       = qw( dev red yellow green );
 my @VALID_ARCHS          = qw( x86_64 armv6h armv7h aarch64 );
-my @VALID_DEVICE_CLASSES = qw( pc vbox ec2 rpi rpi2 rpi4 espressobin odroid-xu3 container );
+my @VALID_DEVICE_CLASSES = qw( pc vbox ec2 rpi rpi2 rpi4 espressobin odroid-xu3 container docker );
 
 my $_now           = time(); # Time the script(s) started running, use now() to access
 my $_deviceClass   = undef;  # Allocated as needed
