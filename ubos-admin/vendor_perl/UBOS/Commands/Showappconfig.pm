@@ -37,6 +37,7 @@ sub run {
     my $detail            = 0;
     my $brief             = 0;
     my $idsOnly           = 0;
+    my @custPoints        = ();
     my $privateCustPoints = 0;
 
     my $siteId;
@@ -54,6 +55,7 @@ sub run {
             'detail'                     => \$detail,
             'brief'                      => \$brief,
             'ids-only|idsonly'           => \$idsOnly,
+            'customizationpoint=s',      => \@custPoints,
             'privatecustomizationpoints' => \$privateCustPoints,
             'siteid=s'                   => \$siteId,
             'hostname=s'                 => \$host,
@@ -64,18 +66,29 @@ sub run {
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
+    my $nDetail = 0;
+    if( $detail ) {
+        ++$nDetail;
+    }
+    if( $brief ) {
+        ++$nDetail;
+    }
+    if( $idsOnly ) {
+        ++$nDetail;
+    }
+    if( @custPoints ) {
+        ++$nDetail;
+    }
+
     if(    !$parseOk
-        || ( $json && ( $detail || $brief || $idsOnly || $privateCustPoints ))
-        || ( $detail && $brief )
-        || ( $brief && $idsOnly )
-        || ( $idsOnly && $detail )
+        || ( $json && $nDetail )
+        || ( $nDetail > 1 )
         || ( $appConfigId && ( $siteId || $host || defined( $context ) || $url ))
         || ( $siteId && $host )
         || ( $siteId && $url )
         || ( $host && $url )
         || (( $siteId || $host ) && !defined( $context ))
         || (( !$siteId && !$host ) && defined( $context ))
-        || ( !$appConfigId && !defined( $context ) && !$url )
         || @args
         || ( $verbose && $logConfigFile ))
     {
@@ -105,20 +118,34 @@ sub run {
             unless( $site ) {
                 fatal( $@ );
             }
-        } else {
+        } elsif( $siteId ) {
             $site = UBOS::Host::findSiteByPartialId( $siteId );
             unless( $site ) {
                 fatal( $@ );
             }
         }
-        $appConfig = $site->appConfigAtContext( $context );
-        unless( $appConfig ) {
-            if( $context ) {
-                fatal( 'Cannot find an appconfiguration at context path', $context,
-                       'for site', $site->hostname, '(' . $site->siteId . ').' );
-            } else {
-                fatal( 'Cannot find an appconfiguration at the root context',
-                       'of site', $site->hostname, '(' . $site->siteId . ').' );
+        if( $site ) {
+            $appConfig = $site->appConfigAtContext( $context );
+            unless( $appConfig ) {
+                if( $context ) {
+                    fatal( 'Cannot find an appconfiguration at context path', $context,
+                           'for site', $site->hostname, '(' . $site->siteId . ').' );
+                } else {
+                    fatal( 'Cannot find an appconfiguration at the root context',
+                           'of site', $site->hostname, '(' . $site->siteId . ').' );
+                }
+            }
+        } else {
+            # check that there is only one AppConfig on the device
+            my $sites = UBOS::Host::sites();
+            if( keys %$sites == 1 ) {
+                my $appConfigs = ( values %$sites )[0]->appConfigs();
+                if( @$appConfigs == 1 ) {
+                    $appConfig = $appConfigs->[0];
+                }
+            }
+            unless( $appConfig ) {
+                fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
             }
         }
     }
@@ -134,6 +161,9 @@ sub run {
 
     } elsif( $detail ) {
         $appConfig->printDetail( $privateCustPoints );
+
+    } elsif( @custPoints ) {
+        $appConfig->printAppCustomizationPoints( \@custPoints, $privateCustPoints );
 
     } else {
         $appConfig->print( $privateCustPoints );
@@ -175,11 +205,16 @@ SSS
     Show information about the AppConfiguration at the site with
     hostname <hostname> and context path <context>.
 HHH
-            <<SSS => <<HHH
+            <<SSS => <<HHH,
     --url <url>
 SSS
     Show information about the AppConfiguration referred to by URL
     <url>.
+HHH
+            <<SSS => <<HHH
+SSS
+    No site or AppConfiguration needs to be specified if only one
+    AppConfiguration is deployed on this device.
 HHH
         },
         'args' => {
@@ -200,6 +235,10 @@ HHH
 HHH
             '--ids-only' => <<HHH,
     Show Site and AppConfiguration ids only.
+HHH
+            '--customizationpoint <name>' => <<HHH,
+    Show the value of the named customizationpoint of the App at this
+    AppConfiguration. This does not apply to Accessories.
 HHH
             '--privatecustomizationpoints' => <<HHH
     Do not mask the values for private customizationpoints.

@@ -243,14 +243,15 @@ sub run {
     }
 
     while( !$adminCredential ) {
+        my $example = 'v3rys3cr3t';
         while( 1 ) {
             if( $jsonTemplate && defined( $jsonTemplate->{admin} ) && defined( $jsonTemplate->{admin}->{credential} )) {
                 $adminCredential = $jsonTemplate->{admin}->{credential};
             } else {
-                $adminCredential = askAnswer( 'Site admin user password (e.g. s3cr3t): ', '^\S[\S ]{6,30}\S$', undef, 1 );
+                $adminCredential = askAnswer( 'Site admin user password (e.g. ' . $example . '): ', '^\S[\S ]{6,30}\S$', undef, 1 );
                 # Use same regex as in Site::_checkJson
             }
-            if( $adminCredential =~ m!s3cr3t!i ) {
+            if( $adminCredential =~ m/$example/i ) {
                 error( "Not that one!" );
             } elsif( $adminCredential eq $adminUserId ) {
                 error( "Password must be different from username." );

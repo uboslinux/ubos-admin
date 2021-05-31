@@ -1,0 +1,23 @@
+pkgname=$(basename $(pwd))
+pkgver=0.1
+pkgrel=1
+pkgdesc="UBOS Network management tools (Docker)"
+arch=('any')
+url="http://ubos.net/"
+developer=${url}
+maintainer=${url}
+license=('PPL3')
+depends=('ubos-admin')
+options=('!strip')
+_vendor_perl=/usr/share/perl5/vendor_perl
+
+package() {
+# Code
+    for d in Networking Networking/NetConfigs; do
+        for f in ${startdir}/vendor_perl/UBOS/${d}/*.pm; do
+            if [ -r "$f" ]; then
+                install -D -m755 ${f} -t ${pkgdir}${_vendor_perl}/UBOS/${d}/
+            fi
+        done
+    done
+}

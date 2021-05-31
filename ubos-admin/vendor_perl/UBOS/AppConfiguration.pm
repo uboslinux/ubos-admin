@@ -873,5 +873,47 @@ sub printDetail {
     return $self->print( 3, $showPrivateCustomizationPoints );
 }
 
+##
+# Print the named customizationpoints of the App at this AppConfiguration.
+# $custPointNamesP: array of names of customizationpoints
+# $showPrivateCustomizationPoints: unless true, blank out the values of private customizationpoints
+sub printAppCustomizationPoints {
+    my $self                           = shift;
+    my $custPointNamesP                = shift;
+    my $showPrivateCustomizationPoints = shift;
+
+    my $installable = $self->app();
+    my $custPoints  = $self->customizationPoints;
+    if( exists( $custPoints->{$installable->packageName} )) {
+        my $installableCustPoints = $custPoints->{$installable->packageName};
+        if( defined( $installableCustPoints )) {
+            foreach my $custPointName ( @$custPointNamesP ) {
+                if( !exists( $installableCustPoints->{$custPointName} )) {
+                    fatal( 'Customizationpoint', $custPointName, 'does not exist.' );
+                }
+            }
+            foreach my $custPointName ( @$custPointNamesP ) {
+                my $custPointValue = $installableCustPoints->{$custPointName};
+                my $custPointDef   = $installable->customizationPoints();
+
+                my $value;
+                if(    !$showPrivateCustomizationPoints
+                    && exists( $custPointDef->{$custPointName}->{private} )
+                    && $custPointDef->{$custPointName}->{private} )
+                {
+                    $value = "<not shown>";
+                } else {
+                    $value = $custPointValue->{value};
+                }
+
+                if( defined( $value )) {
+                    print( "$value\n" );
+                } else {
+                    print( "<not set>\n" );
+                }
+            }
+        }
+    }
+}
 
 1;

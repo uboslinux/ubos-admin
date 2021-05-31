@@ -472,7 +472,7 @@ sub pacnewFiles {
 }
 
 ##
-# Determine all network interfaces of this host and their properties.
+# Determine all network interfaces of this host and their properties, except for the loopback.
 # return: JSON
 sub nics {
     unless( exists( $json->{nics} )) {
@@ -489,14 +489,15 @@ sub nics {
             if( $line =~ /^\s*(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$/ ) {
                 my( $index, $link, $type, $operational, $setup ) = ( $1, $2, $3, $4, $5 );
 
-                my $n = {};
+                if( 'loopback' ne $type ) {
+                    my $n = {};
+                    $n->{index}       = $index;
+                    $n->{type}        = $type;
+                    $n->{operational} = $operational;
+                    $n->{setup}       = $setup;
 
-                $n->{index}       = $index;
-                $n->{type}        = $type;
-                $n->{operational} = $operational;
-                $n->{setup}       = $setup;
-
-                $json->{nics}->{$link} = $n;
+                    $json->{nics}->{$link} = $n;
+                }
             }
         }
 
@@ -725,12 +726,18 @@ sub problems {
             $loads{5}  = $uptimeJson->{loadavg5};
             $loads{15} = $uptimeJson->{loadavg15};
 
-            foreach my $period ( sort { $a <=> $b } keys %loads ) {
-                if( $loads{$period} / $nCpu * 100 >= $ERROR_LOAD_PER_CPU_PERCENT ) {
-                    push @{$json->{problems}},
-                            'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
+            # only the 1min can produce an error, the rest are warnings
+            if( $loads{1} / $nCpu * 100 >= $ERROR_LOAD_PER_CPU_PERCENT ) {
+                push @{$json->{problems}},
+                        'High CPU load: ' . $loads{1} . " (1 min) with $nCpu CPUs.";
 
-                } elsif( $loads{$period} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
+            } elsif( $loads{1} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
+                push @{$json->{warnings}},
+                        'High CPU load: ' . $loads{1} . " (1 min) with $nCpu CPUs.";
+            }
+
+            foreach my $period ( 5, 15 ) {
+                if( $loads{$period} / $nCpu * 100 >= $WARNING_LOAD_PER_CPU_PERCENT ) {
                     push @{$json->{warnings}},
                             'High CPU load: ' . $loads{$period} . " ($period min) with $nCpu CPUs.";
                 }

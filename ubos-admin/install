@@ -60,5 +60,5 @@ post_upgrade() {
 }
 
 ensureChattr() {
-    ( [ -d /var/log/journal ] || mkdir /var/log/journal ) && chattr +C /var/log/journal
+    ( [ -d /var/log/journal ] || mkdir /var/log/journal ) && chattr +C /var/log/journal 2> /dev/null
 }

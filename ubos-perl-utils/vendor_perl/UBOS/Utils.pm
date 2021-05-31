@@ -31,7 +31,7 @@ my $CHANNEL_FILE         = '/etc/ubos/channel';
 my $SKU_FILE             = '/etc/ubos/product';
 my @VALID_CHANNELS       = qw( dev red yellow green );
 my @VALID_ARCHS          = qw( x86_64 armv6h armv7h aarch64 );
-my @VALID_DEVICE_CLASSES = qw( pc vbox ec2 rpi rpi2 rpi4 espressobin odroid-xu3 container );
+my @VALID_DEVICE_CLASSES = qw( pc vbox ec2 rpi rpi2 rpi4 espressobin odroid-xu3 container docker );
 
 my $_now           = time(); # Time the script(s) started running, use now() to access
 my $_deviceClass   = undef;  # Allocated as needed
@@ -1321,30 +1321,37 @@ sub deviceClass {
 
     unless( $_deviceClass ) {
         # now we guess
-        my $out;
-        myexec( 'systemd-detect-virt', undef, \$out, undef );
-        if( $out =~ m!systemd-nspawn! ) {
-            $_deviceClass = 'container';
 
-        } elsif( $out =~ m!xen! ) {
-            $_deviceClass = 'ec2';
-
-        } elsif( $out =~ m!oracle! ) {
-            $_deviceClass = 'vbox';
+        if( -e '/.dockerenv' ) {
+            $_deviceClass = 'docker';
 
         } else {
-            myexec( 'uname -a', undef, \$out, undef );
-            if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
-                $_deviceClass = 'rpi';
+            my $out;
 
-            } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
-                $_deviceClass = 'rpi2';
+            myexec( 'systemd-detect-virt', undef, \$out, undef );
+            if( $out =~ m!systemd-nspawn! ) {
+                $_deviceClass = 'container';
 
-            } elsif( $out =~ m!espressobin.*aarch64! ) {
-                $_deviceClass = 'espressobin';
+            } elsif( $out =~ m!xen! ) {
+                $_deviceClass = 'ec2';
 
-            } elsif( $out =~ m!x86_64! ) {
-                $_deviceClass = 'pc';
+            } elsif( $out =~ m!oracle! ) {
+                $_deviceClass = 'vbox';
+
+            } else {
+                myexec( 'uname -a', undef, \$out, undef );
+                if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
+                    $_deviceClass = 'rpi';
+
+                } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
+                    $_deviceClass = 'rpi2';
+
+                } elsif( $out =~ m!espressobin.*aarch64! ) {
+                    $_deviceClass = 'espressobin';
+
+                } elsif( $out =~ m!x86_64! ) {
+                    $_deviceClass = 'pc';
+                }
             }
         }
     }

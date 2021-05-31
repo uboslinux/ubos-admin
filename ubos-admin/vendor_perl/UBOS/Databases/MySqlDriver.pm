@@ -41,7 +41,7 @@ sub ensureRunning {
     unless( -d $dataDir ) {
         UBOS::Utils::mkdirDashP( $dataDir, 0700, 'mysql', 'mysql', 0755, 'root', 'root' );
     }
-    UBOS::Utils::myexec( "chattr +C $dataDir" ); # nocow on btrfs
+    UBOS::Utils::myexec( "chattr +C $dataDir 2> /dev/null" ); # nocow on btrfs, swallow error on different fs
 
     my $out;
     my $err;
