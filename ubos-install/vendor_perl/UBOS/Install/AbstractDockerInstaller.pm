@@ -13,8 +13,7 @@ use base qw( UBOS::Install::AbstractInstaller );
 use fields;
 
 use UBOS::Install::AbstractVolumeLayout;
-use UBOS::Install::VolumeLayouts::DiskImage;
-use UBOS::Install::Volumes::RootVolume;
+use UBOS::Install::VolumeLayouts::Directory;
 use UBOS::Logging;
 use UBOS::Utils;
 
@@ -77,19 +76,13 @@ sub checkCreateVolumeLayout {
 
     my $installTarget = $self->{installTargets}->[0];
 
-    if( UBOS::Install::AbstractVolumeLayout::isFile( $installTarget )) {
-        # install to file
-        my @volumes = (
-            UBOS::Install::Volumes::RootVolume->new() # defaults
-        );
+    if( UBOS::Install::AbstractVolumeLayout::isDirectory( $installTarget )) {
 
-        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::DiskImage->new(
-                'mbr',
-                $installTarget,
-                \@volumes );
+        $self->{volumeLayout} = UBOS::Install::VolumeLayouts::Directory->new( $installTarget );
+        $self->{target} = $installTarget;
 
     } else {
-        error( 'Install target must be a disk image for this device class:', $installTarget );
+        error( 'Install target must be a directory for this device class:', $installTarget );
         ++$errors;
     }
 
