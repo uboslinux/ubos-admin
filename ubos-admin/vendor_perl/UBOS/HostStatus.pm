@@ -321,12 +321,14 @@ sub blockDevicesJson {
         trace( 'Checking disks' );
         debugAndSuspend( 'Executing lsblk' );
 
+        my $virt = virtualization();
+
         my $out;
         UBOS::Utils::myexec( "lsblk --json --output-all --paths", undef, \$out );
         if( $out ) {
             my $newJson = UBOS::Utils::readJsonFromString( $out );
 
-            my $smartCmd = ( -x '/usr/bin/smartctl' && !virtualization()) ? '/usr/bin/smartctl -H -j' : undef;
+            my $smartCmd = ( -x '/usr/bin/smartctl' && !$virt ) ? '/usr/bin/smartctl -H -j' : undef;
 
             $json->{blockdevices} = [];
             foreach my $blockDevice ( @{$newJson->{blockdevices}} ) {
@@ -336,6 +338,12 @@ sub blockDevicesJson {
                 my $name       = $blockDevice->{name};
                 my $fstype     = $blockDevice->{fstype};
                 my $mountpoint = $blockDevice->{mountpoint};
+
+                if( 'docker' eq $virt ) {
+                    if( '/etc/hosts' eq $mountpoint ) {
+                        next; # Special case for Docker: it mounts /etc/hosts and we don't want that as a block device
+                    }
+                }
 
                 if( $fstype ) {
                     $blockDevice->{usage} = _usageAsJson( $name, $fstype, $mountpoint );
