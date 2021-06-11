@@ -531,6 +531,7 @@ sub _isHardwareNic {
     my $nicType = shift;
 
     if(    $nicName !~ m!^(ve-|tun|tap|docker)!
+        && $nicName !~ m!^veth[a-f0-9]{7}!         # Docker host-side
         && $nicType !~ m!^loopback! )
     {
         return 1;

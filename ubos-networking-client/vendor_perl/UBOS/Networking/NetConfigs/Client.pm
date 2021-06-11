@@ -50,7 +50,11 @@ sub activate {
     if( $initOnly ) {
         @allNics = ( @etherGlobs, @wlanGlobs );
     } else {
-        @allNics = sort keys %{ UBOS::HostStatus::nics() };
+        @allNics = sort keys %{ UBOS::HostStatus::hardwareNics() };
+        # We don't use this Netconfig in containers, so this should be fine
+        # If we also do softwareNics, than a UBOS device that runs Docker containers will
+        # have all the software NIC info stored for each running Docker container, even
+        # if it was only temporary
     }
 
     my $conf    = undef;
