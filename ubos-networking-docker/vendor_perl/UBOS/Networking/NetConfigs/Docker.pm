@@ -56,7 +56,11 @@ sub activate {
         $error = 1;
     }
     unless( exists( $conf->{eth0} )) {
-        $conf->{host0} = {};
+        $conf->{eth0} = {};
+    }
+    unless( exists( $conf->{eth0}->{gendotnetwork} )) {
+        $conf->{eth0}->{gendotnetwork} = 0; # Do not generate .network file for Docker
+        $updated = 1;
     }
     unless( exists( $conf->{eth0}->{dhcp} )) {
         $conf->{eth0}->{dhcp} = JSON::true;

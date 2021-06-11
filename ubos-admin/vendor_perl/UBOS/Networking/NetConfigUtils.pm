@@ -310,6 +310,12 @@ sub configureAll {
 
     foreach my $nic ( keys %$config ) {
         # wildcards allowed here
+
+        if( exists( $config->{$nic}->{gendotnetwork} ) && !$config->{$nic}->{gendotnetwork} ) {
+            # Docker does not want systemd .network files
+            next;
+        }
+
         my $nicPriority       = 50; # by default
         my $dotNetworkContent = <<END;
 #
