@@ -35,6 +35,7 @@ my $READY_FILE              = '/run/ubos-admin-ready';
 my $LAST_UPDATE_FILE        = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system
 my $HOSTNAME_CALLBACKS_DIR  = '/etc/ubos/hostname-callbacks';
 my $STATE_CALLBACKS_DIR     = '/etc/ubos/state-callbacks';
+my $KEY_REFRESH_FILE        = '/etc/ubos/key-refresh.touch';
 
 my $_hostVars               = undef; # allocated as needed
 my $_rolesOnHostInSequence  = undef; # allocated as needed
@@ -539,6 +540,8 @@ sub updateCode {
     my $ret     = 0;
     my $success = 1;
     my $cmd;
+    my $out;
+
     if( -x '/usr/bin/pacman-db-upgrade' ) {
         $cmd = 'pacman-db-upgrade';
         unless( UBOS::Logging::isTraceActive() ) {
@@ -548,9 +551,10 @@ sub updateCode {
         myexec( $cmd );
     }
 
-    my $out;
-    if( myexec( 'pacman-key --list-keys | grep expired', undef, \$out, \$out ) == 0 ) {
-        # at least one key is expired
+    if(     ( ! -e $KEY_REFRESH_FILE || UBOS::Utils::ageOfFileInSeconds( $KEY_REFRESH_FILE ) > 30 * 24 * 60 * 60 )
+        &&  ( myexec( 'pacman-key --list-keys | grep expired', undef, \$out, \$out ) == 0 ))
+    {
+        # at least one key is expired, and at least a month has passed
 
         info( 'Refreshing keys' );
 
@@ -558,10 +562,15 @@ sub updateCode {
         if( $KEYSERVER ) {
             $cmd .= " --keyserver $KEYSERVER";
         }
+
         if( myexec( $cmd, undef, \$out, \$out )) {
             warning( 'Failed to refresh some expired keys (probably harmless)' );
             trace( $out );
+        } else {
+            UBOS::Utils::touch( $KEY_REFRESH_FILE );
         }
+    } else {
+        trace( 'Skipping pacman-key --refresh-keys' );
     }
 
     info( 'Updating code' );

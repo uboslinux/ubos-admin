@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.402
+pkgver=0.403
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -103,6 +103,9 @@ package() {
     mkdir -p ${pkgdir}/etc/ubos/{hostname,state}-callbacks
     install -D -m644 ${startdir}/etc/ubos/staff-boot-callbacks/* -t ${pkgdir}/etc/ubos/staff-boot-callbacks/
     install -D -m644 ${startdir}/etc/logrotate.d/*               -t ${pkgdir}/etc/logrotate.d/
+
+# Key refresh touch file
+    touch ${pkgdir}/etc/ubos/key-refresh.touch
 
 # Give cronie no reason to complain
     install -D -m644 /dev/null ${pkgdir}/etc/crontab

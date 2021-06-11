@@ -680,6 +680,39 @@ sub readFilesInDirectory {
 }
 
 ##
+# Determine the age of a file in seconds
+# $file: the file
+# return: the number of seconds, or undef if does not exist
+sub ageOfFileInSeconds {
+    my $file = shift;
+
+    if( -e $file ) {
+        my $modified = ( stat($file))[9];
+        my $ret      = now() - $modified;
+        return $ret;
+
+    } else {
+        return undef;
+    }
+}
+
+##
+# Touch a file
+# $file: the file to touch
+# return: 1 if success
+sub touch {
+    my $file = shift;
+
+    if( -e $file ) {
+        utime( undef, undef, $file );
+        return 1;
+    } else {
+        return saveFile( $file, '', );
+    }
+}
+
+
+##
 # Obtain all Perl module files in a particular parent package.
 # $parentPackage: name of the parent package
 # $regex: a regex for the module files to be read, not counting the .pm extension, of any if not given
