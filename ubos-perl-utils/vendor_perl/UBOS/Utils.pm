@@ -703,11 +703,13 @@ sub ageOfFileInSeconds {
 sub touch {
     my $file = shift;
 
+    trace( 'touch:', $file );
+
     if( -e $file ) {
         utime( undef, undef, $file );
         return 1;
     } else {
-        return saveFile( $file, '', );
+        return saveFile( $file, '' );
     }
 }
 
