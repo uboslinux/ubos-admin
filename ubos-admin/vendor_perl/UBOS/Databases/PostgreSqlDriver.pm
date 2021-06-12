@@ -226,7 +226,7 @@ sub provisionLocalDatabase {
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
-    my $charset             = shift || 'UNICODE';
+    my $charset             = shift || 'UTF8';
     my $collate             = shift;
     my $description         = shift;
 
@@ -237,6 +237,7 @@ sub provisionLocalDatabase {
     # create database
     my $createDbSql = 'createdb';
     $createDbSql .= " --encoding=$charset";
+    $createDbSql .= " --template=template0";
     if( $collate ) {
         $createDbSql .= " --lc-collate=$collate";
     }
