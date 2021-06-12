@@ -14,6 +14,7 @@ LEFTOVER_FILES_TO_REMOVE="\
     /usr/lib/p11-kit-trust.so \
     /usr/lib32/p11-kit-trust.so \
     /usr/lib/libzn_poly-0.9.so \
+    /etc/httpd/mods-available/php7.load \
 "
 
 for f in $LEFTOVER_FILES_TO_REMOVE; do
