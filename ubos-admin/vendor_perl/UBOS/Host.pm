@@ -962,6 +962,7 @@ sub postSnapshot {
 
 ##
 # Determine the btrfs filesystems
+# FIXME: This should potentially get reconciled with the disk determination in HostStatus
 # return: array of mount points
 sub _findBtrfsFilesystems() {
 
@@ -997,6 +998,8 @@ sub _findBtrfsFilesystems() {
             push @ret, _parseFindMntJson( $fs );
         }
     }
+    @ret = grep { ! /\/etc\// } @ret; # Docker also mounts /etc/hosts, /etc/hostname and /etc/resolv.conf
+
     return @ret;
 }
 
