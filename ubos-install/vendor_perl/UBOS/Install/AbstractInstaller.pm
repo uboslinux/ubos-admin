@@ -51,6 +51,8 @@ use fields qw(
         target
         tempMount
         volumeLayout
+
+        run
 );
 
 # installXXX: settings for installation time (e.g. which software depot to use)
@@ -181,6 +183,9 @@ sub setDeviceConfig {
     }
     if( exists( $deviceConfig->{noboot} )) {
         $self->{noBoot} = $deviceConfig->{noboot};
+    }
+    if( exists( $deviceConfig->{run} )) {
+        $self->{run} = $deviceConfig->{run};
     }
 
     return $errors;
@@ -568,6 +573,10 @@ SCRIPT
             goto DONE;
         }
         $errors += $self->addConfigureSnapperToScript( \$chrootScript );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $self->addRunToScript( \$chrootScript );
         if( $errors ) {
             goto DONE;
         }
@@ -1150,6 +1159,27 @@ sub addConfigureSnapperToScript {
     # Cannot invoke 'snapper setup-quota' here -- it fails with a dbus fatal exception.
     # Presumably it doesn't like the chroot it is running in.
     # So we will have to do this during boot
+    return $errors;
+}
+
+##
+# Add the user-given run commands to the priveded script, to be run in a chroot
+#
+# $chrootScriptP: pointer to script
+# return: number of errors
+sub addRunToScript {
+    my $self          = shift;
+    my $chrootScriptP = shift;
+
+    trace( "Executing addRunToScript" );
+
+    my $errors = 0;
+
+    if( $self->{run} ) {
+        foreach my $run ( @{$self->{run}} ) {
+            $$chrootScriptP .= "$run\n";
+        }
+    }
     return $errors;
 }
 

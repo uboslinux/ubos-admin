@@ -48,6 +48,7 @@ my $noBoot;
 my $swap;
 my $gpt;
 my $mbr;
+my @run;
 
 my $parseOk = GetOptions(
         'verbose+'                     => \$verbose,
@@ -95,7 +96,9 @@ my $parseOk = GetOptions(
 
         'swap!'                        => \$swap,
         'gpt'                          => \$gpt,
-        'mbr'                          => \$mbr );
+        'mbr'                          => \$mbr,
+
+        'run=s'                        => \@run );
 
 UBOS::Logging::initialize( 'ubos-install', undef, $verbose, $logConfigFile, $debug );
 
@@ -135,7 +138,8 @@ if(      $listDeviceClasses
          || @swapPartitions
          || $swap
          || $gpt
-         || $mbr ))
+         || $mbr
+         || @run ))
 {
     synopsisHelpQuit( 0 );
 }
@@ -253,6 +257,9 @@ if( $gpt ) {
     }
 } elsif( $mbr ) {
     $deviceConfig->{partitioningscheme} = 'mbr';
+}
+if( @run ) {
+    $deviceConfig->{run} = \@run;
 }
 
 if( @ARGV ) {
@@ -552,6 +559,8 @@ Optional arguments:
           Deviate from the defaults of the device class by creating a GPT partition table.
     --mbr
           Deviate from the defaults of the device class by creating a MBR (MSDOS) partition table.
+    --run <path>
+          Before ending the installation, run the script or executable at this path within the chroot,
 END
     } else {
         print <<END;
@@ -569,6 +578,7 @@ Optional arguments:
     [--bootpartition <part>][--rootpartition <part>][--ubospartition <part>][--swappartition <part>]
     [--add-mount <fstabentry>][--noboot]
     [--swap | --noswap ][--gpt][--mbr]
+    [--run <script>]
 END
     }
     exit 1;
