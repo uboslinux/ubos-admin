@@ -77,7 +77,7 @@ sub hostname {
 sub tmpdir {
     my $ret = vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
     unless( -d $ret ) {
-        UBOS::Utils::mkdirDashP( $ret );
+        UBOS::Utils::mkdirDashP( $ret, 01777, 0, 0, 0755, 0, 0 );
     }
     return $ret;
 }
