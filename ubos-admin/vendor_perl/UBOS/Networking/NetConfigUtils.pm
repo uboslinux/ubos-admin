@@ -311,11 +311,6 @@ sub configureAll {
     foreach my $nic ( keys %$config ) {
         # wildcards allowed here
 
-        if( exists( $config->{$nic}->{gendotnetwork} ) && !$config->{$nic}->{gendotnetwork} ) {
-            # Docker does not want systemd .network files
-            next;
-        }
-
         my $nicPriority       = 50; # by default
         my $dotNetworkContent = <<END;
 #
@@ -872,6 +867,10 @@ END
         UBOS::Utils::myexec( 'sudo systemctl restart systemd-sysctl.service' );
 
         foreach my $nic ( keys %$config ) {
+            if( exists( $config->{$nic}->{unmanaged} ) && $config->{$nic}->{unmanaged} ) {
+                next; # leave it alone, e.g. for Docker that likes to manage the network itself
+            }
+
             UBOS::Utils::myexec( "ip addr flush $nic" );
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {

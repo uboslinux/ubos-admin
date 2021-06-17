@@ -41,57 +41,18 @@ sub activate {
     my $initOnly = shift;
     my $force    = shift;
 
-    my $conf    = undef;
-    my $error   = 0;
-    my $updated = 0;
-
-    if( $force ) {
-        $conf    = {};
-        $updated = 1;
-    } else {
-        $conf = UBOS::Networking::NetConfigUtils::readNetconfigConfFileFor( $name );
-    }
-    unless( $conf ) {
-        $conf  = {};
-        $error = 1;
-    }
-    unless( exists( $conf->{eth0} )) {
-        $conf->{eth0} = {};
-    }
-    unless( exists( $conf->{eth0}->{gendotnetwork} )) {
-        $conf->{eth0}->{gendotnetwork} = 0; # Do not generate .network file for Docker
-        $updated = 1;
-    }
-    unless( exists( $conf->{eth0}->{dhcp} )) {
-        $conf->{eth0}->{dhcp} = JSON::true;
-        $updated = 1;
-    }
-    unless( exists( $conf->{eth0}->{ports} )) {
-        $conf->{eth0}->{ports} = JSON::true;
-        $updated = 1;
-    }
-    unless( exists( $conf->{eth0}->{ssh} )) {
-        $conf->{eth0}->{ssh} = JSON::true;
-        $conf->{eth0}->{sshratelimit} = JSON::false; # not in a container
-        $updated = 1;
-    }
-    unless( exists( $conf->{eth0}->{appnic} )) {
-        $conf->{eth0}->{appnic} = JSON::true;
-    }
-
-    my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
-
-    if( $updated && !$error ) {
-        UBOS::Networking::NetConfigUtils::saveNetconfigConfFileFor( $name, $conf );
-    }
-    return $ret;
+    # For Docker, we do absolutely nothing.
+    # Docker wants to do its own IP address assignments, and does complicated
+    # things with iptables that basically incomprehensible to anybody other than
+    # them. So we do nothing.
+    return 0;
 }
 
 ##
 # Return help text for this network configuration
 # return: help text
 sub help {
-    return 'Networking for a Docker container.';
+    return 'Networking for a Docker container (does nothing, relies on Docker)';
 }
 
 1;
