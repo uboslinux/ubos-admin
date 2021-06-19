@@ -45,7 +45,7 @@ sub activate {
     # Docker wants to do its own IP address assignments, and does complicated
     # things with iptables that basically incomprehensible to anybody other than
     # them. So we do nothing.
-    return 0;
+    return 1;
 }
 
 ##
