@@ -55,13 +55,14 @@ sub loadCurrentSshConfiguration {
 
         trace( 'SetupUpdateShepherd::loadCurrentSshConfiguration', $staffRootDir );
 
-        my $sshKey = UBOS::Utils::slurpFile( "$staffRootDir/shepherd/ssh/id_rsa.pub" );
-        $sshKey =~ s!^\s+!!;
-        $sshKey =~ s!\s+$!!;
+        my $sshKey      = UBOS::Utils::slurpFile( "$staffRootDir/shepherd/ssh/id_rsa.pub" );
+        my $parsedKeysP = UBOS::StaffManager::parseAuthorizedKeys( $sshKey );
 
-        unless( UBOS::StaffManager::setupUpdateShepherd( $sshKey, 0, 1 )) {
-            # replace during boot
-            return 1;
+        if( $parsedKeysP ) {
+            unless( UBOS::StaffManager::setupUpdateShepherd( $parsedKeysP, 0, 1 )) {
+                # replace during boot
+                return 1;
+            }
         }
     }
     return 0;

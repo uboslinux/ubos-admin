@@ -286,40 +286,55 @@ sub saveCurrentConfiguration {
 
 ##
 # Create or update the shepherd user
-# $key: the public ssh key which is allowed to log in, if any
+# $keysP: array of public ssh keys which are allowed to log in, if any
 # $add: if true, add the keys
 # $force: if true, replace an existing key
 # return: 1 if ok
 sub setupUpdateShepherd {
-    my $key   = shift;
+    my $keysP = shift;
     my $add   = shift;
     my $force = shift;
 
     my $homeShepherd = UBOS::Host::vars()->getResolve( 'host.homeshepherd', '/var/shepherd' );
     if( UBOS::Utils::ensureOsUser( 'shepherd', undef, 'UBOS shepherd user', $homeShepherd )) {
 
-        trace( 'StaffManager::setupUpdateShepherd', $key, $add, $force );
+        trace( 'StaffManager::setupUpdateShepherd', $keysP, $add, $force );
 
         my $authKeyFile = "$homeShepherd/.ssh/authorized_keys";
         unless( -d "$homeShepherd/.ssh" ) {
             UBOS::Utils::mkdir( "$homeShepherd/.ssh", 0700, 'shepherd', 'shepherd' );
         }
-        if( $key ) {
-            my $authorizedKeys;
-            if( -e $authKeyFile ) {
-                $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
+
+        my $newAuthorizedKeys = undef;
+
+        my $authorizedKeys;
+        if( -e $authKeyFile ) {
+            $authorizedKeys = UBOS::Utils::slurpFile( $authKeyFile );
+            if( $keysP && @$keysP ) {
                 if( $add ) {
-                    $authorizedKeys .= "\n" . $key;
+                    info( @$keysP > 1 ? 'Adding authorized keys to shepherd account.' : 'Adding authorized key to shepherd account.' );
+                    $newAuthorizedKeys = $authorizedKeys . "\n" . join( '\n', @$keysP );
                 } elsif( $force ) {
-                    $authorizedKeys = $key;
+                    info( @$keysP > 1 ? 'Setting new authorized keys on shepherd account.' : 'Setting new authorized key on shepherd account.' );
+                    $newAuthorizedKeys = join( '\n', @$keysP );
                 } else {
                     error( 'There is already a key on this account. Use --add or --force to add or overwrite.' );
                     return 0;
                 }
             } else {
-                $authorizedKeys = $key;
+                if( $force ) {
+                    info( 'Deleting authorized keys on shepherd account.' );
+                    $newAuthorizedKeys = '';;
+                }
             }
-            UBOS::Utils::saveFile( $authKeyFile, $authorizedKeys, 0644, 'shepherd', 'shepherd' );
+
+        } elsif( $keysP && @$keysP ) {
+            info( @$keysP > 1 ? 'Setting authorized keys on shepherd account.' : 'Setting authorized key on shepherd account.' );
+            $newAuthorizedKeys = join( '\n', @$keysP );
+        }
+
+        if( defined( $newAuthorizedKeys )) {
+            UBOS::Utils::saveFile( $authKeyFile, $newAuthorizedKeys, 0644, 'shepherd', 'shepherd' );
         }
 
         unless( UBOS::Utils::saveFile( '/etc/sudoers.d/shepherd', <<'CONTENT', 0600, 'root', 'root' )) {
@@ -526,6 +541,38 @@ sub unmountDevice {
     }
 
     return $errors;
+}
+
+##
+# Helper to split a multi-line text string into ssh keys as in the authorized_keys file.
+# This produces an error and return undef if invalid syntax was found.
+# $raw: the raw context to be parsed
+# return: pointer to array of keys, in sequence
+sub parseAuthorizedKeys {
+    my $raw = shift;
+
+    my @ret = ();
+    if( $raw ) {
+        foreach my $line ( split /\n/, $raw ) {
+            $line =~ s!^\s+!!;
+            $line =~ s!\s+$!!;
+            if( $line =~ m!^#! ) {
+                next;
+            }
+            unless( $line ) {
+                next;
+            }
+
+            if( $line =~ m!^(ssh-\S+(\s+\S+)+)$! ) {
+                push @ret, $1;
+            } else {
+                $@ = 'This does not look like valid ssh public key(s)'
+                    . (( length( $line ) > 8 ) ? ( '. Line starts with: ' . substr( $line, 0, 8 ) . '...' ) : ( ': ' . $line ));
+                return undef;
+            }
+        }
+    }
+    return \@ret;
 }
 
 1;
