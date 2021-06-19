@@ -338,6 +338,9 @@ END
         if( exists( $config->{$nic}->{bindcarrier} ) && $config->{$nic}->{bindcarrier} ) {
             $dotNetworkContent .= "BindCarrier=" . $config->{$nic}->{bindcarrier} . "\n";
         }
+        if( exists( $config->{$nic}->{llmnr} ) && $config->{$nic}->{llmnr} ) {
+            $dotNetworkContent .= "LLMNR=yes\n";
+        }
         if( exists( $config->{$nic}->{priority} ) && $config->{$nic}->{priority} ) {
             $nicPriority = $config->{$nic}->{priority};
         }
@@ -663,6 +666,12 @@ END
                 }
                 _append( <<END, \$iptablesContent, \$ip6tablesContent );
 -A NIC-$noWildNic-TCP -p tcp --dport ssh -j ACCEPT
+END
+            }
+            if( exists( $config->{$nic}->{llmnr} ) && $config->{$nic}->{llmnr} ) {
+                _append( <<END, \$iptablesContent, \$ip6tablesContent );
+-A NIC-$noWildNic-UDP -p udp --dport llmnr -j ACCEPT
+-A NIC-$noWildNic-TCP -p tcp --dport llmnr -j ACCEPT
 END
             }
             if( exists( $config->{$nic}->{ports} ) && $config->{$nic}->{ports} ) {

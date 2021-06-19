@@ -58,6 +58,7 @@ sub activate {
     }
     unless( exists( $conf->{host0} )) {
         $conf->{host0} = {};
+        $updated = 1;
     }
     unless( exists( $conf->{host0}->{dhcp} )) {
         $conf->{host0}->{dhcp} = JSON::true;
@@ -74,6 +75,11 @@ sub activate {
     }
     unless( exists( $conf->{host0}->{appnic} )) {
         $conf->{host0}->{appnic} = JSON::true;
+        $updated = 1;
+    }
+    unless( exists( $conf->{host0}->{llmnr} )) {
+        $conf->{host0}->{llmnr} = JSON::true;
+        $updated = 1;
     }
 
     my $ret = UBOS::Networking::NetConfigUtils::configure( $name, $conf, $initOnly );
