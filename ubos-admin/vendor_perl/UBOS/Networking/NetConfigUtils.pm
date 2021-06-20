@@ -894,9 +894,18 @@ END
         # .socket don't want to be started
     }
 
-    UBOS::Utils::saveFile( $currentNetConfigFile, "$name\n" );
+    saveCurrentNetConfigName( $name );
 
     return 1;
+}
+
+##
+# Save the name of the current netconfig
+# $name the name
+sub saveCurrentNetConfigName {
+    my $name = shift;
+
+    UBOS::Utils::saveFile( $currentNetConfigFile, "$name\n" );
 }
 
 ##

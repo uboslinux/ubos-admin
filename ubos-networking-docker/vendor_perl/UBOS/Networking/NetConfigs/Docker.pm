@@ -41,10 +41,14 @@ sub activate {
     my $initOnly = shift;
     my $force    = shift;
 
-    # For Docker, we do absolutely nothing.
+    # For Docker, we do absolutely nothing other than saving the name of the
+    # current netconfig.
     # Docker wants to do its own IP address assignments, and does complicated
     # things with iptables that basically incomprehensible to anybody other than
     # them. So we do nothing.
+
+    UBOS::Networking::NetConfigUtils::saveCurrentNetConfigName( $name );
+
     return 1;
 }
 
