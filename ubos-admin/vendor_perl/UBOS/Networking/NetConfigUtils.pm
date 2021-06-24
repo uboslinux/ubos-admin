@@ -880,7 +880,7 @@ END
                 next; # leave it alone, e.g. for Docker that likes to manage the network itself
             }
 
-            UBOS::Utils::myexec( "ip addr flush $nic" );
+            UBOS::Utils::myexec( "ip address flush dev $nic scope global" ); # don't flush IPv6 link local
 
             if( exists( $config->{$nic}->{state} ) && $config->{$nic}->{state} eq 'off' ) {
                 # keep link up for state eq 'switch'
