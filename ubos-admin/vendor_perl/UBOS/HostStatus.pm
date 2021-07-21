@@ -339,7 +339,7 @@ sub blockDevicesJson {
                 my $fstype     = $blockDevice->{fstype};
                 my $mountpoint = $blockDevice->{mountpoint};
 
-                if( 'docker' eq $virt ) {
+                if( defined( $virt ) && 'docker' eq $virt ) {
                     if( defined( $mountpoint ) && '/etc/hosts' eq $mountpoint ) {
                         next; # Special case for Docker: it mounts /etc/hosts and we don't want that as a block device
                     }
