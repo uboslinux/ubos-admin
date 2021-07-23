@@ -39,7 +39,8 @@ sub run {
     my $logConfigFile = undef;
     my $debug         = undef;
     my $file          = undef;
-    my $add           = 0;
+    my $addKey        = 0;
+    my $noKey         = 0;
     my $force         = 0;
 
     $SIG{__WARN__} = sub {}; # Suppress built-in error message when private key is submitted, as it will be interpreted as an option
@@ -50,7 +51,8 @@ sub run {
             'logConfig=s' => \$logConfigFile,
             'debug'       => \$debug,
             'file=s'      => \$file,
-            'add-key'     => \$add,
+            'add-key'     => \$addKey,
+            'no-key'      => \$noKey,
             'force'       => \$force );
 
     $SIG{__WARN__} = undef;
@@ -60,7 +62,8 @@ sub run {
 
     if(    !$parseOk
         || @args
-        || ( $add && $force )
+        || ( $addKey && $force )
+        || ( $noKey && $addKey )
         || ( $verbose && $logConfigFile ))
     {
         fatal( 'Invalid invocation:', $cmd, '(add --help for help)' );
@@ -73,6 +76,10 @@ sub run {
         } else {
             fatal( 'File cannot be read or does not exist:', $file );
         }
+
+    } elsif( $noKey ) {
+        $keys = undef;
+
     } else {
         print( "Enter ssh key(s), followed by ^D.\n" );
         while( <STDIN> ) {
@@ -80,12 +87,18 @@ sub run {
         }
     }
 
-    my $parsedKeysP = UBOS::StaffManager::parseAuthorizedKeys( $keys );
-    unless( $parsedKeysP ) {
-        fatal( $@ );
+    my $parsedKeysP;
+    if( $noKey ) {
+        $parsedKeysP = undef;
+
+    } else {
+        $parsedKeysP = UBOS::StaffManager::parseAuthorizedKeys( $keys );
+        unless( $parsedKeysP ) {
+            fatal( $@ );
+        }
     }
 
-    UBOS::StaffManager::setupUpdateShepherd( $parsedKeysP, $add, $force );
+    UBOS::StaffManager::setupUpdateShepherd( $parsedKeysP, $addKey, $force );
 
     return 1;
 }
@@ -99,38 +112,44 @@ sub synopsisHelp {
     Configure the shepherd account.
 SSS
         'detail' => <<DDD,
-    This command creates the shepherd account if it does not exist yet.
-    It may also add or replace public ssh keys on the shepherd
-    account so key-based ssh login is possible over the network.
+    Creates and sets up the shepherd account to make ssh login possible
+    over the network.
 DDD
         'cmds' => {
             <<SSS => <<HHH,
     [--force]
 SSS
-    Create the shepherd account if it does not exist yet. Read the public ssh
-    key(s) for the authorized_keys file from stdin.
-    --force will overwrite the existing keys if the account exists already.
+    Create the shepherd account. Read the public ssh key(s) for the
+    authorized_keys file from stdin. If the account exists already,
+    --force will overwrite the existing keys.
 HHH
             <<SSS => <<HHH,
     --add-key
 SSS
-    Create the shepherd account if it does not exist yet. Read additional
-    public ssh key(s) for the authorized_keys file from stdin, which will be
-    appended.
+    Add additional public ssh key(s) for the authorized_keys file by reading
+    from stdin. They will be appended to the existing authorized_keys.
+    If the shepherd account does not exist yet, create it.
 HHH
             <<SSS => <<HHH,
     [--force] --file <keyfile>
 SSS
-    Create the shepherd account if it does not exist yet. Read the public ssh
-    key(s) for the authorized_keys file from the provided file.
-    --force will overwrite the existing keys if the account exists already.
+    Create the shepherd account. Read the public ssh key(s) for the
+    authorized_keys file from <keyfile>. If the account exists already.
+    --force will overwrite the existing keys.
 HHH
-            <<SSS => <<HHH
+            <<SSS => <<HHH,
     --add-key --file <keyfile>
 SSS
-    Create the shepherd account if it does not exist yet. Read additional
-    public ssh key(s) for the authorized_keys file from the provided file, which
-    will be appended.
+    Add additional public ssh key(s) for the authorized_keys file by reading
+    from <keyfile>. They will be appended to the existing authorized_keys.
+    If the shepherd account does not exist yet, create it.
+HHH
+            <<SSS => <<HHH
+    [--force] --no-key
+SSS
+    Create the shepherd account, but do not ask for or add any public
+    keys. If the account exists already, --force will remove the existing
+    keys.
 HHH
         },
         'args' => {

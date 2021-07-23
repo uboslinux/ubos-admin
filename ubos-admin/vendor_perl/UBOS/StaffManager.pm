@@ -325,6 +325,9 @@ sub setupUpdateShepherd {
                 if( $force ) {
                     info( 'Deleting authorized keys on shepherd account.' );
                     $newAuthorizedKeys = '';;
+                } elsif( $authorizedKeys ) {
+                    error( 'There is already a key on this account. Use --no-key --force to remove.' );
+                    return 0;
                 }
             }
 
