@@ -81,7 +81,9 @@ sub run {
         $keys = undef;
 
     } else {
-        print( "Enter ssh key(s), followed by ^D.\n" );
+        if( -t STDIN ) {
+            print( "Enter ssh key(s), followed by ^D.\n" );
+        }
         while( <STDIN> ) {
             $keys .= $_ . "\n";
         }
