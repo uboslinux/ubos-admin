@@ -530,12 +530,14 @@ sub setState {
 # Update all the code currently installed on this host.
 # $syncFirst: if true, perform a pacman -Sy; otherwise only a pacman -Su
 # $showPackages: if true, show the package files that were installed
+# $noKeyRefresh: if true, skip key refresh regardless of heuristic
 # return: if -1, reboot
 sub updateCode {
     my $syncFirst    = shift;
     my $showPackages = shift;
+    my $noKeyRefresh = shift;
 
-    trace( 'Host::updateCode', $syncFirst, $showPackages );
+    trace( 'Host::updateCode', $syncFirst, $showPackages, $noKeyRefresh );
 
     my $ret     = 0;
     my $success = 1;
@@ -551,7 +553,8 @@ sub updateCode {
         myexec( $cmd );
     }
 
-    if(     ( ! -e $KEY_REFRESH_FILE || UBOS::Utils::ageOfFileInSeconds( $KEY_REFRESH_FILE ) > 30 * 24 * 60 * 60 )
+    if(     !$noKeyRefresh
+        &&  ( ! -e $KEY_REFRESH_FILE || UBOS::Utils::ageOfFileInSeconds( $KEY_REFRESH_FILE ) > 30 * 24 * 60 * 60 )
         &&  ( myexec( 'pacman-key --list-keys | grep expired', undef, \$out, \$out ) == 0 ))
     {
         # at least one key is expired, and at least a month has passed
