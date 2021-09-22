@@ -130,6 +130,14 @@ sub run {
                     @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } @$json;
                 }
             }
+            foreach my $siteId ( @siteIds ) {
+                my $site = UBOS::Host::findSiteById( $siteId );
+                if( $site ) {
+                    $oldSites->{$site->siteId} = $site;
+                } else {
+                    fatal( "$@ Not undeploying any site." );
+                }
+            }
         }
     }
 
