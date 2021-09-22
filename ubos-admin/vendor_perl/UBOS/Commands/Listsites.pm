@@ -50,7 +50,7 @@ sub run {
             'logConfig=s'                    => \$logConfigFile,
             'debug'                          => \$debug,
             'json'                           => \$json,
-            'detail'                         => \$detail,
+            'details'                        => \$detail,
             'brief'                          => \$brief,
             'ids-only|idsonly'               => \$idsOnly,
             'hostnames-only|hostnamesonly'   => \$hostnamesOnly,

@@ -76,7 +76,7 @@ sub run {
             'json'           => \$showJson,
             'all'            => \$showAll,
             'arch'           => \$showArch,
-            'detail'         => \$showDetail,
+            'details'        => \$showDetail,
             'deviceclass'    => \$showDeviceclass,
             'channel'        => \$showChannel,
             'cpu'            => \$showCpu,
