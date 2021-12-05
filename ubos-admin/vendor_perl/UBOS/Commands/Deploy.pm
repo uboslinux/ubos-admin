@@ -332,7 +332,7 @@ sub run {
 
                 debugAndSuspend( 'Restoring from UpdateBackup for site', $site->siteId() );
                 $ret &= $updateBackup->restoreSite( $site );
-                $ret &= $site->runInstallersOrUpgraders( $oldSite );
+                $ret &= $site->runInstallersOrUpgraders( $oldSite, 0 );
 
                 if( $ret ) {
                     trace( 'Deleting update backup for site', $site->siteId );
@@ -345,7 +345,7 @@ sub run {
             } else {
                 debugAndSuspend( 'Deploying site', $site->siteId() );
                 $ret &= $site->deploy( $deployUndeployTriggers );
-                $ret &= $site->runInstallersOrUpgraders( undef );
+                $ret &= $site->runInstallersOrUpgraders( undef, 0 );
             }
         }
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
@@ -373,6 +373,13 @@ sub run {
     }
     debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
     UBOS::Host::executeTriggers( $resumeTriggers );
+
+    if( $backupSucceeded ) {
+        foreach my $site ( @newSites ) {
+            my $oldSite = $oldSites->{$site->siteId};
+            $ret &= $site->runInstallersOrUpgraders( $oldSite, 1 );
+        }
+    }
 
     unless( $backupOperation->doUpload()) {
         error( $@ );

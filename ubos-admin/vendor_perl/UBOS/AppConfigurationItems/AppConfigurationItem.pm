@@ -41,6 +41,7 @@ sub new {
 ##
 # Run a post-deploy Perl script. May be overridden.
 # $methodName: the type of post-install
+# $afterResume: 0 or 1. If 0, it's the run before the Site resumes; if 1, after
 # $defaultFromDir: the package directory
 # $defaultToDir: the directory in which the installable was installed
 # $vars: the Variables object that knows about symbolic names and variables
@@ -48,6 +49,7 @@ sub new {
 sub runPostDeployScript {
     my $self           = shift;
     my $methodName     = shift;
+    my $afterResume    = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $vars           = shift;

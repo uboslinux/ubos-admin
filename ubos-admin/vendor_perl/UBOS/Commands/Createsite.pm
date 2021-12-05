@@ -772,7 +772,7 @@ sub run {
         my $deployUndeployTriggers = {};
         debugAndSuspend( 'Deploy site', $newSite->siteId() );
         $ret &= $newSite->deploy( $deployUndeployTriggers );
-        $ret &= $newSite->runInstallersOrUpgraders( undef );
+        $ret &= $newSite->runInstallersOrUpgraders( undef, 0 );
 
         UBOS::Networking::NetConfigUtils::updateOpenPorts();
 
@@ -786,6 +786,8 @@ sub run {
         $ret &= $newSite->resume( $resumeTriggers ); # remove "upgrade in progress page"
         debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
         UBOS::Host::executeTriggers( $resumeTriggers );
+
+        $ret &= $newSite->runInstallersOrUpgraders( undef, 1 );
 
         if( $out ) {
             # Need to be at the end, so tor info has been inserted

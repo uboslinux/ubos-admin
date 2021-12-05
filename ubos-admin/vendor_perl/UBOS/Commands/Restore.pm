@@ -460,7 +460,7 @@ sub restoreAppConfigs {
                 $migratePackages );
 
         debugAndSuspend( 'Running upgraders at appconfig', $newAppConfigId );
-        $ret &= $newAppConfigs{$newAppConfigId}->runInstallersOrUpgraders( $newAppConfigs{$newAppConfigId} );
+        $ret &= $newAppConfigs{$newAppConfigId}->runInstallersOrUpgraders( $newAppConfigs{$newAppConfigId}, 0 );
     }
 
     info( 'Resuming site(s)' );
@@ -469,6 +469,13 @@ sub restoreAppConfigs {
     foreach my $toSite ( @toSites ) {
         debugAndSuspend( 'Resuming site', $toSite->siteId );
         $ret &= $toSite->resume( $resumeTriggers );
+    }
+
+    for( my $i=0 ; $i<@appConfigIdsToRestore ; ++$i ) {
+        my $newAppConfigId = $appConfigIdsToRestore[$i];
+
+        debugAndSuspend( 'Running upgraders at appconfig', $newAppConfigId );
+        $ret &= $newAppConfigs{$newAppConfigId}->runInstallersOrUpgraders( $newAppConfigs{$newAppConfigId}, 1 );
     }
 
     UBOS::Networking::NetConfigUtils::updateOpenPorts();

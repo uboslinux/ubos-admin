@@ -482,12 +482,14 @@ sub resume {
 # Run the upgrader(s), or installer(s) as appropriate for the app and
 # accessories at this AppConfiguration
 # $oldAppConfig: if the AppConfiguration existed before, the old AppConfiguration
+# $afterResume: 0 or 1. If 0, it's the run before the Site resumes; if 1, after
 # return: success or fail
 sub runInstallersOrUpgraders {
     my $self         = shift;
     my $oldAppConfig = shift;
+    my $afterResume  = shift;
 
-    trace( 'AppConfiguration', $self->appConfigId(), '->runInstallersOrUpgraders', $oldAppConfig ? $oldAppConfig->appConfigId() : undef );
+    trace( 'AppConfiguration', $self->appConfigId(), '->runInstallersOrUpgraders', $oldAppConfig ? $oldAppConfig->appConfigId() : undef, $afterResume );
 
     unless( $self->{site} ) {
         fatal( 'Cannot _runPostDeploy AppConfiguration without site' );
@@ -537,7 +539,7 @@ sub runInstallersOrUpgraders {
                                 'with role',              $role,
                                 'of installable',         $installable,
                                 'at appconfig',           $appConfigId );
-                        $ret &= $item->runPostDeployScript( $methodName, $codeDir, $dir, $vars );
+                        $ret &= $item->runPostDeployScript( $methodName, $afterResume, $codeDir, $dir, $vars );
                     }
                     ++$itemCount;
                 }

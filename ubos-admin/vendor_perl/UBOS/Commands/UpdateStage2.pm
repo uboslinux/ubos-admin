@@ -119,7 +119,7 @@ sub finishUpdate {
             $ret &= $backup->restoreSite( $site );
 
             debugAndSuspend( 'Run upgraders at site', $site->siteId );
-            $ret &= $site->runInstallersOrUpgraders( $site );
+            $ret &= $site->runInstallersOrUpgraders( $site, 0 );
             # Site configuration remains the same
         }
         $deployTriggers->{'httpd-restart'} = 1;
@@ -138,6 +138,10 @@ sub finishUpdate {
 
         debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
         UBOS::Host::executeTriggers( $resumeTriggers );
+
+        foreach my $site ( values %$oldSites ) {
+            $ret &= $site->runInstallersOrUpgraders( $site, 1 );
+        }
     }
 
     if( $ret ) {
