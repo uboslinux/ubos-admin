@@ -237,7 +237,7 @@ sub read {
     # Note that this creates AppConfiguration instances that are part of
     # a Site, and additional ones that aren't, even if they are part of
     # the same Site.
-    foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
+    foreach my $siteJsonFile ( $self->{zip}->membersMatching( "^$zipFileSiteEntry/s[0-9a-f]+\.json" )) {
         my $siteJsonContent = $self->{zip}->contents( $siteJsonFile );
         if( $siteJsonContent ) {
             my $siteJson = readJsonFromString( $siteJsonContent );
