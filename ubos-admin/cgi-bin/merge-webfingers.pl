@@ -29,12 +29,14 @@ my $jsonResponse    = undef;
 
 if( -e $siteProxiesFile ) {
     my $siteProxiesContent = UBOS::Utils::slurpFile( $siteProxiesFile );
-    my @urls = grep { /^http/ } split( "\n", $siteProxiesContent );
+    my @lines = grep { /^http/ } split( "\n", $siteProxiesContent );
 
     my $lwp = LWP::UserAgent->new;
 
-    foreach my $url ( @urls ) {
-        my $fullUrl = $url;
+    foreach my $line ( @lines ) {
+        my @words = split( " +", $line );
+
+        my $fullUrl = shift @words;
         if( $args ) {
             $fullUrl .= index( $fullUrl, '?' ) >= 0 ? "&$args" : "?$args";
         }
@@ -42,6 +44,12 @@ if( -e $siteProxiesFile ) {
         # Need to set JSON content-type
         my $req = HTTP::Request->new( 'GET', $fullUrl );
         $req->header( 'Content-Type' => 'application/json' );
+        foreach my $word ( @words ) {
+            my( $name, $value ) = split( '=', $word );
+            if( $name && $value ) {
+                $req->header( $name => $value );
+            }
+        }
 
         my $response = $lwp->request( $req );
         unless( $response->is_success ) {
