@@ -456,8 +456,6 @@ sub wellknowns {
     # values if we don't have one already for the same key, but we do
     # all-or-nothing on a per-AppConfig basis.
 
-    my @wellknownJsons = ();
-
     if( exists( $self->{json}->{wellknown} )) {
         $self->_addWellKnownIfNotPresent(
                 $ret,
@@ -467,18 +465,18 @@ sub wellknowns {
     }
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        my $app              = $appConfig->app();
-        my $appWellknownJson = $app->wellknownJson();
+        foreach my $inst ( $appConfig->app(), $appConfig->accessories() ) {
+            my $instWellknownJson = $inst->wellknownJson();
 
-        if( $appWellknownJson ) {
-            $self->_addWellKnownIfNotPresent(
-                    $ret,
-                    $appWellknownJson,
-                    $appConfig->vars(),
-                    'App ' . $app->packageName() . ' at ' . $self->hostname() . $appConfig->context() );
+            if( $instWellknownJson ) {
+                $self->_addWellKnownIfNotPresent(
+                        $ret,
+                        $instWellknownJson,
+                        $appConfig->vars(),
+                        'Installable ' . $inst->packageName() . ' at ' . $self->hostname() . $appConfig->context() );
+            }
         }
     }
-
     return $ret;
 }
 
@@ -545,14 +543,15 @@ sub _determineWebfingerProxyUrls {
     my @ret  = ();
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        my $app           = $appConfig->app();
-        my $wellknownJson = $app->wellknownJson();
+        foreach my $inst ( $appConfig->app(), $appConfig->accessories() ) {
+            my $instWellknownJson = $inst->wellknownJson();
 
-        if( defined( $wellknownJson ) && exists( $wellknownJson->{webfinger} )) {
-            my $vars = $app->obtainInstallableAtAppconfigVars( $appConfig, 1 );
+            if( defined( $instWellknownJson ) && exists( $instWellknownJson->{webfinger} )) {
+                my $vars = $inst->obtainInstallableAtAppconfigVars( $appConfig, 1 );
 
-            my $url = $vars->replaceVariables( $wellknownJson->{webfinger}->{proxy} );
-            push @ret, $url;
+                my $url = $vars->replaceVariables( $instWellknownJson->{webfinger}->{proxy} );
+                push @ret, $url;
+            }
         }
     }
 

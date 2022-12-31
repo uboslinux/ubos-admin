@@ -374,6 +374,21 @@ sub allowsWildcardHostname {
 }
 
 ##
+# Return the well-known JSON defined by this Installable, if any
+# return: JSON hash, or undef
+sub wellknownJson {
+    my $self = shift;
+
+    if( exists( $self->{json}->{roles}->{apache2} )) {
+        my $apache2Json = $self->{json}->{roles}->{apache2};
+        if( exists( $apache2Json->{wellknown} )) {
+            return $apache2Json->{wellknown};
+        }
+    }
+    return undef;
+}
+
+##
 # Helper method to find a localized attribute in the info section
 # $att: name of the attribute in the info section
 # $locale: the locale
