@@ -276,8 +276,14 @@ sub tagline {
 }
 
 ##
-# Obtain this Installable's JSON
-# return: JSON
+# Determine whether this installable is an app
+# return: true or false
+sub isApp {
+    my $self = shift;
+
+    return 0;
+}
+
 sub installableJson {
     my $self = shift;
 

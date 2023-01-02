@@ -319,6 +319,7 @@ sub deployOrCheck {
 
     my @rolesOnHost  = UBOS::Host::rolesOnHostInSequence();
     my @installables = $self->installables();
+    my $appVars      = undef; # Keep those around so we can selectively pass to accessories (e.g. ports)
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
@@ -345,6 +346,16 @@ sub deployOrCheck {
         }
 
         my $vars = $installable->obtainInstallableAtAppconfigVars( $self, $doIt );
+        if( $installable->isApp()) {
+            $appVars = $vars;
+        } else {
+            # copy ports over
+            foreach my $appKey ( $appVars->keys() ) {
+                if( $appKey =~ m!^appconfig\.(tcp|udp)port\.! ) {
+                    $vars->put( $appKey, $appVars->get( $appKey ));
+                }
+            }
+        }
         if( $doIt ) {
             foreach my $key ( $vars->keys() ) {
                 if( $key =~ m!^installable\.customizationpoints\.([^\.]+)\.filename$! ) {

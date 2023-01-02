@@ -65,6 +65,15 @@ sub _createHierarchicalMapAtAppconfigVars {
 }
 
 ##
+# Determine whether this installable is an app
+# return: true or false
+sub isApp {
+    my $self = shift;
+
+    return 0;
+}
+
+##
 # Obtain the app or apps that this accessory can be used with
 sub getApps {
     my $self = shift;

@@ -42,6 +42,15 @@ sub new {
 }
 
 ##
+# Determine whether this installable is an app
+# return: true or false
+sub isApp {
+    my $self = shift;
+
+    return 1;
+}
+
+##
 # If this app can only be run at a particular context path, return that context path
 # return: context path
 sub fixedContext {
