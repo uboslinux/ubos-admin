@@ -1649,27 +1649,29 @@ sub _checkJson {
                     return 0;
                 }
 
-                my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
-                my $dir    = File::Temp->newdir( DIR => $tmpDir );
-                chmod 0700, $dir;
+                if( !exists( $json->{tls}->{key} ) && ! exists( $json->{tls}->{crt} )) {
+                    my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
+                    my $dir    = File::Temp->newdir( DIR => $tmpDir );
+                    chmod 0700, $dir;
 
-                my $err;
-                if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
-                    fatal( 'openssl genrsa failed', $err );
-                }
-                debugAndSuspend( 'Keys generated, CSR is next' );
-                if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch -subj '/CN=" . $json->{hostname} . "'", undef, undef, \$err )) {
-                    fatal( 'openssl req failed', $err );
-                }
-                debugAndSuspend( 'CRT generated, CRT is next' );
-                if( UBOS::Utils::myexec( "openssl x509 -req -days 3650 -in '$dir/csr' -signkey '$dir/key' -out '$dir/crt'", undef, undef, \$err )) {
-                    fatal( 'openssl x509 failed', $err );
-                }
-                $json->{tls}->{key} = UBOS::Utils::slurpFile( "$dir/key" );
-                $json->{tls}->{crt} = UBOS::Utils::slurpFile( "$dir/crt" );
+                    my $err;
+                    if( UBOS::Utils::myexec( "openssl genrsa -out '$dir/key' 4096 ", undef, undef, \$err )) {
+                        fatal( 'openssl genrsa failed', $err );
+                    }
+                    debugAndSuspend( 'Keys generated, CSR is next' );
+                    if( UBOS::Utils::myexec( "openssl req -new -key '$dir/key' -out '$dir/csr' -batch -subj '/CN=" . $json->{hostname} . "'", undef, undef, \$err )) {
+                        fatal( 'openssl req failed', $err );
+                    }
+                    debugAndSuspend( 'CRT generated, CRT is next' );
+                    if( UBOS::Utils::myexec( "openssl x509 -req -days 3650 -in '$dir/csr' -signkey '$dir/key' -out '$dir/crt'", undef, undef, \$err )) {
+                        fatal( 'openssl x509 failed', $err );
+                    }
+                    $json->{tls}->{key} = UBOS::Utils::slurpFile( "$dir/key" );
+                    $json->{tls}->{crt} = UBOS::Utils::slurpFile( "$dir/crt" );
 
-                debugAndSuspend( 'CRT generated, cleaning up' );
-                UBOS::Utils::deleteFile( "$dir/key", "$dir/csr", "$dir/crt" );
+                    debugAndSuspend( 'CRT generated, cleaning up' );
+                    UBOS::Utils::deleteFile( "$dir/key", "$dir/csr", "$dir/crt" );
+                }
             }
 
             if( !$json->{tls}->{key} || ref( $json->{tls}->{key} )) {

@@ -312,7 +312,7 @@ sub run {
                     redo;
                 }
                 $tlsKey = UBOS::Utils::slurpFile( $tlsKey );
-                unless( $tlsKey =~ m!^-----BEGIN RSA PRIVATE KEY-----.*-----END RSA PRIVATE KEY-----\s*$!s ) {
+                unless( $tlsKey =~ m!^-----BEGIN .*PRIVATE KEY-----.*-----END .*PRIVATE KEY-----\s*$!s ) {
                     error( "This file does not seem to contain a private key" );
                     redo;
                 }
