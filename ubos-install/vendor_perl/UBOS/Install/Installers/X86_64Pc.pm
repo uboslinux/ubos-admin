@@ -55,7 +55,7 @@ sub checkCompleteParameters {
                 grub mkinitcpio
                 rng-tools linux-firmware
                 smartmontools
-                wpa_supplicant crda
+                wpa_supplicant wireless-regdb
                 ubos-deviceclass-pc
         ) ];
     }

@@ -52,7 +52,7 @@ sub checkCompleteParameters {
                 ubos-networking-client ubos-networking-standalone
                 archlinux-keyring archlinuxarm-keyring
                 smartmontools
-                wpa_supplicant crda
+                wpa_supplicant wireless-regdb
                 ubos-deviceclass-odroidxu3
         ) ];
         unless( $self->{noBoot} ) {

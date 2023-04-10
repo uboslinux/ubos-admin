@@ -51,7 +51,7 @@ sub checkCompleteParameters {
                 archlinux-keyring archlinuxarm-keyring
                 rng-tools raspberrypi-firmware raspberrypi-bootloader raspberrypi-bootloader-x
                 smartmontools
-                wpa_supplicant crda
+                wpa_supplicant wireless-regdb
         ) ];
     }
 

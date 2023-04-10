@@ -57,7 +57,7 @@ sub checkCompleteParameters {
                 archlinux-keyring archlinuxarm-keyring
                 uboot-tools espressobin-uboot-config espressobin-ubos-state
                 smartmontools
-                wpa_supplicant crda
+                wpa_supplicant wireless-regdb
                 ubos-deviceclass-espressobin
         ) ];
     }

@@ -32,7 +32,7 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{kernelPackage} ) {
-        $self->{kernelPackage} = 'linux-raspberrypi';
+        $self->{kernelPackage} = 'linux-rpi';
     }
 
     my $errors = $self->SUPER::checkCompleteParameters();
