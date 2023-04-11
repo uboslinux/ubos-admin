@@ -31,7 +31,7 @@ sub new {
     $self->{mkfsFlags}   = '-F32';
     $self->{partedFs}    = 'fat32';
     $self->{partedFlags} = [ qw( boot ) ];
-    $self->{size}        = 128 * 1024 * 1024; # 128 M
+    $self->{size}        = 512 * 1024 * 1024; # 512 M
 
     $self->SUPER::new( %pars );
 
