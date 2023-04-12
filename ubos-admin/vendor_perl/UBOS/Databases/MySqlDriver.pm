@@ -468,7 +468,11 @@ sub runBulkSql {
         ( 'MySqlDriver::runBulkSql', $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, 'SQL (' . length( $sql ) . ') bytes', $delimiter ) } );
 
     # from the command-line; that way we don't have to deal with messy statement splitting
-    my $cmd = "mysql '--host=$dbHost' '--port=$dbPort'";
+    my $cmd = 'mysql';
+    if( $dbHost ne 'localhost' ) {
+        # will connect with UNIX socket otherwise
+        $cmd .= " '--host=$dbHost' '--port=$dbPort'";
+    }
     $cmd .= " '--user=$dbUserLid' '--password=$dbUserLidCredential'";
     if( $delimiter ) {
         $cmd .= " '--delimiter=$delimiter'";
