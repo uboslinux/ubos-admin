@@ -104,48 +104,50 @@ sub activate {
         $error = 1;
     }
 
-    # have we identified at least one gateway device?
-    my $gateway = undef;
-    foreach my $nic ( keys %$allNics ) {
-        if( exists( $conf->{$nic} )) {
-            if( exists( $conf->{$nic}->{masquerade} ) && $conf->{$nic}->{masquerade} ) {
-                $gateway = $nic;
-                last;
-            }
-        }
-    }
-    unless( $gateway ) {
-        my @gateways;
-        foreach my $gatewayNicPattern ( @$gatewayNicPatterns ) {
-            @gateways = grep { m!$gatewayNicPattern! } sort UBOS::Networking::NetConfigUtils::compareNics keys %$allNics;
-            if( @gateways ) {
-                last;
-            }
-        }
-        unless( @gateways ) {
-            error( 'Unable to find a suitable gateway interface' );
-            return 0;
-        }
-
-        $gateway = shift @gateways;
-        $conf->{$gateway} = $upstreamConfig; # overwrite what might have been there before
-        $updated = 1;
-    }
-    $conf->{$gateway}->{appnic} = JSON::true;
-
-    foreach my $nic ( sort keys %$allNics ) {
-        unless( exists( $conf->{$nic} )) {
-            my( $ip, $prefixsize ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
-            if( $ip ) {
-                foreach my $key ( keys %$lanConfig ) {
-                    $conf->{$nic}->{$key} = $lanConfig->{$key};
+    unless( $initOnly ) {
+        # have we identified at least one gateway device?
+        my $gateway = undef;
+        foreach my $nic ( keys %$allNics ) {
+            if( exists( $conf->{$nic} )) {
+                if( exists( $conf->{$nic}->{masquerade} ) && $conf->{$nic}->{masquerade} ) {
+                    $gateway = $nic;
+                    last;
                 }
-                $conf->{$nic}->{address}    = $ip;
-                $conf->{$nic}->{prefixsize} = $prefixsize;
+            }
+        }
+        unless( $gateway ) {
+            my @gateways;
+            foreach my $gatewayNicPattern ( @$gatewayNicPatterns ) {
+                @gateways = grep { m!$gatewayNicPattern! } sort UBOS::Networking::NetConfigUtils::compareNics keys %$allNics;
+                if( @gateways ) {
+                    last;
+                }
+            }
+            unless( @gateways ) {
+                error( 'Unable to find a suitable gateway interface' );
+                return 0;
+            }
 
-                $updated = 1;
-            } else {
-                warning( 'Cannot find unallocated network for interface', $nic );
+            $gateway = shift @gateways;
+            $conf->{$gateway} = $upstreamConfig; # overwrite what might have been there before
+            $updated = 1;
+        }
+        $conf->{$gateway}->{appnic} = JSON::true;
+
+        foreach my $nic ( sort keys %$allNics ) {
+            unless( exists( $conf->{$nic} )) {
+                my( $ip, $prefixsize ) = UBOS::Networking::NetConfigUtils::findUnusedNetwork( $conf );
+                if( $ip ) {
+                    foreach my $key ( keys %$lanConfig ) {
+                        $conf->{$nic}->{$key} = $lanConfig->{$key};
+                    }
+                    $conf->{$nic}->{address}    = $ip;
+                    $conf->{$nic}->{prefixsize} = $prefixsize;
+
+                    $updated = 1;
+                } else {
+                    warning( 'Cannot find unallocated network for interface', $nic );
+                }
             }
         }
     }
