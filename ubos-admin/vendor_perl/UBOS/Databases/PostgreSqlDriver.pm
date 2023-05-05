@@ -214,9 +214,7 @@ sub defaultPort {
 # $dbUserLid: identifier of the database user that is allowed to access it
 # $dbUserLidCredential: credential for the database user
 # $dbUserLidCredType: credential type
-# $privileges: string containing required database privileges, like "readWrite, dbAdmin"
-# $charset: default database character set name
-# $collate: default database collation name
+# $jsonFragment: pointer to a JSON object that has parameters
 # $description: description of the database
 # return: success or fail
 sub provisionLocalDatabase {
@@ -225,10 +223,13 @@ sub provisionLocalDatabase {
     my $dbUserLid           = shift;
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
-    my $privileges          = shift;
-    my $charset             = shift || 'UTF8';
-    my $collate             = shift;
+    my $jsonFragment        = shift;
     my $description         = shift;
+
+    my $privileges        = $jsonFragment->{privileges};
+    my $defaultPrivileges = $jsonFragment->{defaultprivileges};
+    my $charset           = $jsonFragment->{charset} || 'UTF8';
+    my $collate           = $jsonFragment->{collate};
 
     trace( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
@@ -262,18 +263,29 @@ sub provisionLocalDatabase {
         $ret = 0;
     }
 
-    # The create table etc statements have not been executed at this point.
-    # So we need to set default privileges so they apply to tables created
-    # in the future.
-    # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql
-    unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" )) {
-        error( 'Postgres alter default privileges (1):', $@ );
-        $ret = 0;
-    }
     unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT USAGE ON SEQUENCES TO \"$dbUserLid\"" )) {
         error( 'Postgres alter default privileges (2):', $@ );
         $ret = 0;
     }
+
+    # The create table etc statements have not been executed at this point.
+    # So we need to set default privileges so they apply to tables created
+    # in the future.
+    # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql
+    if( $defaultPrivileges ) {
+        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $defaultPrivileges ON TABLES TO \"$dbUserLid\"" )) {
+            error( 'Postgres alter default privileges (1):', $@ );
+            $ret = 0;
+        }
+    }
+
+    if( $privileges ) {
+        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "GRANT $privileges ON ALL TABLES IN SCHEMA \"public\" TO \"$dbUserLid\"" )) {
+            error( 'Postgres alter default privileges (1):', $@ );
+            $ret = 0;
+        }
+    }
+
     return $ret;
 }
 

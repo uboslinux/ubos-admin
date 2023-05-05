@@ -43,8 +43,8 @@ post_upgrade() {
     if [ ! -d /usr/lib/jvm ]; then
         mkdir -m755 /usr/lib/jvm
     fi
-    ln -sf java-11-openjdk /usr/lib/jvm/default
-    ln -sf java-11-openjdk /usr/lib/jvm/default-runtime
+    ln -sf java-19-openjdk /usr/lib/jvm/default
+    ln -sf java-19-openjdk /usr/lib/jvm/default-runtime
 
     systemctl daemon-reload
 

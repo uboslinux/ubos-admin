@@ -66,10 +66,6 @@ sub deployOrCheck {
                     $self->{installable}->packageName,
                     $name );
     unless( $dbName ) {
-        my $privileges = $self->{json}->{privileges};
-        my $charset    = $self->{json}->{charset};
-        my $collate    = $self->{json}->{collate};
-
         if( $doIt ) {
             ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
                     = UBOS::ResourceManager::provisionLocalDatabase(
@@ -77,9 +73,7 @@ sub deployOrCheck {
                             $self->{appConfig}->appConfigId,
                             $self->{installable}->packageName,
                             $name,
-                            $privileges,
-                            $charset,
-                            $collate );
+                            $self->{json} );
         } else {
             # put it some placeholder values, so the variables resolve
             ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )

@@ -280,9 +280,7 @@ sub defaultPort {
 # $dbUserLid: identifier of the database user that is allowed to access it
 # $dbUserLidCredential: credential for the database user
 # $dbUserLidCredType: credential type
-# $privileges: string containing required database privileges, like "create, insert"
-# $charset: default database character set name
-# $collate: default database collation name
+# $jsonFragment: pointer to a JSON object that has parameters
 # $description: description of the database
 # return: success or fail
 sub provisionLocalDatabase {
@@ -291,10 +289,12 @@ sub provisionLocalDatabase {
     my $dbUserLid           = shift;
     my $dbUserLidCredential = shift;
     my $dbUserLidCredType   = shift;
-    my $privileges          = shift;
-    my $charset             = shift || 'utf8mb4';
-    my $collate             = shift || 'utf8mb4_general_ci';
+    my $jsonFragment        = shift;
     my $description         = shift;
+
+    my $privileges = $jsonFragment->{privileges};
+    my $charset    = $jsonFragment->{charset} || 'utf8mb4';
+    my $collate    = $jsonFragment->{collate} || 'utf8mb4_general_ci';
 
     trace( 'MySqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 

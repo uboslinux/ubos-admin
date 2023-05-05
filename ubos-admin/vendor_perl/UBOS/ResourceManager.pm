@@ -67,20 +67,16 @@ sub findProvisionedDatabaseFor {
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
-# $privileges: string containing required database privileges, like "create, insert"
-# $charset: default database character set name
-# $collate: default database collation name
+# $jsonFragment: pointer to a JSON object that has parameters
 # return: hash of dbName, dbHost, dbUser, dbPassword, or undef
 sub provisionLocalDatabase {
     my $dbType        = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
-    my $privileges    = shift;
-    my $charset       = shift;
-    my $collate       = shift;
+    my $jsonFragment  = shift;
 
-    trace( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges, $charset, $collate );
+    trace( 'ResourceManager::provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $jsonFragment );
 
     my $dbDriver = UBOS::Host::obtainDbDriver( $dbType, 'localhost' );
     unless( $dbDriver ) {
@@ -126,9 +122,7 @@ sub provisionLocalDatabase {
             $json->{dbUserLid},
             $json->{dbUserLidCredential},
             $json->{dbUserLidCredType},
-            $privileges,
-            $charset,
-            $collate,
+            $jsonFragment,
             "$appConfigId / $installableId / $itemName" );
 
     _updateResourcesCacheEntry( $key, $json );
