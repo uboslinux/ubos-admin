@@ -280,7 +280,7 @@ sub provisionLocalDatabase {
     }
 
     if( $privileges ) {
-        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "GRANT $privileges ON SCHEMA \"public\" TO \"$dbUserLid\"" )) {
+        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "GRANT $privileges ON ALL TABLES IN SCHEMA \"public\" TO \"$dbUserLid\"" )) {
             error( 'Postgres alter default privileges (1):', $@ );
             $ret = 0;
         }
