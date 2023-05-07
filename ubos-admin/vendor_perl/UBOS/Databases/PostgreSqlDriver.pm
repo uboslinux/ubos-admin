@@ -263,7 +263,7 @@ sub provisionLocalDatabase {
     }
 
     unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT USAGE ON SEQUENCES TO \"$dbUserLid\"" )) {
-        error( 'Postgres alter default privileges (2):', $@ );
+        error( 'Postgres alter default privileges (1):', $@ );
         $ret = 0;
     }
 
@@ -273,8 +273,15 @@ sub provisionLocalDatabase {
     # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql
     if( $privileges ) {
         unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" )) {
-            error( 'Postgres alter default privileges (1):', $@ );
+            error( 'Postgres alter default privileges (2):', $@ );
             $ret = 0;
+        }
+        if( lc( $privileges ) eq 'all privileges' ) {
+            # apparently "all privileges" isn't as many as we thought
+            unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "GRANT create ON SCHEMA \"public\" TO \"$dbUserLid\"" )) {
+                error( 'Postgres alter privileges (3):', $@ );
+                $ret = 0;
+            }
         }
     }
 
