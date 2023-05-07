@@ -227,11 +227,10 @@ sub provisionLocalDatabase {
     my $description         = shift;
 
     my $privileges        = $jsonFragment->{privileges};
-    my $defaultPrivileges = $jsonFragment->{defaultprivileges};
     my $charset           = $jsonFragment->{charset} || 'UTF8';
     my $collate           = $jsonFragment->{collate};
 
-    trace( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $defaultPrivileges, $charset, $collate );
+    trace( 'PostgreSqlDriver::provisionLocalDatabase', $dbName, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, $privileges, $charset, $collate );
 
     my $ret = 1;
 
@@ -272,15 +271,8 @@ sub provisionLocalDatabase {
     # So we need to set default privileges so they apply to tables created
     # in the future.
     # based on this: http://stackoverflow.com/questions/22684255/grant-privileges-on-future-tables-in-postgresql
-    if( $defaultPrivileges ) {
-        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $defaultPrivileges ON TABLES TO \"$dbUserLid\"" )) {
-            error( 'Postgres alter default privileges (1):', $@ );
-            $ret = 0;
-        }
-    }
-
     if( $privileges ) {
-        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "GRANT $privileges ON ALL TABLES IN SCHEMA \"public\" TO \"$dbUserLid\"" )) {
+        unless( executeCmdAsAdmin( "psql -v HISTFILE=/dev/null '$dbName'", "ALTER DEFAULT PRIVILEGES IN SCHEMA \"public\" GRANT $privileges ON TABLES TO \"$dbUserLid\"" )) {
             error( 'Postgres alter default privileges (1):', $@ );
             $ret = 0;
         }
