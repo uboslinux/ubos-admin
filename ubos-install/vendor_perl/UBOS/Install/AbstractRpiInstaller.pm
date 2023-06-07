@@ -49,7 +49,7 @@ sub checkCompleteParameters {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client
                 archlinux-keyring archlinuxarm-keyring
-                rng-tools raspberrypi-firmware raspberrypi-bootloader raspberrypi-bootloader-x
+                rng-tools raspberrypi-firmware raspberrypi-bootloader
                 smartmontools
                 wpa_supplicant wireless-regdb
         ) ];
