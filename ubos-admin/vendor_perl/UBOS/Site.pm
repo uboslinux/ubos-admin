@@ -1165,7 +1165,7 @@ sub obtainLetsEncryptCertificate {
 
         my $crtInfo = UBOS::X509::crtInfo( $tlsCrtFile );
 
-        if( $crtInfo && $crtInfo =~ m!^CN\s*=\s*\Q$hostname\E$! && !UBOS::LetsEncrypt::certNeedsRenewal( $crtInfo )) {
+        if( $crtInfo && $crtInfo->{subject} =~ m!^CN\s*=\s*\Q$hostname\E$! && !UBOS::LetsEncrypt::certNeedsRenewal( $crtInfo )) {
 
             UBOS::LetsEncrypt::deleteStashedCertificate( $hostname ); # ok if does not exist
 
