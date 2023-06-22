@@ -362,11 +362,11 @@ sub certNeedsRenewal {
 # $crt: the certificate
 # $adminEmail: administrator e-mail in case we need to register
 sub importCertificate {
-    my $hostname = shift;
-    my $webroot  = shift;
-    my $key      = shift;
-    my $crt      = shift;
-    my $adminEmail  = shift;
+    my $hostname   = shift;
+    my $webroot    = shift;
+    my $key        = shift;
+    my $crt        = shift;
+    my $adminEmail = shift;
 
     if( -e "$LETSENCRYPT_RENEWAL_DIR/$hostname.conf" ) {
         error( 'Letsencrypt config already exists for this hostname, cannot import:', $hostname );
