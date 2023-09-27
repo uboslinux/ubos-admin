@@ -89,8 +89,8 @@ sub run {
     if( $pacmanConfOnly ) {
         # shortcut
         debugAndSuspend( 'Regenerate pacman.conf' );
-        UBOS::Utils::regeneratePacmanConf();
-        UBOS::Utils::regenerateEtcIssue();
+        UBOS::Host::regeneratePacmanConf();
+        UBOS::Host::regenerateEtcIssue();
         return 1;
     }
 
@@ -201,8 +201,8 @@ sub run {
 
     } else {
         debugAndSuspend( 'Regenerate pacman.conf' );
-        UBOS::Utils::regeneratePacmanConf();
-        UBOS::Utils::regenerateEtcIssue();
+        UBOS::Host::regeneratePacmanConf();
+        UBOS::Host::regenerateEtcIssue();
         debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/mods-enabled' );
         UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/mods-enabled' );
 

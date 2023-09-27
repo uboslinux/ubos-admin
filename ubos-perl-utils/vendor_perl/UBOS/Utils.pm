@@ -26,7 +26,6 @@ our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
                   myexec saveFile slurpFile );
 my $jsonParser = JSON->new->relaxed->pretty->allow_nonref->utf8();
 
-my $PACMAN_CONF_SEP      = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
 my $CHANNEL_FILE         = '/etc/ubos/channel';
 my $SKU_FILE             = '/etc/ubos/product';
 my @VALID_CHANNELS       = qw( dev red yellow green );
@@ -1134,94 +1133,6 @@ sub uri_escape {
     $s =~ s!([^-A-Za-z0-9\._~])!sprintf("%%%02X",ord($1))!ge;
 
     return $s;
-}
-
-##
-# Regenerate the /etc/pacman.conf file. If a repository gets added,
-# the next pacman command must be to sync with the added repository,
-# otherwise a pacman error will occur.
-# $pacmanConfFile: the pacman config file, or default if not provided.
-# $pacmanRepoDir: directory containing the repository fragement statements.
-#    This allows ubos-install to invoke this for staged images
-# $channel: use this as the value for $channel in the repo URLs, or, if not
-#    given, use value of /etc/ubos/channel
-sub regeneratePacmanConf {
-    my $pacmanConfFile = shift || '/etc/pacman.conf';
-    my $pacmanRepoDir  = shift || '/etc/pacman.d/repositories.d';
-    my $channel        = shift;
-
-    unless( $channel ) {
-        $channel = channel();
-    }
-
-    my $pacmanConf    = slurpFile( $pacmanConfFile );
-    my $oldPacmanConf = $pacmanConf;
-
-    if( $pacmanConf =~ m!^(.*?)$PACMAN_CONF_SEP!s ) {
-        # zap the trailer
-        $pacmanConf = $1;
-    }
-
-    $pacmanConf =~ s!\s+$!!; # zap white space at end
-    $pacmanConf .= "\n\n" . $PACMAN_CONF_SEP . "\n";
-
-    my @repoFiles = glob( "$pacmanRepoDir/*" );
-    @repoFiles = sort @repoFiles;
-
-    foreach my $repoFile ( @repoFiles ) {
-        my $toAdd = UBOS::Utils::slurpFile( $repoFile );
-        $toAdd =~ s!#.*$!!gm; # remove comments -- will confuse the user
-        $toAdd =~ s!^\s+!!gm; # leading white space
-        $toAdd =~ s!\s+$!!gm; # trailing white space
-        $toAdd =~ s!\$channel!$channel!g;
-
-        $pacmanConf .= "\n" . $toAdd . "\n";
-    }
-
-    unless( $pacmanConf eq $oldPacmanConf ) {
-        UBOS::Utils::saveFile( $pacmanConfFile, $pacmanConf );
-    }
-}
-
-##
-# Generate/update /etc/issue
-# $deviceClass: the device class
-# $channel: the channel
-# $target: root directory of the file system
-# return: number of errors
-sub regenerateEtcIssue {
-    my $deviceClass = shift || deviceClass();
-    my $channel     = shift || channel();
-    my $target      = shift || '';
-
-    my $errors = 0;
-    my $issue = <<ISSUE;
-
-+--------------------------------------------------------------------------+
-|                                                                          |
-|                           Welcome to UBOS (R)                            |
-|                                                                          |
-|                                ubos.net                                  |
-|                                                                          |
-ISSUE
-    $issue .= sprintf( "|%74s|\n", "device class: $deviceClass, channel: $channel " );
-    $issue .= <<ISSUE;
-+--------------------------------------------------------------------------+
-
-ISSUE
-
-    my $advice = <<ADVICE;
-Note: run 'sudo ubos-admin update' to get the latest version.
-      and: frequent backups with 'sudo ubos-admin backup' are recommended.
-
-ADVICE
-    unless( UBOS::Utils::saveFile( $target . '/etc/issue',     $issue . $advice, 0644, 'root', 'root' )) {
-        ++$errors;
-    }
-    unless( UBOS::Utils::saveFile( $target . '/etc/issue.net', $issue,           0644, 'root', 'root' )) {
-        ++$errors;
-    }
-    return $errors;
 }
 
 ##

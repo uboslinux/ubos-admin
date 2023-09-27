@@ -828,7 +828,7 @@ END
         }
     }
 
-    unless( UBOS::Utils::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d", $channel )) {
+    unless( UBOS::Host::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d", $channel )) {
         ++$errors;
     }
     return $errors;
@@ -936,7 +936,7 @@ sub configureOs {
     # version
     trace( "OS version info" );
 
-    unless( UBOS::Utils::regenerateEtcIssue( $deviceClass, $channel, $target )) {
+    unless( UBOS::Host::regenerateEtcIssue( $deviceClass, $channel, $target )) {
         ++$errors;
     }
 
