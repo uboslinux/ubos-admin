@@ -1,12 +1,12 @@
 pkgname=$(basename $(pwd))
-pkgver=0.79
+pkgver=0.80
 pkgrel=1
 pkgdesc="UBOS Perl utilities"
 arch=('any')
 url="http://ubos.net/"
 developer=${url}
 maintainer=${url}
-license=('PPL3', 'MIT')
+license=('AGPL3')
 depends=('perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'perl-log-journald')
 backup=(
     'etc/ubos/log-default.conf'

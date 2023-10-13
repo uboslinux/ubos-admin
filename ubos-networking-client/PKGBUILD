@@ -1,12 +1,12 @@
 pkgname=$(basename $(pwd))
-pkgver=0.17
+pkgver=0.18
 pkgrel=1
 pkgdesc="UBOS Network management tools (client)"
 arch=('any')
 url="http://ubos.net/"
 developer=${url}
 maintainer=${url}
-license=('PPL3')
+license=('AGPL3')
 depends=('ubos-admin')
 options=('!strip')
 _vendor_perl=/usr/share/perl5/vendor_perl

@@ -1,12 +1,12 @@
 pkgname=$(basename $(pwd))
-pkgver=0.22
+pkgver=0.23
 pkgrel=1
 pkgdesc="UBOS Network management tools (Linux container)"
 arch=('any')
 url="http://ubos.net/"
 developer=${url}
 maintainer=${url}
-license=('PPL3')
+license=('AGPL3')
 depends=('ubos-admin')
 options=('!strip')
 replaces=('ubos-networking-nspawn-container')
