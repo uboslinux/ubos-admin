@@ -16,6 +16,7 @@ LEFTOVER_FILES_TO_REMOVE="\
     /usr/lib/libzn_poly-0.9.so \
     /etc/httpd/mods-available/php7.load \
     /etc/httpd/mods-enabled/php7.load \
+    /etc/diet4j/diet4j.conf \
 "
 
 for f in $LEFTOVER_FILES_TO_REMOVE; do
