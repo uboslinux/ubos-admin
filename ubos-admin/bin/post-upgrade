@@ -17,6 +17,7 @@ LEFTOVER_FILES_TO_REMOVE="\
     /etc/httpd/mods-available/php7.load \
     /etc/httpd/mods-enabled/php7.load \
     /etc/diet4j/diet4j.conf \
+    /usr/bin/rake \
 "
 
 for f in $LEFTOVER_FILES_TO_REMOVE; do
