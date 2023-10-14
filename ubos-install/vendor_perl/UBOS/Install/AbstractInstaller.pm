@@ -440,7 +440,7 @@ sub install {
     info( 'Installing UBOS with hostname', $self->{hostname} );
 
     unless( $self->{target} ) {
-        my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
+        my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
         $self->{tempMount} = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
         $self->{target}    = $self->{tempMount}->dirname;
     }

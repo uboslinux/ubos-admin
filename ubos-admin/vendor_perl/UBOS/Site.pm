@@ -1650,7 +1650,7 @@ sub _checkJson {
                 }
 
                 if( !exists( $json->{tls}->{key} ) && ! exists( $json->{tls}->{crt} )) {
-                    my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmp', '/tmp' );
+                    my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
                     my $dir    = File::Temp->newdir( DIR => $tmpDir );
                     chmod 0700, $dir;
 
