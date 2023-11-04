@@ -65,6 +65,13 @@ sub checkCompleteParameters {
         $self->{partitioningScheme} = 'mbr';
     }
 
+    unless( $self->{deviceKernelParameters} ) {
+        # Allow serial-based access
+        $self->{deviceKernelParameters} = [ qw(
+                console=tty0
+                console=ttyS0,115200n8
+        ) ];
+    }
     return $self->SUPER::checkCompleteParameters();
 }
 
