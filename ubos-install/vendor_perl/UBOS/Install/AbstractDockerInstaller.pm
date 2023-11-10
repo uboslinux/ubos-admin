@@ -39,8 +39,14 @@ sub checkCompleteParameters {
         $self->{hostname}  = 'ubos-docker';
     }
 
+
+    unless( $self->{kernelPackage} ) {
+        $self->{kernelPackage} = 'linux';
+    }
+
     unless( $self->{devicePackages} ) {
         $self->{devicePackages} = [ qw(
+                grub mkinitcpio
                 ubos-networking-docker
                 archlinux-keyring
                 ubos-deviceclass-docker
