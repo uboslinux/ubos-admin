@@ -1345,6 +1345,7 @@ sub regeneratePacmanConf {
     $pacmanConf .= "\n\n" . $PACMAN_CONF_SEP . "\n\n";
 
     unless( $pacmanConf =~ m!XferCommand! ) {
+        $pacmanConf .= "# Fix Amazon S3's inability to fetch files with + characters in it\n";
         $pacmanConf .= "XferCommand = /usr/share/ubos-admin/bin/ubos-s3-curl %u %o\n"
     }
 
