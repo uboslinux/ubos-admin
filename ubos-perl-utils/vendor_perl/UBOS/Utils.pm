@@ -712,7 +712,6 @@ sub touch {
     }
 }
 
-
 ##
 # Obtain all Perl module files in a particular parent package.
 # $parentPackage: name of the parent package
@@ -1124,6 +1123,34 @@ sub string2time {
     return $ret;
 }
 
+##
+# Format time consistently per RFC3339. Note: only seconds-resolution
+# return: formatted time
+sub time2rfc3339String {
+    my $time = shift;
+
+    my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( $time );
+    my $ret = sprintf "%.4d-%.2d-%.2dT%.2d:%.2d:%.2dZ", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec;
+    return $ret;
+}
+
+##
+# Parse RFC3339-formatted timed correctly
+# $s: the string produced by rfc3339Time2string
+# return: UNIX time in seconds-resolution
+sub rfc3339string2time {
+    my $s = shift;
+    my $ret;
+
+    if( $s =~ m!^(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(\.(\d*))?Z$! ) {
+        $ret = timegm( $6, $5, $4, $3, $2-1, $1-1900 );
+    } else {
+        error( "Cannot parse RFC3339 time string $s" );
+        $ret = -1;
+    }
+
+    return $ret;
+}
 ##
 # Escape characters in URL. Inspired by http://cpansearch.perl.org/src/GAAS/URI-1.60/URI/Escape.pm,
 # which does not seem to come with Arch.
