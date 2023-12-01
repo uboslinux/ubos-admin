@@ -18,7 +18,7 @@ use Net::Ping;
 use JSON;
 use Lchown;
 use POSIX;
-use Time::Local qw( timegm );
+use Time::Local qw( timegm ); # This seems to not work before approx year 1973 -- but I don't think we care about then
 use UBOS::Logging;
 
 our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
@@ -1135,7 +1135,7 @@ sub time2rfc3339String {
 }
 
 ##
-# Parse RFC3339-formatted timed correctly
+# Parse RFC3339-formatted time correctly
 # $s: the string produced by rfc3339Time2string
 # return: UNIX time in seconds-resolution
 sub rfc3339string2time {
@@ -1145,12 +1145,30 @@ sub rfc3339string2time {
     if( $s =~ m!^(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(\.(\d*))?Z$! ) {
         $ret = timegm( $6, $5, $4, $3, $2-1, $1-1900 );
     } else {
-        error( "Cannot parse RFC3339 time string $s" );
+        error( "Cannot parse RFC3339 time string: '$s'" );
         $ret = -1;
     }
-
     return $ret;
 }
+
+##
+# Parse RFC3339-formatted time but be lenient about it
+# $s: the string produced by rfc3339Time2string
+# return: UNIX time in seconds-resolution
+sub lenientRfc3339string2time {
+    my $s = shift;
+    my $ret;
+
+    if( $s =~ m!^(\d\d\d\d)-?(\d\d)-?(\d\d)(?:T(\d\d):?(\d\d):?(\d\d)(?:\.(\d*))?)?Z?$! ) {
+        $ret = timegm( $6, $5, $4, $3, $2-1, $1-1900 );
+    } else {
+        error( "Cannot leniently parse RFC3339 time string: '$s'" );
+        $ret = -1;
+    }
+    return $ret;
+}
+
+
 ##
 # Escape characters in URL. Inspired by http://cpansearch.perl.org/src/GAAS/URI-1.60/URI/Escape.pm,
 # which does not seem to come with Arch.
