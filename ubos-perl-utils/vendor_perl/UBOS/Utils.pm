@@ -882,6 +882,7 @@ sub getGid {
     my $gid;
     if( !$gname ) {
         $gid = $(; # default is current group
+        $gid =~ s! .*$!!; # may have multiple values, we want the first
     } elsif( $gname =~ /^[0-9]+$/ ) {
         $gid = $gname;
     } else {
