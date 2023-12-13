@@ -1130,6 +1130,10 @@ sub string2time {
 sub time2rfc3339String {
     my $time = shift;
 
+    unless( $time ) {
+        $time = time();
+    }
+
     my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( $time );
     my $ret = sprintf "%.4d-%.2d-%.2dT%.2d:%.2d:%.2dZ", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec;
     return $ret;
