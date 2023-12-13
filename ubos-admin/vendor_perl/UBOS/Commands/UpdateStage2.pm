@@ -44,6 +44,8 @@ sub run {
     my $verbose       = 0;
     my $logConfigFile = undef;
     my $debug         = undef;
+    my $updateTo      = undef;
+    my $updateSkipTo  = undef;
     my $stage1exit    = 0;
     my $snapNumber    = undef;
 
@@ -52,6 +54,8 @@ sub run {
             'verbose+'     => \$verbose,
             'logConfig=s'  => \$logConfigFile,
             'debug'        => \$debug,
+            'to=s',        => \$updateTo,
+            'skip-to=s',   => \$updateSkipTo,
             'stage1exit=s' => \$stage1exit,
             'snapNumber=s' => \$snapNumber );
 
@@ -62,13 +66,57 @@ sub run {
         error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
-    my $ret = finishUpdate( $snapNumber );
-
-    unless( $ret && !$stage1exit ) {
-        error( "Update failed." );
+    if( $updateTo ) {
+        my $parsed = UBOS::Utils::lenientRfc3339string2time( $updateTo );
+        if( $parsed ) {
+            $updateTo = $parsed;
+        } else {
+            fatal( 'Not a valid timestamp:', $updateTo );
+        }
+    }
+    if( $updateSkipTo ) {
+        my $parsed = UBOS::Utils::lenientRfc3339string2time( $updateSkipTo );
+        if( $parsed ) {
+            $updateSkipTo = $parsed;
+        } else {
+            fatal( 'Not a valid timestamp:', $updateSkipTo );
+        }
     }
 
-    return $ret && !$stage1exit;
+    my $ret = finishUpdate( $snapNumber );
+
+    if( !$ret || $stage1exit ) {
+        error( "Update failed." );
+        return 0;
+
+    } else {
+        UBOS::Host::updateSucceeded();
+
+        if( $updateTo || !$updateSkipTo ) {
+            # more updates, potentially -- we let ubos-admin update decide whether necessary
+            # The !$updateSkipTo is for multi-step updates to HEAD
+
+            my $stage3Cmd = 'ubos-admin update --stage3OrLater';
+            for( my $i=0 ; $i<$verbose ; ++$i ) {
+                $stage3Cmd .= ' -v';
+            }
+            if( $logConfigFile ) {
+                $stage3Cmd .= ' --logConfig ' . $logConfigFile;
+            }
+            if( $debug ) {
+                $stage3Cmd .= ' --debug';
+            }
+            if( $updateTo ) {
+                $stage3Cmd .= ' --to ' . UBOS::Utils::time2rfc3339String( $updateTo );
+            } # There's no case where --skip-to needs to be passed on
+
+            debugAndSuspend( 'Hand over to stage 1 again' );
+            exec( $stage3Cmd ) || fatal( "Failed to run $stage3Cmd" );
+
+        } else {
+            return 1;
+        }
+    }
 }
 
 ##

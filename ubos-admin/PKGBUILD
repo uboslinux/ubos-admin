@@ -2,7 +2,7 @@ developer="http://indiecomputing.com/"
 url="http://ubos.net/"
 maintainer=${developer}
 pkgname=$(basename $(pwd))
-pkgver=0.425
+pkgver=0.426
 pkgrel=1
 pkgdesc="UBOS infrastructure and tools"
 arch=('any')
@@ -95,6 +95,7 @@ package() {
 
 # Repositories
     mkdir -p ${pkgdir}/etc/pacman.d/repositories.d/
+    mkdir -p ${pkgdir}/etc/ubos/repo-update-history.d/
 
 # Other config files
     install -D -m644 ${startdir}/etc/php/conf.d/*.ini    -t ${pkgdir}/etc/php/conf.d/

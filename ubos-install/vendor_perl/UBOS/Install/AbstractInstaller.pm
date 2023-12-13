@@ -13,11 +13,15 @@ package UBOS::Install::AbstractInstaller;
 use Cwd;
 use File::Spec;
 use File::Temp;
+use HTTP::Request;
+use LWP::UserAgent;
 use UBOS::Host;
 use UBOS::Logging;
 use UBOS::Utils;
 
 use fields qw(
+        asof
+
         hostname channel
         kernelPackage
         productInfo
@@ -98,6 +102,13 @@ sub setDeviceConfig {
 
     my $errors = 0;
 
+    if( exists( $deviceConfig->{asof} )) {
+        $self->{asof} = UBOS::Utils::lenientRfc3339string2time( $deviceConfig->{asof} );
+        if( $self->{asof} < 0 ) {
+            error( 'Cannot parse asof timestamp:', $self->{asof} );
+            ++$errors;
+        }
+    }
     if( exists( $deviceConfig->{hostname} )) {
         $self->{hostname} = $deviceConfig->{hostname};
     }
@@ -213,6 +224,15 @@ sub checkCompleteParameters {
     my $self = shift;
 
     my $errors = 0;
+
+    if( $self->{asof} ) {
+        if( $self->{asof} < 0 ) {
+            error( 'Invalid asof timestamp:', $self->{asof} );
+            ++$errors;
+        }
+    } else {
+        $self->{asof} = UBOS::Utils::now();
+    }
 
     if( $self->{partitioningScheme} ) {
         if( $self->{partitioningScheme} ne 'gpt' && $self->{partitioningScheme} ne 'mbr' && $self->{partitioningScheme} ne 'gpt+mbr' ) {
@@ -682,10 +702,11 @@ sub generateInstallPacmanConfig {
 
     trace( "Executing generateInstallPacmanConfig" );
 
-    my $depotRoot   = $self->{installDepotRoot};
-    my $channel     = $self->{channel};
-    my $arch        = $self->arch;
-    my $levelString = $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} );
+    my $providedAsOf = $self->{asOf};
+    my $depotRoot    = $self->{installDepotRoot};
+    my $channel      = $self->{channel};
+    my $arch         = $self->arch;
+    my $levelString  = $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} );
 
     my $ret  = <<END;
 #
@@ -710,11 +731,16 @@ END
         $dbValue =~ s!\$depotRoot!$depotRoot!g;
         $dbValue =~ s!\$channel!$channel!g;
 
+        # the as-of value depends on the db, so here it is the place where to look
+        my $dbName = UBOS::Host::determineDbNameAsOf( $providedAsOf, $dbValue );
+
         my $prefix = '';
         if( grep /^$dbKey$/, @{$self->{installDisablePackageDbs}} ) {
-            $prefix = '# ';
+            $prefix = '# (disabled) ';
+        } elsif( !defined( $dbName )) {
+            $prefix = "# (does not exist as of $providedAsOf ";
         }
-        my $dbFile  = $prefix . "[$dbKey]\n";
+        my $dbFile  = $prefix . "[$dbName]\n";
         $dbFile    .= $prefix . "Server = $dbValue\n";
 
         $ret .= "\n" . $dbFile;
@@ -820,7 +846,7 @@ END
             $prefix = '# ';
             $dbFile .= $prefix . "Remove the # from the next two lines and run `ubos-admin update' to enable package db $dbKey\n";
         }
-        $dbFile .= $prefix . "[$dbKey]\n";
+        $dbFile .= $prefix . "[\$dbName]\n"; # This is being replaced by regeneratePacmanConf
         $dbFile .= $prefix . "Server = $dbValue\n";
 
         unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$dbKey", $dbFile, 0644 )) {
@@ -828,7 +854,7 @@ END
         }
     }
 
-    unless( UBOS::Host::regeneratePacmanConf( "$target/etc/pacman.conf", "$target/etc/pacman.d/repositories.d", $channel )) {
+    unless( UBOS::Host::regeneratePacmanConf( $dbMap, "$target/etc/pacman.conf", $channel )) {
         ++$errors;
     }
     return $errors;

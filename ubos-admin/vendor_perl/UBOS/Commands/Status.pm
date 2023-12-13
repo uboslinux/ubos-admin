@@ -54,7 +54,7 @@ sub run {
     my $showDisks       = 0;
     my $showFailed      = 0;
     my $showHostid      = 0;
-    my $showLastUpdated = 0;
+    my $showUpdated     = 0;
     my $showLive        = 0;
     my $showMemory      = 0;
     my $showNics        = 0;
@@ -84,7 +84,7 @@ sub run {
             'failed'         => \$showFailed,
             'hostid'         => \$showHostid,
             'live'           => \$showLive,
-            'lastupdated'    => \$showLastUpdated,
+            'updated'        => \$showUpdated,
             'memory'         => \$showMemory,
             'nics'           => \$showNics,
             'pacnew'         => \$showPacnew,
@@ -94,18 +94,18 @@ sub run {
             'ready'          => \$showReady,
             'smart'          => \$showSmart,
             'snapper'        => \$showSnapper,
-            'virtualization' => \$showVirt,
-            'uptime'         => \$showUptime );
+            'uptime'         => \$showUptime,
+            'virtualization' => \$showVirt );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    my $showAspect =    $showArch        || $showChannel     || $showCpu
-                     || $showDeviceclass || $showDisks       || $showFailed
-                     || $showHostid      || $showLastUpdated || $showLive
-                     || $showMemory      || $showNics        || $showPacnew
-                     || $showProblems    || $showProduct     || $showPublicKey
-                     || $showReady       || $showSmart       || $showSnapper
+    my $showAspect =    $showArch        || $showChannel || $showCpu
+                     || $showDeviceclass || $showDisks   || $showFailed
+                     || $showHostid      || $showUpdated || $showLive
+                     || $showMemory      || $showNics    || $showPacnew
+                     || $showProblems    || $showProduct || $showPublicKey
+                     || $showReady       || $showSmart   || $showSnapper
                      || $showVirt        || $showUptime;
 
     if(    !$parseOk
@@ -129,7 +129,7 @@ sub run {
         $showDisks       = 1;
         $showFailed      = 1;
         $showHostid      = 1;
-        $showLastUpdated = 1;
+        $showUpdated     = 1;
         $showLive        = 1;
         $showMemory      = 1;
         $showNics        = 1;
@@ -225,10 +225,41 @@ sub run {
             }
         }
 
-        if( $showLastUpdated ) {
-            my $lastUpdated = UBOS::HostStatus::lastUpdated();
-            if( $lastUpdated ) {
-                $out .= 'Last updated:       ' . _formatTimeStamp( $lastUpdated ) . "\n";
+        if( $showUpdated ) {
+            my $repos               = UBOS::Host::determineRepos();
+            my $repoUpdateHistories = UBOS::HostStatus::syncRepoUpdateHistories();
+            my $lastUpdated         = UBOS::HostStatus::lastUpdated();
+
+            $out .="Update status by repository:\n";
+
+            if( exists( $lastUpdated->{asof} ) && $lastUpdated->{asof} ) {
+                # We have migrated to the ratchet
+                foreach my $repo ( sort keys %$repos ) {
+                    $out .= sprintf( "    %12s:\n", $repo );
+
+                    if( exists( $repoUpdateHistories->{$repo} )) {
+                        my $isFirst = 0;
+                        foreach my $entry ( $repoUpdateHistories->{$repo} ) {
+                            my $tstampString = $entry->{tstamp};
+                            my $tstampTime   = UBOS::Utils::rfc3339string2time( $tstampString );
+
+                            if( $isFirst ) {
+                                $out .= '        ' . $tstampString . " (\n";
+                            } else {
+                                $out .= '        ' . $tstampString . "\n";
+                            }
+                        }
+                    }
+                }
+            } else {
+                # We have not yet migrated to the ratchet
+                foreach my $repo ( sort keys %$repos ) {
+                    $out .= sprintf( "    %12s: not tracking repository update history, updating head version\n", $repo );
+                }
+            }
+
+            if( $lastUpdated || !exists( $lastUpdated->{'when'} )) {
+                $out .= 'Last updated:       ' . _formatTimeStamp( $lastUpdated->{'when' } ) . "\n";
             } else {
                 $out .= 'Last updated:       ' . 'Never' . "\n";
             }
@@ -518,7 +549,7 @@ sub synopsisHelp {
 SSS
         'cmds' => {
             <<SSS => <<HHH,
-    [--arch] [--channel] [--cpu] [--deviceclass] [--disks] [--failed] [--lastupdated] [--live] [--memory] [--nic] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--uptime] [--virtualization]
+    [--arch] [--channel] [--cpu] [--deviceclass] [--disks] [--failed] [--hostid] [--live] [--memory] [--nic] [--pacnew] [--problems] [--product] [--publickey] [--ready] [--smart] [--snapper] [--updated] [--uptime] [--virtualization]
 SSS
     If any of the optional arguments are given report on the specified
     subjects, otherwise just report on potential problems:
@@ -529,7 +560,6 @@ SSS
     * disks:          attached disks and their usage
     * failed:         daemons that have failed
     * hostid:         hostid of this device
-    * lastupdated:    when the device was last updated
     * live:           UBOS Live status
     * memory:         how much RAM and swap memory is being used
     * nics:           network interfaces and configuration
@@ -540,6 +570,7 @@ SSS
     * ready:          whether the device is ready or not
     * smart:          disk health via S.M.A.R.T
     * snapper:        snapper snapshots
+    * updated:        when the device was last updated and outstanding updates
     * uptime:         how long the device has been up since last boot
     * virtualization: use of virtualization
 HHH

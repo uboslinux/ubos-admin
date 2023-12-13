@@ -168,14 +168,23 @@ sub readySince {
 }
 
 ##
-# When was this device class updated
-# return: UNIX time or undef if never
+# When was this device last updated
+# return: { 'when' : timestamp, 'asof' : version timestamp }, or null if never
 sub lastUpdated {
     unless( exists( $json->{lastUpdated} )) {
         trace( 'Determining when last updated' );
         $json->{lastUpdated} = UBOS::Host::lastUpdated();
     }
     return $json->{lastUpdated};
+}
+
+##
+# Determine the repo update histories by first syncing
+# return: hash of repo histories
+sub syncRepoUpdateHistories {
+    # Do not use the cache, this is 'sync'
+    $json->{repoUpdateHistories} = UBOS::Host::determineRepoUpdateHistories();
+    return $json->{repoUpdateHistories};
 }
 
 ##

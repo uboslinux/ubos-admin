@@ -42,54 +42,85 @@ sub run {
         exit -2;
     }
 
-    my $verbose           = 0;
-    my $logConfigFile     = undef;
-    my $debug             = undef;
-    my $restIsPackages    = 0;
-    my @packageFiles      = ();
-    my $reboot            = 0;
-    my $noReboot          = 0;
-    my $noSync            = 0;
-    my $noPackageUpgrade  = 0;
-    my $noSnap            = 0;
-    my $noKeyRefresh      = 0;
-    my $showPackages      = 0;
-    my $stage1Only        = 0;
-    my $pacmanConfOnly    = 0;
+    my $verbose          = 0;
+    my $logConfigFile    = undef;
+    my $debug            = undef;
+    my $restIsPackages   = 0;
+    my $updateTo         = undef;
+    my $updateSkipTo     = undef;
+    my $reboot           = 0;
+    my $noReboot         = 0;
+    my $noSynchronize    = 0;
+    my $noSnap           = 0;
+    my $noKeyRefresh     = 0;
+    my $showPackages     = 0;
+    my $noPackageUpgrade = 0;
+    my $stage1Only       = 0;
+    my $stage3OrLater    = 0;
+    my $pacmanConfOnly   = 0;
+    my @packageFiles     = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'verbose+'                        => \$verbose,
-            'logConfig=s'                     => \$logConfigFile,
-            'debug'                           => \$debug,
-            'pkgfiles'                        => \$restIsPackages,
-            'reboot'                          => \$reboot,
-            'noreboot'                        => \$noReboot,
-            'nosynchronize'                   => \$noSync,
-            'nosnapshot'                      => \$noSnap,
-            'nokeyrefresh'                    => \$noKeyRefresh,
-            'showpackages'                    => \$showPackages,
-            'nopackageupgrade'                => \$noPackageUpgrade, # This option is not public, but helpful for development
-            'stage1Only'                      => \$stage1Only,       # This option is not public
-            'pacmanConfOnly'                  => \$pacmanConfOnly ); # This option is not public
+            'verbose+'         => \$verbose,
+            'logConfig=s'      => \$logConfigFile,
+            'debug'            => \$debug,
+            'pkgfiles'         => \$restIsPackages,
+            'to=s',            => \$updateTo,
+            'skip-to=s',       => \$updateSkipTo,
+            'reboot'           => \$reboot,
+            'noreboot'         => \$noReboot,
+            'nosynchronize'    => \$noSynchronize,
+            'nosnapshot'       => \$noSnap,
+            'nokeyrefresh'     => \$noKeyRefresh,
+            'showpackages'     => \$showPackages,
+            'nopackageupgrade' => \$noPackageUpgrade, # This option is not public, but helpful for development: go through the process but skip the actual package upgrades
+            'stage1Only'       => \$stage1Only,       # This option is not public: stop after stage 1, do not go to UpdateStage2
+            'stage3OrLater'    => \$stage3OrLater,    # This option is not public: invoked against for the next step from UpdateStage2
+            'pacmanConfOnly'   => \$pacmanConfOnly ); # This option is not public: only update the pacman config file without ratcheting forward, don't do anything else
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( @packageFiles && $noPackageUpgrade )
+        || ( @packageFiles && ( $noPackageUpgrade || $noSynchronize || $updateTo || $updateSkipTo ))
+        || ( $noSynchronize && ( $updateTo || $updateSkipTo ))
+        || ( $updateTo && $updateSkipTo )
         || ( $reboot && $noReboot )
         || ( $stage1Only && $noReboot )
         || ( $verbose && $logConfigFile )
-        || ( $pacmanConfOnly && ( $restIsPackages || $noReboot || $noSync || $noSnap || $showPackages || $noPackageUpgrade || $stage1Only )))
+        || ( $pacmanConfOnly && ( $restIsPackages || $noReboot || $noSynchronize || $noSnap || $showPackages || $noPackageUpgrade || $stage1Only || $updateTo )))
     {
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    if( $updateTo ) {
+        my $parsed = UBOS::Utils::lenientRfc3339string2time( $updateTo );
+        if( $parsed ) {
+            $updateTo = $parsed;
+        } else {
+            fatal( 'Not a valid timestamp:', $updateTo );
+        }
+    }
+    if( $updateSkipTo ) {
+        my $parsed = UBOS::Utils::lenientRfc3339string2time( $updateSkipTo );
+        if( $parsed ) {
+            $updateSkipTo = $parsed;
+        } else {
+            fatal( 'Not a valid timestamp:', $updateSkipTo );
+        }
     }
 
     if( $pacmanConfOnly ) {
         # shortcut
         debugAndSuspend( 'Regenerate pacman.conf' );
-        UBOS::Host::regeneratePacmanConf();
+        my $dbNames;
+        if( $updateSkipTo ) {
+            $dbNames = UBOS::Host::determineDbNamesAsOf( $updateSkipTo );
+        } else {
+            $dbNames = UBOS::Host::determineDbNamesOfLastSuccess();
+        }
+        UBOS::Host::regeneratePacmanConf( $dbNames );
         UBOS::Host::regenerateEtcIssue();
         return 1;
     }
@@ -187,22 +218,19 @@ sub run {
         info( 'No need to suspend or backup sites, none deployed' );
     }
 
-    unless( $backupSucceeded ) {
-        info( 'Resuming sites' );
-
-        my $resumeTriggers = {};
-        foreach my $site ( values %$oldSites ) {
-            debugAndSuspend( 'Resuming site', $site->siteId() );
-            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
-        }
-        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
-        UBOS::Host::executeTriggers( $resumeTriggers );
-        $ret = 0;
-
-    } else {
+    if( $backupSucceeded ) {
         debugAndSuspend( 'Regenerate pacman.conf' );
-        UBOS::Host::regeneratePacmanConf();
+        my $dbNames;
+        if( $updateSkipTo ) {
+            $dbNames = UBOS::Host::determineDbNamesAsOf( $updateSkipTo );
+        } elsif( $updateTo ) {
+            $dbNames = UBOS::Host::determineDbNamesForNextUpdate( $updateTo );
+        } else {
+            $dbNames = UBOS::Host::determineDbNamesForNextUpdate();
+        }
+
         UBOS::Host::regenerateEtcIssue();
+
         debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/mods-enabled' );
         UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/mods-enabled' );
 
@@ -219,6 +247,13 @@ sub run {
         if( $debug ) {
             $stage2Cmd .= ' --debug';
         }
+        if( $updateTo ) {
+            $stage2Cmd .= ' --to ' . UBOS::Utils::time2rfc3339String( $updateTo );
+        } elsif( $updateSkipTo ) {
+            # Distinguish between "all the way to head" and not
+            $stage2Cmd .= ' --skip-to ' . UBOS::Utils::time2rfc3339String( $updateSkipTo );
+        }
+
         unless( $ret ) {
             $stage2Cmd .= ' --stage1exit 1';
         }
@@ -227,7 +262,7 @@ sub run {
             colPrint( "Stopping after stage 1 as requested. To complete the update:\n" );
             colPrint( "1. Install upgraded packages via pacman (pacman -S or pacman -U)\n" );
             colPrint( "2. If you installed a new kernel: reboot. Stage 2 of the update will run automatically\n" );
-            colPrint( "3. If you did not reboot: manually run stage 2: $stage2Cmd\n" );
+            colPrint( "3. If you did not reboot: manually run stage 2: sudo $stage2Cmd\n" );
             exit 0;
         }
 
@@ -237,7 +272,7 @@ sub run {
         } elsif( @packageFiles ) {
             UBOS::Host::installPackageFiles( \@packageFiles, $showPackages );
         } else {
-            if( UBOS::Host::updateCode( $noSync ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive(), $noKeyRefresh ) == -1 ) {
+            if( UBOS::Host::updateCode( $noSynchronize ? 0 : 1, $showPackages || UBOS::Logging::isInfoActive(), $noKeyRefresh ) == -1 ) {
                 $rebootHeuristics = 1;
             }
         }
@@ -288,10 +323,24 @@ sub run {
             UBOS::Utils::myexec( 'systemctl daemon-reexec' );
 
             debugAndSuspend( 'Hand over to stage2' );
-            exec( $stage2Cmd ) || fatal( "Failed to run ubos-admin update-stage2" );
+            exec( $stage2Cmd ) || fatal( "Failed to run $stage2Cmd" );
         }
         # Never gets here
+
+    } else {
+        # backup failed, so we stop here
+        info( 'Resuming sites' );
+
+        my $resumeTriggers = {};
+        foreach my $site ( values %$oldSites ) {
+            debugAndSuspend( 'Resuming site', $site->siteId() );
+            $ret &= $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+        }
+        debugAndSuspend( 'Execute triggers', keys %$resumeTriggers );
+        UBOS::Host::executeTriggers( $resumeTriggers );
+        $ret = 0;
     }
+    return $ret;
 }
 
 ##
@@ -324,7 +373,7 @@ SSS
     operations to determine which packages might exist in the cloud that
     could be upgraded.
 HHH
-        <<SSS => <<HHH
+        <<SSS => <<HHH,
     --pkgfiles <package-file>...
 SSS
     Upgrade using the provided package files only. Do not perform any
@@ -333,6 +382,18 @@ SSS
     This is useful for development when the device needs to remain in
     the same state, while only repeatedly upgrading to new versions of
     a package under development.
+HHH
+        <<SSS => <<HHH,
+    --to <timestamp>
+SSS
+    Perform all upgrades until (and including) the upgrades current at
+    the given timestamp (YYYY-MM-DDTHH:MM:SSZ format).
+HHH
+        <<SSS => <<HHH
+    --skip-to <timestamp>
+SSS
+    Perform the upgrades current at the given timestamp (YYYY-MM-DDTHH:MM:SSZ
+    format) but skip intermediate upgrades. This is not recommended.
 HHH
         },
         'args' => {
