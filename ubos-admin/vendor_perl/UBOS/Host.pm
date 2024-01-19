@@ -602,7 +602,7 @@ sub updateCode {
 
     # ubos-admin and the key packages come first
     my @firstUpgraded = ();
-    foreach my $pack ( 'archlinux-keyring', 'archlinuxarm-keyring', 'ec2-keyring', 'ubos-admin' ) {
+    foreach my $pack ( 'archlinux-keyring', 'archlinuxarm-keyring', 'ec2-keyring' ) {
         debugAndSuspend( 'Execute pacman -S ', $pack );
         if( myexec( "pacman -Q $pack 2> /dev/null && pacman -S $pack --noconfirm || true", undef, \$out, \$out ) != 0 ) {
             error( 'Checking/upgrading package failed:', $pack, "\n$out" );
@@ -706,6 +706,7 @@ sub updateSucceeded {
         UBOS::Utils::deleteFile( $LAST_UPDATE_FILE );
     }
 
+    # Ratchet forward and save
     my $successfulUpdates = determineSuccessfulDbUpdates();
     foreach my $repoDir ( keys %$successfulUpdates ) {
         foreach my $repoName ( keys %{$successfulUpdates->{$repoDir}} ) {
@@ -714,10 +715,21 @@ sub updateSucceeded {
             if( exists( $entry->{currentts} )) {
                 $entry->{successTs} = $entry->{currentts};
                 delete $entry->{currentts};
+
+                my $json = {
+                    'successts' => UBOS::Utils::time2rfc3339String( $entry->{successTs} )
+                };
+
+                my $updateDir  = "$REPO_UPDATE_HISTORY_DIR/$repoName";
+                my $updateFile = "$updateDir/update.json";
+
+                unless( -d $updateDir ) {
+                    UBOS::Utils::mkdirDashP( $updateDir );
+                }
+                UBOS::Utils::writeJsonToFile( $json, $updateFile );
             }
         }
     }
-    saveSuccessfulDbUpdates( $successfulUpdates );
 }
 
 ##
@@ -1387,6 +1399,10 @@ sub determineRepos {
             $repoFileContent =~ s!^\s+!!gm; # leading white space
             $repoFileContent =~ s!\s+$!!gm; # trailing white space
 
+            unless( $repoFileContent ) {
+                # nothing in it, must be disabled/commented out
+                next;
+            }
             if( $repoFileContent =~ m!\[([^\]]+)\]\sServer\s*=\s*(\S+)! ) {
                 my $dbName        = $1;
                 my $rawServerName = $2;
@@ -1520,40 +1536,6 @@ sub determineSuccessfulDbUpdates {
 }
 
 ##
-# Save the timestamps identifying the element in each repository history to which this device
-# was most recently upgraded successfully.
-# $successfulDbUpdates: hash of repo name to the timestamp of the most recent history element for this repo, or undef if head e.g. { 'os' => 1234, 'hl' => undef, ... }
-# $repoDir: if given, write to this directory instead of repositories.d
-# $updateHistoryDir: if given, write to this directory instead of $REPO_UPDATE_HISTORY_DIR
-sub saveSuccessfulDbUpdates {
-    my $successfulDbUpdates  = shift;
-    my $repoDir              = shift || $PACMAN_REPO_DIR;
-    my $repoUpdateHistoryDir = shift || $REPO_UPDATE_HISTORY_DIR;
-
-    if( exists( $_successfulDbUpdates->{$repoDir} )) {
-        foreach my $repoName ( keys %{$_successfulDbUpdates->{$repoDir}} ) {
-            my $successTs  = $_successfulDbUpdates->{$repoDir}->{$repoName}->{successts};
-            my $currentTs  = $_successfulDbUpdates->{$repoDir}->{$repoName}->{currentts};
-            my $updateDir  = "$repoUpdateHistoryDir/$repoName";
-            my $updateFile = "$updateDir/update.json";
-
-            unless( -d $updateDir ) {
-                UBOS::Utils::mkdirDashP( $updateDir );
-            }
-
-            my $json = {};
-            if( $successTs >= 0 ) {
-                $json->{successts} = UBOS::Utils::time2rfc3339String( $successTs )
-            }
-            if( $currentTs >= 0 ) {
-                $json->{currentts} = UBOS::Utils::time2rfc3339String( $currentTs )
-            }
-            UBOS::Utils::writeJsonToFile( $json, $updateFile );
-        }
-    }
-}
-
-##
 # Determine the db names, with expanded timestamps, that are valid for the next update, but no
 # further than at most the provided timestamp.
 # $cutoff: the timestamp in epoch seconds
@@ -1568,11 +1550,6 @@ sub determineDbNamesForNextUpdate {
     my $repos               = determineRepos( $repoDir );
     my $repoUpdateHistories = determineRepoUpdateHistories( $repoDir );
     my $updates             = determineSuccessfulDbUpdates( $repoDir );
-
-use Data::Dumper;
-print( "XXX repos " . Dumper( $repos ));
-print( "XXX repoUpdateHistories " . Dumper( $repoUpdateHistories ));
-print( "XXX updates " . Dumper( $updates ));
 
     # Note: If the repos are updated like this:
     # os:     1000 2000            5000
@@ -1655,7 +1632,7 @@ print( "XXX updates " . Dumper( $updates ));
             }
         }
     }
-
+use Data::Dumper;
 print( "XXX returns " . Dumper( $ret ));
     return $ret;
 }
@@ -1756,10 +1733,7 @@ sub dbNameWithTimestamp {
 sub regeneratePacmanConf {
     my $repoDbsMap     = shift;
     my $pacmanConfFile = shift || $PACMAN_CONF_FILE;
-    my $channel        = shift;
-
-use Data::Dumper;
-print( "repoDbsMap " . Dumper( $repoDbsMap ));
+    my $channel        = shift || undef;
 
     unless( $channel ) {
         $channel = UBOS::Utils::channel();

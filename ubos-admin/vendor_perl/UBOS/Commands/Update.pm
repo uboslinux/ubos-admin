@@ -48,6 +48,7 @@ sub run {
     my $restIsPackages   = 0;
     my $updateTo         = undef;
     my $updateSkipTo     = undef;
+    my $noStage3         = undef;
     my $reboot           = 0;
     my $noReboot         = 0;
     my $noSynchronize    = 0;
@@ -58,7 +59,6 @@ sub run {
     my $stage1Only       = 0;
     my $stage3OrLater    = 0;
     my $pacmanConfOnly   = 0;
-    my @packageFiles     = ();
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -68,6 +68,7 @@ sub run {
             'pkgfiles'         => \$restIsPackages,
             'to=s',            => \$updateTo,
             'skip-to=s',       => \$updateSkipTo,
+            'nostage3'         => \$noStage3,
             'reboot'           => \$reboot,
             'noreboot'         => \$noReboot,
             'nosynchronize'    => \$noSynchronize,
@@ -83,9 +84,11 @@ sub run {
     info( 'ubos-admin', $cmd, @_ );
 
     if(    !$parseOk
-        || ( @packageFiles && ( $noPackageUpgrade || $noSynchronize || $updateTo || $updateSkipTo ))
+        || ( $restIsPackages && ( $noPackageUpgrade || $noSynchronize || $updateTo || $updateSkipTo ))
         || ( $noSynchronize && ( $updateTo || $updateSkipTo ))
         || ( $updateTo && $updateSkipTo )
+        || ( $updateSkipTo && $noStage3 )
+        || ( $noStage3 && $updateTo )
         || ( $reboot && $noReboot )
         || ( $stage1Only && $noReboot )
         || ( $verbose && $logConfigFile )
@@ -120,6 +123,8 @@ sub run {
         } else {
             $dbNames = UBOS::Host::determineDbNamesOfLastSuccess();
         }
+        # The other cases: $noPackageUpgrade, $restIsPackages/@packageFiles and $updateTo don't exist here
+
         UBOS::Host::regeneratePacmanConf( $dbNames );
         UBOS::Host::regenerateEtcIssue();
         return 1;
@@ -134,6 +139,7 @@ sub run {
         }
     }
 
+    my @packageFiles = ();
     if( $restIsPackages ) {
         if( grep /^--/, @args ) {
             fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
@@ -225,16 +231,21 @@ sub run {
             $dbNames = UBOS::Host::determineDbNamesAsOf( $updateSkipTo );
         } elsif( $updateTo ) {
             $dbNames = UBOS::Host::determineDbNamesForNextUpdate( $updateTo );
+        } elsif( $noPackageUpgrade || @packageFiles ) {
+            $dbNames = UBOS::Host::determineDbNamesOfLastSuccess();
         } else {
             $dbNames = UBOS::Host::determineDbNamesForNextUpdate();
         }
 
+        UBOS::Host::regeneratePacmanConf( $dbNames );
         UBOS::Host::regenerateEtcIssue();
 
         debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/mods-enabled' );
         UBOS::Utils::removeDanglingSymlinks( '/etc/httpd/mods-enabled' );
 
         my $stage2Cmd = 'ubos-admin update-stage2';
+        $stage2Cmd .= ' --nostage3'; # FIXME FOR NOW
+
         if( defined( $snapNumber )) {
             $stage2Cmd .= ' --snapnumber ' . $snapNumber;
         }

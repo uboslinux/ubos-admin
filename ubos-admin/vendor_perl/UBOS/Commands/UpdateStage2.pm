@@ -46,6 +46,7 @@ sub run {
     my $debug         = undef;
     my $updateTo      = undef;
     my $updateSkipTo  = undef;
+    my $noStage3      = undef;
     my $stage1exit    = 0;
     my $snapNumber    = undef;
 
@@ -56,6 +57,7 @@ sub run {
             'debug'        => \$debug,
             'to=s',        => \$updateTo,
             'skip-to=s',   => \$updateSkipTo,
+            'nostage3'     => \$noStage3,
             'stage1exit=s' => \$stage1exit,
             'snapNumber=s' => \$snapNumber );
 
@@ -92,6 +94,9 @@ sub run {
     } else {
         UBOS::Host::updateSucceeded();
 
+        if( $noStage3 ) {
+            return 1;
+        }
         if( $updateTo || !$updateSkipTo ) {
             # more updates, potentially -- we let ubos-admin update decide whether necessary
             # The !$updateSkipTo is for multi-step updates to HEAD
