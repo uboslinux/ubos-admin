@@ -12,7 +12,7 @@ set -e
 u=$1
 f=$2
 
-if [[ $u == *'depot.ubos.net'* ]]; then
+if [[ $u == *'depot'*'.ubos.net'* ]]; then
     u=${u//+/%2B}
 fi
 echo "Downloading $u"
