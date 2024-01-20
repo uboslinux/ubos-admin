@@ -702,7 +702,7 @@ sub generateInstallPacmanConfig {
 
     trace( "Executing generateInstallPacmanConfig" );
 
-    my $providedAsOf = $self->{asOf};
+    my $providedAsOf = $self->{asof};
     my $depotRoot    = $self->{installDepotRoot};
     my $channel      = $self->{channel};
     my $arch         = $self->arch;
@@ -732,7 +732,7 @@ END
         $dbValue =~ s!\$channel!$channel!g;
 
         # the as-of value depends on the db, so here it is the place where to look
-        my $dbName = UBOS::Host::determineDbNameAsOf( $providedAsOf, $dbValue );
+        my $dbName = UBOS::Host::determineDbNamesAsOf( $providedAsOf, $dbValue );
 
         my $prefix = '';
         if( grep /^$dbKey$/, @{$self->{installDisablePackageDbs}} ) {
@@ -854,7 +854,8 @@ END
         }
     }
 
-    unless( UBOS::Host::regeneratePacmanConf( $dbMap, "$target/etc/pacman.conf", $channel )) {
+    my $dbNames = UBOS::Host::determineDbNamesOfLastSuccess( "$target/etc/pacman.d/repositories.d" );
+    unless( UBOS::Host::regeneratePacmanConf( $dbNames, "$target/etc/pacman.conf", $channel )) {
         ++$errors;
     }
     return $errors;
