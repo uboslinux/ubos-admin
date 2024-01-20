@@ -1,6 +1,6 @@
 [Unit]
 Description=UBOS ready actions
-Wants=network.target cronie.service httpd.service certbot.timer
+Wants=network.target httpd.service certbot.timer
 After=ubos-admin.service httpd.service mysqld.service
 
 [Service]

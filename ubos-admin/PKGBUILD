@@ -108,9 +108,6 @@ package() {
 # Key refresh touch file
     touch ${pkgdir}/etc/ubos/key-refresh.touch
 
-# Give cronie no reason to complain
-    install -D -m644 /dev/null ${pkgdir}/etc/crontab
-
 # Keep old directory, so after-boot file can be written prior to upgrade
     mkdir -p ${pkgdir}/var/lib/ubos
 
