@@ -144,10 +144,24 @@ sub setDeviceConfig {
     }
 
     if( exists( $deviceConfig->{installaddpackagedbs} )) {
-        $self->{installAddPackageDbs} = $deviceConfig->{installaddpackagedbs};
+        # provided is the dbName=>rawserver mapping from the command-line
+        # but we need something more complex
+        $self->{installAddPackageDbs} = {};
+        map {
+            $self->{installAddPackageDbs}->{$_} = {
+                'rawserver' => $deviceConfig->{installaddpackagedbs}->{$_}
+            };
+        } keys %{$deviceConfig->{installaddpackagedbs}};
     }
     if( exists( $deviceConfig->{runaddpackagedbs} )) {
-        $self->{runAddPackageDbs} = $deviceConfig->{runaddpackagedbs};
+        # provided is the dbName=>rawserver mapping from the command-line
+        # but we need something more complex
+        $self->{runAddPackageDbs} = {};
+        map {
+            $self->{runAddPackageDbs}->{$_} = {
+                'rawserver' => $deviceConfig->{runaddpackagedbs}->{$_}
+            };
+        } keys %{$deviceConfig->{runaddpackagedbs}};
     }
     if( exists( $deviceConfig->{installdisablepackagedbs} )) {
         $self->{installDisablePackageDbs} = $deviceConfig->{installdisablepackagedbs};
@@ -360,15 +374,29 @@ sub checkCompleteParameters {
 
     unless( $self->{installPackageDbs} ) {
         $self->{installPackageDbs} = {
-                'os'      => '$depotRoot/$channel/$arch/os',
-                'hl'      => '$depotRoot/$channel/$arch/hl',
-                'tools'   => '$depotRoot/$channel/$arch/tools',
-                'toyapps' => '$depotRoot/$channel/$arch/toyapps',
+                'os' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/os'
+                },
+                'hl' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/hl'
+                },
+                'tools' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/tools'
+                },
+                'toyapps' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/toyapps'
+                },
 
-                'os-experimental'    => '$depotRoot/$channel/$arch/os-experimental',
-                'hl-experimental'    => '$depotRoot/$channel/$arch/hl-experimental',
-                'tools-experimental' => '$depotRoot/$channel/$arch/tools-experimental'
-        }; # These constants get replaced later
+                'os-experimental' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/os-experimental'
+                },
+                'hl-experimental' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/hl-experimental'
+                },
+                'tools-experimental' => {
+                    'rawserver' => '$depotRoot/$channel/$arch/tools-experimental'
+                }
+        }; # These hashes get augmented later with 'dbname' and 'server'
     }
 
     unless( $self->{runPackageDbs} ) {
@@ -719,6 +747,10 @@ Architecture = $arch
 SigLevel           = $levelString
 LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
+
+# Fix Amazon S3's inability to fetch files with + characters in it
+XferCommand = /usr/share/ubos-admin/bin/ubos-s3-curl %u %o
+
 END
 
     my %bothDbs = ( %{ $self->{installPackageDbs} }, %{ $self->{installAddPackageDbs} } );
@@ -727,21 +759,18 @@ END
             next;
         }
 
-        my $dbValue = $bothDbs{$dbKey};
-        $dbValue =~ s!\$depotRoot!$depotRoot!g;
-        $dbValue =~ s!\$channel!$channel!g;
-
-        # the as-of value depends on the db, so here it is the place where to look
-        my $dbName = UBOS::Host::determineDbNamesAsOf( $providedAsOf, $dbValue );
+        my $server = $bothDbs{$dbKey}->{rawserver};
+        $server =~ s!\$depotRoot!$depotRoot!g;
+        $server =~ s!\$channel!$channel!g;
 
         my $prefix = '';
         if( grep /^$dbKey$/, @{$self->{installDisablePackageDbs}} ) {
             $prefix = '# (disabled) ';
-        } elsif( !defined( $dbName )) {
-            $prefix = "# (does not exist as of $providedAsOf ";
+        # } elsif( !defined( $dbName )) {
+        #     $prefix = "# (does not exist as of $providedAsOf ";
         }
-        my $dbFile  = $prefix . "[$dbName]\n";
-        $dbFile    .= $prefix . "Server = $dbValue\n";
+        my $dbFile  = $prefix . "[$dbKey]\n";
+        $dbFile    .= $prefix . "Server = $server\n";
 
         $ret .= "\n" . $dbFile;
     }
