@@ -1374,10 +1374,10 @@ sub lastUpdated {
 # return: hash of repo name to repo data, e.g.
 # {
 #   'os' => {
-#     'rawserver' => 'https://depot.ubos.net/$channel/$arch/os',
-#     'server'    => 'https://depot.ubos.net/red/aarch64/os',
-#     'dbname'    => 'os-$tstamp',
-#     'raw'       => '...'
+#     'rawserver'  => 'https://depot.ubos.net/$channel/$arch/os',
+#     'server'     => 'https://depot.ubos.net/red/aarch64/os',
+#     'dbname'     => 'os-$tstamp'
+#     'rawcontent' => '...' (content of the file in repositories.d)
 #   },
 #   'hl' => { ... }}
 sub determineRepos {
@@ -1418,10 +1418,10 @@ sub determineRepos {
                 $repoName =~ s!.*/!!;
 
                 $_repos->{$repoDir}->{$repoName} = {
-                    'rawserver' => $rawServerName,
-                    'server'    => $serverName,
-                    'dbname'    => $dbName,
-                    'raw'       => $rawRepoFileContent
+                    'rawserver'  => $rawServerName,
+                    'server'     => $serverName,
+                    'dbname'     => $dbName,
+                    'rawcontent' => $rawRepoFileContent
                 };
             } else {
                 warning( 'Repo file does not have expected syntax, skipping:', $repoFile );
@@ -1687,9 +1687,9 @@ sub determineDbNamesOfLastSuccess {
         my $repo = $repos->{$repoName};
 
         $ret->{$repoName} = {
-            'raw'       => $repo->{raw},
-            'server'    => $repo->{server},
-            'rawserver' => $repo->{rawserver},
+            'rawcontent' => $repo->{rawcontent},
+            'server'     => $repo->{server},
+            'rawserver'  => $repo->{rawserver},
         };
 
         if( exists( $updates->{$repoName} )) {
@@ -1760,7 +1760,7 @@ sub regeneratePacmanConf {
     my $asOf  = -1;
     foreach my $repoName( keys %$repos ) {
         my $dbName = $repoDbsMap->{$repoName}->{dbname};
-        my $toAdd  = $repos->{$repoName}->{'raw'};
+        my $toAdd  = $repos->{$repoName}->{'rawcontent'};
 
         $toAdd =~ s!#.*$!!gm; # remove comments -- will confuse the user
         $toAdd =~ s!^\s+!!gm; # leading white space
