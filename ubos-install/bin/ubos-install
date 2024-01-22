@@ -501,11 +501,11 @@ Optional arguments:
           only works on some device classes.
     --install-depot-root <url>
           Use this URL for the root of the code repository from where to download the
-          to-be installed packages. Defaults to http://depot.ubos.net
+          to-be installed packages. Defaults to https://depot.ubosfiles.net
     --run-depot-root <url>
           Use this URL for the root of the code repository from where to download any
           additional or upgraded packages the user wishes to install when the system is
-          running. Defaults to http://depot.ubos.net
+          running. Defaults to https://depot.ubosfiles.net
     --install-check-signatures <never|optional|required>
           Should package signatures be checked during installation. Same as in
           pacman.conf(5). Defaults to required.

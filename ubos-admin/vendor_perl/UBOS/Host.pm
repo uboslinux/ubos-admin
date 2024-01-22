@@ -1374,8 +1374,8 @@ sub lastUpdated {
 # return: hash of repo name to repo data, e.g.
 # {
 #   'os' => {
-#     'rawserver'  => 'https://depot.ubos.net/$channel/$arch/os',
-#     'server'     => 'https://depot.ubos.net/red/aarch64/os',
+#     'rawserver'  => 'https://depot.ubosfiles.net/$channel/$arch/os',
+#     'server'     => 'https://depot.ubosfiles.net/red/aarch64/os',
 #     'dbname'     => 'os-$tstamp'
 #     'rawcontent' => '...' (content of the file in repositories.d)
 #   },
@@ -1749,11 +1749,6 @@ sub regeneratePacmanConf {
     $pacmanConf =~ s!\s+$!!; # zap white space at end
 
     $pacmanConf .= "\n\n" . $PACMAN_CONF_SEP . "\n\n";
-
-    unless( $pacmanConf =~ m!XferCommand! ) {
-        $pacmanConf .= "# Fix Amazon S3's inability to fetch files with + characters in it\n";
-        $pacmanConf .= "XferCommand = /usr/share/ubos-admin/bin/ubos-s3-curl %u %o\n"
-    }
 
     my $repos = determineRepos();
 

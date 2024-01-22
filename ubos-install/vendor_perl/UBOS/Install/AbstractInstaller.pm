@@ -338,7 +338,7 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{installDepotRoot} ) {
-        $self->{installDepotRoot} = 'http://depot.ubos.net';
+        $self->{installDepotRoot} = 'https://depot.ubosfiles.net';
     }
     if( $self->{installDepotRoot} !~ m!^(http|https|ftp)://! && ! -d $self->{installDepotRoot} ) {
         error( 'Install depot root must be a URL or a directory:', $self->{installDepotRoot} );
@@ -747,9 +747,6 @@ Architecture = $arch
 SigLevel           = $levelString
 LocalFileSigLevel  = $levelString
 RemoteFileSigLevel = $levelString
-
-# Fix Amazon S3's inability to fetch files with + characters in it
-XferCommand = /usr/share/ubos-admin/bin/ubos-s3-curl %u %o
 
 END
 

@@ -1440,7 +1440,7 @@ sub isIpv6Address {
 # $host: hostname to attempt to reach
 # return: true or false
 sub isOnline {
-    my $host = shift || 'depot.ubos.net';
+    my $host = shift || 'depot.ubosfiles.net';
     my $ret = Net::Ping->new( 'icmp' )->ping( $host );
 
     return $ret;

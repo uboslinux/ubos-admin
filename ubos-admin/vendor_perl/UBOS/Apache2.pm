@@ -126,6 +126,7 @@ sub _syncApacheCtl {
 
 ##
 # Make the changes to Apache configuration files are in place that are needed by UBOS.
+# This is invoked by httpd.service
 sub ensureConfigFiles {
     trace( 'Apache2::ensureConfigFiles' );
 
@@ -143,7 +144,7 @@ sub ensureConfigFiles {
 
     unless( -f $keyFile ) {
         debugAndSuspend( 'Generate default Apache TLS key' );
-        UBOS::Utils::myexec( "openssl genrsa -out '$keyFile' 1024" );
+        UBOS::Utils::myexec( "openssl genrsa -out '$keyFile' 2048" );
         chmod 0040, $keyFile;
         chown $uid, $gid, $keyFile;
     }
