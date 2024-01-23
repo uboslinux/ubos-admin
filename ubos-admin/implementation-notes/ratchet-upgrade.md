@@ -12,7 +12,7 @@ Our upstream distro -- Arch -- provides no functionality for this. Not sure that
 
 Instead of having repositories like `os` exist only in the then-current version, we create and keep around each version of each repository that we released, with a timestamp, such as `os-20140101T123456Z`.
 
-Each device records the timestamp of the most recent repository that it was successfully upgraded to. When the next upgrade is performed, `ubos-admin update` is performed once for each timestamp that is in the future from the most recent successful update. Each of these upgrades includes backup/restore/running updaters from each deployed application, and may include device reboots.
+Each device records a timestamp that allows us to identify the version of each repository that was used in the most recent successful upgrade. When the next upgrade is performed, `ubos-admin update` is performed once for each version that is in the future from the most recent successful update. Each of these upgrades includes backup/restore/running updaters from each deployed application, and may include device reboots.
 
 Note: we will use the Arch terminology of "database file" for the `.db` files, like `os.db`.
 
@@ -34,10 +34,10 @@ We will add a timestamp to the name of the database file, so `pacman` will read 
 
 ```
 [os-20140101T123456Z]
-http://depot-develop.ubosfiles.net/dev/$arch/os
+Server = http://depot-develop.ubosfiles.net/dev/$arch/os
 ```
 
-Note that multiple versions of the same database file may coexist in the same directory. they may also point to the same, or an overlapping set of package files in the same directory.
+Note that multiple versions of the same database file may coexist in the same directory. They may also point to the same, or an overlapping set of package files in the same directory, as most updates update only a small percentage of all package files.
 
 ### `history.json`
 
@@ -47,7 +47,7 @@ This file is consulted by `ubos-admin update` to determine the name of the repos
 
 For each entry in `history.json`, a corresponding database file must exist.
 
-If a `history.json` file does not exist for a given repository, the ratchet upgrade algorithm is not applied for this repository and `ubos-admin update` always upgrades to the most recent version. If `history.json` has appeared since the last upgrade, the repository switches from traditional upgrades to ratchet upgrades, starting with the oldest entry in the `history.json` file.
+If a `history.json` file does not exist for a given repository, the ratchet upgrade algorithm is not applied for this repository and `ubos-admin update` always upgrades to the most recent version. If `history.json` has appeared since the last upgrade, the repository switches from traditional upgrades to ratchet upgrades. For which entry to upgrade to, see upgrade algorithm below.
 
 ### Purging of package files
 
@@ -59,35 +59,39 @@ Each UBOS device maintains a file `last-ubos-update.json` that contains:
 * The wall clock time when the device was last successfully upgraded (`upgradeSuccessTs`).
 * The timestamp that is the maximum, over all active repositories, of the timestamps of the versions of the repositories that were used in the last successful upgrade (`repositoryPositionTs`).
 
-Note that `repositoryPositionTs` may only be used by a single repository used in the upgrade; other repositories may not have a version at that time stamp and their preceding version was used in the last successful upgrade.
+Note that the exact value of `repositoryPositionTs` may only be used by a single repository used in the upgrade; other repositories may not have a version at that time stamp and their preceding version was used in the last successful upgrade.
 
 If this file does not exist on a device, the device has not been upgraded successfully with the ratchet upgrade process.
 
 ### Upgrade process
 
-When `ubos-admin update` is run in order to upgrade (i.e. not with ``--pacmanConfOnly`` or ``-pkg`` or such), the following steps need to be performed:
+When `ubos-admin update` is run in order to upgrade (i.e. not with ``--pacmanConfOnly`` or ``--pkg`` or such), the following steps need to be performed:
 .
-* For each active repository, obtain the current `history.json`.
+* For each active repository, obtain the current `history.json` from the depot.
 
 * If `history.json` does not exist for a repository, use the database file without a timestamp; the ratchet upgrade algorithm is not in effect for this repository.
 
-* If `last-ubos-update.json` does not exist, we run the ratchet upgrade algorithm for the first time. To do so, use the following calculated value for `repositoryPositionTs` instead: the maximum update timestamp, over the set of active repositories, of the oldest entry in their respective `history.json` files. (This generally should normally cause the oldest version of each repository to be used.)
+* If `last-ubos-update.json` does not exist, we run the ratchet upgrade algorithm for the first time. To do so, use the following calculated value for `repositoryPositionTs` instead: the maximum update timestamp, over the set of active repositories, of the oldest entry in their respective `history.json` files. (This generally should normally cause the oldest version of each repository to be used. We want to miss as few updates as possible even in case when we first start using the ratchet algorithm.)
 
-* Given `repositoryPositionTs`, find the next `repositoryPositionTs`. This is calculated as the minimum timestamp, over all active repositories, of the next entry in each repository's `history.json`. The new value is not written to disk until the upgrade has been successul.
-
-* Given the new `repositoryPositionTs`, calculate
+* Given `repositoryPositionTs`, find the next `repositoryPositionTs`. This is calculated as the minimum timestamp, over all active repositories, of the next entry in each repository's `history.json` (i.e. the entry whose timestamp is equal, or minimally larger). The new value is not written to disk until the upgrade has been successul.
 
 * Regenerate `pacman.conf` with the calculated database names.
 
-* Update the `last-ubos-update.json` file.
+* Perform the upgrade.
+
+* If successful, update the `last-ubos-update.json` file. If unsuccessful, stop.
 
 * Repeat this process until `repositoryPositionTs` is the maximum timestamp, or greater than the maximum, over all active repositories, of the largest timestamp in any of their `history.json` files. This test should be performed at the beginning of `ubos-admin update`, so we don't undeploy etc if there are no available updates.
 
 Note that the `/etc/pacman.conf` file, after an update, will reference the timestamps of the databases that 1) the most recent upgrade was successfully performed from, or 2) the most recent upgrade was unsuccessful from. This appears to be the appropriate state to either 1) install additional packages from before the next update, or 2) attempt manual fixes to the broken upgrade from.
 
-### Complications
+### Calculating `/etc/pacman.conf` timestamps
 
-* Not all repositories may be released at the same time (in particular if the device uses non-standard repositories as well). So the upgrade timeline is created as the superset of all upgrades of all repositories. When an upgrade at a particular timestamp occurs, only one or not all repositories may have new packages.
+* If a repository does not have a `history.json`, use the database name without a timestamp. Otherwise:
+
+* Given a `repositoryPositionTs`, find the timestamp that is, or directly precedes `repositoryPositionTs`, and use that for the database name.
+
+### Complications
 
 * If a repository is temporarily disabled, and re-enabled later, neither skipping intermediate updates, nor performing them is great; they both create problems. Because skipping intermediate updates is much simpler to implement, we use this bad alternative over the other bad alternative.
 
@@ -106,6 +110,8 @@ Note that the `/etc/pacman.conf` file, after an update, will reference the times
 * The above upgrade process must be implemented.
 
 * `ubos-admin update` is now performed in a loop that spans `ubos-admin update`, `ubos-admin update-stage2` and potentially several reboots.
+
+* Suitable flags should be added to `ubos-admin update` to run only a single update, or to update all the way to a certain timestamp that is not the most recent timestamp. That will help is practice when things to wrong and need fixing.
 
 ### Impact on `ubos-install`
 
