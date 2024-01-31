@@ -15,6 +15,7 @@ use HTTP::Request;
 use LWP::UserAgent;
 use UBOS::Apache2;
 use UBOS::Logging;
+use UBOS::RatchetState;
 use UBOS::Roles::apache2;
 use UBOS::Roles::generic;
 use UBOS::Roles::mysql;
@@ -36,22 +37,16 @@ my $SITE_JSON_DIR           = vars()->getResolve( 'host.sitejsondir' );
 my $AFTER_BOOT_FILE         = vars()->getResolve( 'host.afterbootfile' );
 my $KEYSERVER               = vars()->getResolveOrNull( 'host.keyserver', 'pool.sks-keyservers.net' );
 my $READY_FILE              = '/run/ubos-admin-ready';
-my $LAST_UPDATE_FILE        = '/etc/ubos/last-ubos-update'; # not /var, as /var might move from system to system -- obsolete
-my $LAST_UPDATE_JSON_FILE   = '/etc/ubos/last-ubos-update.json';
 my $HOSTNAME_CALLBACKS_DIR  = '/etc/ubos/hostname-callbacks';
 my $STATE_CALLBACKS_DIR     = '/etc/ubos/state-callbacks';
 my $KEY_REFRESH_FILE        = '/etc/ubos/key-refresh.touch';
-my $REPO_UPDATE_HISTORY_DIR = '/etc/ubos/repo-update-history.d';
 my $PACMAN_CONF_FILE        = '/etc/pacman.conf';
-my $PACMAN_REPO_DIR         = '/etc/pacman.d/repositories.d';
 
 my $_hostVars               = undef; # allocated as needed
 my $_rolesOnHostInSequence  = undef; # allocated as needed
 my $_rolesOnHost            = undef; # allocated as needed
 my $_sites                  = undef; # allocated as needed
-my $_repos                  = {};    # populated as needed
-my $_repoUpdateHistories    = {};    # populated as needed
-my $_successfulDbUpdates    = {};    # populated as needed
+my $_ratchetState           = undef; # allocated as needed
 my $_currentState           = undef;
 
 ##
@@ -600,9 +595,9 @@ sub updateCode {
         }
     }
 
-    # ubos-admin and the key packages come first
+    # key packages come first
     my @firstUpgraded = ();
-    foreach my $pack ( 'archlinux-keyring', 'archlinuxarm-keyring', 'ec2-keyring' ) {
+    foreach my $pack ( 'ubos-keyring', 'archlinux-keyring', 'archlinuxarm-keyring', 'ec2-keyring', 'ubos-admin' ) {
         debugAndSuspend( 'Execute pacman -S ', $pack );
         if( myexec( "pacman -Q $pack 2> /dev/null && pacman -S $pack --noconfirm || true", undef, \$out, \$out ) != 0 ) {
             error( 'Checking/upgrading package failed:', $pack, "\n$out" );
@@ -694,42 +689,13 @@ sub updateCode {
 }
 
 ##
-# Record that an update succeeded
-sub updateSucceeded {
-    my $asOf = shift;
-
-    my $json = {
-        'when' => UBOS::Utils::time2string( time() )
-    };
-    UBOS::Utils::writeJsonToFile( $LAST_UPDATE_JSON_FILE, $json );
-    if( -e $LAST_UPDATE_FILE ) {
-        UBOS::Utils::deleteFile( $LAST_UPDATE_FILE );
+# Smart factory method to calculate the current RatchetState
+# $
+sub ratchetState {
+    unless( $_ratchetState ) {
+        $_ratchetState = UBOS::RatchetState->load();
     }
-
-    # Ratchet forward and save
-    my $successfulUpdates = determineSuccessfulDbUpdates();
-    foreach my $repoDir ( keys %$successfulUpdates ) {
-        foreach my $repoName ( keys %{$successfulUpdates->{$repoDir}} ) {
-            my $entry = $successfulUpdates->{$repoDir}->{$repoName};
-
-            if( exists( $entry->{currentts} )) {
-                $entry->{successTs} = $entry->{currentts};
-                delete $entry->{currentts};
-
-                my $json = {
-                    'successts' => UBOS::Utils::time2rfc3339String( $entry->{successTs} )
-                };
-
-                my $updateDir  = "$REPO_UPDATE_HISTORY_DIR/$repoName";
-                my $updateFile = "$updateDir/update.json";
-
-                unless( -d $updateDir ) {
-                    UBOS::Utils::mkdirDashP( $updateDir );
-                }
-                UBOS::Utils::writeJsonToFile( $json, $updateFile );
-            }
-        }
-    }
+    return $_ratchetState;
 }
 
 ##
@@ -1344,435 +1310,6 @@ END
     }
     return '';
 }
-
-##
-# Determine when the host was last updated using ubos-admin update.
-# return: { 'when' : timestamp, 'asof' : version timestamp }, or null if never
-sub lastUpdated {
-    my $ret;
-    if( -r $LAST_UPDATE_JSON_FILE ) {
-        $ret = UBOS::Utils::readJsonFromFile( $LAST_UPDATE_JSON_FILE );
-
-    } elsif( -e $LAST_UPDATE_FILE ) {
-        my $found = UBOS::Utils::slurpFile( $LAST_UPDATE_FILE );
-        $found =~ s!^\s+!!;
-        $found =~ s!\s+$!!;
-        $ret = {
-            'when' => $found,
-            'asof' => undef
-        };
-    } else {
-        $ret = undef;
-    }
-    return $ret;
-}
-
-##
-# Determine the active list of repos and related data. This comes from repositories.d,
-# not the current pacman.conf, so timestamps are not expanded.
-# $repoDir: if given, look into this directory instead of repositories.d
-# return: hash of repo name to repo data, e.g.
-# {
-#   'os' => {
-#     'rawserver'  => 'https://depot.ubosfiles.net/$channel/$arch/os',
-#     'server'     => 'https://depot.ubosfiles.net/red/aarch64/os',
-#     'dbname'     => 'os-$tstamp'
-#     'rawcontent' => '...' (content of the file in repositories.d)
-#   },
-#   'hl' => { ... }}
-sub determineRepos {
-    my $repoDir = shift || $PACMAN_REPO_DIR;
-
-    unless( exists( $_repos->{$repoDir} )) {
-        my @repoFiles = glob( "$repoDir/*" );
-
-        $_repos->{$repoDir} = {};
-
-        my $arch    = UBOS::Utils::arch();
-        my $channel = UBOS::Utils::channel();
-
-        foreach my $repoFile ( @repoFiles ) {
-            my $rawRepoFileContent = UBOS::Utils::slurpFile( $repoFile );
-            my $repoFileContent = $rawRepoFileContent;
-
-            $repoFileContent =~ s!#.*$!!gm; # remove comments
-            $repoFileContent =~ s!^\s+!!gm; # leading white space
-            $repoFileContent =~ s!\s+$!!gm; # trailing white space
-
-            unless( $repoFileContent ) {
-                # nothing in it, must be disabled/commented out
-                next;
-            }
-            if( $repoFileContent =~ m!\[([^\]]+)\]\sServer\s*=\s*(\S+)! ) {
-                my $dbName        = $1;
-                my $rawServerName = $2;
-                my $repoName      = $repoFile;
-
-                if( $rawServerName =~ m!/$! ) {
-                    $rawServerName = substr( $rawServerName, 0, -1 );
-                }
-                my $serverName = $rawServerName;
-                $serverName =~ s!\$arch!$arch!g;
-                $serverName =~ s!\$channel!$channel!g;
-
-                $repoName =~ s!.*/!!;
-
-                $_repos->{$repoDir}->{$repoName} = {
-                    'rawserver'  => $rawServerName,
-                    'server'     => $serverName,
-                    'dbname'     => $dbName,
-                    'rawcontent' => $rawRepoFileContent
-                };
-            } else {
-                warning( 'Repo file does not have expected syntax, skipping:', $repoFile );
-            }
-        }
-        trace( 'Determined repos', sort keys %$_repos );
-    }
-    return $_repos->{$repoDir};
-}
-
-##
-# Determine the update histories available in the depots for the active repos.
-# Also write/cache them locally into the file system (although we currently won't use
-# those files there).
-# This parses the timestamps into epoch seconds.
-# $repoDir: if given, look into this directory instead of repositories.d
-# return: hash of repo name to repo history, or to empty hash if no history, e.g.
-# {
-#   'os' => {
-#     'history' => [
-#       { 'tstamp' => '2020-01-02T03:04:05Z' },
-#       { 'tstamp' => '2021-11-12T13:14:15Z' }
-#     ]
-#   },
-#   'hl' => {}
-# }
-sub determineRepoUpdateHistories {
-    my $repoDir = shift || $PACMAN_REPO_DIR;
-
-    unless( exists( $_repoUpdateHistories->{$repoDir} )) {
-        my $repos = determineRepos( $repoDir );
-        my $ua    = new LWP::UserAgent;
-        $_repoUpdateHistories->{$repoDir} = {};
-
-        foreach my $repoName ( keys %$repos ) {
-            my $serverName = $repos->{$repoName}->{'server'};
-            my $url        = $serverName . '/history.json';
-
-            trace( 'Requesting repo history from', $url );
-            my $request    = new HTTP::Request( 'GET', $url );
-            my $response   = $ua->request( $request );
-
-            my $repoHistoryDir = "$REPO_UPDATE_HISTORY_DIR/$repoName";
-            unless( -d $repoHistoryDir ) {
-                UBOS::Utils::mkdirDashP( $repoHistoryDir );
-            }
-
-            if( $response->is_success() ) {
-                my $json = UBOS::Utils::readJsonFromString( $response->content() );
-                $_repoUpdateHistories->{$repoDir}->{$repoName}->{history} = [];
-                foreach my $historyElementJson ( @{$json->{history}} ) {
-                    my $tstampString = $historyElementJson->{tstamp};
-                    my $tstamp       = UBOS::Utils::rfc3339string2time( $tstampString );
-
-                    push @{$_repoUpdateHistories->{$repoDir}->{$repoName}->{history}}, {
-                        'tstamp' => $tstamp
-                    };
-                }
-
-                trace( 'Successful syncing repository history.json from', $request->url() );
-                UBOS::Utils::writeJsonToFile( "$repoHistoryDir/history.json", $json );
-
-            } else {
-                $_repoUpdateHistories->{$repoDir}->{$repoName} = {};
-
-                trace( 'Unuccessful syncing repository history.json from', $request->url() );
-                UBOS::Utils::writeJsonToFile( "$repoHistoryDir/history.json", {} );
-            }
-        }
-    }
-    return $_repoUpdateHistories->{$repoDir};
-}
-
-##
-# Determine the timestamps identifying the element in each repository history from which
-# this device was most recently updated successfully.
-# $repoDir: if given, look into this directory instead of repositories.d
-# $updateHistoryDir: if given, look into this directory instead of $REPO_UPDATE_HISTORY_DIR
-# return: hash of repo name to the timestamp of the most recent history element for this repo, or undef if head e.g. { 'os' => 1234, 'hl' => undef, ... }
-sub determineSuccessfulDbUpdates {
-    my $repoDir              = shift || $PACMAN_REPO_DIR;
-    my $repoUpdateHistoryDir = shift || $REPO_UPDATE_HISTORY_DIR;
-
-    unless( exists( $_successfulDbUpdates->{$repoDir} )) {
-        my $repos = determineRepos( $repoDir );
-
-        $_successfulDbUpdates->{$repoDir} = {};
-        foreach my $repoName ( keys %$repos ) {
-            my $updateFile = "$repoUpdateHistoryDir/$repoName/update.json";
-
-            if( -r $updateFile ) {
-                my $updateJson = UBOS::Utils::readJsonFromFile( "$repoDir/update.json" );
-                if( $updateJson ) {
-                    if( exists( $updateJson->{successts} )) {
-                        my $successTs = UBOS::Utils::rfc3339string2time( $updateJson->{successts} );
-                        $_successfulDbUpdates->{$repoDir}->{$repoName}->{successts} = $successTs;
-                    }
-                    if( exists( $updateJson->{currentts} )) {
-                        my $currentTs = UBOS::Utils::rfc3339string2time( $updateJson->{currentts} );
-                        $_successfulDbUpdates->{$repoDir}->{$repoName}->{currentts} = $currentTs;
-                    }
-                } else {
-                    # error emitted already; but don't insert
-                }
-            } else {
-                # not so far
-                $_successfulDbUpdates->{$repoDir}->{$repoName} = undef;
-            }
-        }
-    }
-    return $_successfulDbUpdates->{$repoDir};
-}
-
-##
-# Determine the db names, with expanded timestamps, that are valid for the next update, but no
-# further than at most the provided timestamp.
-# $cutoff: the timestamp in epoch seconds
-# $repoDir: if given, look into this directory instead of repositories.d
-# return: hash of repo to repo data, e.g. { 'os' => { 'dbname' => 'os-20231212T121212Z' }, 'hl' => { ... }}
-# Note that AWS does not permit : in path names, so we trim all special characters from the timestamps
-sub determineDbNamesForNextUpdate {
-    my $cutoff  = shift;
-    my $repoDir = shift || $PACMAN_REPO_DIR;
-    my $ret     = {};
-
-    my $repos               = determineRepos( $repoDir );
-    my $repoUpdateHistories = determineRepoUpdateHistories( $repoDir );
-    my $updates             = determineSuccessfulDbUpdates( $repoDir );
-
-    # Note: If the repos are updated like this:
-    # os:     1000 2000            5000
-    # hl:     1000       3000 4000 5000
-    # we cannot simply update the timestamp for os while we catch up with hl; we need to keep os for a while
-
-    # first we determine $nextUpdates -- the next timestamp for each repo, after the most recent successful update
-    # (or undef if none) -- while ignoring how the repos relate to each other
-
-    my $nextUpdates = {}; # hash of repo name to the next timestamp after the most recent successful update, or undef if none
-    foreach my $repoName ( keys %$repos ) {
-        my $history = $repoUpdateHistories->{$repoName};
-        if( !$history || !exists( $history->{history} ) || !@{$history->{history}} ) {
-            # this repo does not have history
-            $nextUpdates->{$repoName} = undef;
-            next;
-        }
-
-        if( !exists( $updates->{$repoName} ) || !exists( $updates->{$repoName}->{successts} ) || $updates->{$repoName}->{successts} < 0 ) {
-            $nextUpdates->{$repoName} = $history->{history}->[0]->{tstamp}; # oldest
-            next;
-        }
-        my $lastSuccess = $updates->{$repoName}->{successts};
-
-        foreach my $historyElement ( @{$history->{history}} ) {
-            if( $lastSuccess < $historyElement->{tstamp} ) {
-                $nextUpdates->{$repoName} = $historyElement->{tstamp};
-                last;
-            }
-        }
-    }
-
-    # now find the oldest $nextUpdate
-
-    my $smallestNext = undef;
-    foreach my $repoName ( keys %$repos ) {
-        if( $smallestNext ) {
-            if( $nextUpdates->{$repoName} < $smallestNext ) {
-                $smallestNext = $nextUpdates->{$repoName};
-            }
-        } else {
-            $smallestNext = $nextUpdates->{$repoName};
-        }
-    }
-
-    # now construct the repo names
-    if( $smallestNext && ( !$cutoff || $smallestNext < $cutoff )) {
-        foreach my $repoName ( keys %$repos ) {
-            if( $nextUpdates->{$repoName} ) {
-                if( $smallestNext == $nextUpdates->{$repoName} ) {
-                    # Needs to be racheted forward
-                    $ret->{$repoName} = {
-                        'dbname' => dbNameWithTimestamp( $repoName, $smallestNext )
-                    };
-                } else {
-                    # Keep at current ratchet
-                    $ret->{$repoName} = {
-                        'dbname' => dbNameWithTimestamp( $repoName, $updates->{$repoName} )
-                    };
-                }
-            } else {
-                # does not have history
-                $ret->{$repoName} = {
-                    'dbname' => dbNameWithTimestamp( $repoName )
-                };
-            }
-        }
-    } else {
-        foreach my $repoName ( keys %$repos ) {
-            if( $nextUpdates->{$repoName} ) {
-                # Keep at current ratchet
-                $ret->{$repoName} = {
-                    'dbname' => dbNameWithTimestamp( $repoName, $updates->{$repoName} )
-                };
-            } else {
-                # does not have history
-                $ret->{$repoName} = {
-                    'dbname' => dbNameWithTimestamp( $repoName )
-                };
-            }
-        }
-    }
-use Data::Dumper;
-print( "XXX returns " . Dumper( $ret ));
-    return $ret;
-}
-
-##
-# Determine the db names, with expanded timestamps, that reflect the state at the provided
-# timestamp. This is useful for upgrade --skip-to.
-# $asof: the timestamp
-# return: undef, or hash of repo to repo data, e.g. { 'os' => { 'dbname' => 'os-20231212T121212Z' }, 'hl' => { ... }}
-# Note that AWS does not permit : in path names, so we trim all special characters from the timestamps
-sub determineDbNamesAsOf {
-    my $asof    = shift;
-    my $repoDir = shift || $PACMAN_REPO_DIR;
-    my $ret     = {};
-
-    my $repos               = determineRepos( $repoDir );
-    my $repoUpdateHistories = determineRepoUpdateHistories( $repoDir );
-
-    foreach my $repoName ( keys %$repos ) {
-        my $history = $repoUpdateHistories->{$repoName};
-        if( !$history || !( keys %$history ) ) {
-            # this repo does not have history
-            $ret->{$repoName} = {
-                'dbname' => dbNameWithTimestamp( $repoName )
-            };
-            next;
-        }
-
-        foreach my $historyElement ( reverse @$history ) {
-            if( $asof >= $historyElement ) {
-                $ret->{$repoName} = dbNameWithTimestamp( $repoName, $historyElement );
-                last;
-            }
-        }
-    }
-    return $ret;
-}
-
-##
-# Determine the db names, with expanded timestamps, that reflect the state of the most
-# recent successful update.
-# $repoDir: the directory holding the repository definitions
-# return: undef, or hash of repo to repo data, e.g. { 'os' => { 'dbname' => 'os-20231212T121212Z' }, 'hl' => { ... }}
-# Note that AWS does not permit : in path names, so we trim all special characters from the timestamps
-sub determineDbNamesOfLastSuccess {
-    my $repoDir = shift || $PACMAN_REPO_DIR;
-    my $repos   = determineRepos( $repoDir );
-    my $updates = determineSuccessfulDbUpdates( $repoDir );
-
-    my $ret = {};
-    foreach my $repoName ( keys %$repos ) {
-        my $repo = $repos->{$repoName};
-
-        $ret->{$repoName} = {
-            'rawcontent' => $repo->{rawcontent},
-            'server'     => $repo->{server},
-            'rawserver'  => $repo->{rawserver},
-        };
-
-        if( exists( $updates->{$repoName} )) {
-            $ret->{$repoName}->{dbname} = dbNameWithTimestamp( $repoName, $updates->{$repoName}->{successts} );
-        } else {
-            $ret->{$repoName}->{dbname} = dbNameWithTimestamp( $repoName );
-        }
-    }
-    return $ret;
-}
-
-##
-# Helper to construct the db name given a repo name and a timestamp.
-# $repoName
-# $ts: timestamp in epoch millis, or undef if no timestamp
-# return dbName
-sub dbNameWithTimestamp {
-    my $repoName = shift;
-    my $ts       = shift;
-
-    my $ret;
-    if( $ts ) {
-        $ret = UBOS::Utils::time2rfc3339String( $ts );
-        $ret =~ s![:-]!!g;
-        $ret = "$repoName-$ret";
-    } else {
-        $ret = $repoName;
-    }
-    return $ret;
-}
-
-##
-# Regenerate the /etc/pacman.conf file. If a repository gets added,
-# the next pacman command must be to sync with the added repository,
-# otherwise a pacman error will occur.
-# $repoDbsMap: map of repo name to dbName to use
-# $pacmanConfFile: the pacman config file, or default if not provided.
-# $channel: use this as the value for $channel in the repo URLs, or, if not
-#    given, use value of /etc/ubos/channel
-# return: timestamp of the newest repo
-sub regeneratePacmanConf {
-    my $repoDbsMap     = shift;
-    my $pacmanConfFile = shift || $PACMAN_CONF_FILE;
-    my $channel        = shift || undef;
-
-    unless( $channel ) {
-        $channel = UBOS::Utils::channel();
-    }
-
-    my $pacmanConf    = UBOS::Utils::slurpFile( $pacmanConfFile );
-    my $oldPacmanConf = $pacmanConf;
-
-    if( $pacmanConf =~ m!^(.*?)$PACMAN_CONF_SEP!s ) {
-        # zap the trailer
-        $pacmanConf = $1;
-    }
-    $pacmanConf =~ s!\s+$!!; # zap white space at end
-
-    $pacmanConf .= "\n\n" . $PACMAN_CONF_SEP . "\n\n";
-
-    my $repos = determineRepos();
-
-    my $asOf  = -1;
-    foreach my $repoName( keys %$repos ) {
-        my $dbName = $repoDbsMap->{$repoName}->{dbname};
-        my $toAdd  = $repos->{$repoName}->{'rawcontent'};
-
-        $toAdd =~ s!#.*$!!gm; # remove comments -- will confuse the user
-        $toAdd =~ s!^\s+!!gm; # leading white space
-        $toAdd =~ s!\s+$!!gm; # trailing white space
-        $toAdd =~ s!\$dbname!$dbName!g;
-        $toAdd =~ s!\$channel!$channel!g;
-
-        $pacmanConf .= "\n" . $toAdd . "\n";
-    }
-
-    unless( $pacmanConf eq $oldPacmanConf ) {
-        UBOS::Utils::saveFile( $pacmanConfFile, $pacmanConf );
-    }
-
-    return $asOf; # FIXME
-}
-
 
 ##
 # Generate/update /etc/issue

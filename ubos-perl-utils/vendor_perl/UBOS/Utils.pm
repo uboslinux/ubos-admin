@@ -713,6 +713,37 @@ sub touch {
 }
 
 ##
+# Ensure that the provided file is in sync with the content at the
+# provided URL. If the file does not exist, download it. If it does
+# and is out-of-date, update it.
+# $filename: name of the file
+# $url: where to HTTP GET it from
+# return: filename if data is available, undef otherwise
+sub ensureCachedFileUpToDate {
+    my $filename = shift;
+    my $url      = shift;
+
+    my $out;
+    # follow redirects, stay silent, write HTTP status to stdout, maintain an etag file for efficient download
+    if( myexec( "curl -L -s -w '\%{response_code}' -o '$filename' --etag-compare '$filename.etag' --etag-save '$filename.etag' '$url'", undef, \$out )) {
+        $@ = 'Failed to curl from: ' . $url;
+        return undef;
+
+    } elsif( $out =~ /^200/ ) {
+        # downloaded
+        return $filename;
+
+    } elsif( $out =~ /^304/ ) {
+        # not changed
+        return $filename;
+
+    } else {
+        # didn't work
+        return undef;
+    }
+}
+
+##
 # Obtain all Perl module files in a particular parent package.
 # $parentPackage: name of the parent package
 # $regex: a regex for the module files to be read, not counting the .pm extension, of any if not given

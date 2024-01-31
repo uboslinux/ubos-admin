@@ -46,7 +46,7 @@ sub run {
     my $debug         = undef;
     my $updateTo      = undef;
     my $updateSkipTo  = undef;
-    my $noStage3      = undef;
+    my $stage3        = 1;
     my $stage1exit    = 0;
     my $snapNumber    = undef;
 
@@ -57,7 +57,7 @@ sub run {
             'debug'        => \$debug,
             'to=s',        => \$updateTo,
             'skip-to=s',   => \$updateSkipTo,
-            'nostage3'     => \$noStage3,
+            'stage3!'      => \$stage3, # doesn't want to do --nostage3
             'stage1exit=s' => \$stage1exit,
             'snapNumber=s' => \$snapNumber );
 
@@ -85,6 +85,15 @@ sub run {
         }
     }
 
+    my $ratchetState = UBOS::Host::ratchetState();
+    if( $updateSkipTo ) {
+        $ratchetState = $ratchetState->skipTo( $updateSkipTo );
+    } elsif( $updateTo ) {
+        $ratchetState = $ratchetState->ratchetNext( $updateTo );
+    } else {
+        $ratchetState = $ratchetState->ratchetNext();
+    }
+
     my $ret = finishUpdate( $snapNumber );
 
     if( !$ret || $stage1exit ) {
@@ -92,11 +101,17 @@ sub run {
         return 0;
 
     } else {
-        UBOS::Host::updateSucceeded();
-
-        if( $noStage3 ) {
+        if( !$ratchetState->isRatchetActive() ) {
+            return 1; # non-ratchet case; we are done here
+        }
+        unless( $stage3 ) {
             return 1;
         }
+
+        if( $ratchetState->isModified()) {
+            $ratchetState->save();
+        }
+
         if( $updateTo || !$updateSkipTo ) {
             # more updates, potentially -- we let ubos-admin update decide whether necessary
             # The !$updateSkipTo is for multi-step updates to HEAD

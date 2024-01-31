@@ -24,14 +24,13 @@ my $WARNING_DISK_PERCENT         = 70;
 my $WARNING_LOAD_PER_CPU_PERCENT = 70;
 
 # files where to get info from
-my $PRODUCT_FILE                 = '/etc/ubos/product.json';
+my $PRODUCT_FILE = '/etc/ubos/product.json';
 
 # Location of the update backups
 my $updateBackupDir = '/ubos/backups/update';
 
 # cached data -- inserted as needed
 my $json = {};
-
 
 ##
 # Is this system virtualized?
@@ -168,23 +167,31 @@ sub readySince {
 }
 
 ##
-# When was this device last updated
-# return: { 'when' : timestamp, 'asof' : version timestamp }, or null if never
-sub lastUpdated {
-    unless( exists( $json->{lastUpdated} )) {
-        trace( 'Determining when last updated' );
-        $json->{lastUpdated} = UBOS::Host::lastUpdated();
-    }
-    return $json->{lastUpdated};
-}
+# Determine the ratchet state
+# return: RatchetState
+sub ratchetUpdatesJson {
+    unless( exists( $json->{'ratchet-updates-state'} )) {
+        my $ratchetState = UBOS::Host::ratchetState();
+        my $json = {
+            'upgradeSuccessTs' => UBOS::Utils::time2rfc3339String( $ratchetState->upgradeSuccessTs() )
+        };
 
-##
-# Determine the repo update histories by first syncing
-# return: hash of repo histories
-sub syncRepoUpdateHistories {
-    # Do not use the cache, this is 'sync'
-    $json->{repoUpdateHistories} = UBOS::Host::determineRepoUpdateHistories();
-    return $json->{repoUpdateHistories};
+        if( $ratchetState->isRatchetActive() ) {
+            $json->{'ratchet-updates-state'} = {
+                'ratchetPositionTs' => $ratchetState->repositoryPositionTs(),
+                'repositories' => {}
+            };
+            foreach my $repoName ( $ratchetState->repoNames() ) {
+                $json->{repositories}->{$repoName} = {};
+                my $repoCurrentTs = $ratchetState->repoCurrentTsFor( $repoName );
+                if( $repoCurrentTs ) {
+                    $json->{repositories}->{$repoName}->{currentTs} = UBOS::Utils::time2rfc3339String( $repoCurrentTs );
+                }
+            }
+        }
+        $json->{'ratchet-updates-state'} = $json;
+    }
+    return $json->{'ratchet-updates-state'};
 }
 
 ##
@@ -841,13 +848,13 @@ sub allAsJson {
     hostId();
     hostPublicKey();
     hostname();
-    lastUpdated();
     liveJson();
     memoryJson();
     nics();
     pacnewFiles();
     problems();
     productJson();
+    ratchetUpdatesJson();
     readySince();
     snapperJson();
     softwareNics();
@@ -873,13 +880,13 @@ sub liveAsJson {
     hostId();
     hostPublicKey();
     hostname();
-    lastUpdated();
     liveJson();
     memoryJson();
     nics();
     pacnewFiles();
     problems();
     productJson();
+    ratchetUpdatesJson();
     readySince();
     snapperJson();
     softwareNics();

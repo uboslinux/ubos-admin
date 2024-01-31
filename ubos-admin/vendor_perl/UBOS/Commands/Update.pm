@@ -114,31 +114,6 @@ sub run {
         }
     }
 
-    if( $pacmanConfOnly ) {
-        # shortcut
-        debugAndSuspend( 'Regenerate pacman.conf' );
-        my $dbNames;
-        if( $updateSkipTo ) {
-            $dbNames = UBOS::Host::determineDbNamesAsOf( $updateSkipTo );
-        } else {
-            $dbNames = UBOS::Host::determineDbNamesOfLastSuccess();
-        }
-        # The other cases: $noPackageUpgrade, $restIsPackages/@packageFiles and $updateTo don't exist here
-
-        UBOS::Host::regeneratePacmanConf( $dbNames );
-        UBOS::Host::regenerateEtcIssue();
-        return 1;
-    }
-
-    my $backupOperation = UBOS::BackupOperation::parseArgumentsPartial( \@args );
-    unless( $backupOperation ) {
-        if( $@ ) {
-            fatal( $@ );
-        } else {
-            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
-        }
-    }
-
     my @packageFiles = ();
     if( $restIsPackages ) {
         if( grep /^--/, @args ) {
@@ -150,6 +125,42 @@ sub run {
     } elsif( @args ) {
         # some are left over
         fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+    }
+
+    my $ratchetState = UBOS::Host::ratchetState();
+    if( $updateSkipTo ) {
+        $ratchetState = $ratchetState->skipTo( $updateSkipTo );
+    } elsif( $updateTo ) {
+        $ratchetState = $ratchetState->ratchetNext( $updateTo );
+    } elsif( !$noPackageUpgrade && !@packageFiles ) {
+        $ratchetState = $ratchetState->ratchetNext();
+    }
+
+    if( $pacmanConfOnly ) {
+        # shortcut
+        debugAndSuspend( 'Regenerate pacman.conf' );
+
+        $ratchetState->regeneratePacmanConf();
+        UBOS::Host::regenerateEtcIssue();
+        return 1;
+    }
+
+    if( $ratchetState->isRatchetActive() && !$ratchetState->isModified() && !( $noPackageUpgrade || @packageFiles )) {
+        if( $stage3OrLater ) {
+            info( 'Updates complete. Your UBOS device is now current.')
+        } else {
+            info( 'Your UBOS device is current. No updates required.')
+        }
+        return 1;
+    }
+
+    my $backupOperation = UBOS::BackupOperation::parseArgumentsPartial( \@args );
+    unless( $backupOperation ) {
+        if( $@ ) {
+            fatal( $@ );
+        } else {
+            fatal( 'Invalid invocation:', $cmd, @_, '(add --help for help)' );
+        }
     }
 
     # Need to keep a copy of the logConfigFile, new package may not have it any more
@@ -225,19 +236,9 @@ sub run {
     }
 
     if( $backupSucceeded ) {
-        debugAndSuspend( 'Regenerate pacman.conf' );
-        my $dbNames;
-        if( $updateSkipTo ) {
-            $dbNames = UBOS::Host::determineDbNamesAsOf( $updateSkipTo );
-        } elsif( $updateTo ) {
-            $dbNames = UBOS::Host::determineDbNamesForNextUpdate( $updateTo );
-        } elsif( $noPackageUpgrade || @packageFiles ) {
-            $dbNames = UBOS::Host::determineDbNamesOfLastSuccess();
-        } else {
-            $dbNames = UBOS::Host::determineDbNamesForNextUpdate();
-        }
+        debugAndSuspend( 'Update pacman.conf' );
 
-        UBOS::Host::regeneratePacmanConf( $dbNames );
+        $ratchetState->regeneratePacmanConf();
         UBOS::Host::regenerateEtcIssue();
 
         debugAndSuspend( 'Remove dangling symlinks in /etc/httpd/mods-enabled' );

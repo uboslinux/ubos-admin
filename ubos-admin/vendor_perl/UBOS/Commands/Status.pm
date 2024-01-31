@@ -41,32 +41,32 @@ sub run {
         fatal( "This command must be run as root" );
     }
 
-    my $verbose         = 0;
-    my $logConfigFile   = undef;
-    my $debug           = undef;
-    my $showJson        = 0;
-    my $showAll         = 0;
-    my $showArch        = 0;
-    my $showDetail      = 0;
-    my $showDeviceclass = 0;
-    my $showChannel     = 0;
-    my $showCpu         = 0;
-    my $showDisks       = 0;
-    my $showFailed      = 0;
-    my $showHostid      = 0;
-    my $showUpdated     = 0;
-    my $showLive        = 0;
-    my $showMemory      = 0;
-    my $showNics        = 0;
-    my $showPacnew      = 0;
-    my $showProblems    = 0;
-    my $showProduct     = 0;
-    my $showPublicKey   = 0;
-    my $showReady       = 0;
-    my $showSmart       = 0;
-    my $showSnapper     = 0;
-    my $showVirt        = 0;
-    my $showUptime      = 0;
+    my $verbose            = 0;
+    my $logConfigFile      = undef;
+    my $debug              = undef;
+    my $showJson           = 0;
+    my $showAll            = 0;
+    my $showArch           = 0;
+    my $showDetail         = 0;
+    my $showDeviceclass    = 0;
+    my $showChannel        = 0;
+    my $showCpu            = 0;
+    my $showDisks          = 0;
+    my $showFailed         = 0;
+    my $showHostid         = 0;
+    my $showRatchetUpdates = 0;
+    my $showLive           = 0;
+    my $showMemory         = 0;
+    my $showNics           = 0;
+    my $showPacnew         = 0;
+    my $showProblems       = 0;
+    my $showProduct        = 0;
+    my $showPublicKey      = 0;
+    my $showReady          = 0;
+    my $showSmart          = 0;
+    my $showSnapper        = 0;
+    my $showVirt           = 0;
+    my $showUptime         = 0;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
@@ -84,7 +84,6 @@ sub run {
             'failed'         => \$showFailed,
             'hostid'         => \$showHostid,
             'live'           => \$showLive,
-            'updated'        => \$showUpdated,
             'memory'         => \$showMemory,
             'nics'           => \$showNics,
             'pacnew'         => \$showPacnew,
@@ -94,19 +93,20 @@ sub run {
             'ready'          => \$showReady,
             'smart'          => \$showSmart,
             'snapper'        => \$showSnapper,
+            'updated'        => \$showRatchetUpdates,
             'uptime'         => \$showUptime,
             'virtualization' => \$showVirt );
 
     UBOS::Logging::initialize( 'ubos-admin', $cmd, $verbose, $logConfigFile, $debug );
     info( 'ubos-admin', $cmd, @_ );
 
-    my $showAspect =    $showArch        || $showChannel || $showCpu
-                     || $showDeviceclass || $showDisks   || $showFailed
-                     || $showHostid      || $showUpdated || $showLive
-                     || $showMemory      || $showNics    || $showPacnew
-                     || $showProblems    || $showProduct || $showPublicKey
-                     || $showReady       || $showSmart   || $showSnapper
-                     || $showVirt        || $showUptime;
+    my $showAspect =    $showArch           || $showChannel   || $showCpu
+                     || $showDeviceclass    || $showDisks     || $showFailed
+                     || $showHostid         || $showLive      || $showMemory
+                     || $showNics           || $showPacnew    || $showProblems
+                     || $showProduct        || $showPublicKey || $showReady
+                     || $showSmart          || $showSnapper   || $showVirt
+                     || $showRatchetUpdates || $showUptime;
 
     if(    !$parseOk
         || ( $showAll  && $showAspect )
@@ -122,29 +122,29 @@ sub run {
     }
 
     if( $showAll ) {
-        $showArch        = 1;
-        $showChannel     = 1;
-        $showCpu         = 1;
-        $showDeviceclass = 1;
-        $showDisks       = 1;
-        $showFailed      = 1;
-        $showHostid      = 1;
-        $showUpdated     = 1;
-        $showLive        = 1;
-        $showMemory      = 1;
-        $showNics        = 1;
-        $showPacnew      = 1;
-        $showProblems    = 1;
-        $showProduct     = 1;
-        $showReady       = 1;
-        $showSmart       = !UBOS::HostStatus::virtualization(),
-        $showSnapper     = 1;
-        $showVirt        = 1;
-        $showUptime      = 1;
+        $showArch           = 1;
+        $showChannel        = 1;
+        $showCpu            = 1;
+        $showDeviceclass    = 1;
+        $showDisks          = 1;
+        $showFailed         = 1;
+        $showHostid         = 1;
+        $showLive           = 1;
+        $showMemory         = 1;
+        $showNics           = 1;
+        $showPacnew         = 1;
+        $showProblems       = 1;
+        $showProduct        = 1;
+        $showRatchetUpdates = 1;
+        $showReady          = 1;
+        $showSmart          = !UBOS::HostStatus::virtualization(),
+        $showSnapper        = 1;
+        $showVirt           = 1;
+        $showUptime         = 1;
 
     } elsif( !$showAspect ) {
         # default
-        $showProblems    = 1;
+        $showProblems        = 1;
     }
 
     my $ret = 1;
@@ -225,44 +225,24 @@ sub run {
             }
         }
 
-        if( $showUpdated ) {
-            my $repos               = UBOS::Host::determineRepos();
-            my $repoUpdateHistories = UBOS::HostStatus::syncRepoUpdateHistories();
-            my $lastUpdated         = UBOS::HostStatus::lastUpdated();
-
-            $out .="Update status by repository:\n";
-
-            if( exists( $lastUpdated->{asof} ) && $lastUpdated->{asof} ) {
-                # We have migrated to the ratchet
-                foreach my $repo ( sort keys %$repos ) {
-                    $out .= sprintf( "    %12s:\n", $repo );
-
-                    if( exists( $repoUpdateHistories->{$repo} )) {
-                        my $isFirst = 0;
-                        foreach my $entry ( $repoUpdateHistories->{$repo} ) {
-                            my $tstampString = $entry->{tstamp};
-                            my $tstampTime   = UBOS::Utils::rfc3339string2time( $tstampString );
-
-                            if( $isFirst ) {
-                                $out .= '        ' . $tstampString . " (\n";
-                            } else {
-                                $out .= '        ' . $tstampString . "\n";
-                            }
-                        }
-                    }
-                }
+        if( $showRatchetUpdates ) {
+            my $ratchetJson = UBOS::HostStatus::ratchetUpdatesJson();
+            if( exists( $ratchetJson->{ratchetPositionTs} )) {
+                $out .= "Update ratchet position is at " . _formatTimeStamp( $ratchetJson->{ratchetPositionTs} ) . "\n";
             } else {
-                # We have not yet migrated to the ratchet
-                foreach my $repo ( sort keys %$repos ) {
-                    $out .= sprintf( "    %12s: not tracking repository update history, updating head version\n", $repo );
+                $out .= "Update ratchet not yet active\n";
+            }
+            foreach my $repoName ( sort keys %{$ratchetJson->{repositories}} ) {
+                my $repoJson = $ratchetJson->{repositories}->{$repoName};
+                my $repoStatus;
+                if( exists( $repoJson->{currentTs})) {
+                    $repoStatus = _formatTimeStamp( $repoJson->{currentTs} );
+                } else {
+                    $repoStatus = "(HEAD)";
                 }
+                $out .= sprintf( "    %12s: %s\n", $repoName, $repoStatus );
             }
-
-            if( $lastUpdated || !exists( $lastUpdated->{'when'} )) {
-                $out .= 'Last updated:       ' . _formatTimeStamp( $lastUpdated->{'when' } ) . "\n";
-            } else {
-                $out .= 'Last updated:       ' . 'Never' . "\n";
-            }
+            $out .= 'Last updated:       ' . _formatTimeStamp( $ratchetJson->{upgradeSuccessTs} ) . "\n";
         }
 
         if( $showChannel ) {
