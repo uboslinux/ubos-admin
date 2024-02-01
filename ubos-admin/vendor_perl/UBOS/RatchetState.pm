@@ -22,9 +22,10 @@ package UBOS::RatchetState;
 use UBOS::Logging;
 use UBOS::Utils;
 
-use fields qw( repoDir repos upgradeSuccessTs repositoryPositionTs repoHistories isModified );
+use fields qw( pacmanConfFile repoDir repoHistoriesDir repos upgradeSuccessTs repositoryPositionTs repoHistories isModified );
 
-# repoDir: name of the directory from where we read the data in repos
+# pacmanConfFile: location of pacman.conf, e.g. /etc/pacman.conf
+# repoDir: directory containing the repository files from which pacman.conf is generated, e.g. /etc/pacman.d/repositories.d
 # repos:   maps names of active repos to a hash with the following entries:
 #     'rawserver'  => 'https://depot.ubosfiles.net/$channel/$arch/os', # as in the file
 #     'server'     => 'https://depot.ubosfiles.net/red/aarch64/os',    # variables replaced
@@ -35,19 +36,18 @@ use fields qw( repoDir repos upgradeSuccessTs repositoryPositionTs repoHistories
 # repoHistories: hash from repo name to hash reflecting the JSON content of that repo's history.json file
 # isModified: if 0, no need to save the file
 
-my $PACMAN_CONF_FILE        = '/etc/pacman.conf';
-my $PACMAN_REPO_DIR         = '/etc/pacman.d/repositories.d';
-my $LAST_UPDATE_FILE        = '/var/ubos/last-ubos-update'; # not /var, as /var might move from system to system -- obsolete
-my $LAST_UPDATE_JSON_FILE   = '/etc/ubos/last-ubos-update.json';
-my $REPO_HISTORIES_DIR      = '/etc/ubos/repo-histories.d'; # caches repo's history.json files
-my $PACMAN_CONF_SEP         = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
+my $DEFAULT_PACMAN_CONF_FILE   = '/etc/pacman.conf';
+my $DEFAULT_PACMAN_REPO_DIR    = '/etc/pacman.d/repositories.d';
+my $DEFAULT_REPO_HISTORIES_DIR = '/etc/ubos/repo-histories.d'; # caches repo's history.json files
+my $PACMAN_CONF_SEP            = '### DO NOT EDIT ANYTHING BELOW THIS LINE, UBOS WILL OVERWRITE ###';
+my $LAST_UPDATE_FILE           = '/var/ubos/last-ubos-update'; # not /var, as /var might move from system to system -- obsolete
+my $LAST_UPDATE_JSON_FILE      = '/etc/ubos/last-ubos-update.json';
 
 ##
 # Factory method to create a RatchetState from the standard locations in the
-# filesystem on a device.
+# filesystem on a device. This is used during ubos-admin update and the like.
 sub load {
     my $self    = shift;
-    my $repoDir = shift || $PACMAN_REPO_DIR;
 
     my $arch    = UBOS::Utils::arch();
     my $channel = UBOS::Utils::channel();
@@ -55,10 +55,12 @@ sub load {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{repoDir} = $repoDir;
-    $self->{repos}   = {};
+    $self->{pacmanConfFile}   = $DEFAULT_PACMAN_CONF_FILE;
+    $self->{repoDir}          = $DEFAULT_PACMAN_REPO_DIR;
+    $self->{repoHistoriesDir} = $DEFAULT_REPO_HISTORIES_DIR;
+    $self->{repos}            = {};
 
-    my @repoFiles = glob( "$repoDir/*" );
+    my @repoFiles = glob( $self->{repoDir} . '/*' );
 
     foreach my $repoFile ( @repoFiles ) {
         my $rawRepoFileContent = UBOS::Utils::slurpFile( $repoFile );
@@ -112,6 +114,28 @@ sub load {
 }
 
 ##
+# Factory method to create a RatchetState that will be the initial RatchetState for a newly installed system
+sub new{
+    my $self             = shift;
+    my $pacmanConfFile   = shift;
+    my $repoDir          = shift;
+    my $repoHistoriesDir = shift;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+    $self->{pacmanConfFile}       = $pacmanConfFile;
+    $self->{repoDir}              = $repoDir;
+    $self->{repoHistoriesDir}     = $repoHistoriesDir;
+    $self->{repos}                = {};
+    $self->{upgradeSuccessTs}     = time();
+    $self->{repositoryPositionTs} = $self->{upgradeSuccessTs};
+    $self->{repoHistories}        = undef; # allocated as needed
+    $self->{isModified}           = 0;
+    return $self;
+}
+
+##
 # Save this state back to the standard locations in the filesystem on a device.
 sub save {
     my $self = shift;
@@ -125,6 +149,31 @@ sub save {
     if( -e $LAST_UPDATE_FILE ) {
         UBOS::Utils::deleteFile( $LAST_UPDATE_FILE );
     }
+}
+
+##
+##
+# Returns true if this RatchetState is different from the current state on disk, and
+# needs to be saved.
+sub isModified {
+    my $self = shift;
+
+    return $self->{isModified};
+}
+
+##
+# Determine whether the ratchet is already active on this device, or whether
+# we still are pre-ratchet.
+sub isRatchetActive {
+    my $self = shift;
+
+    foreach my $repoName ( keys %{$self->{repos}} ) {
+        my $currentTs = $self->repoCurrentTsFor( $repoName );
+        if( $currentTs ) {
+            return 1;
+        }
+    }
+    return 0; # not one of them
 }
 
 ##
@@ -207,11 +256,12 @@ sub _ensureRepoHistoryFor {
             error( 'Repo does not exist', $repoName );
             return undef;
         }
-        my $file = "$REPO_HISTORIES_DIR/$repoName/history.json";
+        my $repoHistoriesDir = $self->{repoHistoriesDir};
+        my $file = "$repoHistoriesDir/$repoName/history.json";
         my $url  = $self->{repos}->{$repoName}->{server} . '/history.json';
 
-        unless( -d "$REPO_HISTORIES_DIR/$repoName" ) {
-            UBOS::Utils::mkdirDashP( "$REPO_HISTORIES_DIR/$repoName" );
+        unless( -d "$repoHistoriesDir/$repoName" ) {
+            UBOS::Utils::mkdirDashP( "$repoHistoriesDir/$repoName" );
         }
 
         $file = UBOS::Utils::ensureCachedFileUpToDate( $file, $url );
@@ -234,7 +284,6 @@ sub skipTo {
     my $updateSkipTo  = shift;
 
     my $ret = fields::new( 'UBOS::RatchetState' );
-    $ret->{repoDir}              = $self->{repoDir};
     $ret->{repos}                = $self->{repoDreposir};
     $ret->{upgradeSuccessTs}     = $self->{upgradeSuccessTs};
     $ret->{repositoryPositionTs} = $updateSkipTo;
@@ -273,8 +322,7 @@ sub ratchetNext {
     }
 
     my $ret = fields::new( 'UBOS::RatchetState' );
-    $ret->{repoDir}              = $self->{repoDir};
-    $ret->{repos}                = $self->{repoDreposir};
+    $ret->{repos}                = $self->{repos};
     $ret->{upgradeSuccessTs}     = $self->{upgradeSuccessTs};
     $ret->{repositoryPositionTs} = $found;
     $ret->{repoHistories}        = $self->{repoHistories};
@@ -285,14 +333,13 @@ sub ratchetNext {
 
 ##
 # Regenerate the /etc/pacman.conf file.
-# $pacmanConfFile: the pacman config file, or default if not provided.
 # $channel: use this as the value for $channel in the repo URLs, or, if not
 #    given, use value of /etc/ubos/channel
 sub regeneratePacmanConf {
-    my $self           = shift;
-    my $pacmanConfFile = shift || $PACMAN_CONF_FILE;
-    my $channel        = shift || UBOS::Utils::channel();
+    my $self = shift;
 
+    my $channel = UBOS::Utils::channel();
+    my $pacmanConfFile = $self->{pacmanConfFile};
     my $oldPacmanConf = UBOS::Utils::slurpFile( $pacmanConfFile );
 
     my $preamble = $oldPacmanConf;
@@ -326,97 +373,89 @@ sub regeneratePacmanConf {
 }
 
 ##
-# Returns true if this RatchetState is different from the current state on disk, and
-# needs to be saved.
-sub isModified {
-    my $self = shift;
+# Save the entire pacman.conf file. This is used during install.
+sub savePacmanConfig {
+    my $self           = shift;
+    my $depotRoot      = shift;
+    my $signatureLevel = shift;
+    my $arch           = shift || UBOS::Utils::arch();
+    my $channel        = shift || UBOS::Utils::channel();
 
-    return $self->{isModified};
+    my $errors = 0;
+    my $levelString = $self->getPacmanSigLevelStringFor( $signatureLevel );
+    my $content = <<END;
+#
+# Pacman config file for UBOS
+#
+
+[options]
+Architecture = $arch
+CheckSpace
+
+SigLevel           = $levelString
+LocalFileSigLevel  = $levelString
+RemoteFileSigLevel = $levelString
+
+END
+
+    foreach my $repoName ( %{$self->{repos}} ) {
+        my $server = $self->{repos}->{$repoName}->{rawserver};
+        $server =~ s!\$depotRoot!$depotRoot!g;
+        $server =~ s!\$channel!$channel!g;
+
+        my $dbName = dbNameWithTimestamp( $repoName, $self->repoCurrentTsFor( $repoName ));
+
+        $content .= "\n";
+        $content .= "[$dbName]\n";
+        $content .= "Server = $server\n";
+    }
+
+    unless( UBOS::Utils::saveFile( $self->{pacmanConfFile}, $content, 0644 )) {
+        ++$errors;
+    }
+    return $errors;
 }
 
 ##
-# Determine whether the ratchet is already active on this device, or whether
-# we still are pre-ratchet.
-sub isRatchetActive {
-    my $self = shift;
+# Save the pacman repositories to repositories.d.
+# This is only here because it is similar code, but not actually a method of RachetState
+sub savePacmanRepositories {
+    my $activeRepos   = shift;
+    my $disabledRepos = shift;
+    my $repoDir       = shift;
+    my $depotRoot     = shift;
 
-    foreach my $repoName ( keys %{$self->{repos}} ) {
-        my $currentTs = $self->repoCurrentTsFor( $repoName );
-        if( $currentTs ) {
-            return 1;
+    my $errors = 0;
+    unless( -d $repoDir ) {
+        unless( UBOS::Utils::mkdir( $repoDir )) {
+            ++$errors;
         }
     }
-    return 0; # not one of them
+
+    foreach my $dbKey ( sort keys %$activeRepos ) {
+        my $dbValue = $activeRepos->{$dbKey};
+        $dbValue =~ s!\$depotRoot!$depotRoot!g;
+
+        my $content = "[\$dbName]\n"; # This is being replaced when pacman.conf is generated
+        $content .= "Server = $dbValue\n";
+
+        unless( UBOS::Utils::saveFile( "$repoDir/$dbKey", $content, 0644 )) {
+            ++$errors;
+        }
+    }
+    foreach my $dbKey ( sort keys %$disabledRepos ) {
+        my $dbValue = $activeRepos->{$dbKey};
+        $dbValue =~ s!\$depotRoot!$depotRoot!g;
+
+        my $content = "# [\$dbName]\n"; # This is being replaced when pacman.conf is generated
+        $content .= "# Server = $dbValue\n";
+
+        unless( UBOS::Utils::saveFile( "$repoDir/$dbKey", $content, 0644 )) {
+            ++$errors;
+        }
+    }
+    return $errors;
 }
-
-# ##
-# # Generate the content for the /etc/pacman.conf file from scratch.
-# # This is invoked during `ubos-install`.
-# # $signatureLevel: the string value of the `SigLevel` setting, such as "Required TrustedOnly"
-# # $arch: the arch for this installation, or the current arch if not provided
-# sub generatePacmanConfContent {
-#     my $self           = shift;
-#     my $signatureLevel = shift;
-#     my $arch           = shift || UBOS::Utils::arch();
-
-#     my $content = <<END;
-# #
-# # Pacman config file for UBOS
-# #
-
-# [options]
-# Architecture = $arch
-# CheckSpace
-
-# SigLevel           = $levelString
-# LocalFileSigLevel  = $levelString
-# RemoteFileSigLevel = $levelString
-
-# END
-# FIXME();
-#     return $content;
-# }
-
-
-#     my $providedAsOf = $self->{asof};
-#     my $depotRoot    = $self->{installDepotRoot};
-#     my $channel      = $self->{channel};
-
-#     my $ret  = <<END;
-# #
-# # Pacman config file for installing packages
-# #
-
-# [options]
-# Architecture = $arch
-
-# SigLevel           = $levelString
-# LocalFileSigLevel  = $levelString
-# RemoteFileSigLevel = $levelString
-
-# END
-
-#     my %bothDbs = ( %{ $self->{installPackageDbs} }, %{ $self->{installAddPackageDbs} } );
-#     foreach my $dbKey ( sort keys %bothDbs ) {
-#         if( exists( $self->{installRemovePackageDbs}->{$dbKey} )) {
-#             next;
-#         }
-
-#         my $server = $bothDbs{$dbKey}->{rawserver};
-#         $server =~ s!\$depotRoot!$depotRoot!g;
-#         $server =~ s!\$channel!$channel!g;
-
-#         my $prefix = '';
-#         if( grep /^$dbKey$/, @{$self->{installDisablePackageDbs}} ) {
-#             $prefix = '# (disabled) ';
-#         }
-#         my $dbFile  = $prefix . "[$dbKey]\n";
-#         $dbFile    .= $prefix . "Server = $server\n";
-
-#         $ret .= "\n" . $dbFile;
-#     }
-#     return $ret;
-
 
 ##
 # Helper to construct the db name given a repo name and a timestamp.

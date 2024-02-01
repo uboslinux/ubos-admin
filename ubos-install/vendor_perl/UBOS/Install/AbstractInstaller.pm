@@ -144,24 +144,10 @@ sub setDeviceConfig {
     }
 
     if( exists( $deviceConfig->{installaddpackagedbs} )) {
-        # provided is the dbName=>rawserver mapping from the command-line
-        # but we need something more complex
-        $self->{installAddPackageDbs} = {};
-        map {
-            $self->{installAddPackageDbs}->{$_} = {
-                'rawserver' => $deviceConfig->{installaddpackagedbs}->{$_}
-            };
-        } keys %{$deviceConfig->{installaddpackagedbs}};
+        $self->{installAddPackageDbs} = $deviceConfig->{installaddpackagedbs}
     }
     if( exists( $deviceConfig->{runaddpackagedbs} )) {
-        # provided is the dbName=>rawserver mapping from the command-line
-        # but we need something more complex
-        $self->{runAddPackageDbs} = {};
-        map {
-            $self->{runAddPackageDbs}->{$_} = {
-                'rawserver' => $deviceConfig->{runaddpackagedbs}->{$_}
-            };
-        } keys %{$deviceConfig->{runaddpackagedbs}};
+        $self->{runAddPackageDbs} = $deviceConfig->{runaddpackagedbs};
     }
     if( exists( $deviceConfig->{installdisablepackagedbs} )) {
         $self->{installDisablePackageDbs} = $deviceConfig->{installdisablepackagedbs};
@@ -374,29 +360,14 @@ sub checkCompleteParameters {
 
     unless( $self->{installPackageDbs} ) {
         $self->{installPackageDbs} = {
-                'os' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/os'
-                },
-                'hl' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/hl'
-                },
-                'tools' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/tools'
-                },
-                'toyapps' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/toyapps'
-                },
-
-                'os-experimental' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/os-experimental'
-                },
-                'hl-experimental' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/hl-experimental'
-                },
-                'tools-experimental' => {
-                    'rawserver' => '$depotRoot/$channel/$arch/tools-experimental'
-                }
-        }; # These hashes get augmented later with 'dbname' and 'server'
+                'os'                 => '$depotRoot/$channel/$arch/os',
+                'hl'                 => '$depotRoot/$channel/$arch/hl',
+                'tools'              => '$depotRoot/$channel/$arch/tools',
+                'toyapps'            => '$depotRoot/$channel/$arch/toyapps',
+                'os-experimental'    => '$depotRoot/$channel/$arch/os-experimental',
+                'hl-experimental'    => '$depotRoot/$channel/$arch/hl-experimental',
+                'tools-experimental' => '$depotRoot/$channel/$arch/tools-experimental'
+        };
     }
 
     unless( $self->{runPackageDbs} ) {
@@ -487,25 +458,52 @@ sub install {
 
     info( 'Installing UBOS with hostname', $self->{hostname} );
 
+    my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
     unless( $self->{target} ) {
-        my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
         $self->{tempMount} = File::Temp->newdir( DIR => $tmpDir, UNLINK => 1 );
         $self->{target}    = $self->{tempMount}->dirname;
     }
 
+    my $activeRunPackageDbs = {};
+    foreach my $p ( keys %{$self->{runPackageDbs}}) {
+        if( exists( $self->{runRemovePackageDbs}->{$p})) {
+            next;
+        }
+        $activeRunPackageDbs->{$p} = $self->{runPackageDbs}->{$p};
+    }
+    my $activeInstallPackageDbs  = {};
+    foreach my $p ( keys %{$self->{installPackageDbs}}) {
+        if( exists( $self->{installRemovePackageDbs}->{$p})) {
+            next;
+        }
+        if( exists( $self->{installDisablePackageDbs}->{$p})) {
+            next;
+        }
+        $activeInstallPackageDbs->{$p} = $self->{installPackageDbs}->{$p};
+    }
+
+    my $installPacmanConfig = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
+    my $installRatchetState = UBOS::Install::RatchetState->newForInstall(
+            $installPacmanConfig,
+            $self->{installDepotRoot},
+            {
+                ( grep { !exists( $self->{installRemovePackageDbs}->{$_}) } %{ $self->{installPackageDbs} } ),
+                %{ $self->{installAddPackageDbs} }
+            },
+            $self->{installDisablePackageDbs},
+            $self->arch(),
+            $self->{channel},
+            $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} ));
+
+    my $runRatchetState = UBOS::Install::RatchetState->newForRun(
+            $self->{target} . '/etc/pacman.conf',
+            $self->{target} . '/etc/pacman.d/repositories.d',
+            $self->{target} . '/etc/ubos/repo-histories.d',
+            $activeRunPackageDbs );
+
     my $errors = 0;
 
-    my $pacmanConfigInstallContent = $self->generateInstallPacmanConfig();
-
-    my $pacmanConfigInstall = File::Temp->new( UNLINK => 1 );
-    if( $pacmanConfigInstall ) {
-        print $pacmanConfigInstall $pacmanConfigInstallContent;
-        close $pacmanConfigInstall;
-
-    } else {
-        error( 'Failed to create temporary pacman config file' );
-        ++$errors;
-    }
+    $errors += $installRatchetState->savePacmanConfig( $self->{installDepotRoot}, $self->{installCheckSignatures}, $self->arch(), $self->{channel} ;
     if( $errors ) {
         goto DONE;
     }
@@ -539,7 +537,16 @@ sub install {
         if( $errors ) {
             goto DONE;
         }
-        $errors += $self->saveRunPacmanConfig();
+        $errors += UBOS::Utils::RatchetStat::savePacmanRepositories(
+            $activeRunPackageDbs,
+            $self->{runDisablePackageDbs},
+            $self->{target} . '/etc/pacman.d/repositories.d',
+            $self->{runDepotRoot}
+        );
+        if( $errors ) {
+            goto DONE;
+        }
+        $errors += $runRatchetState->savePacmanConfig( $self->{runDepotRoot}, $self->{runCheckSignatures}, $self->arch(), $self->{channel} ;
         if( $errors ) {
             goto DONE;
         }
@@ -722,59 +729,6 @@ END
 }
 
 ##
-# Generate the content of the install-time pacman config file
-# $dbs: array of package database names
-# return: File object of the generated temp file
-sub generateInstallPacmanConfig {
-    my $self = shift;
-
-    trace( "Executing generateInstallPacmanConfig" );
-
-    my $providedAsOf = $self->{asof};
-    my $depotRoot    = $self->{installDepotRoot};
-    my $channel      = $self->{channel};
-    my $arch         = $self->arch;
-    my $levelString  = $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} );
-
-    my $ret  = <<END;
-#
-# Pacman config file for installing packages
-#
-
-[options]
-Architecture = $arch
-
-SigLevel           = $levelString
-LocalFileSigLevel  = $levelString
-RemoteFileSigLevel = $levelString
-
-END
-
-    my %bothDbs = ( %{ $self->{installPackageDbs} }, %{ $self->{installAddPackageDbs} } );
-    foreach my $dbKey ( sort keys %bothDbs ) {
-        if( exists( $self->{installRemovePackageDbs}->{$dbKey} )) {
-            next;
-        }
-
-        my $server = $bothDbs{$dbKey}->{rawserver};
-        $server =~ s!\$depotRoot!$depotRoot!g;
-        $server =~ s!\$channel!$channel!g;
-
-        my $prefix = '';
-        if( grep /^$dbKey$/, @{$self->{installDisablePackageDbs}} ) {
-            $prefix = '# (disabled) ';
-        # } elsif( !defined( $dbName )) {
-        #     $prefix = "# (does not exist as of $providedAsOf ";
-        }
-        my $dbFile  = $prefix . "[$dbKey]\n";
-        $dbFile    .= $prefix . "Server = $server\n";
-
-        $ret .= "\n" . $dbFile;
-    }
-    return $ret;
-}
-
-##
 # Install the packages that need to be installed
 # $installPacmanConfig: the pacman config file to use
 #
@@ -816,74 +770,6 @@ sub installPackages {
         ++$errors;
     }
 
-    return $errors;
-}
-
-##
-# Generate and save the pacman config file for the device run-time
-sub saveRunPacmanConfig {
-    my $self = shift;
-
-    trace( "Executing savePacmanConfigProduction" );
-
-    my $errors      = 0;
-    my $arch        = $self->arch;
-    my $channel     = $self->{channel};
-    my $target      = $self->{target};
-    my $depotRoot   = $self->{runDepotRoot};
-    my $levelString = $self->getPacmanSigLevelStringFor( $self->{runCheckSignatures} );
-
-    my $runPacmanConfig = <<END;
-#
-# Pacman config file for UBOS
-#
-
-[options]
-Architecture = $arch
-CheckSpace
-
-SigLevel           = $levelString
-LocalFileSigLevel  = $levelString
-RemoteFileSigLevel = $levelString
-
-END
-    unless( UBOS::Utils::saveFile( "$target/etc/pacman.conf", $runPacmanConfig, 0644 )) {
-        ++$errors;
-    }
-
-    unless( -d "$target/etc/pacman.d/repositories.d" ) {
-        unless( UBOS::Utils::mkdir( "$target/etc/pacman.d/repositories.d" )) {
-            ++$errors;
-        }
-    }
-
-    my %bothDbs = ( %{ $self->{runPackageDbs} }, %{ $self->{runAddPackageDbs} } );
-    foreach my $dbKey ( sort keys %bothDbs ) {
-        if( exists( $self->{runRemovePackageDbs}->{$dbKey} )) {
-            next;
-        }
-
-        my $dbValue = $bothDbs{$dbKey};
-        $dbValue =~ s!\$depotRoot!$depotRoot!g;
-
-        my $prefix = '';
-        my $dbFile = '';
-        if( grep /^$dbKey$/, @{$self->{runDisablePackageDbs}} ) {
-            $prefix = '# ';
-            $dbFile .= $prefix . "Remove the # from the next two lines and run `ubos-admin update' to enable package db $dbKey\n";
-        }
-        $dbFile .= $prefix . "[\$dbName]\n"; # This is being replaced by regeneratePacmanConf
-        $dbFile .= $prefix . "Server = $dbValue\n";
-
-        unless( UBOS::Utils::saveFile( "$target/etc/pacman.d/repositories.d/$dbKey", $dbFile, 0644 )) {
-            ++$errors;
-        }
-    }
-
-    my $dbNames = UBOS::Host::determineDbNamesOfLastSuccess( "$target/etc/pacman.d/repositories.d" );
-    unless( UBOS::Host::regeneratePacmanConf( $dbNames, "$target/etc/pacman.conf", $channel )) {
-        ++$errors;
-    }
     return $errors;
 }
 
