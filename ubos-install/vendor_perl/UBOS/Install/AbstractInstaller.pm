@@ -482,20 +482,15 @@ sub install {
         $activeInstallPackageDbs->{$p} = $self->{installPackageDbs}->{$p};
     }
 
-    my $installPacmanConfig = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
-    my $installRatchetState = UBOS::Install::RatchetState->newForInstall(
+    my $installPacmanConfig  = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
+    my $installRepoHistories = File::Temp->newdir( DIR => $tmpDir, CLEANUP => 1 )
+    my $installRatchetState = UBOS::Install::RatchetState->new(
             $installPacmanConfig,
-            $self->{installDepotRoot},
-            {
-                ( grep { !exists( $self->{installRemovePackageDbs}->{$_}) } %{ $self->{installPackageDbs} } ),
-                %{ $self->{installAddPackageDbs} }
-            },
-            $self->{installDisablePackageDbs},
-            $self->arch(),
-            $self->{channel},
-            $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} ));
+            undef,
+            $installRepoHistories,
+            activeInstallPackageDbs );
 
-    my $runRatchetState = UBOS::Install::RatchetState->newForRun(
+    my $runRatchetState = UBOS::Install::RatchetState->new(
             $self->{target} . '/etc/pacman.conf',
             $self->{target} . '/etc/pacman.d/repositories.d',
             $self->{target} . '/etc/ubos/repo-histories.d',
