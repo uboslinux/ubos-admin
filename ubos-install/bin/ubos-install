@@ -527,7 +527,7 @@ Optional arguments:
           Do not add one of the default UBOS repositories when the system is running, where <name>
           is the section name.
     --install-disable-package-db <name>
-          Disable one of the otherwise added repositories during installatino, where <name>
+          Disable one of the otherwise added repositories during installation, where <name>
           is the section name.
     --run-disable-package-db <name>
           Disable one of the otherwise added repositories when the system is running, where <name>
