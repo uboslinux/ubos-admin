@@ -17,6 +17,7 @@ use HTTP::Request;
 use LWP::UserAgent;
 use UBOS::Host;
 use UBOS::Logging;
+use UBOS::RatchetState;
 use UBOS::Utils;
 
 use fields qw(
@@ -375,12 +376,12 @@ sub checkCompleteParameters {
     }
 
     unless( $self->{installDisablePackageDbs} ) {
-        $self->{installDisablePackageDbs} = [ qw(
-                toyapps
-                os-experimental
-                hl-experimental
-                tools-experimental
-        ) ];
+        $self->{installDisablePackageDbs} = {
+                'toyapps' => 1,
+                'os-experimental' => 1,
+                'hl-experimental' => 1,
+                'tools-experimental' => 1
+        };
     }
 
     unless( $self->{runDisablePackageDbs} ) {
@@ -469,6 +470,9 @@ sub install {
         if( exists( $self->{runRemovePackageDbs}->{$p})) {
             next;
         }
+        if( exists( $self->{runDisablePackageDbs}->{$p})) {
+            next;
+        }
         $activeRunPackageDbs->{$p} = $self->{runPackageDbs}->{$p};
     }
     my $activeInstallPackageDbs  = {};
@@ -483,22 +487,31 @@ sub install {
     }
 
     my $installPacmanConfig  = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
-    my $installRepoHistories = File::Temp->newdir( DIR => $tmpDir, CLEANUP => 1 )
-    my $installRatchetState = UBOS::Install::RatchetState->new(
+    my $installRepoHistories = File::Temp->newdir( DIR => $tmpDir, CLEANUP => 1 );
+    my $installRatchetState = UBOS::RatchetState->new(
             $installPacmanConfig,
             undef,
             $installRepoHistories,
-            activeInstallPackageDbs );
+            $activeInstallPackageDbs,
+            $self->arch(),
+            $self->{channel} );
 
-    my $runRatchetState = UBOS::Install::RatchetState->new(
+    my $runRatchetState = UBOS::RatchetState->new(
             $self->{target} . '/etc/pacman.conf',
             $self->{target} . '/etc/pacman.d/repositories.d',
             $self->{target} . '/etc/ubos/repo-histories.d',
-            $activeRunPackageDbs );
+            $activeRunPackageDbs,
+            $self->arch(),
+            $self->{channel} );
+
+use Data::Dumper;
+print( "XXX installRatchetState: " . Dumper( $installRatchetState ));
+print( "XXX runRatchetState: " . Dumper( $runRatchetState ));
 
     my $errors = 0;
 
-    $errors += $installRatchetState->savePacmanConfig( $self->{installDepotRoot}, $self->{installCheckSignatures}, $self->arch(), $self->{channel} ;
+    my $installSigLevelString = $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} );
+    $errors += $installRatchetState->savePacmanConfig( $self->{installDepotRoot}, $installSigLevelString, $self->arch(), $self->{channel} );
     if( $errors ) {
         goto DONE;
     }
@@ -528,11 +541,11 @@ sub install {
         if( $errors ) {
             goto DONE;
         }
-        $errors += $self->installPackages( $pacmanConfigInstall );
+        $errors += $self->installPackages( $installPacmanConfig );
         if( $errors ) {
             goto DONE;
         }
-        $errors += UBOS::Utils::RatchetStat::savePacmanRepositories(
+        $errors += UBOS::RatchetState::savePacmanRepositories(
             $activeRunPackageDbs,
             $self->{runDisablePackageDbs},
             $self->{target} . '/etc/pacman.d/repositories.d',
@@ -541,7 +554,8 @@ sub install {
         if( $errors ) {
             goto DONE;
         }
-        $errors += $runRatchetState->savePacmanConfig( $self->{runDepotRoot}, $self->{runCheckSignatures}, $self->arch(), $self->{channel} ;
+        my $runSigLevelString = $self->getPacmanSigLevelStringFor( $self->{runCheckSignatures} );
+        $errors += $runRatchetState->savePacmanConfig( $self->{runDepotRoot}, $runSigLevelString, $self->arch(), $self->{channel} );
         if( $errors ) {
             goto DONE;
         }
@@ -587,7 +601,7 @@ sub install {
             goto DONE;
         }
         unless( $self->{noBoot} ) {
-            $errors += $self->installBootLoader( $pacmanConfigInstall );
+            $errors += $self->installBootLoader( $installPacmanConfig );
             if( $errors ) {
                 goto DONE;
             }

@@ -27,9 +27,7 @@ use fields qw( pacmanConfFile repoDir repoHistoriesDir repos upgradeSuccessTs re
 # pacmanConfFile: location of pacman.conf, e.g. /etc/pacman.conf
 # repoDir: directory containing the repository files from which pacman.conf is generated, e.g. /etc/pacman.d/repositories.d
 # repos:   maps names of active repos to a hash with the following entries:
-#     'rawserver'  => 'https://depot.ubosfiles.net/$channel/$arch/os', # as in the file
 #     'server'     => 'https://depot.ubosfiles.net/red/aarch64/os',    # variables replaced
-#     'dbname'     => 'os-$tstamp'                                     # as in the file
 #     'rawcontent' => '...'                                            # raw content of the file in repositories.d
 # upgradeSuccessTs: wall clock time when the system was last upgraded successfully
 # repositoryPositionTs: timestamp identifying position in the ratchet
@@ -89,9 +87,7 @@ sub load {
             $repoName =~ s!.*/!!;
 
             $self->{repos}->{$repoName} = {
-                'rawserver'  => $rawServerName,
                 'server'     => $serverName,
-                'dbname'     => $dbName,
                 'rawcontent' => $rawRepoFileContent
             };
         } else {
@@ -115,11 +111,14 @@ sub load {
 
 ##
 # Factory method to create a RatchetState that will be the initial RatchetState for a newly installed system
-sub new{
+sub new {
     my $self             = shift;
     my $pacmanConfFile   = shift;
     my $repoDir          = shift;
     my $repoHistoriesDir = shift;
+    my $repos            = shift;
+    my $arch             = shift;
+    my $channel          = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -127,11 +126,26 @@ sub new{
     $self->{pacmanConfFile}       = $pacmanConfFile;
     $self->{repoDir}              = $repoDir;
     $self->{repoHistoriesDir}     = $repoHistoriesDir;
-    $self->{repos}                = {};
     $self->{upgradeSuccessTs}     = time();
     $self->{repositoryPositionTs} = $self->{upgradeSuccessTs};
     $self->{repoHistories}        = undef; # allocated as needed
     $self->{isModified}           = 0;
+
+    $self->{repos} = {};
+    foreach my $repoName ( keys %$repos ) {
+        my $rawServerName = $repos->{$repoName};
+        if( $rawServerName =~ m!/$! ) {
+            $rawServerName = substr( $rawServerName, 0, -1 );
+        }
+        my $serverName = $rawServerName;
+        $serverName =~ s!\$arch!$arch!g;
+        $serverName =~ s!\$channel!$channel!g;
+
+        $self->{repos}->{$repoName} = {
+            'server' => $serverName,
+            'rawcontent' => "[\$dbName]\nServer = $serverName\n\n"
+        };
+    }
     return $self;
 }
 
@@ -355,7 +369,7 @@ sub regeneratePacmanConf {
     foreach my $repoName( sort keys %{$self->{repos}} ) {
         my $dbName = dbNameWithTimestamp( $repoName, $self->repoCurrentTsFor( $repoName ));
 
-        my $toAdd  = $self->{repos}->{$repoName}->{'rawcontent'};
+        my $toAdd  = $self->{repos}->{$repoName}->{rawcontent};
 
         $toAdd =~ s!#.*$!!gm; # remove comments -- will confuse the user
         $toAdd =~ s!^\s+!!gm; # leading white space
@@ -377,12 +391,11 @@ sub regeneratePacmanConf {
 sub savePacmanConfig {
     my $self           = shift;
     my $depotRoot      = shift;
-    my $signatureLevel = shift;
+    my $sigLevelString = shift;
     my $arch           = shift || UBOS::Utils::arch();
     my $channel        = shift || UBOS::Utils::channel();
 
     my $errors = 0;
-    my $levelString = $self->getPacmanSigLevelStringFor( $signatureLevel );
     my $content = <<END;
 #
 # Pacman config file for UBOS
@@ -392,14 +405,14 @@ sub savePacmanConfig {
 Architecture = $arch
 CheckSpace
 
-SigLevel           = $levelString
-LocalFileSigLevel  = $levelString
-RemoteFileSigLevel = $levelString
+SigLevel           = $sigLevelString
+LocalFileSigLevel  = $sigLevelString
+RemoteFileSigLevel = $sigLevelString
 
 END
 
-    foreach my $repoName ( %{$self->{repos}} ) {
-        my $server = $self->{repos}->{$repoName}->{rawserver};
+    foreach my $repoName ( sort keys %{$self->{repos}} ) {
+        my $server = $self->{repos}->{$repoName}->{server};
         $server =~ s!\$depotRoot!$depotRoot!g;
         $server =~ s!\$channel!$channel!g;
 
@@ -444,7 +457,7 @@ sub savePacmanRepositories {
         }
     }
     foreach my $dbKey ( sort keys %$disabledRepos ) {
-        my $dbValue = $activeRepos->{$dbKey};
+        my $dbValue = $disabledRepos->{$dbKey};
         $dbValue =~ s!\$depotRoot!$depotRoot!g;
 
         my $content = "# [\$dbName]\n"; # This is being replaced when pacman.conf is generated

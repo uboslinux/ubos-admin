@@ -215,16 +215,20 @@ if( keys %runAddPackageDbs ) {
     $deviceConfig->{runaddpackagedbs} = \%runAddPackageDbs;
 }
 if( @installRemovePackageDbs ) {
-    $deviceConfig->{installremovepackagedbs} = \@installRemovePackageDbs;
+    $deviceConfig->{installremovepackagedbs} = {};
+    map { $deviceConfig->{installremovepackagedbs}->{$_} = 1; } @installRemovePackageDbs;
 }
 if( @runRemovePackageDbs ) {
-    $deviceConfig->{runremovepackagedbs} = \@runRemovePackageDbs;
+    $deviceConfig->{runremovepackagedbs} = {};
+    map { $deviceConfig->{runremovepackagedbs}->{$_} = 1; } @runRemovePackageDbs;
 }
 if( @installDisablePackageDbs ) {
-    $deviceConfig->{installdisablepackagedbs} = \@installDisablePackageDbs;
+    $deviceConfig->{installdisablepackagedbs} = {};
+    map { $deviceConfig->{installdisablepackagedbs}->{$_} = 1; } @installDisablePackageDbs;
 }
 if( @runDisablePackageDbs ) {
-    $deviceConfig->{rundisablepackagedbs} = \@runDisablePackageDbs;
+    $deviceConfig->{rundisablepackagedbs} = {};
+    map { $deviceConfig->{rundisablepackagedbs}->{$_} = 1; } @runDisablePackageDbs;
 }
 if( @mbrBootLoaderDevices ) {
     $deviceConfig->{mbrbootloaderdevices} = \@mbrBootLoaderDevices;
@@ -315,6 +319,8 @@ if( $errors ) {
     goto END;
 }
 $errors = $installer->checkComplete();
+trace( 'Installer:', sub { use Data::Dumper; return Dumper( $installer ); });
+
 if( $errors ) {
     goto END;
 }
