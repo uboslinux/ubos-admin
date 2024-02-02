@@ -185,7 +185,7 @@ sub run {
         }
         $file = $in;
     } else {
-        my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
+        my $tmpDir = UBOS::Host::tmpdir();
 
         $tmpFile = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
         close $tmpFile;

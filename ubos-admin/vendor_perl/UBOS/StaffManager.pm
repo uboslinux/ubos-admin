@@ -507,7 +507,7 @@ sub mountDevice {
     my $device  = shift;
     my $targetP = shift;
 
-    my $tmpDir    = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
+    my $tmpDir    = UBOS::Host::tmpdir();
     $$targetP     = File::Temp->newdir( DIR => $tmpDir, UNLINK => 0 ); # do not unlink; if umount fails, it would erase Staff content
     my $targetDir = $$targetP->dirname;
     my $errors    = 0;

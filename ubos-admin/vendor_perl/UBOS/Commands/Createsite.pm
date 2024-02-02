@@ -95,7 +95,7 @@ sub run {
         my $localTemplate;
         my $localTemplateFile;
         if( $fromTemplate =~ m!^\S+://! ) {
-            my $tmpDir = UBOS::Host::vars()->getResolve( 'host.tmpdir', '/ubos/tmp' );
+            my $tmpDir = UBOS::Host::tmpdir();
 
             $localTemplateFile = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
             close $localTemplateFile;
