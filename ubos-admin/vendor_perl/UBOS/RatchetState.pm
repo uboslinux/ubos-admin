@@ -374,7 +374,7 @@ sub regeneratePacmanConf {
         $toAdd =~ s!#.*$!!gm; # remove comments -- will confuse the user
         $toAdd =~ s!^\s+!!gm; # leading white space
         $toAdd =~ s!\s+$!!gm; # trailing white space
-        $toAdd =~ s!\$dbname!$dbName!g;
+        $toAdd =~ s!\$dbName!$dbName!g;
         $toAdd =~ s!\$channel!$channel!g;
 
         $pacmanConf .= "\n" . $toAdd . "\n";
@@ -408,6 +408,9 @@ CheckSpace
 SigLevel           = $sigLevelString
 LocalFileSigLevel  = $sigLevelString
 RemoteFileSigLevel = $sigLevelString
+
+$PACMAN_CONF_SEP
+
 
 END
 
