@@ -475,6 +475,19 @@ sub install {
         }
         $activeRunPackageDbs->{$p} = $self->{runPackageDbs}->{$p};
     }
+    foreach my $p ( keys %{$self->{runAddPackageDbs}}) {
+        $activeRunPackageDbs->{$p} = $self->{runAddPackageDbs}->{$p};
+    }
+
+    my $inactiveRunPackageDbs = {};
+    foreach my $p ( keys %{$self->{runDisablePackageDbs} ) {
+        if( exists( $self->{runPackageDbs}->{$p} )) {
+            $inactiveRunPackageDbs->{$p} = $self->{runPackageDbs}->{$p};
+        elsif( exists( $self->{runAddPackageDbs->{$p} )) {
+            $inactiveRunPackageDbs->{$p} = $self->{runAddPackageDbs}->{$p};
+        } # else ignore
+    }
+
     my $activeInstallPackageDbs  = {};
     foreach my $p ( keys %{$self->{installPackageDbs}}) {
         if( exists( $self->{installRemovePackageDbs}->{$p})) {
@@ -485,6 +498,13 @@ sub install {
         }
         $activeInstallPackageDbs->{$p} = $self->{installPackageDbs}->{$p};
     }
+    foreach my $p ( keys %{$self->{installAddPackageDbs}}) {
+        $activeInstallPackageDbs->{$p} = $self->{installPackageDbs}->{$p};
+    }
+
+    debugAndSuspend( 'Package dbs: activeRun:', sort keys %$activeRunPackageDbs,
+                     '; inactive run:',         sort keys %$inactiveRunPackageDbs,
+                     ';  active install:',      sort keys %$activeInstallPackageDbs );
 
     my $installPacmanConfig  = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
     my $installRepoHistories = File::Temp->newdir( DIR => $tmpDir, CLEANUP => 1 );
@@ -543,7 +563,7 @@ sub install {
         }
         $errors += UBOS::RatchetState::savePacmanRepositories(
             $activeRunPackageDbs,
-            $self->{runDisablePackageDbs},
+            $inactiveRunPackageDbs,
             $self->{target} . '/etc/pacman.d/repositories.d',
             $self->{runDepotRoot}
         );
