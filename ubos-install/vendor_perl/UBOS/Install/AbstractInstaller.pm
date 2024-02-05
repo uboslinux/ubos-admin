@@ -504,10 +504,6 @@ sub install {
             $self->arch(),
             $self->{channel} );
 
-use Data::Dumper;
-print( "XXX installRatchetState: " . Dumper( $installRatchetState ));
-print( "XXX runRatchetState: " . Dumper( $runRatchetState ));
-
     my $errors = 0;
 
     my $installSigLevelString = $self->getPacmanSigLevelStringFor( $self->{installCheckSignatures} );
