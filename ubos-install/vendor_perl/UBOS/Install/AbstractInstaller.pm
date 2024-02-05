@@ -483,7 +483,7 @@ sub install {
     foreach my $p ( keys %{$self->{runDisablePackageDbs}} ) {
         if( exists( $self->{runPackageDbs}->{$p} )) {
             $inactiveRunPackageDbs->{$p} = $self->{runPackageDbs}->{$p};
-        elsif( exists( $self->{runAddPackageDbs}->{$p} )) {
+        } elsif( exists( $self->{runAddPackageDbs}->{$p} )) {
             $inactiveRunPackageDbs->{$p} = $self->{runAddPackageDbs}->{$p};
         } # else ignore
     }
