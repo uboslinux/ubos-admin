@@ -499,12 +499,12 @@ sub install {
         $activeInstallPackageDbs->{$p} = $self->{installPackageDbs}->{$p};
     }
     foreach my $p ( keys %{$self->{installAddPackageDbs}}) {
-        $activeInstallPackageDbs->{$p} = $self->{installPackageDbs}->{$p};
+        $activeInstallPackageDbs->{$p} = $self->{installAddPackageDbs}->{$p};
     }
 
-    debugAndSuspend( 'Package dbs: activeRun:', sort keys %$activeRunPackageDbs,
-                     '; inactive run:',         sort keys %$inactiveRunPackageDbs,
-                     ';  active install:',      sort keys %$activeInstallPackageDbs );
+    trace( 'Package dbs: activeRun:', sort keys %$activeRunPackageDbs,
+           '; inactive run:',         sort keys %$inactiveRunPackageDbs,
+           ';  active install:',      sort keys %$activeInstallPackageDbs );
 
     my $installPacmanConfig  = File::Temp->new( DIR => $tmpDir, UNLINK => 1 );
     my $installRepoHistories = File::Temp->newdir( DIR => $tmpDir, CLEANUP => 1 );
@@ -1260,6 +1260,10 @@ sub replaceDevSymlinks {
 
     for( my $i=0 ; $i<@$devices ; ++$i ) {
         my $resolved = UBOS::Utils::absReadlink( $devices->[$i] );
+        unless( $resolved ) {
+            $@ = 'Cannot find device: '. $devices->[$i];
+            return 0;
+        }
         if( -b $resolved || -f $resolved ) {
             $devices->[$i] = $resolved;
         } else {
