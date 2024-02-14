@@ -142,6 +142,24 @@ sub ensureConfigFiles {
     my $uid = 0;  # avoid overwrite by http
     my $gid = UBOS::Utils::getGid( 'http' );
 
+    if( -f $keyFile ) {
+        # Upgrade to 2048 bits if needed
+        my $regen = 0;
+        my $out;
+        UBOS::Utils::myexec( "openssl rsa -in '$keyFile' -text -noout", undef, \$out );
+        if( $out =~ m!Private-Key:\s*\((\d+)\s*bit! ) {
+            my $bits = $1;
+            if( $bits < 2048 ) {
+                $regen = 1;
+            }
+        } else {
+            $regen = 1;
+        }
+        if( $regen ) {
+            UBOS::Utils::deleteFile( $keyFile, $csrFile, $crtFile );
+        }
+    }
+
     unless( -f $keyFile ) {
         debugAndSuspend( 'Generate default Apache TLS key' );
         UBOS::Utils::myexec( "openssl genrsa -out '$keyFile' 2048" );

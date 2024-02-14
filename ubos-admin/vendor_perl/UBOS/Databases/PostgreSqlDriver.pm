@@ -55,6 +55,8 @@ sub ensureRunning {
         $initDbCmd .= ' --pgdata="' . $dataDir . '"';
         if( !executeCmdAsAdmin( $initDbCmd )) {
             error( 'Init postgres failed:', $@ );
+            $running = 0;
+            return 0;
         }
 
         # tighten down authentication

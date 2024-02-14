@@ -380,7 +380,7 @@ sub exportLocalDatabase {
     my $tmpDir = UBOS::Host::tmpdir();
     my $file;
 
-    my $cmd = "mysqldump -u $rootUser -p$rootPass $dbName";
+    my $cmd = "mariadb-dump -u $rootUser -p$rootPass $dbName";
     if( $compress ) {
         if( $compress eq 'gz' ) {
             $file = File::Temp->new( UNLINK => 0, DIR => $tmpDir, SUFFIX => '.gz' );
@@ -428,13 +428,13 @@ sub importLocalDatabase {
     my $cmd;
     if( $compress ) {
         if( $compress eq 'gz' ) {
-            $cmd = "zcat '$fileName' | mysql -u '$rootUser' '-p$rootPass' '$dbName'";
+            $cmd = "zcat '$fileName' | mariadb -u '$rootUser' '-p$rootPass' '$dbName'";
         } else {
             error( 'Unknown compression method:', $compress );
             return 0;
         }
     } else {
-        $cmd = "mysql -u '$rootUser' '-p$rootPass' '$dbName' < '$fileName'";
+        $cmd = "mariadb -u '$rootUser' '-p$rootPass' '$dbName' < '$fileName'";
     }
     if( UBOS::Utils::myexec( $cmd )) {
         return 0;
@@ -468,7 +468,7 @@ sub runBulkSql {
         ( 'MySqlDriver::runBulkSql', $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential ? '<pass>' : '', $dbUserLidCredType, 'SQL (' . length( $sql ) . ') bytes', $delimiter ) } );
 
     # from the command-line; that way we don't have to deal with messy statement splitting
-    my $cmd = 'mysql';
+    my $cmd = 'mariadb';
     if( $dbHost ne 'localhost' ) {
         # will connect with UNIX socket otherwise
         $cmd .= " '--host=$dbHost' '--port=$dbPort'";
