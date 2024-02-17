@@ -32,6 +32,13 @@ if( -e $siteProxiesFile ) {
     my @lines = grep { /^http/ } split( "\n", $siteProxiesContent );
 
     my $lwp = LWP::UserAgent->new;
+    # support self-signed certificates. We are only talking to ourselves
+    # so this does not reduce security; everything from the outside world
+    # is unaffected by this
+    $lwp->ssl_opts(
+        SSL_verify_mode => 0,
+        verify_hostname => 0
+    );
 
     foreach my $line ( @lines ) {
         my @words = split( " +", $line );
