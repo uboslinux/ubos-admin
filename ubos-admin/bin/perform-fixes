@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# Perform fixes prior to attempting to upgrade
+
+# ArchLinuxARM currentl has a key problem (2024-02)
+pacman-key --finger 68B3537F39A313B3E574D06777193F152BDBE6A6 2>/dev/null | grep marginal >/dev/null 2>&1 \
+    && echo 'Fixing trust of Arch Linux ARM Build System <builder@archlinuxarm.org> key' \
+    && pacman-key --lsign-key 68B3537F39A313B3E574D06777193F152BDBE6A6 >/dev/null 2>&1 \
+    || true
