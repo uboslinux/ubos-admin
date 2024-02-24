@@ -1,5 +1,5 @@
 pkgname=$(basename $(pwd))
-pkgver=0.83
+pkgver=0.84
 pkgrel=1
 pkgdesc="UBOS Perl utilities"
 arch=('any')
