@@ -1367,13 +1367,7 @@ sub deviceClass {
 
             } else {
                 myexec( 'uname -a', undef, \$out, undef );
-                if( $out =~ m!(alarmpi|raspberry).*armv6l! ) {
-                    $_deviceClass = 'rpi';
-
-                } elsif( $out =~ m!(alarmpi|raspberry).*armv7l! ) {
-                    $_deviceClass = 'rpi2';
-
-                } elsif( $out =~ m!espressobin.*aarch64! ) {
+                if( $out =~ m!espressobin.*aarch64! ) {
                     $_deviceClass = 'espressobin';
 
                 } elsif( $out =~ m!x86_64! ) {
