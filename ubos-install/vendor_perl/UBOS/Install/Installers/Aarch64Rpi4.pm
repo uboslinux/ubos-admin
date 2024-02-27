@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-package UBOS::Install::Installers::Armv7hRpi4;
+package UBOS::Install::Installers::Aarch64Rpi4;
 
 use UBOS::Install::AbstractRpiInstaller;
 use UBOS::Install::AbstractVolumeLayout;

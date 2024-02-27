@@ -49,7 +49,7 @@ sub checkCompleteParameters {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client
                 archlinux-keyring archlinuxarm-keyring
-                rng-tools raspberrypi-firmware raspberrypi-bootloader
+                rng-tools raspberrypi-firmware
                 smartmontools
                 wpa_supplicant wireless-regdb
         ) ];
@@ -147,6 +147,19 @@ sub checkCreateVolumeLayout {
     }
 
     return $errors;
+}
+
+##
+# Install the bootloader
+# $pacmanConfigFile: the Pacman config file to be used to install packages
+# return: number of errors
+sub installBootLoader {
+    my $self             = shift;
+    my $pacmanConfigFile = shift;
+
+    # done by the already-installed packages
+
+    return 0;
 }
 
 ##
