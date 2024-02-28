@@ -49,12 +49,12 @@ sub checkCompleteParameters {
         $self->{devicePackages} = [ qw(
                 ubos-networking-client
                 archlinux-keyring archlinuxarm-keyring
-                rng-tools raspberrypi-firmware
+                rng-tools linux-firmware
+                linux-rpi raspberrypi-bootloader firmware-raspberrypi
                 smartmontools
                 wpa_supplicant wireless-regdb
         ) ];
     }
-
     unless( $self->{deviceServices} ) {
         $self->{deviceServices} = [ qw(
                 rngd.service systemd-timesyncd.service
@@ -157,8 +157,15 @@ sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
 
-    # done by the already-installed packages
+    # done by the already-installed packages, except for the systemd init parameter
+    my $target = $self->{target};
+    my $cmdline = UBOS::Utils::slurpFile( "$target/boot/cmdline.txt" );
 
+    $cmdline =~ s!init=\S+!!;
+    $cmdline .= ' init=/usr/lib/systemd/systemd';
+    unless( UBOS::Utils::saveFile( "$target/boot/cmdline.txt", $cmdline )) {
+        ++$ret;
+    }
     return 0;
 }
 
