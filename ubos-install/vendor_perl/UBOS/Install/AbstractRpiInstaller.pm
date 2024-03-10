@@ -157,6 +157,7 @@ sub installBootLoader {
     my $self             = shift;
     my $pacmanConfigFile = shift;
 
+    my $ret = 0;
     # done by the already-installed packages, except for the systemd init parameter
     my $target = $self->{target};
     my $cmdline = UBOS::Utils::slurpFile( "$target/boot/cmdline.txt" );
@@ -166,7 +167,7 @@ sub installBootLoader {
     unless( UBOS::Utils::saveFile( "$target/boot/cmdline.txt", $cmdline )) {
         ++$ret;
     }
-    return 0;
+    return $ret;
 }
 
 ##
