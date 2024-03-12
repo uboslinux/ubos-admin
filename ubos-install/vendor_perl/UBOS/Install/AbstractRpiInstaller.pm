@@ -163,6 +163,8 @@ sub installBootLoader {
     my $cmdline = UBOS::Utils::slurpFile( "$target/boot/cmdline.txt" );
 
     $cmdline =~ s!init=\S+!!;
+    $cmdline =~ s!^\s+!!;
+    $cmdline =~ s!\s+$!!;
     $cmdline .= ' init=/usr/lib/systemd/systemd';
     unless( UBOS::Utils::saveFile( "$target/boot/cmdline.txt", $cmdline )) {
         ++$ret;
