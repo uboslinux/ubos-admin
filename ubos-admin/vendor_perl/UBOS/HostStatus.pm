@@ -368,15 +368,8 @@ sub blockDevicesJson {
                 if( $smartCmd ) {
                     UBOS::Utils::myexec( "$smartCmd $name", undef, \$out );
                     my $smartJson = UBOS::Utils::readJsonFromString( $out );
-                    if( $smartJson && exists( $smartJson->{smart_status} )) {
+                    if( $smartJson ) {
                         $blockDevice->{smart} = $smartJson;
-
-                    } elsif(    $smartJson
-                             && exists( $smartJson->{smartctl} )
-                             && exists( $smartJson->{smartctl}->{messages} )
-                             && @{$smartJson->{smartctl}->{messages}} )
-                    {
-                        # some warning or error, but this is not material here
 
                     } else {
                         warning( 'Failed to parse smartctl json for device', $name, ':', $out );
