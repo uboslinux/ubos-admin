@@ -441,11 +441,15 @@ sub wellknowns {
     my $ret = {};
 
     # robots.txt and webfinger are different.
-    $ret->{'robots.txt'} = {
-        'value' => $self->_constructRobotsTxt()
-    };
+    my $robotsTxt = $self->_constructRobotsTxt();
+    if( defined( $robotsTxt )) {
+        $ret->{'robots.txt'} = {
+            'value' => $robotsTxt
+        };
+    }
+
     my $webfingerProxyUrls = $self->_determineWebfingerProxyUrls();
-    if( $webfingerProxyUrls ) {
+    if( $webfingerProxyUrls && @$webfingerProxyUrls ) {
         $ret->{webfinger} = {
             'proxies' => $webfingerProxyUrls
         };
@@ -632,7 +636,7 @@ sub _addWellKnownIfNotPresent {
             }
         }
     }
-    return $tmp; # not really needed
+    return $aggregate; # not really needed
 }
 
 ##
