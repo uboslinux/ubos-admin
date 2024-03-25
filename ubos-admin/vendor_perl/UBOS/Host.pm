@@ -656,7 +656,15 @@ sub updateCode {
         unless( UBOS::Logging::isTraceActive() ) {
             $cmd .= ' > /dev/null';
         }
-        debugAndSuspend( 'Execute pacman-db-upgrade' );
+        debugAndSuspend( 'Execute', $cmd );
+        myexec( $cmd );
+    }
+    if( -x '/usr/bin/archlinux-java' ) {
+        $cmd = '/usr/bin/archlinux-java fix';
+        unless( UBOS::Logging::isTraceActive() ) {
+            $cmd .= ' > /dev/null';
+        }
+        debugAndSuspend( 'Execute', $cmd );
         myexec( $cmd );
     }
 
